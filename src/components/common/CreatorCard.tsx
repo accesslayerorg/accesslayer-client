@@ -1,7 +1,6 @@
-import React from 'react';
 import { useAccount } from 'wagmi';
 import { Button } from '@/components/ui/button';
-import { Course } from '@/services/course.service';
+import type { Course } from '@/services/course.service';
 import { cn } from '@/lib/utils';
 import { ShoppingCart, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
