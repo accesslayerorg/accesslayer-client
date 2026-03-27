@@ -7,6 +7,7 @@ import { ShoppingCart, Wallet, Link as LinkIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import showToast from '@/utils/toast.util';
 import TransactionRetryNotice from '@/components/common/TransactionRetryNotice';
+import CardMetaRow from '@/components/common/CardMetaRow';
 
 interface CreatorCardProps {
 	creator: Course;
@@ -77,28 +78,28 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 				<p className="font-jakarta text-sm text-white/50">
 					@{creator.instructorId || 'creator'}
 				</p>
-				{creator.socialHandle ? (
-					<div className="mt-2 flex items-center gap-1.5 text-xs text-white/60">
-						<LinkIcon className="size-3 text-amber-500/70" />
-						<span className="truncate">@{creator.socialHandle}</span>
-					</div>
-				) : (
-					<div className="mt-2 flex items-center gap-1.5 text-xs text-white/30 italic">
-						<LinkIcon className="size-3 opacity-50" />
-						<span>No public handle</span>
-					</div>
-				)}
+				<div className="mt-3 space-y-1.5">
+					<CardMetaRow
+						label={
+							<span className="inline-flex items-center gap-1.5">
+								<LinkIcon className="size-3 text-amber-500/70" />
+								Handle
+							</span>
+						}
+						value={creator.socialHandle ? `@${creator.socialHandle}` : 'No public handle'}
+						valueTitle={creator.socialHandle ? `@${creator.socialHandle}` : undefined}
+						valueClassName={creator.socialHandle ? 'text-white/75' : 'italic text-white/35'}
+					/>
+					<CardMetaRow
+						label="Key Price"
+						value={`${creator.price} ETH`}
+						truncateValue={false}
+						valueClassName="font-grotesque text-base font-black text-amber-400"
+					/>
+				</div>
 			</div>
 
-			<div className="flex items-center justify-between gap-4">
-				<div>
-					<p className="text-xs uppercase tracking-wider text-white/40">
-						Key Price
-					</p>
-					<p className="font-grotesque text-xl font-black text-amber-400">
-						{creator.price} ETH
-					</p>
-				</div>
+			<div className="flex items-center justify-end gap-4">
 				<Button
 					onClick={handleBuy}
 					variant={isConnected ? 'default' : 'outline'}
