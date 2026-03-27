@@ -12,6 +12,7 @@ import SectionHeading from '@/components/common/SectionHeading';
 import CompactSectionSubtitle from '@/components/common/CompactSectionSubtitle';
 import CreatorProfileInfoGrid from '@/components/common/CreatorProfileInfoGrid';
 import MiniStatChip from '@/components/common/MiniStatChip';
+import MarketplaceSection from '@/components/common/MarketplaceSection';
 
 const FEATURED_CREATOR_FACTS = [
 	{ label: 'Membership', value: 'Collectors Circle' },
@@ -152,7 +153,7 @@ function LandingPage() {
 			<div className="absolute bottom-[8%] right-[-3rem] size-72 rounded-full bg-emerald-300/15 blur-[100px]" />
 			<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,186,73,0.1),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(74,222,128,0.08),transparent_35%)]" />
 			<div className="relative z-10 mx-auto max-w-7xl">
-				<header className="mb-16 text-center">
+				<MarketplaceSection as="header" spacing="major" className="text-center">
 					<img
 						className="mx-auto mb-8 size-10"
 						src="/icons/logo.svg"
@@ -164,7 +165,7 @@ function LandingPage() {
 					<h1 className="mb-8 font-grotesque text-[clamp(2.5rem,8vw,5rem)] font-extrabold leading-[1.1] tracking-tight text-white">
 						Access Layer
 					</h1>
-					<div className="mb-8 flex justify-center">
+					<div className="flex justify-center">
 						<UnavailableAction
 							disabled={true}
 							reason="Feature coming soon"
@@ -172,7 +173,7 @@ function LandingPage() {
 							<Button>Buy Access</Button>
 						</UnavailableAction>
 					</div>
-				</header>
+				</MarketplaceSection>
 
 				<SectionDivider title="Discover creators" spacing="relaxed" />
 
@@ -192,7 +193,7 @@ function LandingPage() {
 
 				<SectionDivider title="Marketplace results" spacing="default" />
 
-				<section className="mt-2">
+				<MarketplaceSection>
 					<SectionHeading
 						title="Explore creators"
 						supportingText="Discover creator profiles and marketplace listings."
@@ -218,11 +219,14 @@ function LandingPage() {
 							/>
 						</div>
 					)}
-				</section>
+				</MarketplaceSection>
 
 				<SectionDivider title="Creator profile pattern" spacing="relaxed" />
 
-				<section className="grid gap-8 rounded-[2rem] border border-white/10 bg-white/[0.045] p-6 shadow-[0_24px_80px_-60px_rgba(8,17,31,0.95)] backdrop-blur-sm md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
+				<MarketplaceSection
+					spacing="relaxed"
+					className="grid gap-8 rounded-[2rem] border border-white/10 bg-white/[0.045] p-6 shadow-[0_24px_80px_-60px_rgba(8,17,31,0.95)] backdrop-blur-sm md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start"
+				>
 					<div>
 						<SectionHeading
 							eyebrow="Profile spotlight"
@@ -241,7 +245,7 @@ function LandingPage() {
 						</div>
 					</div>
 					<CreatorProfileInfoGrid items={FEATURED_CREATOR_FACTS} />
-				</section>
+				</MarketplaceSection>
 			</div>
 		</main>
 	);

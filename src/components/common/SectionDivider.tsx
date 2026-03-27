@@ -9,9 +9,9 @@ interface SectionDividerProps {
 }
 
 const spacingClasses: Record<SectionDividerSpacing, string> = {
-  compact: 'my-4 md:my-5',
-  default: 'my-6 md:my-8',
-  relaxed: 'my-8 md:my-12',
+  compact: 'marketplace-section-compact',
+  default: 'marketplace-section',
+  relaxed: 'marketplace-section-relaxed',
 };
 
 function SectionDivider({ title, spacing = 'default', className }: SectionDividerProps) {

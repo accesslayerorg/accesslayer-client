@@ -49,6 +49,10 @@
 	--font-manrope: 'Manrope', sans-serif;
 	--font-inter: 'Inter', sans-serif;
 	--font-jakarta: 'Plus Jakarta Sans', sans-serif;
+	--spacing-section-compact: clamp(1rem, 4vh, 1.25rem);
+	--spacing-section-default: clamp(1.5rem, 6vh, 2rem);
+	--spacing-section-relaxed: clamp(2rem, 8vh, 3rem);
+	--spacing-section-major: clamp(3rem, 12vh, 4rem);
 }
 
 :root {
@@ -126,5 +130,27 @@
 	}
 	body {
 		@apply bg-background text-foreground;
+	}
+}
+
+@layer components {
+	.marketplace-section {
+		margin-top: var(--spacing-section-default);
+		margin-bottom: var(--spacing-section-default);
+	}
+
+	.marketplace-section-compact {
+		margin-top: var(--spacing-section-compact);
+		margin-bottom: var(--spacing-section-compact);
+	}
+
+	.marketplace-section-relaxed {
+		margin-top: var(--spacing-section-relaxed);
+		margin-bottom: var(--spacing-section-relaxed);
+	}
+
+	.marketplace-section-major {
+		margin-top: var(--spacing-section-major);
+		margin-bottom: var(--spacing-section-major);
 	}
 }
