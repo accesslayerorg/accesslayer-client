@@ -9,7 +9,6 @@ import showToast from '@/utils/toast.util';
 import TransactionRetryNotice from '@/components/common/TransactionRetryNotice';
 import CardMetaRow from '@/components/common/CardMetaRow';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
-import CategoryTag from '@/components/common/CategoryTag';
 import CompactEmptyWalletState from '@/components/common/CompactEmptyWalletState';
 
 interface CreatorCardProps {
