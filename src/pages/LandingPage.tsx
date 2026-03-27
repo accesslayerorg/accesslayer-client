@@ -5,6 +5,7 @@ import StickyFilterBar from '@/components/common/StickyFilterBar';
 import CreatorCard from '@/components/common/CreatorCard';
 import { CreatorGridSkeleton } from '@/components/common/CreatorSkeleton';
 import EmptyState from '@/components/common/EmptyState';
+import SectionDivider from '@/components/common/SectionDivider';
 import { Button } from '@/components/ui/button';
 import { UnavailableAction } from '@/components/ui/unavailable-action';
 import SectionHeading from '@/components/common/SectionHeading';
@@ -163,6 +164,8 @@ function LandingPage() {
 					</div>
 				</header>
 
+				<SectionDivider title="Discover creators" spacing="relaxed" />
+
 				<StickyFilterBar
 					eyebrow="Marketplace filters"
 					title="Find creators without losing your place"
@@ -176,6 +179,8 @@ function LandingPage() {
 						className="max-w-none shadow-2xl shadow-black/20"
 					/>
 				</StickyFilterBar>
+
+				<SectionDivider title="Marketplace results" spacing="default" />
 
 				<section className="mt-2">
 					<SectionHeading
