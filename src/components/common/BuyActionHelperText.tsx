@@ -5,11 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface BuyActionHelperTextProps {
 	state: 'idle' | 'submitting' | 'failed' | 'success';
 	className?: string;
+	disabledReason?: string;
 }
 
 const BuyActionHelperText: React.FC<BuyActionHelperTextProps> = ({
 	state,
 	className,
+	disabledReason,
 }) => {
 	const getMessage = () => {
 		switch (state) {
@@ -64,6 +66,9 @@ const BuyActionHelperText: React.FC<BuyActionHelperTextProps> = ({
 
 	const styles = getStyles();
 
+	// Handle disabled reason display
+	const hasDisabledReason = disabledReason && disabledReason.trim().length > 0;
+
 	return (
 		<div
 			className={cn(
@@ -76,18 +81,31 @@ const BuyActionHelperText: React.FC<BuyActionHelperTextProps> = ({
 			<div className={cn('absolute left-0 top-0 h-full w-1', styles.accent)} />
 			<div className="flex items-start gap-3">
 				<div className="mt-0.5 shrink-0">{styles.icon}</div>
-				<AnimatePresence mode="wait">
-					<motion.p
-						key={state}
-						initial={{ opacity: 0, x: -4 }}
-						animate={{ opacity: 1, x: 0 }}
-						exit={{ opacity: 0, x: 4 }}
-						transition={{ duration: 0.2 }}
-						className={cn('text-[0.72rem] font-medium leading-relaxed', styles.text)}
-					>
-						{getMessage()}
-					</motion.p>
-				</AnimatePresence>
+				<div className="flex-1 space-y-2">
+					<AnimatePresence mode="wait">
+						<motion.p
+							key={state}
+							initial={{ opacity: 0, x: -4 }}
+							animate={{ opacity: 1, x: 0 }}
+							exit={{ opacity: 0, x: 4 }}
+							transition={{ duration: 0.2 }}
+							className={cn('text-[0.72rem] font-medium leading-relaxed', styles.text)}
+						>
+							{getMessage()}
+						</motion.p>
+					</AnimatePresence>
+					{hasDisabledReason && (
+						<motion.p
+							initial={{ opacity: 0, height: 0 }}
+							animate={{ opacity: 1, height: 'auto' }}
+							exit={{ opacity: 0, height: 0 }}
+							transition={{ duration: 0.2 }}
+							className="text-[0.72rem] font-medium leading-relaxed text-white/40"
+						>
+							{disabledReason}
+						</motion.p>
+					)}
+				</div>
 			</div>
 		</div>
 	);
