@@ -11,6 +11,7 @@ import { UnavailableAction } from '@/components/ui/unavailable-action';
 import SectionHeading from '@/components/common/SectionHeading';
 import CompactSectionSubtitle from '@/components/common/CompactSectionSubtitle';
 import CreatorProfileInfoGrid from '@/components/common/CreatorProfileInfoGrid';
+import CreatorLabeledStatRow from '@/components/common/CreatorLabeledStatRow';
 import MiniStatChip from '@/components/common/MiniStatChip';
 import MarketplaceSection from '@/components/common/MarketplaceSection';
 
@@ -28,6 +29,7 @@ const DEMO_CREATORS: Course[] = [
 		title: 'Alex Rivers',
 		description: 'Digital Artist & Illustrator',
 		price: 0.05,
+		creatorShareSupply: 120,
 		instructorId: 'arivers',
 		category: 'Art',
 		level: 'BEGINNER',
@@ -40,6 +42,7 @@ const DEMO_CREATORS: Course[] = [
 		title: 'Sarah Chen',
 		description: 'Solidity Developer',
 		price: 0.12,
+		creatorShareSupply: 64,
 		instructorId: 'schen_dev',
 		category: 'Tech',
 		level: 'ADVANCED',
@@ -52,6 +55,7 @@ const DEMO_CREATORS: Course[] = [
 		title: 'Marcus Thorne',
 		description: 'Crypto Strategist',
 		price: 0.08,
+		creatorShareSupply: 88,
 		instructorId: 'mthorne',
 		category: 'Finance',
 		level: 'INTERMEDIATE',
@@ -64,6 +68,7 @@ const DEMO_CREATORS: Course[] = [
 		title: 'Elena Vance',
 		description: 'UI/UX Designer',
 		price: 0.04,
+		creatorShareSupply: 150,
 		instructorId: 'evance_design',
 		category: 'Design',
 		level: 'BEGINNER',
@@ -76,6 +81,7 @@ const DEMO_CREATORS: Course[] = [
 		title: 'David Kojo',
 		description: 'Music Producer',
 		price: 0.15,
+		creatorShareSupply: 42,
 		instructorId: 'dkojo_beats',
 		category: 'Music',
 		level: 'ADVANCED',
@@ -88,6 +94,7 @@ const DEMO_CREATORS: Course[] = [
 		title: 'Yuki Sato',
 		description: 'Motion Designer',
 		price: 0.07,
+		creatorShareSupply: 96,
 		instructorId: 'yuki_s',
 		category: 'Design',
 		level: 'INTERMEDIATE',
@@ -246,7 +253,13 @@ function LandingPage() {
 							<MiniStatChip label="Access" value="Member-first drops" />
 						</div>
 					</div>
-					<CreatorProfileInfoGrid items={FEATURED_CREATOR_FACTS} />
+					<div className="space-y-3">
+						<CreatorProfileInfoGrid items={FEATURED_CREATOR_FACTS} />
+						<CreatorLabeledStatRow
+							label="Creator Share Supply"
+							value="250 shares available"
+						/>
+					</div>
 				</MarketplaceSection>
 			</div>
 		</main>

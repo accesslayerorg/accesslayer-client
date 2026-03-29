@@ -16,6 +16,7 @@ import TransactionStatusIcon from '@/components/common/TransactionStatusIcon';
 import MiniStatChip from '@/components/common/MiniStatChip';
 import CreatorListRowDivider from '@/components/common/CreatorListRowDivider';
 import BuyActionHelperText from '@/components/common/BuyActionHelperText';
+import CreatorLabeledStatRow from '@/components/common/CreatorLabeledStatRow';
 
 interface CreatorCardProps {
 	creator: Course;
@@ -105,6 +106,17 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 				</div>
 				<CreatorListRowDivider className="my-4" />
 				<div className="mt-3 space-y-1.5">
+					<CreatorLabeledStatRow
+						label="Creator Share Supply"
+						value={
+							creator.creatorShareSupply
+								? `${creator.creatorShareSupply} shares`
+								: 'Supply pending'
+						}
+						className="px-3 py-3"
+						labelClassName="text-[0.6rem]"
+						valueClassName="text-sm md:text-sm"
+					/>
 					<CardMetaRow
 						label={
 							<span className="inline-flex items-center gap-1.5">

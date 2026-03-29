@@ -6,6 +6,7 @@ export interface Course {
 	title: string;
 	description: string;
 	price: number;
+	creatorShareSupply?: number;
 	instructorId: string;
 	thumbnail?: string;
 	category: string;
