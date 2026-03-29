@@ -47,7 +47,11 @@ const TruncatedAddress: React.FC<TruncatedAddressProps> = ({
 					aria-label="Copy address"
 					className="text-white/40 transition-colors hover:text-amber-500"
 				>
-					{copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+					{copied ? (
+						<Check className="size-3" />
+					) : (
+						<Copy className="size-3" />
+					)}
 				</button>
 			)}
 		</span>

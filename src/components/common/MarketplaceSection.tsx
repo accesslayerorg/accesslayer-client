@@ -24,7 +24,8 @@ const marketplaceSectionVariants = cva('w-full', {
 });
 
 interface MarketplaceSectionProps
-	extends React.HTMLAttributes<HTMLElement>,
+	extends
+		React.HTMLAttributes<HTMLElement>,
 		VariantProps<typeof marketplaceSectionVariants> {
 	as?: 'section' | 'div' | 'header' | 'footer';
 }

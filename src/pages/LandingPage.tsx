@@ -164,7 +164,11 @@ function LandingPage() {
 			<div className="absolute bottom-[8%] right-[-3rem] size-72 rounded-full bg-emerald-300/15 blur-[100px]" />
 			<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,186,73,0.1),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(74,222,128,0.08),transparent_35%)]" />
 			<div className="relative z-10 mx-auto max-w-7xl">
-				<MarketplaceSection as="header" spacing="major" className="text-center">
+				<MarketplaceSection
+					as="header"
+					spacing="major"
+					className="text-center"
+				>
 					<img
 						className="mx-auto mb-8 size-10"
 						src="/icons/logo.svg"
@@ -255,23 +259,23 @@ function LandingPage() {
 					className="grid gap-8 rounded-[2rem] border border-white/10 bg-white/[0.045] p-6 shadow-[0_24px_80px_-60px_rgba(8,17,31,0.95)] backdrop-blur-sm md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start"
 				>
 					<div>
-					<SectionHeading
-						eyebrow="Profile spotlight"
-						title="A reusable profile facts layout for featured creators"
-						className="mb-4"
-					/>
-					<ProfileTabPillGroup
-						tabs={[
-							{ label: 'Overview', value: 'overview' },
-							{ label: 'Creations', value: 'creations' },
-							{ label: 'Collectors', value: 'collectors' },
-							{ label: 'Activity', value: 'activity' },
-						]}
-						activeTab={activeProfileTab}
-						onTabChange={setActiveProfileTab}
-						className="mb-4"
-					/>
-					<CompactSectionSubtitle className="max-w-xl">
+						<SectionHeading
+							eyebrow="Profile spotlight"
+							title="A reusable profile facts layout for featured creators"
+							className="mb-4"
+						/>
+						<ProfileTabPillGroup
+							tabs={[
+								{ label: 'Overview', value: 'overview' },
+								{ label: 'Creations', value: 'creations' },
+								{ label: 'Collectors', value: 'collectors' },
+								{ label: 'Activity', value: 'activity' },
+							]}
+							activeTab={activeProfileTab}
+							onTabChange={setActiveProfileTab}
+							className="mb-4"
+						/>
+						<CompactSectionSubtitle className="max-w-xl">
 							Use the same subtitle pattern beneath headings, then drop
 							repeated creator facts into one responsive grid that stays
 							tidy on mobile and desktop.

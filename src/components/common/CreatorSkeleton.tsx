@@ -22,12 +22,20 @@ const CreatorSkeleton: React.FC<CreatorSkeletonProps> = ({ className }) => {
 			<div className="mb-4 space-y-2">
 				<motion.div
 					animate={{ opacity: [0.4, 0.7, 0.4] }}
-					transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+					transition={{
+						duration: 1.5,
+						repeat: Infinity,
+						ease: 'easeInOut',
+					}}
 					className="h-6 w-3/4 rounded-md bg-white/10"
 				/>
 				<motion.div
 					animate={{ opacity: [0.4, 0.7, 0.4] }}
-					transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+					transition={{
+						duration: 1.5,
+						repeat: Infinity,
+						ease: 'easeInOut',
+					}}
 					className="h-4 w-1/2 rounded-md bg-white/10"
 				/>
 			</div>
@@ -55,7 +63,11 @@ const CreatorSkeleton: React.FC<CreatorSkeletonProps> = ({ className }) => {
 				</div>
 				<motion.div
 					animate={{ opacity: [0.4, 0.7, 0.4] }}
-					transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+					transition={{
+						duration: 1.5,
+						repeat: Infinity,
+						ease: 'easeInOut',
+					}}
 					className="h-9 w-24 rounded-xl bg-white/10"
 				/>
 			</div>

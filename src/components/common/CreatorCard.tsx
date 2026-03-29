@@ -85,7 +85,9 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 					<div className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-slate-950/75 border border-white/10 px-2.5 py-1 backdrop-blur-md">
 						<TrendingUp className="size-3 text-emerald-400" />
 						<span className="text-xs font-bold text-white/90">
-							{creator.volume24h > 0 ? `${creator.volume24h} ETH` : 'New'}
+							{creator.volume24h > 0
+								? `${creator.volume24h} ETH`
+								: 'New'}
 						</span>
 					</div>
 				)}
@@ -118,9 +120,9 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 				)}
 
 				{/*  Sparkline placeholder */}
-                    <div className="mt-3">
-                   <div className="h-10 w-full rounded-lg bg-white/10 animate-pulse" />
-            </div>
+				<div className="mt-3">
+					<div className="h-10 w-full rounded-lg bg-white/10 animate-pulse" />
+				</div>
 
 				<div className="mt-3 flex flex-wrap gap-2">
 					<MiniStatChip label="Price" value={`${creator.price} ETH`} />
@@ -177,7 +179,6 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 					handle={creator.socialHandle}
 					className="mt-4"
 				/>
-
 			</div>
 
 			<div className="flex items-center justify-end gap-4">
@@ -211,10 +212,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 				</Button>
 			</div>
 
-			<BuyActionHelperText
-				state={transactionState}
-				className="mt-4"
-			/>
+			<BuyActionHelperText state={transactionState} className="mt-4" />
 
 			{!isConnected && <WalletConnectCalloutBanner className="mt-4" />}
 

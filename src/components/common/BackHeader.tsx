@@ -9,7 +9,12 @@ interface BackHeaderProps {
 	className?: string;
 }
 
-const BackHeader: React.FC<BackHeaderProps> = ({ title, subtitle, onBack, className }) => {
+const BackHeader: React.FC<BackHeaderProps> = ({
+	title,
+	subtitle,
+	onBack,
+	className,
+}) => {
 	const navigate = useNavigate();
 
 	const handleBack = () => {
@@ -34,7 +39,9 @@ const BackHeader: React.FC<BackHeaderProps> = ({ title, subtitle, onBack, classN
 					{title}
 				</h1>
 				{subtitle && (
-					<p className="font-jakarta text-sm text-white/50 truncate">{subtitle}</p>
+					<p className="font-jakarta text-sm text-white/50 truncate">
+						{subtitle}
+					</p>
 				)}
 			</div>
 		</div>

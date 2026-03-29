@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link } from 'react-router';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -18,7 +19,10 @@ const CreatorBreadcrumb: React.FC<CreatorBreadcrumbProps> = ({
 	return (
 		<nav
 			aria-label="Breadcrumb"
-			className={cn('flex items-center gap-2 font-jakarta text-sm', className)}
+			className={cn(
+				'flex items-center gap-2 font-jakarta text-sm',
+				className
+			)}
 		>
 			<Link
 				to={parentHref}

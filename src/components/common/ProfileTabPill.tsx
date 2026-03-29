@@ -19,7 +19,8 @@ const profileTabPillVariants = cva(
 );
 
 export interface ProfileTabPillProps
-	extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+	extends
+		React.ButtonHTMLAttributes<HTMLButtonElement>,
 		VariantProps<typeof profileTabPillVariants> {
 	isActive?: boolean;
 	icon?: React.ReactNode;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Copy, Check, Share2 } from 'lucide-react';
 import showToast from '@/utils/toast.util';
 import { Button } from '@/components/ui/button';
@@ -36,7 +36,12 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 	};
 
 	return (
-		<div className={cn('flex flex-col gap-6 md:flex-row md:items-end md:justify-between', className)}>
+		<div
+			className={cn(
+				'flex flex-col gap-6 md:flex-row md:items-end md:justify-between',
+				className
+			)}
+		>
 			<div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
 				<div className="size-24 overflow-hidden rounded-2xl border-4 border-white/10 shadow-xl md:size-32">
 					<CreatorInitialsAvatar name={name} imageSrc={avatarUrl} />
@@ -63,7 +68,9 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 					) : (
 						<Copy className="mr-2 size-4 text-amber-500" />
 					)}
-					<span className="hidden sm:inline">{copied ? 'Copied!' : 'Copy Profile Link'}</span>
+					<span className="hidden sm:inline">
+						{copied ? 'Copied!' : 'Copy Profile Link'}
+					</span>
 					<span className="sm:hidden">{copied ? 'Copied' : 'Copy'}</span>
 				</Button>
 				<Button
