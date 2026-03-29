@@ -13,6 +13,7 @@ export interface Course {
 	level: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 	socialHandle?: string;
 	isVerified?: boolean;
+	volume24h?: number;
 }
 
 export interface GetCoursesParams {

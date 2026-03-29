@@ -3,7 +3,7 @@ import { useAccount } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import type { Course } from '@/services/course.service';
 import { cn } from '@/lib/utils';
-import { ShoppingCart, Link as LinkIcon } from 'lucide-react';
+import { ShoppingCart, Link as LinkIcon, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import showToast from '@/utils/toast.util';
 import TransactionRetryNotice from '@/components/common/TransactionRetryNotice';
@@ -81,6 +81,14 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 					imageClassName="transition-transform duration-500 md:group-hover:scale-[1.03]"
 				/>
 				<div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 transition-opacity duration-300 md:group-hover:opacity-100" />
+				{creator.volume24h !== undefined && (
+					<div className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-slate-950/75 border border-white/10 px-2.5 py-1 backdrop-blur-md">
+						<TrendingUp className="size-3 text-emerald-400" />
+						<span className="text-xs font-bold text-white/90">
+							{creator.volume24h > 0 ? `${creator.volume24h} ETH` : 'New'}
+						</span>
+					</div>
+				)}
 			</div>
 
 			<div className="mb-4">
