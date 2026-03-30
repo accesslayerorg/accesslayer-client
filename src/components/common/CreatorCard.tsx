@@ -19,6 +19,7 @@ import KeySupplyBadge from '@/components/common/KeySupplyBadge';
 import CreatorListRowDivider from '@/components/common/CreatorListRowDivider';
 import BuyActionHelperText from '@/components/common/BuyActionHelperText';
 import CreatorLabeledStatRow from '@/components/common/CreatorLabeledStatRow';
+import NetworkFeeHint from '@/components/common/NetworkFeeHint';
 
 interface CreatorCardProps {
 	creator: Course;
@@ -185,7 +186,8 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 				/>
 			</div>
 
-			<div className="flex items-center justify-end gap-4">
+			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+				<NetworkFeeHint className="shrink-0" />
 				<Button
 					onClick={handleBuy}
 					variant={isConnected ? 'default' : 'outline'}
