@@ -19,6 +19,7 @@ import KeySupplyBadge from '@/components/common/KeySupplyBadge';
 import CreatorListRowDivider from '@/components/common/CreatorListRowDivider';
 import BuyActionHelperText from '@/components/common/BuyActionHelperText';
 import CreatorLabeledStatRow from '@/components/common/CreatorLabeledStatRow';
+import { useTransactionTelemetry } from '@/hooks/useTransactionTelemetry';
 
 interface CreatorCardProps {
 	creator: Course;
@@ -31,9 +32,11 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 		'idle' | 'submitting' | 'failed' | 'success'
 	>('idle');
 	const hasFailedOnceRef = useRef(false);
+	const trackTransactionEvent = useTransactionTelemetry();
 
 	const runPurchaseAttempt = () => {
 		setTransactionState('submitting');
+		trackTransactionEvent('tx_submitted', { creatorId: creator.id, creatorTitle: creator.title });
 		showToast.loading(`Purchasing keys for ${creator.title}...`);
 
 		window.setTimeout(() => {
@@ -47,6 +50,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 
 			hasFailedOnceRef.current = false;
 			setTransactionState('success');
+			trackTransactionEvent('tx_confirmed', { creatorId: creator.id, creatorTitle: creator.title });
 			showToast.transactionSuccess(
 				'Purchase Successful!',
 				`You successfully bought a key for ${creator.title}`,
