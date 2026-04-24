@@ -17,6 +17,8 @@ import MarketplaceSection from '@/components/common/MarketplaceSection';
 import { ProfileTabPillGroup } from '@/components/common/ProfileTabPill';
 import CreatorBreadcrumb from '@/components/common/CreatorBreadcrumb';
 import CreatorProfileHeader from '@/components/common/CreatorProfileHeader';
+import TransactionRetryNotice from '@/components/common/TransactionRetryNotice';
+import EmptyTransactionTimelineState from '@/components/common/EmptyTransactionTimelineState';
 
 const FEATURED_CREATOR_FACTS = [
 	{ label: 'Membership', value: 'Collectors Circle' },
@@ -107,11 +109,25 @@ const DEMO_CREATORS: Course[] = [
 	},
 ];
 
+const CREATOR_SORT_KEY = 'accesslayer.creator-sort';
+const MAX_CREATOR_FETCH_RETRIES = 3;
+const BASE_RETRY_DELAY_MS = 800;
+
+type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'supply-desc';
+
 function LandingPage() {
 	const [creators, setCreators] = useState<Course[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [activeProfileTab, setActiveProfileTab] = useState('overview');
+	const [sortOption, setSortOption] = useState<SortOption>(() => {
+		if (typeof window === 'undefined') return 'featured';
+		const saved = window.localStorage.getItem(CREATOR_SORT_KEY) as SortOption | null;
+		return saved ?? 'featured';
+	});
+	const [fetchRetryAttempt, setFetchRetryAttempt] = useState(0);
+	const [showRetryBanner, setShowRetryBanner] = useState(false);
+	const [finalFetchError, setFinalFetchError] = useState('');
 
 	const trimmedSearchQuery = searchQuery.trim();
 	const hasInvalidSearchInput = /[^a-zA-Z0-9_\s-]/.test(trimmedSearchQuery);
@@ -120,8 +136,16 @@ function LandingPage() {
 		: undefined;
 
 	useEffect(() => {
+		if (typeof window !== 'undefined') {
+			window.localStorage.setItem(CREATOR_SORT_KEY, sortOption);
+		}
+	}, [sortOption]);
+
+	useEffect(() => {
 		const fetchCreators = async () => {
 			setIsLoading(true);
+			setShowRetryBanner(false);
+			setFinalFetchError('');
 			try {
 				const data = await courseService.getCourses();
 				if (data && data.length > 0) {
@@ -129,8 +153,24 @@ function LandingPage() {
 				} else {
 					setCreators(DEMO_CREATORS);
 				}
-			} catch (error) {
-				console.error('Failed to fetch creators:', error);
+				setFetchRetryAttempt(0);
+			} catch {
+				if (fetchRetryAttempt < MAX_CREATOR_FETCH_RETRIES) {
+					const nextAttempt = fetchRetryAttempt + 1;
+					setShowRetryBanner(true);
+					const backoffDelay = Math.min(
+						BASE_RETRY_DELAY_MS * 2 ** fetchRetryAttempt,
+						5000
+					);
+					window.setTimeout(() => setFetchRetryAttempt(nextAttempt), backoffDelay);
+					return;
+				}
+
+				setFinalFetchError(
+					'Unable to load live creators right now. Showing fallback creators.'
+				);
+				setShowRetryBanner(false);
+				setFetchRetryAttempt(0);
 				setCreators(DEMO_CREATORS);
 			} finally {
 				setTimeout(() => setIsLoading(false), 800);
@@ -138,14 +178,14 @@ function LandingPage() {
 		};
 
 		fetchCreators();
-	}, []);
+	}, [fetchRetryAttempt]);
 
 	const filteredCreators = useMemo(() => {
 		if (hasInvalidSearchInput) {
 			return [];
 		}
 
-		return creators.filter(
+		const filtered = creators.filter(
 			creator =>
 				creator.title
 					.toLowerCase()
@@ -154,7 +194,24 @@ function LandingPage() {
 					.toLowerCase()
 					.includes(trimmedSearchQuery.toLowerCase())
 		);
-	}, [creators, trimmedSearchQuery, hasInvalidSearchInput]);
+		const sorted = [...filtered];
+		switch (sortOption) {
+			case 'price-asc':
+				sorted.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+				break;
+			case 'price-desc':
+				sorted.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+				break;
+			case 'supply-desc':
+				sorted.sort(
+					(a, b) => (b.creatorShareSupply ?? 0) - (a.creatorShareSupply ?? 0)
+				);
+				break;
+			default:
+				break;
+		}
+		return sorted;
+	}, [creators, trimmedSearchQuery, hasInvalidSearchInput, sortOption]);
 
 	const handleResetSearch = () => setSearchQuery('');
 
@@ -200,12 +257,35 @@ function LandingPage() {
 					onReset={handleResetSearch}
 					showReset={searchQuery.length > 0}
 				>
-					<SearchBar
-						value={searchQuery}
-						onChange={setSearchQuery}
-						validationMessage={searchValidationMessage}
-						className="max-w-none shadow-2xl shadow-black/20"
-					/>
+					<div className="space-y-3">
+						<SearchBar
+							value={searchQuery}
+							onChange={setSearchQuery}
+							validationMessage={searchValidationMessage}
+							className="max-w-none shadow-2xl shadow-black/20"
+						/>
+						<div className="flex items-center gap-3">
+							<label
+								htmlFor="creator-sort"
+								className="text-xs font-semibold uppercase tracking-[0.16em] text-white/60"
+							>
+								Sort
+							</label>
+							<select
+								id="creator-sort"
+								value={sortOption}
+								onChange={e =>
+									setSortOption(e.target.value as SortOption)
+								}
+								className="h-9 rounded-lg border border-white/15 bg-slate-950/80 px-3 text-sm text-white outline-none focus:border-amber-400/60"
+							>
+								<option value="featured">Featured</option>
+								<option value="price-asc">Price: Low to high</option>
+								<option value="price-desc">Price: High to low</option>
+								<option value="supply-desc">Supply: High to low</option>
+							</select>
+						</div>
+					</div>
 				</StickyFilterBar>
 
 				<SectionDivider title="Marketplace results" spacing="default" />
@@ -221,10 +301,25 @@ function LandingPage() {
 					{isLoading ? (
 						<CreatorGridSkeleton count={6} />
 					) : filteredCreators.length > 0 ? (
-						<div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-							{filteredCreators.map(creator => (
-								<CreatorCard key={creator.id} creator={creator} />
-							))}
+						<div className="space-y-4">
+							{showRetryBanner && (
+								<TransactionRetryNotice
+									title="Loading live creators"
+									message={`Fetch failed, retrying with capped backoff (attempt ${fetchRetryAttempt + 1} of ${MAX_CREATOR_FETCH_RETRIES + 1}).`}
+									retryLabel="Retry now"
+									onRetry={() => setFetchRetryAttempt(0)}
+								/>
+							)}
+							{finalFetchError && (
+								<div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+									{finalFetchError}
+								</div>
+							)}
+							<div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+								{filteredCreators.map(creator => (
+									<CreatorCard key={creator.id} creator={creator} />
+								))}
+							</div>
 						</div>
 					) : (
 						<div className="flex justify-center py-12">
@@ -293,6 +388,11 @@ function LandingPage() {
 							value="250 shares available"
 						/>
 					</div>
+				</MarketplaceSection>
+
+				<SectionDivider title="Transaction timeline pattern" spacing="relaxed" />
+				<MarketplaceSection spacing="relaxed">
+					<EmptyTransactionTimelineState />
 				</MarketplaceSection>
 			</div>
 		</main>
