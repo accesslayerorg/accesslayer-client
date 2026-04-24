@@ -18,6 +18,7 @@ import Change24hBadge from '@/components/common/Change24hBadge';
 import KeySupplyBadge from '@/components/common/KeySupplyBadge';
 import CreatorListRowDivider from '@/components/common/CreatorListRowDivider';
 import BuyActionHelperText from '@/components/common/BuyActionHelperText';
+import MarketActionConfirmationModal from '@/components/common/MarketActionConfirmationModal';
 import CreatorLabeledStatRow from '@/components/common/CreatorLabeledStatRow';
 
 interface CreatorCardProps {
@@ -31,6 +32,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 		'idle' | 'submitting' | 'failed' | 'success'
 	>('idle');
 	const hasFailedOnceRef = useRef(false);
+	const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
 	const runPurchaseAttempt = () => {
 		setTransactionState('submitting');
@@ -68,10 +70,11 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 			return;
 		}
 
-		toast.success(`Purchasing keys for ${creator.title}...`, {
-			duration: 3000,
-		});
-		// Implementation for contract interaction would go here
+		setIsConfirmModalOpen(true);
+	};
+
+	const handleConfirmPurchase = () => {
+		setIsConfirmModalOpen(false);
 		runPurchaseAttempt();
 	};
 
@@ -234,6 +237,16 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 					onRetry={runPurchaseAttempt}
 				/>
 			)}
+
+			<MarketActionConfirmationModal
+				isOpen={isConfirmModalOpen}
+				onOpenChange={setIsConfirmModalOpen}
+				onConfirm={handleConfirmPurchase}
+				type="buy"
+				creatorName={creator.title}
+				price={`${creator.price} ETH`}
+				isLoading={transactionState === 'submitting'}
+			/>
 		</div>
 	);
 };
