@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
@@ -67,6 +67,7 @@ export interface ProfileTabPillGroupProps {
 	activeTab: string;
 	onTabChange: (value: string) => void;
 	className?: string;
+	enableHashRouting?: boolean;
 }
 
 export const ProfileTabPillGroup: React.FC<ProfileTabPillGroupProps> = ({
@@ -74,7 +75,40 @@ export const ProfileTabPillGroup: React.FC<ProfileTabPillGroupProps> = ({
 	activeTab,
 	onTabChange,
 	className,
+	enableHashRouting = false,
 }) => {
+	useEffect(() => {
+		if (!enableHashRouting) return;
+
+		const handleHashChange = () => {
+			const hash = window.location.hash.slice(1);
+			const validTab = tabs.find(tab => tab.value === hash);
+			if (validTab && hash !== activeTab) {
+				onTabChange(hash);
+			}
+		};
+
+		window.addEventListener('hashchange', handleHashChange);
+		return () => window.removeEventListener('hashchange', handleHashChange);
+	}, [enableHashRouting, tabs, activeTab, onTabChange]);
+
+	const handleTabClick = (value: string) => {
+		onTabChange(value);
+		if (enableHashRouting) {
+			window.location.hash = value;
+		}
+	};
+
+	useEffect(() => {
+		if (!enableHashRouting) return;
+
+		const hash = window.location.hash.slice(1);
+		const validTab = tabs.find(tab => tab.value === hash);
+		if (validTab && hash !== activeTab) {
+			onTabChange(hash);
+		}
+	}, [enableHashRouting, tabs, activeTab, onTabChange]);
+
 	return (
 		<nav
 			role="tablist"
@@ -88,7 +122,7 @@ export const ProfileTabPillGroup: React.FC<ProfileTabPillGroupProps> = ({
 					aria-selected={activeTab === tab.value}
 					isActive={activeTab === tab.value}
 					icon={tab.icon}
-					onClick={() => onTabChange(tab.value)}
+					onClick={() => handleTabClick(tab.value)}
 				>
 					{tab.label}
 				</ProfileTabPill>
