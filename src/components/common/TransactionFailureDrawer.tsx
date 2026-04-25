@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
 	Dialog,
 	DialogContent,
@@ -7,7 +7,7 @@ import {
 	DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Copy } from 'lucide-react';
+import { AlertCircle, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatAbsoluteDateTime, formatRelativeTime } from '@/utils/time.utils';
 
@@ -34,9 +34,13 @@ const TransactionFailureDrawer: React.FC<TransactionFailureDrawerProps> = ({
 	onRetry,
 	onDismiss,
 }) => {
-	const copyToClipboard = (text: string) => {
+	const [copiedField, setCopiedField] = useState<'errorCode' | 'txHash' | null>(null);
+
+	const copyToClipboard = (text: string, field: 'errorCode' | 'txHash') => {
 		navigator.clipboard.writeText(text);
 		toast.success('Copied to clipboard');
+		setCopiedField(field);
+		setTimeout(() => setCopiedField(null), 2000);
 	};
 
 	const handleClose = () => {
@@ -100,14 +104,26 @@ const TransactionFailureDrawer: React.FC<TransactionFailureDrawerProps> = ({
 								</code>
 								<button
 									onClick={() =>
-										copyToClipboard(failureDetails.errorCode!)
+										copyToClipboard(failureDetails.errorCode!, 'errorCode')
 									}
 									className="shrink-0 p-2 hover:bg-white/10 rounded transition-colors"
-									aria-label="Copy error code"
+									aria-label={copiedField === 'errorCode' ? 'Error code copied' : 'Copy error code'}
 								>
-									<Copy className="size-4 text-white/60" />
+									{copiedField === 'errorCode' ? (
+										<Check className="size-4 text-emerald-400" aria-hidden="true" />
+									) : (
+										<Copy className="size-4 text-white/60" aria-hidden="true" />
+									)}
 								</button>
 							</div>
+							<span
+								role="status"
+								aria-live="polite"
+								aria-atomic="true"
+								className="sr-only"
+							>
+								{copiedField === 'errorCode' ? 'Error code copied to clipboard' : ''}
+							</span>
 						</div>
 					)}
 
@@ -122,14 +138,26 @@ const TransactionFailureDrawer: React.FC<TransactionFailureDrawerProps> = ({
 								</code>
 								<button
 									onClick={() =>
-										copyToClipboard(failureDetails.txHash!)
+										copyToClipboard(failureDetails.txHash!, 'txHash')
 									}
 									className="shrink-0 p-2 hover:bg-white/10 rounded transition-colors"
-									aria-label="Copy transaction hash"
+									aria-label={copiedField === 'txHash' ? 'Transaction hash copied' : 'Copy transaction hash'}
 								>
-									<Copy className="size-4 text-white/60" />
+									{copiedField === 'txHash' ? (
+										<Check className="size-4 text-emerald-400" aria-hidden="true" />
+									) : (
+										<Copy className="size-4 text-white/60" aria-hidden="true" />
+									)}
 								</button>
 							</div>
+							<span
+								role="status"
+								aria-live="polite"
+								aria-atomic="true"
+								className="sr-only"
+							>
+								{copiedField === 'txHash' ? 'Transaction hash copied to clipboard' : ''}
+							</span>
 						</div>
 					)}
 

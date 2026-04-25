@@ -42,17 +42,27 @@ const TruncatedAddress: React.FC<TruncatedAddressProps> = ({
 		>
 			<span>{truncate(address, prefixChars, suffixChars)}</span>
 			{copyable && (
-				<button
-					onClick={handleCopy}
-					aria-label="Copy address"
-					className="text-white/40 transition-colors hover:text-amber-500"
-				>
-					{copied ? (
-						<Check className="size-3" />
-					) : (
-						<Copy className="size-3" />
-					)}
-				</button>
+				<>
+					<button
+						onClick={handleCopy}
+						aria-label={copied ? 'Address copied' : 'Copy address'}
+						className="text-white/40 transition-colors hover:text-amber-500"
+					>
+						{copied ? (
+							<Check className="size-3" aria-hidden="true" />
+						) : (
+							<Copy className="size-3" aria-hidden="true" />
+						)}
+					</button>
+					<span
+						role="status"
+						aria-live="polite"
+						aria-atomic="true"
+						className="sr-only"
+					>
+						{copied ? 'Address copied to clipboard' : ''}
+					</span>
+				</>
 			)}
 		</span>
 	);
