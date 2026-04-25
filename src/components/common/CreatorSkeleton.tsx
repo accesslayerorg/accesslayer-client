@@ -1,9 +1,11 @@
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface CreatorSkeletonProps {
 	className?: string;
 }
+
+const skeletonBlockClass =
+	'rounded-md bg-white/12 skeleton-shimmer motion-reduce:bg-white/18 motion-reduce:ring-1 motion-reduce:ring-white/15';
 
 const CreatorSkeleton: React.FC<CreatorSkeletonProps> = ({ className }) => {
 	return (
@@ -13,63 +15,24 @@ const CreatorSkeleton: React.FC<CreatorSkeletonProps> = ({ className }) => {
 				className
 			)}
 		>
-			<motion.div
-				animate={{ opacity: [0.4, 0.7, 0.4] }}
-				transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-				className="mb-4 aspect-square w-full rounded-xl bg-white/10"
+			<div
+				className={cn(
+					'mb-4 aspect-square w-full rounded-xl',
+					skeletonBlockClass
+				)}
 			/>
 
 			<div className="mb-4 space-y-2">
-				<motion.div
-					animate={{ opacity: [0.4, 0.7, 0.4] }}
-					transition={{
-						duration: 1.5,
-						repeat: Infinity,
-						ease: 'easeInOut',
-					}}
-					className="h-6 w-3/4 rounded-md bg-white/10"
-				/>
-				<motion.div
-					animate={{ opacity: [0.4, 0.7, 0.4] }}
-					transition={{
-						duration: 1.5,
-						repeat: Infinity,
-						ease: 'easeInOut',
-					}}
-					className="h-4 w-1/2 rounded-md bg-white/10"
-				/>
+				<div className={cn('h-6 w-3/4', skeletonBlockClass)} />
+				<div className={cn('h-4 w-1/2', skeletonBlockClass)} />
 			</div>
 
 			<div className="flex items-center justify-between">
 				<div className="space-y-1">
-					<motion.div
-						animate={{ opacity: [0.4, 0.7, 0.4] }}
-						transition={{
-							duration: 1.5,
-							repeat: Infinity,
-							ease: 'easeInOut',
-						}}
-						className="h-3 w-12 rounded bg-white/10"
-					/>
-					<motion.div
-						animate={{ opacity: [0.4, 0.7, 0.4] }}
-						transition={{
-							duration: 1.5,
-							repeat: Infinity,
-							ease: 'easeInOut',
-						}}
-						className="h-6 w-16 rounded bg-white/10"
-					/>
+					<div className={cn('h-3 w-12', skeletonBlockClass)} />
+					<div className={cn('h-6 w-16', skeletonBlockClass)} />
 				</div>
-				<motion.div
-					animate={{ opacity: [0.4, 0.7, 0.4] }}
-					transition={{
-						duration: 1.5,
-						repeat: Infinity,
-						ease: 'easeInOut',
-					}}
-					className="h-9 w-24 rounded-xl bg-white/10"
-				/>
+				<div className={cn('h-9 w-24 rounded-xl', skeletonBlockClass)} />
 			</div>
 		</div>
 	);
