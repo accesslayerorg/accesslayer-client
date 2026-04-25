@@ -3,7 +3,9 @@ import { courseService, type Course } from '@/services/course.service';
 import SearchBar from '@/components/common/SearchBar';
 import StickyFilterBar from '@/components/common/StickyFilterBar';
 import CreatorCard from '@/components/common/CreatorCard';
+import CreatorListRow from '@/components/common/CreatorListRow';
 import { CreatorGridSkeleton } from '@/components/common/CreatorSkeleton';
+import { LayoutGrid, List } from 'lucide-react';
 import EmptyState from '@/components/common/EmptyState';
 import SectionDivider from '@/components/common/SectionDivider';
 import { Button } from '@/components/ui/button';
@@ -122,7 +124,9 @@ const MAX_CREATOR_FETCH_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 800;
 const PAGE_SIZE = 6;
 
+const CREATOR_VIEW_MODE_KEY = 'accesslayer.creator-view-mode';
 type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'supply-desc';
+type ViewMode = 'grid' | 'list';
 
 function LandingPage() {
 	const [creators, setCreators] = useState<Course[]>([]);
@@ -149,6 +153,11 @@ function LandingPage() {
 		const parsed = saved ? Number(saved) : 0;
 		return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 	});
+	const [viewMode, setViewMode] = useState<ViewMode>(() => {
+		if (typeof window === 'undefined') return 'grid';
+		const saved = window.localStorage.getItem(CREATOR_VIEW_MODE_KEY) as ViewMode | null;
+		return saved ?? 'grid';
+	});
 	const pendingScrollRestoreRef = useRef<number | null>(null);
 
 	const trimmedSearchQuery = searchQuery.trim();
@@ -167,6 +176,12 @@ function LandingPage() {
 		if (typeof window === 'undefined') return;
 		window.sessionStorage.setItem(CREATOR_PAGE_KEY, String(page));
 	}, [page]);
+
+	useEffect(() => {
+		if (typeof window !== 'undefined') {
+			window.localStorage.setItem(CREATOR_VIEW_MODE_KEY, viewMode);
+		}
+	}, [viewMode]);
 
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
@@ -395,6 +410,33 @@ function LandingPage() {
 								<option value="price-desc">Price: High to low</option>
 								<option value="supply-desc">Supply: High to low</option>
 							</select>
+
+							<div className="flex items-center gap-1 border border-white/10 rounded-lg p-1 bg-white/5 ml-auto">
+								<button
+									onClick={() => setViewMode('grid')}
+									title="Grid View"
+									className={cn(
+										'p-1.5 rounded-md transition-all',
+										viewMode === 'grid'
+											? 'bg-amber-500/20 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.1)]'
+											: 'text-white/40 hover:text-white/70 hover:bg-white/5'
+									)}
+								>
+									<LayoutGrid className="size-4" />
+								</button>
+								<button
+									onClick={() => setViewMode('list')}
+									title="List View"
+									className={cn(
+										'p-1.5 rounded-md transition-all',
+										viewMode === 'list'
+											? 'bg-amber-500/20 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.1)]'
+											: 'text-white/40 hover:text-white/70 hover:bg-white/5'
+									)}
+								>
+									<List className="size-4" />
+								</button>
+							</div>
 						</div>
 					</div>
 				</StickyFilterBar>
@@ -426,10 +468,23 @@ function LandingPage() {
 									{finalFetchError}
 								</div>
 							)}
-							<div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-								{pagedCreators.map(creator => (
-									<CreatorCard key={creator.id} creator={creator} />
-								))}
+							<div
+								className={cn(
+									viewMode === 'grid'
+										? 'grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3'
+										: 'flex flex-col gap-4'
+								)}
+							>
+								{pagedCreators.map(creator =>
+									viewMode === 'grid' ? (
+										<CreatorCard key={creator.id} creator={creator} />
+									) : (
+										<CreatorListRow
+											key={creator.id}
+											creator={creator}
+										/>
+									)
+								)}
 							</div>
 							<div className="mt-8 flex items-center justify-center gap-3">
 								<Button
