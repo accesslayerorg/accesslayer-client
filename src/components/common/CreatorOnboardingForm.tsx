@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FormInput } from './FormInput';
+
+const ONBOARDING_DRAFT_KEY = 'accesslayer.onboarding-draft';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -19,11 +21,21 @@ export interface CreatorOnboardingFormProps {
 export const CreatorOnboardingForm: React.FC<
 	CreatorOnboardingFormProps
 > = ({ onSubmit, initialData, className }) => {
-	const [formData, setFormData] = useState<CreatorOnboardingFormData>({
-		name: initialData?.name || '',
-		email: initialData?.email || '',
-		bio: initialData?.bio || '',
-		category: initialData?.category || '',
+	const [formData, setFormData] = useState<CreatorOnboardingFormData>(() => {
+		const savedDraft = typeof window !== 'undefined' ? localStorage.getItem(ONBOARDING_DRAFT_KEY) : null;
+		if (savedDraft) {
+			try {
+				return JSON.parse(savedDraft);
+			} catch (e) {
+				console.error('Failed to parse onboarding draft:', e);
+			}
+		}
+		return {
+			name: initialData?.name || '',
+			email: initialData?.email || '',
+			bio: initialData?.bio || '',
+			category: initialData?.category || '',
+		};
 	});
 
 	const [isDirty, setIsDirty] = useState(false);
@@ -59,6 +71,12 @@ export const CreatorOnboardingForm: React.FC<
 		return () => window.removeEventListener('beforeunload', handleBeforeUnload);
 	}, [isDirty]);
 
+	useEffect(() => {
+		if (isDirty) {
+			localStorage.setItem(ONBOARDING_DRAFT_KEY, JSON.stringify(formData));
+		}
+	}, [formData, isDirty]);
+
 	const handleChange = (field: keyof CreatorOnboardingFormData, value: string) => {
 		setFormData(prev => ({ ...prev, [field]: value }));
 		setTouched(prev => ({ ...prev, [field]: true }));
@@ -69,15 +87,17 @@ export const CreatorOnboardingForm: React.FC<
 		onSubmit?.(formData);
 		setIsDirty(false);
 		initialDataRef.current = { ...formData };
+		localStorage.removeItem(ONBOARDING_DRAFT_KEY);
 	};
 
 	const handleReset = () => {
-		if (isDirty && !confirm('Discard unsaved changes?')) {
+		if (isDirty && !confirm('Discard unsaved changes and clear draft?')) {
 			return;
 		}
 		setFormData(initialDataRef.current);
 		setTouched({});
 		setIsDirty(false);
+		localStorage.removeItem(ONBOARDING_DRAFT_KEY);
 	};
 
 	return (
@@ -134,8 +154,15 @@ export const CreatorOnboardingForm: React.FC<
 			</div>
 
 			{isDirty && (
-				<div className="rounded-lg bg-amber-500/10 border border-amber-500/30 px-4 py-3 text-sm text-amber-100">
-					You have unsaved changes. They will be lost if you leave this page.
+				<div className="rounded-lg bg-amber-500/10 border border-amber-500/30 px-4 py-3 text-sm text-amber-100 flex items-center justify-between">
+					<span>Draft autosaved to local storage.</span>
+					<button
+						type="button"
+						onClick={handleReset}
+						className="text-amber-400 hover:text-amber-300 font-medium underline underline-offset-4"
+					>
+						Clear Draft
+					</button>
 				</div>
 			)}
 		</form>
