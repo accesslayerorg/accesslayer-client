@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { courseService, type Course } from '@/services/course.service';
 import SearchBar from '@/components/common/SearchBar';
 import StickyFilterBar from '@/components/common/StickyFilterBar';
@@ -129,6 +130,7 @@ function LandingPage() {
 	const { isMismatch: isNetworkMismatch } = useNetworkMismatch();
 	const [isLoading, setIsLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState('');
+	const [debouncedSearchQuery, flushSearchQuery] = useDebounce(searchQuery, 300);
 	const [activeProfileTab, setActiveProfileTab] = useState('overview');
 	const [featuredHoldings, setFeaturedHoldings] = useState(3);
 	const [tradeSide, setTradeSide] = useState<TradeSide>('buy');
@@ -151,7 +153,7 @@ function LandingPage() {
 	});
 	const pendingScrollRestoreRef = useRef<number | null>(null);
 
-	const trimmedSearchQuery = searchQuery.trim();
+	const trimmedSearchQuery = debouncedSearchQuery.trim();
 	const hasInvalidSearchInput = /[^a-zA-Z0-9_\s-]/.test(trimmedSearchQuery);
 	const searchValidationMessage = hasInvalidSearchInput
 		? 'Only letters, numbers, spaces, hyphens, and underscores are supported.'
@@ -372,6 +374,7 @@ function LandingPage() {
 						<SearchBar
 							value={searchQuery}
 							onChange={setSearchQuery}
+							onSubmit={() => flushSearchQuery(searchQuery)}
 							validationMessage={searchValidationMessage}
 							className="max-w-none shadow-2xl shadow-black/20"
 						/>
