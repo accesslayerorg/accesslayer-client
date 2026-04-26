@@ -14,6 +14,9 @@ const EmptyTransactionTimelineState: React.FC = () => {
         <p className="mt-2 text-sm text-white/65">
           New users will see transaction milestones here after submitting their first buy or sell action.
         </p>
+        <p className="mt-1 text-xs text-white/50">
+          No creator activity yet
+        </p>
         <div className="mt-5 flex justify-center">
           <Button className="rounded-xl">Buy your first key</Button>
         </div>
