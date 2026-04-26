@@ -24,10 +24,13 @@ export const useZodValidation = <T extends Record<string, unknown>>(
 		{} as Record<keyof T, string>
 	);
 	const [touched, setTouched] = useState<Record<keyof T, boolean>>(
-		Object.keys(initialFormData).reduce((acc, key) => {
-			acc[key as keyof T] = false;
-			return acc;
-		}, {} as Record<keyof T, boolean>)
+		Object.keys(initialFormData).reduce(
+			(acc, key) => {
+				acc[key as keyof T] = false;
+				return acc;
+			},
+			{} as Record<keyof T, boolean>
+		)
 	);
 
 	const validate = (schema: z.ZodSchema<T>, data: unknown): T | null => {
@@ -38,11 +41,14 @@ export const useZodValidation = <T extends Record<string, unknown>>(
 			return result.data;
 		} else {
 			// Convert string keys back to T keys
-			const typedErrors = Object.keys(initialFormData).reduce((acc, key) => {
-				const fieldKey = key as keyof T;
-				acc[fieldKey] = result.errors[key] || '';
-				return acc;
-			}, {} as Record<keyof T, string>);
+			const typedErrors = Object.keys(initialFormData).reduce(
+				(acc, key) => {
+					const fieldKey = key as keyof T;
+					acc[fieldKey] = result.errors[key] || '';
+					return acc;
+				},
+				{} as Record<keyof T, string>
+			);
 
 			setErrors(typedErrors);
 			return null;
@@ -53,10 +59,13 @@ export const useZodValidation = <T extends Record<string, unknown>>(
 
 	const markAllTouched = () => {
 		setTouched(
-			Object.keys(initialFormData).reduce((acc, key) => {
-				acc[key as keyof T] = true;
-				return acc;
-			}, {} as Record<keyof T, boolean>)
+			Object.keys(initialFormData).reduce(
+				(acc, key) => {
+					acc[key as keyof T] = true;
+					return acc;
+				},
+				{} as Record<keyof T, boolean>
+			)
 		);
 	};
 

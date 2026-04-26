@@ -16,7 +16,10 @@ function formatCount(count: number): string {
 	return count.toString();
 }
 
-const FollowerCountPill: React.FC<FollowerCountPillProps> = ({ count, className }) => {
+const FollowerCountPill: React.FC<FollowerCountPillProps> = ({
+	count,
+	className,
+}) => {
 	if (count == null || count < 0) {
 		return null;
 	}

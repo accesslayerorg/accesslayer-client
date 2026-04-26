@@ -59,9 +59,9 @@ describe('courseService.getCourse – invalid creator detail reads', () => {
 	it('throws ApiError(404) for a non-existent creator id', async () => {
 		mockGet.mockRejectedValueOnce(fakeApiError(404, 'Creator not found'));
 
-		const err = await courseService.getCourse('nonexistent-id').catch(
-			(e: unknown) => e,
-		);
+		const err = await courseService
+			.getCourse('nonexistent-id')
+			.catch((e: unknown) => e);
 
 		expect(err).toBeInstanceOf(ApiError);
 		expect((err as ApiError).status).toBe(404);
@@ -79,23 +79,23 @@ describe('courseService.getCourse – invalid creator detail reads', () => {
 	it('throws ApiError(status=0) on network failure', async () => {
 		mockGet.mockRejectedValueOnce(fakeNetworkError());
 
-		const err = await courseService.getCourse('any-id').catch(
-			(e: unknown) => e,
-		);
+		const err = await courseService
+			.getCourse('any-id')
+			.catch((e: unknown) => e);
 
 		expect(err).toBeInstanceOf(ApiError);
 		expect((err as ApiError).status).toBe(0);
 		expect((err as ApiError).message).toBe(
-			'Network error - check your connection',
+			'Network error - check your connection'
 		);
 	});
 
 	it('throws ApiError(500) on unexpected server error', async () => {
 		mockGet.mockRejectedValueOnce(fakeApiError(500, 'Internal server error'));
 
-		const err = await courseService.getCourse('any-id').catch(
-			(e: unknown) => e,
-		);
+		const err = await courseService
+			.getCourse('any-id')
+			.catch((e: unknown) => e);
 
 		expect(err).toBeInstanceOf(ApiError);
 		expect((err as ApiError).status).toBe(500);

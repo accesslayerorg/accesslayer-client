@@ -33,7 +33,9 @@ const TransactionRetryNotice: React.FC<TransactionRetryNoticeProps> = ({
 					<AlertTriangle className="size-4" />
 				</div>
 				<div className="min-w-0 flex-1">
-					<p className="font-jakarta text-sm font-bold text-white">{title}</p>
+					<p className="font-jakarta text-sm font-bold text-white">
+						{title}
+					</p>
 					<p className="mt-1 font-jakarta text-sm leading-relaxed text-white/70">
 						{message}
 					</p>
