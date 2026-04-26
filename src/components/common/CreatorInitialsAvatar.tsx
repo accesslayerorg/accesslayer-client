@@ -36,10 +36,17 @@ const CreatorInitialsAvatar: React.FC<CreatorInitialsAvatarProps> = ({
 	const fallbackColors = getFallbackAvatarColors(creatorId);
 
 	if (!imageSrc || hasError) {
+		const fallbackLabel = hasError
+			? `${name} – avatar image unavailable, showing initials`
+			: `${name} initials avatar`;
+
 		return (
 			<div
+				role="img"
+				aria-label={fallbackLabel}
+				title={hasError ? 'Avatar image could not be loaded' : name}
 				className={cn(
-					'flex size-full items-center justify-center text-3xl font-black tracking-wide',
+					'flex size-full flex-col items-center justify-center gap-1 text-3xl font-black tracking-wide',
 					className
 				)}
 				style={{
@@ -47,7 +54,12 @@ const CreatorInitialsAvatar: React.FC<CreatorInitialsAvatarProps> = ({
 					color: fallbackColors.textColor,
 				}}
 			>
-				<span aria-label={`${name} initials avatar`}>{initials}</span>
+				<span aria-hidden="true">{initials}</span>
+				{hasError && (
+					<span className="text-[0.45rem] font-semibold uppercase tracking-widest opacity-60">
+						Image unavailable
+					</span>
+				)}
 			</div>
 		);
 	}

@@ -5,7 +5,10 @@ const EmptyTransactionTimelineState: React.FC = () => {
   return (
     <section className="rounded-2xl border border-white/10 bg-white/5 p-6 md:p-8">
       <div className="mx-auto max-w-2xl text-center">
-        <div className="mx-auto mb-4 inline-flex size-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-amber-300">
+        <div
+          className="mx-auto mb-4 inline-flex size-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-amber-300"
+          aria-hidden="true"
+        >
           <Clock3 className="size-5" />
         </div>
         <h3 className="font-grotesque text-2xl font-bold text-white">

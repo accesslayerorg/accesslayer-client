@@ -20,7 +20,7 @@ const CompactEmptyWalletState: React.FC<CompactEmptyWalletStateProps> = ({
 			)}
 		>
 			<div className="mt-0.5 rounded-lg bg-amber-300/20 p-1.5">
-				<WalletMinimal className="size-4 text-amber-200" />
+				<WalletMinimal className="size-4 text-amber-200" aria-hidden="true" />
 			</div>
 			<div>
 				<p className="text-sm font-semibold text-amber-100">{title}</p>
