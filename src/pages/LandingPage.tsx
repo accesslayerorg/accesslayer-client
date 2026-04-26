@@ -378,7 +378,7 @@ function LandingPage() {
 						<div className="flex items-center gap-3">
 							<label
 								htmlFor="creator-sort"
-								className="text-xs font-semibold uppercase tracking-[0.16em] text-white/60"
+								className="marketplace-label-muted text-xs font-semibold uppercase tracking-[0.16em]"
 							>
 								Sort
 							</label>
@@ -441,7 +441,7 @@ function LandingPage() {
 								>
 									Previous
 								</Button>
-								<span className="text-xs text-white/60">
+								<span className="marketplace-label-muted text-xs">
 									Page {safePage + 1} of {totalPages}
 								</span>
 								<Button
@@ -490,7 +490,7 @@ function LandingPage() {
 
 				<MarketplaceSection
 					spacing="relaxed"
-					className="grid gap-8 rounded-[2rem] border border-white/10 bg-white/[0.045] p-6 shadow-[0_24px_80px_-60px_rgba(8,17,31,0.95)] backdrop-blur-sm md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start"
+					className="marketplace-card-surface grid gap-8 rounded-[2rem] border p-6 shadow-[0_24px_80px_-60px_rgba(8,17,31,0.95)] backdrop-blur-sm md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start"
 				>
 					<div>
 						<SectionHeading
