@@ -1,5 +1,6 @@
 // src/services/course.service.ts
 import { BaseApiService, type APIResponse } from './api.service';
+import { cacheManager } from '@/utils/cache.utils';
 
 export interface Course {
 	id: string;
@@ -14,6 +15,7 @@ export interface Course {
 	socialHandle?: string;
 	isVerified?: boolean;
 	volume24h?: number;
+	change24h?: number;
 }
 
 export interface GetCoursesParams {
@@ -24,15 +26,23 @@ export interface GetCoursesParams {
 }
 
 class CourseService extends BaseApiService {
+	private readonly PROFILE_CACHE_TTL = 30000; // 30 seconds
+
 	// Get all courses - GET /courses
 	async getCourses(params?: GetCoursesParams): Promise<Course[]> {
+		const cacheKey = `courses_${JSON.stringify(params || {})}`;
+		const cached = cacheManager.get<Course[]>(cacheKey);
+		if (cached) return cached;
+
 		try {
 			const response = await this.api.get<APIResponse<Course[]>>(
 				'/courses',
 				{ params }
 			);
 
-			return response.data.data;
+			const data = response.data.data;
+			cacheManager.set(cacheKey, data, this.PROFILE_CACHE_TTL);
+			return data;
 		} catch (error) {
 			throw this.handleError(error);
 		}
@@ -40,12 +50,18 @@ class CourseService extends BaseApiService {
 
 	// Get single course - GET /courses/:id
 	async getCourse(courseId: string): Promise<Course> {
+		const cacheKey = `course_${courseId}`;
+		const cached = cacheManager.get<Course>(cacheKey);
+		if (cached) return cached;
+
 		try {
 			const response = await this.api.get<APIResponse<Course>>(
 				`/courses/${courseId}`
 			);
 
-			return response.data.data;
+			const data = response.data.data;
+			cacheManager.set(cacheKey, data, this.PROFILE_CACHE_TTL);
+			return data;
 		} catch (error) {
 			throw this.handleError(error);
 		}

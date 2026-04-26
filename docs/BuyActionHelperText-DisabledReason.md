@@ -12,48 +12,48 @@ The `BuyActionHelperText` component now supports displaying a disabled reason me
 import BuyActionHelperText from '@/components/common/BuyActionHelperText';
 
 <BuyActionHelperText
-  state="idle"
-  disabledReason="Insufficient balance to complete this purchase"
-  className="mt-4"
-/>
+	state="idle"
+	disabledReason="Insufficient balance to complete this purchase"
+	className="mt-4"
+/>;
 ```
 
 ### With CreatorCard
 
 ```tsx
 const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
-  const { isConnected } = useAccount();
-  const [transactionState, setTransactionState] = useState<
-    'idle' | 'submitting' | 'failed' | 'success'
-  >('idle');
+	const { isConnected } = useAccount();
+	const [transactionState, setTransactionState] = useState<
+		'idle' | 'submitting' | 'failed' | 'success'
+	>('idle');
 
-  // Example: Check if user has sufficient balance
-  const hasInsufficientBalance = true; // Replace with actual balance check
-  const disabledReason = hasInsufficientBalance 
-    ? 'Insufficient balance to complete this purchase'
-    : undefined;
+	// Example: Check if user has sufficient balance
+	const hasInsufficientBalance = true; // Replace with actual balance check
+	const disabledReason = hasInsufficientBalance
+		? 'Insufficient balance to complete this purchase'
+		: undefined;
 
-  return (
-    <div>
-      {/* ... other card content ... */}
-      
-      <BuyActionHelperText
-        state={transactionState}
-        disabledReason={disabledReason}
-        className="mt-4"
-      />
-    </div>
-  );
+	return (
+		<div>
+			{/* ... other card content ... */}
+
+			<BuyActionHelperText
+				state={transactionState}
+				disabledReason={disabledReason}
+				className="mt-4"
+			/>
+		</div>
+	);
 };
 ```
 
 ## Props
 
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `state` | `'idle' \| 'submitting' \| 'failed' \| 'success'` | Yes | Current transaction state |
-| `className` | `string` | No | Additional CSS classes |
-| `disabledReason` | `string` | No | Reason message when action is disabled |
+| Prop             | Type                                              | Required | Description                            |
+| ---------------- | ------------------------------------------------- | -------- | -------------------------------------- |
+| `state`          | `'idle' \| 'submitting' \| 'failed' \| 'success'` | Yes      | Current transaction state              |
+| `className`      | `string`                                          | No       | Additional CSS classes                 |
+| `disabledReason` | `string`                                          | No       | Reason message when action is disabled |
 
 ## Behavior
 
@@ -64,6 +64,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 ## Styling
 
 The disabled reason text uses:
+
 - Font size: `0.72rem` (matching the main message)
 - Color: `text-white/40` (subtle, non-intrusive)
 - Animation: Framer Motion with opacity and height transitions
@@ -73,19 +74,19 @@ The disabled reason text uses:
 
 ```tsx
 // Insufficient balance
-disabledReason="Insufficient balance to complete this purchase"
+disabledReason = 'Insufficient balance to complete this purchase';
 
 // Network issue
-disabledReason="Network connection required to proceed"
+disabledReason = 'Network connection required to proceed';
 
 // Wallet not connected
-disabledReason="Connect your wallet to enable purchases"
+disabledReason = 'Connect your wallet to enable purchases';
 
 // Creator unavailable
-disabledReason="This creator is currently unavailable"
+disabledReason = 'This creator is currently unavailable';
 
 // Maximum keys reached
-disabledReason="Maximum number of keys already purchased"
+disabledReason = 'Maximum number of keys already purchased';
 ```
 
 ## Safe Empty Content Handling
@@ -110,6 +111,7 @@ const hasDisabledReason = disabledReason && disabledReason.trim().length > 0;
 ```
 
 This ensures:
+
 - Null/undefined values are handled
 - Empty strings are ignored
 - Whitespace-only strings are ignored
@@ -130,53 +132,53 @@ import BuyActionHelperText from '@/components/common/BuyActionHelperText';
 import { Button } from '@/components/ui/button';
 
 export function BuyActionExample() {
-  const { isConnected } = useAccount();
-  const [transactionState, setTransactionState] = useState<
-    'idle' | 'submitting' | 'failed' | 'success'
-  >('idle');
+	const { isConnected } = useAccount();
+	const [transactionState, setTransactionState] = useState<
+		'idle' | 'submitting' | 'failed' | 'success'
+	>('idle');
 
-  // Example conditions that might disable an action
-  const userBalance = 0.5; // ETH
-  const requiredAmount = 1.0; // ETH
-  const isNetworkAvailable = true;
-  const hasReachedLimit = false;
+	// Example conditions that might disable an action
+	const userBalance = 0.5; // ETH
+	const requiredAmount = 1.0; // ETH
+	const isNetworkAvailable = true;
+	const hasReachedLimit = false;
 
-  // Determine disabled reason based on conditions
-  const getDisabledReason = () => {
-    if (!isConnected) {
-      return 'Connect your wallet to enable purchases';
-    }
-    if (userBalance < requiredAmount) {
-      return `Insufficient balance. You need ${requiredAmount - userBalance} ETH more`;
-    }
-    if (!isNetworkAvailable) {
-      return 'Network connection required to proceed';
-    }
-    if (hasReachedLimit) {
-      return 'Maximum number of keys already purchased';
-    }
-    return undefined; // No disabled reason
-  };
+	// Determine disabled reason based on conditions
+	const getDisabledReason = () => {
+		if (!isConnected) {
+			return 'Connect your wallet to enable purchases';
+		}
+		if (userBalance < requiredAmount) {
+			return `Insufficient balance. You need ${requiredAmount - userBalance} ETH more`;
+		}
+		if (!isNetworkAvailable) {
+			return 'Network connection required to proceed';
+		}
+		if (hasReachedLimit) {
+			return 'Maximum number of keys already purchased';
+		}
+		return undefined; // No disabled reason
+	};
 
-  const disabledReason = getDisabledReason();
-  const isDisabled = !!disabledReason || transactionState === 'submitting';
+	const disabledReason = getDisabledReason();
+	const isDisabled = !!disabledReason || transactionState === 'submitting';
 
-  return (
-    <div className="space-y-4">
-      <Button
-        onClick={() => setTransactionState('submitting')}
-        disabled={isDisabled}
-        variant={isConnected ? 'default' : 'outline'}
-      >
-        Buy Key
-      </Button>
+	return (
+		<div className="space-y-4">
+			<Button
+				onClick={() => setTransactionState('submitting')}
+				disabled={isDisabled}
+				variant={isConnected ? 'default' : 'outline'}
+			>
+				Buy Key
+			</Button>
 
-      <BuyActionHelperText
-        state={transactionState}
-        disabledReason={disabledReason}
-        className="mt-4"
-      />
-    </div>
-  );
+			<BuyActionHelperText
+				state={transactionState}
+				disabledReason={disabledReason}
+				className="mt-4"
+			/>
+		</div>
+	);
 }
 ```

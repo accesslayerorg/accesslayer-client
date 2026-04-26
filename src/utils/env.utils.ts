@@ -4,9 +4,7 @@ const envSchema = z.object({
 	VITE_BACKEND_URL: z.string().default('/api'),
 	VITE_DEFAULT_CHAIN_ID: z.coerce.number().default(84532),
 	VITE_ANVIL_RPC_URL: z.string().default('http://127.0.0.1:8545'),
-	VITE_BASE_SEPOLIA_RPC_URL: z
-		.string()
-		.default('https://sepolia.base.org'),
+	VITE_BASE_SEPOLIA_RPC_URL: z.string().default('https://sepolia.base.org'),
 	VITE_SEPOLIA_RPC_URL: z.string().optional(),
 	VITE_MAINNET_RPC_URL: z.string().optional(),
 });

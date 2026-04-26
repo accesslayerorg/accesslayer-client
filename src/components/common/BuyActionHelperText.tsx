@@ -35,7 +35,9 @@ const BuyActionHelperText: React.FC<BuyActionHelperTextProps> = ({
 					border: 'border-amber-500/30',
 					accent: 'bg-amber-500',
 					text: 'text-amber-200/90',
-					icon: <Loader2 className="size-3.5 animate-spin text-amber-400" />,
+					icon: (
+						<Loader2 className="size-3.5 animate-spin text-amber-400" />
+					),
 				};
 			case 'failed':
 				return {
@@ -78,7 +80,9 @@ const BuyActionHelperText: React.FC<BuyActionHelperTextProps> = ({
 				className
 			)}
 		>
-			<div className={cn('absolute left-0 top-0 h-full w-1', styles.accent)} />
+			<div
+				className={cn('absolute left-0 top-0 h-full w-1', styles.accent)}
+			/>
 			<div className="flex items-start gap-3">
 				<div className="mt-0.5 shrink-0">{styles.icon}</div>
 				<div className="flex-1 space-y-2">
@@ -89,7 +93,10 @@ const BuyActionHelperText: React.FC<BuyActionHelperTextProps> = ({
 							animate={{ opacity: 1, x: 0 }}
 							exit={{ opacity: 0, x: 4 }}
 							transition={{ duration: 0.2 }}
-							className={cn('text-[0.72rem] font-medium leading-relaxed', styles.text)}
+							className={cn(
+								'text-[0.72rem] font-medium leading-relaxed',
+								styles.text
+							)}
 						>
 							{getMessage()}
 						</motion.p>
