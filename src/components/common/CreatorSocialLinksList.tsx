@@ -73,7 +73,7 @@ const CreatorSocialLinksList: React.FC<CreatorSocialLinksListProps> = ({
 						href={url}
 						target="_blank"
 						rel="noreferrer"
-						className="group inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-[11px] font-semibold text-white/80 transition-colors hover:border-amber-400/40 hover:bg-amber-400/10 hover:text-amber-100"
+						className="link-action-chip group inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-[11px] font-semibold text-white/80 transition-colors hover:border-amber-400/40 hover:bg-amber-400/10 hover:text-amber-100"
 					>
 						<Icon className="size-3.5" />
 						<span>{label}</span>

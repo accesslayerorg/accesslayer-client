@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
@@ -67,6 +67,7 @@ export interface ProfileTabPillGroupProps {
 	activeTab: string;
 	onTabChange: (value: string) => void;
 	className?: string;
+	enableHashRouting?: boolean;
 }
 
 export const ProfileTabPillGroup: React.FC<ProfileTabPillGroupProps> = ({
@@ -74,7 +75,39 @@ export const ProfileTabPillGroup: React.FC<ProfileTabPillGroupProps> = ({
 	activeTab,
 	onTabChange,
 	className,
+	enableHashRouting = false,
 }) => {
+	// Read the initial URL hash on mount and listen for subsequent changes.
+	// Both concerns share one effect so there is no race between the initial
+	// read and the listener being attached.
+	useEffect(() => {
+		if (!enableHashRouting) return;
+
+		const syncFromHash = () => {
+			const hash = window.location.hash.slice(1);
+			const validTab = tabs.find(tab => tab.value === hash);
+			if (validTab && hash !== activeTab) {
+				onTabChange(hash);
+			}
+		};
+
+		// Sync immediately on mount so direct URL hash navigation works.
+		syncFromHash();
+
+		window.addEventListener('hashchange', syncFromHash);
+		return () => window.removeEventListener('hashchange', syncFromHash);
+		// activeTab is intentionally excluded: we only want to sync *from* the
+		// hash into state, never the other way round inside this effect.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [enableHashRouting, tabs, onTabChange]);
+
+	const handleTabClick = (value: string) => {
+		onTabChange(value);
+		if (enableHashRouting) {
+			window.location.hash = value;
+		}
+	};
+
 	return (
 		<nav
 			role="tablist"
@@ -84,11 +117,13 @@ export const ProfileTabPillGroup: React.FC<ProfileTabPillGroupProps> = ({
 			{tabs.map(tab => (
 				<ProfileTabPill
 					key={tab.value}
+					id={`profile-tab-${tab.value}`}
 					role="tab"
 					aria-selected={activeTab === tab.value}
+					aria-controls={`profile-panel-${tab.value}`}
 					isActive={activeTab === tab.value}
 					icon={tab.icon}
-					onClick={() => onTabChange(tab.value)}
+					onClick={() => handleTabClick(tab.value)}
 				>
 					{tab.label}
 				</ProfileTabPill>

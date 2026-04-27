@@ -46,14 +46,22 @@ const TransactionHashRow: React.FC<TransactionHashRowProps> = ({
 					<button
 						onClick={handleCopy}
 						className="inline-flex size-6 items-center justify-center rounded-md bg-white/5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
-						aria-label="Copy transaction hash"
+						aria-label={copied ? 'Transaction hash copied' : 'Copy transaction hash'}
 					>
 						{copied ? (
-							<Check className="size-3 text-emerald-400" />
+							<Check className="size-3 text-emerald-400" aria-hidden="true" />
 						) : (
-							<Copy className="size-3" />
+							<Copy className="size-3" aria-hidden="true" />
 						)}
 					</button>
+					<span
+						role="status"
+						aria-live="polite"
+						aria-atomic="true"
+						className="sr-only"
+					>
+						{copied ? 'Transaction hash copied to clipboard' : ''}
+					</span>
 					{explorerUrl && (
 						<a
 							href={explorerUrl}

@@ -12,7 +12,14 @@ const router = createBrowserRouter([
 function App() {
 	return (
 		<>
-			<Toaster />
+			<Toaster
+				toastOptions={{
+					ariaProps: {
+						role: 'status',
+						'aria-live': 'polite',
+					},
+				}}
+			/>
 			<RouterProvider router={router} />
 		</>
 	);
