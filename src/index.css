@@ -154,6 +154,27 @@
 		margin-bottom: var(--spacing-section-major);
 	}
 
+	.link-action-chip:focus-visible {
+		outline: none;
+		border-color: rgba(252, 211, 77, 0.85);
+		background-color: rgba(251, 191, 36, 0.2);
+		color: rgba(255, 255, 255, 0.98);
+		box-shadow:
+			0 0 0 2px rgba(252, 211, 77, 0.9),
+			0 0 0 5px rgba(15, 23, 42, 0.95);
+	}
+
+	@media (forced-colors: active) {
+		.link-action-chip:focus-visible {
+			outline: 2px solid Highlight;
+			outline-offset: 2px;
+			border-color: Highlight;
+			background-color: Canvas;
+			color: CanvasText;
+			box-shadow: none;
+		}
+	}
+
 	.skeleton-shimmer {
 		position: relative;
 		overflow: hidden;

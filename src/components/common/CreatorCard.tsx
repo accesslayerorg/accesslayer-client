@@ -22,6 +22,7 @@ import KeySupplyBadge from '@/components/common/KeySupplyBadge';
 import CreatorListRowDivider from '@/components/common/CreatorListRowDivider';
 import BuyActionHelperText from '@/components/common/BuyActionHelperText';
 import CreatorLabeledStatRow from '@/components/common/CreatorLabeledStatRow';
+import CreatorBio from '@/components/common/CreatorBio';
 import { useTransactionTelemetry } from '@/hooks/useTransactionTelemetry';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
 import { formatCompactNumber, formatNumber } from '@/utils/numberFormat.utils';
@@ -118,6 +119,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 			<div className="relative mb-4 aspect-square overflow-hidden rounded-xl">
 				<CreatorInitialsAvatar
 					name={creator.title}
+					creatorId={creator.id}
 					imageSrc={creator.thumbnail}
 					imageClassName="transition-transform duration-500 md:group-hover:scale-[1.03]"
 				/>
@@ -149,6 +151,8 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 				<p className="font-jakarta text-sm text-white/50">
 					@{creator.instructorId || 'creator'}
 				</p>
+
+				<CreatorBio bio={creator.description} variant="card" className="mt-2" />
 
 				{creator.socialHandle ? (
 					<div className="mt-2 flex items-center gap-1.5 text-xs text-white/60">

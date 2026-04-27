@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { formatNumber } from '@/utils/numberFormat.utils';
+import PercentageBadge from '@/components/common/PercentageBadge';
 
 export type TradeSide = 'buy' | 'sell';
 
@@ -92,9 +93,23 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 							!amountValid && amountText.trim() ? 'border-red-500/40' : ''
 						)}
 						aria-label="Trade amount"
+						data-focus-order="1"
+						data-testid="trade-dialog-amount"
 					/>
-					<div className="text-xs text-white/45">
-						Holdings: {formatNumber(availableHoldings)} keys
+					<div className="flex flex-wrap items-center gap-2 text-xs text-white/45">
+						<span>Holdings: {formatNumber(availableHoldings)} keys</span>
+						{side === 'sell' &&
+							availableHoldings > 0 &&
+							Number.isFinite(parsedAmount) &&
+							parsedAmount > 0 && (
+								<PercentageBadge
+									label="of holdings"
+									value={(parsedAmount / availableHoldings) * 100}
+									tone={
+										parsedAmount > availableHoldings ? 'negative' : 'neutral'
+									}
+								/>
+							)}
 					</div>
 					{side === 'sell' && parsedAmount > availableHoldings && (
 						<div className="text-xs text-red-300">
@@ -103,12 +118,23 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 					)}
 				</div>
 
+				{/*
+				 * Focus order is intentional: amount input → Cancel → Confirm.
+				 * That matches the visual left-to-right reading order in the
+				 * footer (`sm:justify-between` puts Cancel on the left, Confirm
+				 * on the right) and keeps the destructive action one Tab away
+				 * from the primary action so users always pass through Cancel
+				 * before reaching Confirm. The covering test in
+				 * `__tests__/TradeDialog.focusOrder.test.tsx` guards this.
+				 */}
 				<DialogFooter className="sm:justify-between">
 					<Button
 						type="button"
 						variant="ghost"
 						onClick={() => onOpenChange(false)}
 						disabled={isSubmitting}
+						data-focus-order="2"
+						data-testid="trade-dialog-cancel"
 					>
 						Cancel
 					</Button>
@@ -116,6 +142,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 						type="button"
 						onClick={() => onConfirm(parsedAmount)}
 						disabled={!amountValid || isSubmitting}
+						data-focus-order="3"
+						data-testid="trade-dialog-confirm"
 					>
 						{isSubmitting ? 'Submitting…' : confirmLabel}
 					</Button>

@@ -1,6 +1,10 @@
 import React, { Fragment, useEffect, useState } from 'react';
 import { Trash2, RefreshCw, CloudUpload, X, Check } from 'lucide-react';
 import { Alert } from '../common/Alert';
+import {
+	isFileAccepted,
+	unsupportedFormatMessage,
+} from '@/utils/fileFormat.utils';
 
 type FileUploadStatus =
 	| 'initial'
@@ -8,6 +12,7 @@ type FileUploadStatus =
 	| 'success'
 	| 'error'
 	| 'too-large'
+	| 'unsupported-format'
 	| 'failed';
 
 // Configuration props for the component
@@ -65,6 +70,22 @@ const FormFileUpload: React.FC<FileUploadProps> = ({
 	}, [id, value]);
 
 	const simulateUpload = (file: File) => {
+		// Reject unsupported formats before kicking off the upload simulation.
+		// The native picker filters via the `accept` attribute, but drag-and-drop
+		// and some platforms ignore it, so this is the user-facing safety net.
+		if (!isFileAccepted(file, acceptedFormats)) {
+			setUploadedFile({
+				id,
+				name: file.name,
+				size: file.size,
+				progress: 0,
+				status: 'unsupported-format',
+				errorMessage: unsupportedFormatMessage(acceptedFormats),
+			});
+			onChange?.(null);
+			return;
+		}
+
 		// Check file size
 		if (file.size > maxSize * 1024 * 1024) {
 			setUploadedFile({
@@ -296,6 +317,53 @@ const FormFileUpload: React.FC<FileUploadProps> = ({
 								<button className="p-2 bg-zinc-100 text-zinc-400 text-sm font-medium rounded-sm hover:bg-zinc-200 hover:text-zinc-500 transition-colors font-inter flex items-center justify-center border cursor-pointer ">
 									<CloudUpload className="w-5 h-5" />
 								</button>
+							</div>
+						</div>
+					</Fragment>
+				);
+
+			case 'unsupported-format':
+				return (
+					<Fragment>
+						<div className="relative bg-white">
+							<input
+								type="file"
+								accept={acceptedFormats}
+								onChange={handleFileSelect}
+								className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+								id={id}
+							/>
+							<div className="border-2 border-dashed border-yellow-300 rounded-lg p-5 bg-yellow-50/40">
+								<div className="flex items-center justify-between">
+									<div className="flex items-center space-x-3">
+										<div className="p-3 bg-yellow-100 rounded-full flex items-center justify-center">
+											<div className="p-1 bg-yellow-400 rounded-full flex items-center justify-center">
+												<Alert className="w-3 h-3 text-white stroke-3" />
+											</div>
+										</div>
+										<div>
+											<p className="text-md font-medium text-gray-700 font-manrope mb-1">
+												{uploadedFile?.name || 'Selected file'}
+											</p>
+											<p
+												className="text-xs text-yellow-700"
+												role="alert"
+												data-testid="unsupported-format-note"
+											>
+												{uploadedFile?.errorMessage ||
+													unsupportedFormatMessage(acceptedFormats)}
+											</p>
+										</div>
+									</div>
+									<button
+										type="button"
+										className="p-2 bg-zinc-100 text-zinc-500 text-sm font-medium rounded-sm hover:bg-zinc-200 transition-colors font-inter flex items-center justify-center border"
+										onClick={handleRemove}
+										aria-label="Remove unsupported file"
+									>
+										<X className="w-5 h-5" />
+									</button>
+								</div>
 							</div>
 						</div>
 					</Fragment>

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { getFallbackAvatarColors } from '@/utils/avatarColor.util';
 
 interface CreatorInitialsAvatarProps {
 	name: string;
+	creatorId?: string | number | null;
 	imageSrc?: string;
 	className?: string;
 	imageClassName?: string;
@@ -24,20 +26,26 @@ const getInitials = (name: string) => {
 
 const CreatorInitialsAvatar: React.FC<CreatorInitialsAvatarProps> = ({
 	name,
+	creatorId,
 	imageSrc,
 	className,
 	imageClassName,
 }) => {
 	const [hasError, setHasError] = useState(false);
 	const initials = getInitials(name);
+	const fallbackColors = getFallbackAvatarColors(creatorId);
 
 	if (!imageSrc || hasError) {
 		return (
 			<div
 				className={cn(
-					'flex size-full items-center justify-center bg-gradient-to-br from-slate-800 via-slate-700 to-amber-700 text-3xl font-black tracking-wide text-white/95',
+					'flex size-full items-center justify-center text-3xl font-black tracking-wide',
 					className
 				)}
+				style={{
+					background: fallbackColors.background,
+					color: fallbackColors.textColor,
+				}}
 			>
 				<span aria-label={`${name} initials avatar`}>{initials}</span>
 			</div>

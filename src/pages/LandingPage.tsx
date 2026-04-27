@@ -129,7 +129,12 @@ function LandingPage() {
 	const { isMismatch: isNetworkMismatch } = useNetworkMismatch();
 	const [isLoading, setIsLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState('');
-	const [activeProfileTab, setActiveProfileTab] = useState('overview');
+	const [activeProfileTab, setActiveProfileTab] = useState(() => {
+		if (typeof window === 'undefined') return 'overview';
+		const PROFILE_TABS = ['overview', 'creations', 'collectors', 'activity'];
+		const hash = window.location.hash.slice(1);
+		return PROFILE_TABS.includes(hash) ? hash : 'overview';
+	});
 	const [featuredHoldings, setFeaturedHoldings] = useState(3);
 	const [tradeSide, setTradeSide] = useState<TradeSide>('buy');
 	const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
@@ -137,7 +142,9 @@ function LandingPage() {
 	const [pendingTxOpen, setPendingTxOpen] = useState(false);
 	const [sortOption, setSortOption] = useState<SortOption>(() => {
 		if (typeof window === 'undefined') return 'featured';
-		const saved = window.localStorage.getItem(CREATOR_SORT_KEY) as SortOption | null;
+		const saved = window.localStorage.getItem(
+			CREATOR_SORT_KEY
+		) as SortOption | null;
 		return saved ?? 'featured';
 	});
 	const [fetchRetryAttempt, setFetchRetryAttempt] = useState(0);
@@ -171,7 +178,10 @@ function LandingPage() {
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
 		const handleScroll = () => {
-			window.sessionStorage.setItem(CREATOR_SCROLL_KEY, String(window.scrollY));
+			window.sessionStorage.setItem(
+				CREATOR_SCROLL_KEY,
+				String(window.scrollY)
+			);
 		};
 		window.addEventListener('scroll', handleScroll, { passive: true });
 		return () => window.removeEventListener('scroll', handleScroll);
@@ -207,7 +217,10 @@ function LandingPage() {
 						BASE_RETRY_DELAY_MS * 2 ** fetchRetryAttempt,
 						5000
 					);
-					window.setTimeout(() => setFetchRetryAttempt(nextAttempt), backoffDelay);
+					window.setTimeout(
+						() => setFetchRetryAttempt(nextAttempt),
+						backoffDelay
+					);
 					return;
 				}
 
@@ -249,7 +262,8 @@ function LandingPage() {
 				break;
 			case 'supply-desc':
 				sorted.sort(
-					(a, b) => (b.creatorShareSupply ?? 0) - (a.creatorShareSupply ?? 0)
+					(a, b) =>
+						(b.creatorShareSupply ?? 0) - (a.creatorShareSupply ?? 0)
 				);
 				break;
 			default:
@@ -262,7 +276,10 @@ function LandingPage() {
 		setPage(0);
 	}, [trimmedSearchQuery, sortOption]);
 
-	const totalPages = Math.max(1, Math.ceil(filteredCreators.length / PAGE_SIZE));
+	const totalPages = Math.max(
+		1,
+		Math.ceil(filteredCreators.length / PAGE_SIZE)
+	);
 	const safePage = Math.min(page, totalPages - 1);
 	const pagedCreators = useMemo(() => {
 		const start = safePage * PAGE_SIZE;
@@ -309,7 +326,9 @@ function LandingPage() {
 			await new Promise<void>(resolve => window.setTimeout(resolve, 900));
 
 			setFeaturedHoldings(current =>
-				tradeSide === 'buy' ? current + amount : Math.max(0, current - amount)
+				tradeSide === 'buy'
+					? current + amount
+					: Math.max(0, current - amount)
 			);
 
 			await new Promise<void>(resolve => window.setTimeout(resolve, 250));
@@ -442,7 +461,9 @@ function LandingPage() {
 									variant="outline"
 									size="sm"
 									disabled={safePage === 0}
-									onClick={() => handlePageChange(Math.max(0, safePage - 1))}
+									onClick={() =>
+										handlePageChange(Math.max(0, safePage - 1))
+									}
 								>
 									Previous
 								</Button>
@@ -489,6 +510,7 @@ function LandingPage() {
 					<CreatorProfileHeader
 						name="Alex Rivers"
 						handle="arivers"
+						creatorId="arivers"
 						isVerified={true}
 						avatarUrl="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop"
 					/>
@@ -513,6 +535,7 @@ function LandingPage() {
 							]}
 							activeTab={activeProfileTab}
 							onTabChange={setActiveProfileTab}
+							enableHashRouting
 							className="mb-4"
 						/>
 						<CompactSectionSubtitle className="max-w-xl">
@@ -520,10 +543,23 @@ function LandingPage() {
 							repeated creator facts into one responsive grid that stays
 							tidy on mobile and desktop.
 						</CompactSectionSubtitle>
-						<div className="mt-5 flex flex-wrap gap-2">
-							<MiniStatChip label="Status" value="Verified creator" />
-							<MiniStatChip label="Audience" value="12.4K collectors" />
-							<MiniStatChip label="Access" value="Member-first drops" />
+						<div
+							id={`profile-panel-${activeProfileTab}`}
+							role="tabpanel"
+							aria-labelledby={`profile-tab-${activeProfileTab}`}
+							tabIndex={0}
+						>
+							<div className="mt-5 flex flex-wrap gap-2">
+								<MiniStatChip label="Status" value="Verified creator" />
+								<MiniStatChip
+									label="Audience"
+									value="12.4K collectors"
+								/>
+								<MiniStatChip
+									label="Access"
+									value="Member-first drops"
+								/>
+							</div>
 						</div>
 					</div>
 					<div className="space-y-3">
@@ -540,18 +576,7 @@ function LandingPage() {
 							label="Creator Share Supply"
 							value={`${formatCompactNumber(250)} shares available`}
 						/>
-						{featuredHoldings === 0 && (
-							<button
-								onClick={scrollToMarketplace}
-								className="w-full rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-left text-sm text-amber-200 transition-colors hover:bg-amber-500/15"
-							>
-								You don't hold any keys yet.{' '}
-								<span className="font-semibold underline underline-offset-2">Browse creators →</span>
-							</button>
-						)}
-						{isNetworkMismatch && (
-							<NetworkMismatchBanner />
-						)}
+						{isNetworkMismatch && <NetworkMismatchBanner />}
 						<div className="hidden md:flex items-center gap-3">
 							<Button
 								className="rounded-xl"
@@ -604,7 +629,10 @@ function LandingPage() {
 					</div>
 				</div>
 
-				<SectionDivider title="Transaction timeline pattern" spacing="relaxed" />
+				<SectionDivider
+					title="Transaction timeline pattern"
+					spacing="relaxed"
+				/>
 				<MarketplaceSection spacing="relaxed">
 					<EmptyTransactionTimelineState onDiscover={scrollToMarketplace} />
 				</MarketplaceSection>
