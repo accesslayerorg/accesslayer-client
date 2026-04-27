@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatPercent } from '@/utils/numberFormat.utils';
+import { formatPercent, formatFollowerCount } from '@/utils/numberFormat.utils';
 
 describe('formatPercent', () => {
 	it('renders the value with a trailing percent sign', () => {
@@ -56,5 +56,29 @@ describe('formatPercent', () => {
 				minimumFractionDigits: 2,
 			})
 		).toBe('12.00%');
+	});
+});
+
+describe('formatFollowerCount', () => {
+	it('formats numbers less than 1000 as is', () => {
+		expect(formatFollowerCount(0)).toBe('0');
+		expect(formatFollowerCount(999)).toBe('999');
+	});
+
+	it('formats thousands with K suffix', () => {
+		expect(formatFollowerCount(1000)).toBe('1K');
+		expect(formatFollowerCount(1500)).toBe('1.5K');
+		expect(formatFollowerCount(999999)).toBe('1000K');
+	});
+
+	it('formats millions with M suffix', () => {
+		expect(formatFollowerCount(1000000)).toBe('1M');
+		expect(formatFollowerCount(1500000)).toBe('1.5M');
+		expect(formatFollowerCount(999999999)).toBe('1000M');
+	});
+
+	it('removes trailing .0', () => {
+		expect(formatFollowerCount(1000)).toBe('1K');
+		expect(formatFollowerCount(1000000)).toBe('1M');
 	});
 });
