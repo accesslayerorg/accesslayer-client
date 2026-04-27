@@ -25,7 +25,7 @@ import CreatorLabeledStatRow from '@/components/common/CreatorLabeledStatRow';
 import CreatorBio from '@/components/common/CreatorBio';
 import { useTransactionTelemetry } from '@/hooks/useTransactionTelemetry';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
-import { formatCompactNumber, formatNumber } from '@/utils/numberFormat.utils';
+import { formatCompactNumber, formatNumber, formatFollowerCount } from '@/utils/numberFormat.utils';
 
 interface CreatorCardProps {
 	creator: Course;
@@ -185,7 +185,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 						label="Creator Share Supply"
 						value={
 							creator.creatorShareSupply
-								? `${formatCompactNumber(creator.creatorShareSupply)} shares`
+								? `${formatFollowerCount(creator.creatorShareSupply)} shares`
 								: 'Supply pending'
 						}
 						className="px-3 py-3"
