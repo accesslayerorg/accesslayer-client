@@ -135,6 +135,7 @@ function LandingPage() {
 	const { isMismatch: isNetworkMismatch } = useNetworkMismatch();
 	const [isLoading, setIsLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState('');
+	const searchInputRef = useRef<HTMLInputElement>(null);
 	const [activeProfileTab, setActiveProfileTab] = useState(() => {
 		if (typeof window === 'undefined') return 'overview';
 		const PROFILE_TABS = ['overview', 'creations', 'collectors', 'activity'];
@@ -308,6 +309,39 @@ function LandingPage() {
 
 	const handleResetSearch = () => setSearchQuery('');
 
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.defaultPrevented) return;
+			if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+			const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+			const isTypingTarget =
+				activeTag === 'input' ||
+				activeTag === 'textarea' ||
+				(document.activeElement as HTMLElement | null)?.isContentEditable;
+
+			if (event.key === '/' && !isTypingTarget) {
+				event.preventDefault();
+				searchInputRef.current?.focus();
+				return;
+			}
+
+			if (isTypingTarget) return;
+			if (event.key === 'ArrowLeft' && safePage > 0) {
+				event.preventDefault();
+				handlePageChange(Math.max(0, safePage - 1));
+				return;
+			}
+			if (event.key === 'ArrowRight' && safePage < totalPages - 1) {
+				event.preventDefault();
+				handlePageChange(Math.min(totalPages - 1, safePage + 1));
+			}
+		};
+
+		window.addEventListener('keydown', handleKeyDown);
+		return () => window.removeEventListener('keydown', handleKeyDown);
+	}, [safePage, totalPages]);
+
 	const openTradeDialog = (side: TradeSide) => {
 		setTradeSide(side);
 		setTradeDialogOpen(true);
@@ -398,6 +432,7 @@ function LandingPage() {
 							value={searchQuery}
 							onChange={setSearchQuery}
 							validationMessage={searchValidationMessage}
+							inputRef={searchInputRef}
 							className="max-w-none shadow-2xl shadow-black/20"
 						/>
 						<div className="flex items-center gap-3">
@@ -434,13 +469,28 @@ function LandingPage() {
 						supportingTextClassName="max-w-3xl"
 					/>
 
-					{isLoading ? (
-						<CreatorGridSkeleton count={6} />
-					) : filteredCreators.length > 0 ? (
-						<div className="space-y-4">
-							{showRetryBanner && (
-								<TransactionRetryNotice
-									title="Loading live creators"
+						{isLoading ? (
+							<CreatorGridSkeleton count={6} />
+						) : filteredCreators.length > 0 ? (
+							<div className="space-y-4">
+								<div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/40 px-4 py-3 text-xs text-white/60 backdrop-blur">
+									<span className="font-semibold uppercase tracking-[0.12em] text-white/50">
+										Keyboard
+									</span>
+									<div className="flex flex-wrap items-center gap-2">
+										<span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1">
+											<span className="font-mono text-[0.7rem] text-white/80">/</span>
+											<span>Search</span>
+										</span>
+										<span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1">
+											<span className="font-mono text-[0.7rem] text-white/80">&#8592;/&#8594;</span>
+											<span>Page</span>
+										</span>
+									</div>
+								</div>
+								{showRetryBanner && (
+									<TransactionRetryNotice
+										title="Loading live creators"
 									message={getFetchRetryHelperCopy(
 										fetchRetryAttempt + 1,
 										MAX_CREATOR_FETCH_RETRIES + 1
