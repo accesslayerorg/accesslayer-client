@@ -1,7 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Clock3 } from 'lucide-react';
 
-const EmptyTransactionTimelineState: React.FC = () => {
+interface EmptyTransactionTimelineStateProps {
+	onDiscover?: () => void;
+}
+
+const EmptyTransactionTimelineState: React.FC<EmptyTransactionTimelineStateProps> = ({ onDiscover }) => {
   return (
     <section className="rounded-2xl border border-white/10 bg-white/5 p-6 md:p-8">
       <div className="mx-auto max-w-2xl text-center">
@@ -15,7 +19,7 @@ const EmptyTransactionTimelineState: React.FC = () => {
           New users will see transaction milestones here after submitting their first buy or sell action.
         </p>
         <div className="mt-5 flex justify-center">
-          <Button className="rounded-xl">Buy your first key</Button>
+          <Button className="rounded-xl" onClick={onDiscover}>Browse creators</Button>
         </div>
       </div>
     </section>

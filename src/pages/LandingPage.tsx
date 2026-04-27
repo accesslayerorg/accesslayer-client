@@ -285,6 +285,10 @@ function LandingPage() {
 
 	const handleResetSearch = () => setSearchQuery('');
 
+	const scrollToMarketplace = () => {
+		document.getElementById('creator-marketplace')?.scrollIntoView({ behavior: 'smooth' });
+	};
+
 	const openTradeDialog = (side: TradeSide) => {
 		setTradeSide(side);
 		setTradeDialogOpen(true);
@@ -360,6 +364,7 @@ function LandingPage() {
 
 				<SectionDivider title="Discover creators" spacing="relaxed" />
 
+				<div id="creator-marketplace">
 				<StickyFilterBar
 					eyebrow="Marketplace filters"
 					title="Find creators without losing your place"
@@ -471,6 +476,8 @@ function LandingPage() {
 					)}
 				</MarketplaceSection>
 
+				</div>
+
 				<SectionDivider title="Creator profile pattern" spacing="relaxed" />
 
 				<div className="mb-8 space-y-6">
@@ -533,6 +540,15 @@ function LandingPage() {
 							label="Creator Share Supply"
 							value={`${formatCompactNumber(250)} shares available`}
 						/>
+						{featuredHoldings === 0 && (
+							<button
+								onClick={scrollToMarketplace}
+								className="w-full rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-left text-sm text-amber-200 transition-colors hover:bg-amber-500/15"
+							>
+								You don't hold any keys yet.{' '}
+								<span className="font-semibold underline underline-offset-2">Browse creators →</span>
+							</button>
+						)}
 						{isNetworkMismatch && (
 							<NetworkMismatchBanner />
 						)}
@@ -590,7 +606,7 @@ function LandingPage() {
 
 				<SectionDivider title="Transaction timeline pattern" spacing="relaxed" />
 				<MarketplaceSection spacing="relaxed">
-					<EmptyTransactionTimelineState />
+					<EmptyTransactionTimelineState onDiscover={scrollToMarketplace} />
 				</MarketplaceSection>
 			</div>
 
