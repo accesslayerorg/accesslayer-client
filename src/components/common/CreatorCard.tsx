@@ -21,6 +21,7 @@ import Change24hBadge from '@/components/common/Change24hBadge';
 import KeySupplyBadge from '@/components/common/KeySupplyBadge';
 import CreatorListRowDivider from '@/components/common/CreatorListRowDivider';
 import BuyActionHelperText from '@/components/common/BuyActionHelperText';
+import MarketActionConfirmationModal from '@/components/common/MarketActionConfirmationModal';
 import CreatorLabeledStatRow from '@/components/common/CreatorLabeledStatRow';
 import CreatorBio from '@/components/common/CreatorBio';
 import { useTransactionTelemetry } from '@/hooks/useTransactionTelemetry';
@@ -43,7 +44,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 		errorMessage: '',
 	});
 	const hasFailedOnceRef = useRef(false);
-	const trackTransactionEvent = useTransactionTelemetry();
+	const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
 	const runPurchaseAttempt = () => {
 		setTransactionState('submitting');
@@ -95,17 +96,11 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 			return;
 		}
 
-		if (isNetworkMismatch) {
-			toast.error(`Switch to ${expectedChainName} to purchase keys`, {
-				duration: 4000,
-			});
-			return;
-		}
+		setIsConfirmModalOpen(true);
+	};
 
-		toast.success(`Purchasing keys for ${creator.title}...`, {
-			duration: 3000,
-		});
-		// Implementation for contract interaction would go here
+	const handleConfirmPurchase = () => {
+		setIsConfirmModalOpen(false);
 		runPurchaseAttempt();
 	};
 
@@ -281,12 +276,14 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 				/>
 			)}
 
-			<TransactionFailureDrawer
-				open={failureDrawerOpen}
-				onOpenChange={setFailureDrawerOpen}
-				failureDetails={failureDetails}
-				onRetry={runPurchaseAttempt}
-				onDismiss={() => setFailureDrawerOpen(false)}
+			<MarketActionConfirmationModal
+				isOpen={isConfirmModalOpen}
+				onOpenChange={setIsConfirmModalOpen}
+				onConfirm={handleConfirmPurchase}
+				type="buy"
+				creatorName={creator.title}
+				price={`${creator.price} ETH`}
+				isLoading={transactionState === 'submitting'}
 			/>
 		</div>
 	);
