@@ -5,6 +5,7 @@ import StickyFilterBar from '@/components/common/StickyFilterBar';
 import CreatorCard from '@/components/common/CreatorCard';
 import { CreatorGridSkeleton } from '@/components/common/CreatorSkeleton';
 import EmptyState from '@/components/common/EmptyState';
+import EmptySearchSuggestions from '@/components/common/EmptySearchSuggestions';
 import SectionDivider from '@/components/common/SectionDivider';
 import { Button } from '@/components/ui/button';
 import { UnavailableAction } from '@/components/ui/unavailable-action';
@@ -243,6 +244,17 @@ function LandingPage() {
 
 		fetchCreators();
 	}, [fetchRetryAttempt]);
+
+	const searchSuggestions = useMemo(() => {
+		const fromCategories = creators
+			.map(creator => creator.category)
+			.filter((category): category is string => Boolean(category));
+		// Categories are the most useful prefilled query because they reliably
+		// match creator entries; fall back to a sensible default list when the
+		// dataset is too sparse to suggest anything contextual.
+		if (fromCategories.length > 0) return fromCategories;
+		return ['Art', 'Tech', 'Music', 'Design'];
+	}, [creators]);
 
 	const filteredCreators = useMemo(() => {
 		if (hasInvalidSearchInput) {
@@ -490,13 +502,20 @@ function LandingPage() {
 							</div>
 						</div>
 					) : (
-						<div className="flex justify-center py-12">
+						<div className="flex flex-col items-center gap-6 py-12">
 							<EmptyState
 								image="/images/no-results.png"
 								title="No creators found"
 								description={`We couldn't find any creators matching "${searchQuery}". Try a different name or handle.`}
 								onReset={handleResetSearch}
 							/>
+							{!hasInvalidSearchInput && (
+								<EmptySearchSuggestions
+									className="w-full max-w-xl"
+									suggestions={searchSuggestions}
+									onSelect={setSearchQuery}
+								/>
+							)}
 						</div>
 					)}
 				</MarketplaceSection>
