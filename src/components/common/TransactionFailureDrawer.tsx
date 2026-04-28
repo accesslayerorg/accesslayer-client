@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Copy, Check } from 'lucide-react';
 import showToast from '@/utils/toast.util';
-import { formatTimestampTooltip } from '@/utils/keyPrice.utils';
+import { formatTimestampTooltip } from '@/utils/time.utils';
 
 export interface TransactionFailureDetails {
 	txHash?: string;
@@ -48,7 +48,7 @@ const TransactionFailureDrawer: React.FC<TransactionFailureDrawerProps> = ({
 			showToast.success('Copied to clipboard');
 			setCopiedField(field);
 			window.setTimeout(() => setCopiedField(null), 2000);
-		} catch (error) {
+		} catch {
 			showToast.error('Failed to copy to clipboard');
 		}
 	};
@@ -59,7 +59,9 @@ const TransactionFailureDrawer: React.FC<TransactionFailureDrawerProps> = ({
 	};
 
 	const timestamp = failureDetails.timestamp
-		? formatTimestampTooltip(new Date(failureDetails.timestamp).toISOString())
+		? formatTimestampTooltip(failureDetails.timestamp, {
+				showAbsolute: false,
+			})
 		: null;
 
 	const handleCopyErrorCode = () => {
