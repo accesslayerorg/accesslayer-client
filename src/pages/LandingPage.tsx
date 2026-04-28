@@ -121,6 +121,12 @@ const CREATOR_SCROLL_KEY = 'accesslayer.creator-scrollY';
 const MAX_CREATOR_FETCH_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 800;
 const PAGE_SIZE = 6;
+const FETCH_RETRY_ACTION_LABEL = 'Try again';
+const FINAL_FETCH_ERROR_COPY =
+	'Unable to load live creators right now. Showing fallback creators.';
+
+const getFetchRetryHelperCopy = (attempt: number, maxAttempts: number) =>
+	`We couldn't load live creators yet. Retrying automatically (attempt ${attempt} of ${maxAttempts}).`;
 
 type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'supply-desc';
 
@@ -225,7 +231,7 @@ function LandingPage() {
 				}
 
 				setFinalFetchError(
-					'Unable to load live creators right now. Showing fallback creators.'
+					FINAL_FETCH_ERROR_COPY
 				);
 				setShowRetryBanner(false);
 				setFetchRetryAttempt(0);
@@ -397,7 +403,7 @@ function LandingPage() {
 						<div className="flex items-center gap-3">
 							<label
 								htmlFor="creator-sort"
-								className="text-xs font-semibold uppercase tracking-[0.16em] text-white/60"
+								className="marketplace-label-muted text-xs font-semibold uppercase tracking-[0.16em]"
 							>
 								Sort
 							</label>
@@ -435,8 +441,11 @@ function LandingPage() {
 							{showRetryBanner && (
 								<TransactionRetryNotice
 									title="Loading live creators"
-									message={`Fetch failed, retrying with capped backoff (attempt ${fetchRetryAttempt + 1} of ${MAX_CREATOR_FETCH_RETRIES + 1}).`}
-									retryLabel="Retry now"
+									message={getFetchRetryHelperCopy(
+										fetchRetryAttempt + 1,
+										MAX_CREATOR_FETCH_RETRIES + 1
+									)}
+									retryLabel={FETCH_RETRY_ACTION_LABEL}
 									onRetry={() => setFetchRetryAttempt(0)}
 								/>
 							)}
@@ -462,7 +471,7 @@ function LandingPage() {
 								>
 									Previous
 								</Button>
-								<span className="text-xs text-white/60">
+								<span className="marketplace-label-muted text-xs">
 									Page {safePage + 1} of {totalPages}
 								</span>
 								<Button
@@ -511,7 +520,7 @@ function LandingPage() {
 
 				<MarketplaceSection
 					spacing="relaxed"
-					className="grid gap-8 rounded-[2rem] border border-white/10 bg-white/[0.045] p-6 shadow-[0_24px_80px_-60px_rgba(8,17,31,0.95)] backdrop-blur-sm md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start"
+					className="marketplace-card-surface grid gap-8 rounded-[2rem] border p-6 shadow-[0_24px_80px_-60px_rgba(8,17,31,0.95)] backdrop-blur-sm md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start"
 				>
 					<div>
 						<SectionHeading
