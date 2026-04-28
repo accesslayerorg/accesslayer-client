@@ -22,9 +22,10 @@ import KeySupplyBadge from '@/components/common/KeySupplyBadge';
 import CreatorListRowDivider from '@/components/common/CreatorListRowDivider';
 import BuyActionHelperText from '@/components/common/BuyActionHelperText';
 import CreatorLabeledStatRow from '@/components/common/CreatorLabeledStatRow';
+import CreatorBio from '@/components/common/CreatorBio';
 import { useTransactionTelemetry } from '@/hooks/useTransactionTelemetry';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
-import { formatCompactNumber, formatNumber } from '@/utils/numberFormat.utils';
+import { formatCompactNumber, formatNumber, formatFollowerCount } from '@/utils/numberFormat.utils';
 
 interface CreatorCardProps {
 	creator: Course;
@@ -111,13 +112,14 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 	return (
 		<div
 			className={cn(
-				'group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 transition-all duration-300 focus-within:ring-2 focus-within:ring-amber-400/40 focus-within:ring-offset-2 focus-within:ring-offset-slate-950 md:hover:-translate-y-0.5 md:hover:border-amber-500/25 md:hover:bg-white/[0.08] md:hover:shadow-[0_12px_32px_-20px_rgba(251,191,36,0.5)]',
+				'marketplace-card-surface marketplace-card-surface-hover group relative overflow-hidden rounded-2xl border p-4 transition-all duration-300 focus-within:ring-2 focus-within:ring-amber-400/40 focus-within:ring-offset-2 focus-within:ring-offset-slate-950 md:hover:-translate-y-0.5 md:hover:border-amber-500/25 md:hover:shadow-[0_12px_32px_-20px_rgba(251,191,36,0.5)]',
 				className
 			)}
 		>
 			<div className="relative mb-4 aspect-square overflow-hidden rounded-xl">
 				<CreatorInitialsAvatar
 					name={creator.title}
+					creatorId={creator.id}
 					imageSrc={creator.thumbnail}
 					imageClassName="transition-transform duration-500 md:group-hover:scale-[1.03]"
 				/>
@@ -146,12 +148,14 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 					<Change24hBadge change={creator.change24h} />
 					<KeySupplyBadge supply={creator.creatorShareSupply} />
 				</div>
-				<p className="font-jakarta text-sm text-white/50">
+				<p className="marketplace-label-muted font-jakarta text-sm">
 					@{creator.instructorId || 'creator'}
 				</p>
 
+				<CreatorBio bio={creator.description} variant="card" className="mt-2" />
+
 				{creator.socialHandle ? (
-					<div className="mt-2 flex items-center gap-1.5 text-xs text-white/60">
+					<div className="marketplace-label-muted mt-2 flex items-center gap-1.5 text-xs">
 						<LinkIcon className="size-3 text-amber-500/70" />
 						<span className="truncate">@{creator.socialHandle}</span>
 					</div>
@@ -181,7 +185,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 						label="Creator Share Supply"
 						value={
 							creator.creatorShareSupply
-								? `${formatCompactNumber(creator.creatorShareSupply)} shares`
+								? `${formatFollowerCount(creator.creatorShareSupply)} shares`
 								: 'Supply pending'
 						}
 						className="px-3 py-3"

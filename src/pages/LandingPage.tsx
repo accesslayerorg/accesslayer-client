@@ -6,6 +6,7 @@ import StickyFilterBar from '@/components/common/StickyFilterBar';
 import CreatorCard from '@/components/common/CreatorCard';
 import { CreatorGridSkeleton } from '@/components/common/CreatorSkeleton';
 import EmptyState from '@/components/common/EmptyState';
+import EmptySearchSuggestions from '@/components/common/EmptySearchSuggestions';
 import SectionDivider from '@/components/common/SectionDivider';
 import { Button } from '@/components/ui/button';
 import { UnavailableAction } from '@/components/ui/unavailable-action';
@@ -122,6 +123,12 @@ const CREATOR_SCROLL_KEY = 'accesslayer.creator-scrollY';
 const MAX_CREATOR_FETCH_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 800;
 const PAGE_SIZE = 6;
+const FETCH_RETRY_ACTION_LABEL = 'Try again';
+const FINAL_FETCH_ERROR_COPY =
+	'Unable to load live creators right now. Showing fallback creators.';
+
+const getFetchRetryHelperCopy = (attempt: number, maxAttempts: number) =>
+	`We couldn't load live creators yet. Retrying automatically (attempt ${attempt} of ${maxAttempts}).`;
 
 type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'supply-desc';
 
@@ -130,8 +137,12 @@ function LandingPage() {
 	const { isMismatch: isNetworkMismatch } = useNetworkMismatch();
 	const [isLoading, setIsLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState('');
-	const [debouncedSearchQuery, flushSearchQuery] = useDebounce(searchQuery, 300);
-	const [activeProfileTab, setActiveProfileTab] = useState('overview');
+	const [activeProfileTab, setActiveProfileTab] = useState(() => {
+		if (typeof window === 'undefined') return 'overview';
+		const PROFILE_TABS = ['overview', 'creations', 'collectors', 'activity'];
+		const hash = window.location.hash.slice(1);
+		return PROFILE_TABS.includes(hash) ? hash : 'overview';
+	});
 	const [featuredHoldings, setFeaturedHoldings] = useState(3);
 	const [tradeSide, setTradeSide] = useState<TradeSide>('buy');
 	const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
@@ -139,7 +150,9 @@ function LandingPage() {
 	const [pendingTxOpen, setPendingTxOpen] = useState(false);
 	const [sortOption, setSortOption] = useState<SortOption>(() => {
 		if (typeof window === 'undefined') return 'featured';
-		const saved = window.localStorage.getItem(CREATOR_SORT_KEY) as SortOption | null;
+		const saved = window.localStorage.getItem(
+			CREATOR_SORT_KEY
+		) as SortOption | null;
 		return saved ?? 'featured';
 	});
 	const [fetchRetryAttempt, setFetchRetryAttempt] = useState(0);
@@ -173,7 +186,10 @@ function LandingPage() {
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
 		const handleScroll = () => {
-			window.sessionStorage.setItem(CREATOR_SCROLL_KEY, String(window.scrollY));
+			window.sessionStorage.setItem(
+				CREATOR_SCROLL_KEY,
+				String(window.scrollY)
+			);
 		};
 		window.addEventListener('scroll', handleScroll, { passive: true });
 		return () => window.removeEventListener('scroll', handleScroll);
@@ -209,12 +225,15 @@ function LandingPage() {
 						BASE_RETRY_DELAY_MS * 2 ** fetchRetryAttempt,
 						5000
 					);
-					window.setTimeout(() => setFetchRetryAttempt(nextAttempt), backoffDelay);
+					window.setTimeout(
+						() => setFetchRetryAttempt(nextAttempt),
+						backoffDelay
+					);
 					return;
 				}
 
 				setFinalFetchError(
-					'Unable to load live creators right now. Showing fallback creators.'
+					FINAL_FETCH_ERROR_COPY
 				);
 				setShowRetryBanner(false);
 				setFetchRetryAttempt(0);
@@ -226,6 +245,17 @@ function LandingPage() {
 
 		fetchCreators();
 	}, [fetchRetryAttempt]);
+
+	const searchSuggestions = useMemo(() => {
+		const fromCategories = creators
+			.map(creator => creator.category)
+			.filter((category): category is string => Boolean(category));
+		// Categories are the most useful prefilled query because they reliably
+		// match creator entries; fall back to a sensible default list when the
+		// dataset is too sparse to suggest anything contextual.
+		if (fromCategories.length > 0) return fromCategories;
+		return ['Art', 'Tech', 'Music', 'Design'];
+	}, [creators]);
 
 	const filteredCreators = useMemo(() => {
 		if (hasInvalidSearchInput) {
@@ -251,7 +281,8 @@ function LandingPage() {
 				break;
 			case 'supply-desc':
 				sorted.sort(
-					(a, b) => (b.creatorShareSupply ?? 0) - (a.creatorShareSupply ?? 0)
+					(a, b) =>
+						(b.creatorShareSupply ?? 0) - (a.creatorShareSupply ?? 0)
 				);
 				break;
 			default:
@@ -264,7 +295,10 @@ function LandingPage() {
 		setPage(0);
 	}, [trimmedSearchQuery, sortOption]);
 
-	const totalPages = Math.max(1, Math.ceil(filteredCreators.length / PAGE_SIZE));
+	const totalPages = Math.max(
+		1,
+		Math.ceil(filteredCreators.length / PAGE_SIZE)
+	);
 	const safePage = Math.min(page, totalPages - 1);
 	const pagedCreators = useMemo(() => {
 		const start = safePage * PAGE_SIZE;
@@ -307,7 +341,9 @@ function LandingPage() {
 			await new Promise<void>(resolve => window.setTimeout(resolve, 900));
 
 			setFeaturedHoldings(current =>
-				tradeSide === 'buy' ? current + amount : Math.max(0, current - amount)
+				tradeSide === 'buy'
+					? current + amount
+					: Math.max(0, current - amount)
 			);
 
 			await new Promise<void>(resolve => window.setTimeout(resolve, 250));
@@ -381,7 +417,7 @@ function LandingPage() {
 						<div className="flex items-center gap-3">
 							<label
 								htmlFor="creator-sort"
-								className="text-xs font-semibold uppercase tracking-[0.16em] text-white/60"
+								className="marketplace-label-muted text-xs font-semibold uppercase tracking-[0.16em]"
 							>
 								Sort
 							</label>
@@ -419,8 +455,11 @@ function LandingPage() {
 							{showRetryBanner && (
 								<TransactionRetryNotice
 									title="Loading live creators"
-									message={`Fetch failed, retrying with capped backoff (attempt ${fetchRetryAttempt + 1} of ${MAX_CREATOR_FETCH_RETRIES + 1}).`}
-									retryLabel="Retry now"
+									message={getFetchRetryHelperCopy(
+										fetchRetryAttempt + 1,
+										MAX_CREATOR_FETCH_RETRIES + 1
+									)}
+									retryLabel={FETCH_RETRY_ACTION_LABEL}
 									onRetry={() => setFetchRetryAttempt(0)}
 								/>
 							)}
@@ -440,11 +479,13 @@ function LandingPage() {
 									variant="outline"
 									size="sm"
 									disabled={safePage === 0}
-									onClick={() => handlePageChange(Math.max(0, safePage - 1))}
+									onClick={() =>
+										handlePageChange(Math.max(0, safePage - 1))
+									}
 								>
 									Previous
 								</Button>
-								<span className="text-xs text-white/60">
+								<span className="marketplace-label-muted text-xs">
 									Page {safePage + 1} of {totalPages}
 								</span>
 								<Button
@@ -461,15 +502,31 @@ function LandingPage() {
 									Next
 								</Button>
 							</div>
+							{safePage >= totalPages - 1 && (
+								<p
+									role="status"
+									aria-live="polite"
+									className="mt-4 text-center text-xs font-semibold uppercase tracking-[0.18em] text-white/45"
+								>
+									{`You've reached the end — ${formatNumber(filteredCreators.length)} creator${filteredCreators.length === 1 ? '' : 's'} shown.`}
+								</p>
+							)}
 						</div>
 					) : (
-						<div className="flex justify-center py-12">
+						<div className="flex flex-col items-center gap-6 py-12">
 							<EmptyState
 								image="/images/no-results.png"
 								title="No creators found"
 								description={`We couldn't find any creators matching "${searchQuery}". Try a different name or handle.`}
 								onReset={handleResetSearch}
 							/>
+							{!hasInvalidSearchInput && (
+								<EmptySearchSuggestions
+									className="w-full max-w-xl"
+									suggestions={searchSuggestions}
+									onSelect={setSearchQuery}
+								/>
+							)}
 						</div>
 					)}
 				</MarketplaceSection>
@@ -485,6 +542,7 @@ function LandingPage() {
 					<CreatorProfileHeader
 						name="Alex Rivers"
 						handle="arivers"
+						creatorId="arivers"
 						isVerified={true}
 						avatarUrl="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop"
 					/>
@@ -492,7 +550,7 @@ function LandingPage() {
 
 				<MarketplaceSection
 					spacing="relaxed"
-					className="grid gap-8 rounded-[2rem] border border-white/10 bg-white/[0.045] p-6 shadow-[0_24px_80px_-60px_rgba(8,17,31,0.95)] backdrop-blur-sm md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start"
+					className="marketplace-card-surface grid gap-8 rounded-[2rem] border p-6 shadow-[0_24px_80px_-60px_rgba(8,17,31,0.95)] backdrop-blur-sm md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start"
 				>
 					<div>
 						<SectionHeading
@@ -509,6 +567,7 @@ function LandingPage() {
 							]}
 							activeTab={activeProfileTab}
 							onTabChange={setActiveProfileTab}
+							enableHashRouting
 							className="mb-4"
 						/>
 						<CompactSectionSubtitle className="max-w-xl">
@@ -516,10 +575,23 @@ function LandingPage() {
 							repeated creator facts into one responsive grid that stays
 							tidy on mobile and desktop.
 						</CompactSectionSubtitle>
-						<div className="mt-5 flex flex-wrap gap-2">
-							<MiniStatChip label="Status" value="Verified creator" />
-							<MiniStatChip label="Audience" value="12.4K collectors" />
-							<MiniStatChip label="Access" value="Member-first drops" />
+						<div
+							id={`profile-panel-${activeProfileTab}`}
+							role="tabpanel"
+							aria-labelledby={`profile-tab-${activeProfileTab}`}
+							tabIndex={0}
+						>
+							<div className="mt-5 flex flex-wrap gap-2">
+								<MiniStatChip label="Status" value="Verified creator" />
+								<MiniStatChip
+									label="Audience"
+									value="12.4K collectors"
+								/>
+								<MiniStatChip
+									label="Access"
+									value="Member-first drops"
+								/>
+							</div>
 						</div>
 					</div>
 					<div className="space-y-3">
@@ -536,9 +608,7 @@ function LandingPage() {
 							label="Creator Share Supply"
 							value={`${formatCompactNumber(250)} shares available`}
 						/>
-						{isNetworkMismatch && (
-							<NetworkMismatchBanner />
-						)}
+						{isNetworkMismatch && <NetworkMismatchBanner />}
 						<div className="hidden md:flex items-center gap-3">
 							<Button
 								className="rounded-xl"
@@ -591,7 +661,10 @@ function LandingPage() {
 					</div>
 				</div>
 
-				<SectionDivider title="Transaction timeline pattern" spacing="relaxed" />
+				<SectionDivider
+					title="Transaction timeline pattern"
+					spacing="relaxed"
+				/>
 				<MarketplaceSection spacing="relaxed">
 					<EmptyTransactionTimelineState />
 				</MarketplaceSection>
