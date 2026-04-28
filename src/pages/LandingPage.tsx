@@ -500,6 +500,15 @@ function LandingPage() {
 									Next
 								</Button>
 							</div>
+							{safePage >= totalPages - 1 && (
+								<p
+									role="status"
+									aria-live="polite"
+									className="mt-4 text-center text-xs font-semibold uppercase tracking-[0.18em] text-white/45"
+								>
+									{`You've reached the end — ${formatNumber(filteredCreators.length)} creator${filteredCreators.length === 1 ? '' : 's'} shown.`}
+								</p>
+							)}
 						</div>
 					) : (
 						<div className="flex flex-col items-center gap-6 py-12">
