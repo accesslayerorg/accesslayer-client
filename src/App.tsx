@@ -6,6 +6,8 @@ import { WalletButton } from './components/wallet/WalletButton';
 import { WalletStatusPill } from './components/wallet/WalletStatusPill';
 import { ReadOnlyBanner } from './components/wallet/ReadOnlyBanner';
 import { CreatorCard } from './components/creator/CreatorCard';
+import { TransactionStatusBadge } from './components/transaction/TransactionStatusBadge';
+import type { TxStatus } from './components/transaction/TransactionStatusBadge';
 const router = createBrowserRouter([
 	{
 		path: '/',
@@ -40,6 +42,8 @@ function App() {
     onViewProfile={(id) => console.log('Profile:', id)}
   />
 </div>
+<TransactionStatusBadge status="pending" />
+<TransactionStatusBadge status="success" showLegend={false} />
 			<WalletStatusPill />
         <WalletButton />
 			<RouterProvider router={router} />
