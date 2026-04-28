@@ -10,8 +10,12 @@ import { cn } from '@/lib/utils';
 
 interface CreatorSocialLinksListProps {
 	handle?: string;
+	/** Override the default empty-state placeholder copy. */
+	emptyPlaceholder?: string;
 	className?: string;
 }
+
+const DEFAULT_EMPTY_PLACEHOLDER = 'No social links added yet';
 
 interface SocialLinkItem {
 	id: 'x' | 'instagram' | 'youtube' | 'website';
@@ -22,17 +26,20 @@ interface SocialLinkItem {
 
 const CreatorSocialLinksList: React.FC<CreatorSocialLinksListProps> = ({
 	handle,
+	emptyPlaceholder = DEFAULT_EMPTY_PLACEHOLDER,
 	className,
 }) => {
-	if (!handle) {
+	if (!handle?.trim()) {
 		return (
 			<div
+				role="note"
+				aria-label="Creator profile links not provided"
 				className={cn(
 					'rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-2 text-xs italic text-white/40',
 					className
 				)}
 			>
-				No social links yet
+				{emptyPlaceholder}
 			</div>
 		);
 	}

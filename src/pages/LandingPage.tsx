@@ -5,6 +5,7 @@ import StickyFilterBar from '@/components/common/StickyFilterBar';
 import CreatorCard from '@/components/common/CreatorCard';
 import { CreatorGridSkeleton } from '@/components/common/CreatorSkeleton';
 import EmptyState from '@/components/common/EmptyState';
+import EmptySearchSuggestions from '@/components/common/EmptySearchSuggestions';
 import SectionDivider from '@/components/common/SectionDivider';
 import { Button } from '@/components/ui/button';
 import { UnavailableAction } from '@/components/ui/unavailable-action';
@@ -121,6 +122,12 @@ const CREATOR_SCROLL_KEY = 'accesslayer.creator-scrollY';
 const MAX_CREATOR_FETCH_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 800;
 const PAGE_SIZE = 6;
+const FETCH_RETRY_ACTION_LABEL = 'Try again';
+const FINAL_FETCH_ERROR_COPY =
+	'Unable to load live creators right now. Showing fallback creators.';
+
+const getFetchRetryHelperCopy = (attempt: number, maxAttempts: number) =>
+	`We couldn't load live creators yet. Retrying automatically (attempt ${attempt} of ${maxAttempts}).`;
 
 type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'supply-desc';
 
@@ -225,7 +232,7 @@ function LandingPage() {
 				}
 
 				setFinalFetchError(
-					'Unable to load live creators right now. Showing fallback creators.'
+					FINAL_FETCH_ERROR_COPY
 				);
 				setShowRetryBanner(false);
 				setFetchRetryAttempt(0);
@@ -237,6 +244,17 @@ function LandingPage() {
 
 		fetchCreators();
 	}, [fetchRetryAttempt]);
+
+	const searchSuggestions = useMemo(() => {
+		const fromCategories = creators
+			.map(creator => creator.category)
+			.filter((category): category is string => Boolean(category));
+		// Categories are the most useful prefilled query because they reliably
+		// match creator entries; fall back to a sensible default list when the
+		// dataset is too sparse to suggest anything contextual.
+		if (fromCategories.length > 0) return fromCategories;
+		return ['Art', 'Tech', 'Music', 'Design'];
+	}, [creators]);
 
 	const filteredCreators = useMemo(() => {
 		if (hasInvalidSearchInput) {
@@ -402,7 +420,7 @@ function LandingPage() {
 						<div className="flex items-center gap-3">
 							<label
 								htmlFor="creator-sort"
-								className="text-xs font-semibold uppercase tracking-[0.16em] text-white/60"
+								className="marketplace-label-muted text-xs font-semibold uppercase tracking-[0.16em]"
 							>
 								Sort
 							</label>
@@ -440,8 +458,11 @@ function LandingPage() {
 							{showRetryBanner && (
 								<TransactionRetryNotice
 									title="Loading live creators"
-									message={`Fetch failed, retrying with capped backoff (attempt ${fetchRetryAttempt + 1} of ${MAX_CREATOR_FETCH_RETRIES + 1}).`}
-									retryLabel="Retry now"
+									message={getFetchRetryHelperCopy(
+										fetchRetryAttempt + 1,
+										MAX_CREATOR_FETCH_RETRIES + 1
+									)}
+									retryLabel={FETCH_RETRY_ACTION_LABEL}
 									onRetry={() => setFetchRetryAttempt(0)}
 								/>
 							)}
@@ -467,7 +488,7 @@ function LandingPage() {
 								>
 									Previous
 								</Button>
-								<span className="text-xs text-white/60">
+								<span className="marketplace-label-muted text-xs">
 									Page {safePage + 1} of {totalPages}
 								</span>
 								<Button
@@ -484,15 +505,31 @@ function LandingPage() {
 									Next
 								</Button>
 							</div>
+							{safePage >= totalPages - 1 && (
+								<p
+									role="status"
+									aria-live="polite"
+									className="mt-4 text-center text-xs font-semibold uppercase tracking-[0.18em] text-white/45"
+								>
+									{`You've reached the end — ${formatNumber(filteredCreators.length)} creator${filteredCreators.length === 1 ? '' : 's'} shown.`}
+								</p>
+							)}
 						</div>
 					) : (
-						<div className="flex justify-center py-12">
+						<div className="flex flex-col items-center gap-6 py-12">
 							<EmptyState
 								image="/images/no-results.png"
 								title="No creators found"
 								description={`We couldn't find any creators matching "${searchQuery}". Try a different name or handle.`}
 								onReset={handleResetSearch}
 							/>
+							{!hasInvalidSearchInput && (
+								<EmptySearchSuggestions
+									className="w-full max-w-xl"
+									suggestions={searchSuggestions}
+									onSelect={setSearchQuery}
+								/>
+							)}
 						</div>
 					)}
 				</MarketplaceSection>
@@ -518,7 +555,7 @@ function LandingPage() {
 
 				<MarketplaceSection
 					spacing="relaxed"
-					className="grid gap-8 rounded-[2rem] border border-white/10 bg-white/[0.045] p-6 shadow-[0_24px_80px_-60px_rgba(8,17,31,0.95)] backdrop-blur-sm md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start"
+					className="marketplace-card-surface grid gap-8 rounded-[2rem] border p-6 shadow-[0_24px_80px_-60px_rgba(8,17,31,0.95)] backdrop-blur-sm md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start"
 				>
 					<div>
 						<SectionHeading

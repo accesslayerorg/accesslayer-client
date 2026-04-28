@@ -88,6 +88,11 @@
 	--sidebar-accent-foreground: oklch(0.21 0.006 285.885);
 	--sidebar-border: oklch(0.92 0.004 286.32);
 	--sidebar-ring: oklch(0.705 0.015 286.067);
+	--marketplace-card-bg: rgba(255, 255, 255, 0.05);
+	--marketplace-card-bg-hover: rgba(255, 255, 255, 0.08);
+	--marketplace-card-border: rgba(255, 255, 255, 0.1);
+	--marketplace-label-muted: rgba(255, 255, 255, 0.6);
+	--marketplace-label-strong: rgba(255, 255, 255, 0.85);
 }
 
 .dark {
@@ -122,6 +127,22 @@
 	--sidebar-accent-foreground: oklch(0.985 0 0);
 	--sidebar-border: oklch(1 0 0 / 10%);
 	--sidebar-ring: oklch(0.552 0.016 285.938);
+	--marketplace-card-bg: rgba(255, 255, 255, 0.05);
+	--marketplace-card-bg-hover: rgba(255, 255, 255, 0.08);
+	--marketplace-card-border: rgba(255, 255, 255, 0.1);
+	--marketplace-label-muted: rgba(255, 255, 255, 0.6);
+	--marketplace-label-strong: rgba(255, 255, 255, 0.85);
+}
+
+@media (prefers-contrast: more) {
+	:root,
+	.dark {
+		--marketplace-card-bg: rgba(4, 12, 24, 0.88);
+		--marketplace-card-bg-hover: rgba(7, 20, 40, 0.94);
+		--marketplace-card-border: rgba(255, 255, 255, 0.4);
+		--marketplace-label-muted: rgba(255, 255, 255, 0.88);
+		--marketplace-label-strong: rgba(255, 255, 255, 0.97);
+	}
 }
 
 @layer base {
@@ -186,6 +207,23 @@
 		);
 		background-size: 220% 100%;
 		animation: skeleton-shimmer 1.6s linear infinite;
+	}
+
+	.marketplace-card-surface {
+		background-color: var(--marketplace-card-bg);
+		border-color: var(--marketplace-card-border);
+	}
+
+	.marketplace-card-surface-hover:hover {
+		background-color: var(--marketplace-card-bg-hover);
+	}
+
+	.marketplace-label-muted {
+		color: var(--marketplace-label-muted);
+	}
+
+	.marketplace-label-strong {
+		color: var(--marketplace-label-strong);
 	}
 
 	@media (prefers-reduced-motion: reduce) {
