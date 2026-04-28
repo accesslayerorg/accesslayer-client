@@ -18,6 +18,7 @@ import MarketplaceSection from '@/components/common/MarketplaceSection';
 import { ProfileTabPillGroup } from '@/components/common/ProfileTabPill';
 import CreatorBreadcrumb from '@/components/common/CreatorBreadcrumb';
 import CreatorProfileHeader from '@/components/common/CreatorProfileHeader';
+import TransactionStatusIcon from '@/components/common/TransactionStatusIcon';
 import TransactionRetryNotice from '@/components/common/TransactionRetryNotice';
 import EmptyTransactionTimelineState from '@/components/common/EmptyTransactionTimelineState';
 import TradeDialog, { type TradeSide } from '@/components/common/TradeDialog';
@@ -120,6 +121,7 @@ const CREATOR_SORT_KEY = 'accesslayer.creator-sort';
 const CREATOR_PAGE_KEY = 'accesslayer.creator-page';
 const CREATOR_SCROLL_KEY = 'accesslayer.creator-scrollY';
 const MAX_CREATOR_FETCH_RETRIES = 3;
+const LOADING_TIMEOUT_MS = 10000;
 const BASE_RETRY_DELAY_MS = 800;
 const PAGE_SIZE = 6;
 const FETCH_RETRY_ACTION_LABEL = 'Try again';
@@ -157,6 +159,8 @@ function LandingPage() {
 	const [fetchRetryAttempt, setFetchRetryAttempt] = useState(0);
 	const [showRetryBanner, setShowRetryBanner] = useState(false);
 	const [finalFetchError, setFinalFetchError] = useState('');
+	const [loadingTimeout, setLoadingTimeout] = useState(false);
+	const [refreshSignal, setRefreshSignal] = useState(0);
 	const [page, setPage] = useState(() => {
 		if (typeof window === 'undefined') return 0;
 		const saved = window.sessionStorage.getItem(CREATOR_PAGE_KEY);
@@ -204,6 +208,19 @@ function LandingPage() {
 	}, []);
 
 	useEffect(() => {
+		let timeoutId: number;
+		if (isLoading) {
+			setLoadingTimeout(false);
+			timeoutId = window.setTimeout(() => {
+				setLoadingTimeout(true);
+			}, LOADING_TIMEOUT_MS);
+		}
+		return () => {
+			if (timeoutId) window.clearTimeout(timeoutId);
+		};
+	}, [isLoading]);
+
+	useEffect(() => {
 		const fetchCreators = async () => {
 			setIsLoading(true);
 			setShowRetryBanner(false);
@@ -243,7 +260,13 @@ function LandingPage() {
 		};
 
 		fetchCreators();
-	}, [fetchRetryAttempt]);
+	}, [fetchRetryAttempt, refreshSignal]);
+
+	const handleRetryConnection = () => {
+		setLoadingTimeout(false);
+		setFetchRetryAttempt(0);
+		setRefreshSignal(prev => prev + 1);
+	};
 
 	const searchSuggestions = useMemo(() => {
 		const fromCategories = creators
@@ -447,7 +470,34 @@ function LandingPage() {
 					/>
 
 					{isLoading ? (
-						<CreatorGridSkeleton count={6} />
+						<div className="space-y-8">
+							<CreatorGridSkeleton count={6} />
+							{loadingTimeout && (
+								<div className="flex flex-col items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-center backdrop-blur-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+									<div className="mb-4 flex size-12 items-center justify-center rounded-full bg-amber-500/20">
+										<TransactionStatusIcon
+											status="idle"
+											className="size-6 text-amber-400"
+										/>
+									</div>
+									<h3 className="mb-2 font-grotesque text-xl font-bold text-white">
+										Still loading creators...
+									</h3>
+									<p className="mb-6 max-w-md text-sm text-white/60">
+										This is taking longer than expected. It could be due
+										to a slow connection or high network traffic.
+									</p>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleRetryConnection}
+										className="rounded-xl border-amber-500/30 bg-amber-500/10 px-6 font-bold text-amber-400 hover:bg-amber-500/20"
+									>
+										Retry Connection
+									</Button>
+								</div>
+							)}
+						</div>
 					) : filteredCreators.length > 0 ? (
 						<div className="space-y-4">
 							{showRetryBanner && (
