@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import InlineValidationMessage from '@/components/common/InlineValidationMessage';
+import type { RefObject } from 'react';
 
 interface SearchBarProps {
 	value: string;
@@ -8,6 +9,7 @@ interface SearchBarProps {
 	placeholder?: string;
 	className?: string;
 	validationMessage?: string;
+	inputRef?: RefObject<HTMLInputElement | null>;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({
@@ -16,6 +18,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 	placeholder = 'Search creators by name or handle...',
 	className,
 	validationMessage,
+	inputRef,
 }) => {
 	return (
 		<div className={cn('w-full max-w-md', className)}>
@@ -25,6 +28,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 				</div>
 				<input
 					type="text"
+					ref={inputRef}
 					className={cn(
 						'block w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-3 text-sm text-white placeholder:text-white/40 focus:border-amber-500/50 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-500/20',
 						validationMessage &&
