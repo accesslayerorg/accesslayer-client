@@ -5,6 +5,7 @@ import InlineValidationMessage from '@/components/common/InlineValidationMessage
 interface SearchBarProps {
 	value: string;
 	onChange: (value: string) => void;
+	onSubmit?: () => void;
 	placeholder?: string;
 	className?: string;
 	validationMessage?: string;
@@ -13,6 +14,7 @@ interface SearchBarProps {
 const SearchBar: React.FC<SearchBarProps> = ({
 	value,
 	onChange,
+	onSubmit,
 	placeholder = 'Search creators by name or handle...',
 	className,
 	validationMessage,
@@ -33,6 +35,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 					placeholder={placeholder}
 					value={value}
 					onChange={e => onChange(e.target.value)}
+					onKeyDown={e => e.key === 'Enter' && onSubmit?.()}
 				/>
 			</div>
 			{validationMessage && (
