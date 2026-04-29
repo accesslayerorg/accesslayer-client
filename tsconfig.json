@@ -11,8 +11,10 @@
 	"compilerOptions": {
 		"ignoreDeprecations": "6.0",
 		"baseUrl": ".",
+		"types": ["vitest/globals"],
 		"paths": {
 			"@/*": ["./src/*"]
 		}
-	}
+	},
+	"exclude": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"]
 }

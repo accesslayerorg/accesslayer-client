@@ -65,4 +65,5 @@ const NetworkBadge = React.forwardRef<HTMLDivElement, NetworkBadgeProps>(
 
 NetworkBadge.displayName = 'NetworkBadge';
 
-export { NetworkBadge };
+// eslint-disable-next-line react-refresh/only-export-components
+export { NetworkBadge, networkBadgeVariants };

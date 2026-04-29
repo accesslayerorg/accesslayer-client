@@ -143,7 +143,7 @@ export const FormInput: React.FC<FormInputProps> = ({
 		const commonProps = {
 			id: inputId,
 			// For number inputs show formatted displayValue, otherwise show raw value
-			value: type === 'number' ? displayValue : value ?? '',
+			value: type === 'number' ? displayValue : (value ?? ''),
 			onChange: handleChange,
 			placeholder,
 			disabled,

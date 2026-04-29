@@ -19,8 +19,15 @@ const CardMetaRow: React.FC<CardMetaRowProps> = ({
 	valueTitle,
 }) => {
 	return (
-		<div className={cn('flex items-center justify-between gap-3 text-xs', className)}>
-			<span className="shrink-0 uppercase tracking-wider text-white/40">{label}</span>
+		<div
+			className={cn(
+				'flex items-center justify-between gap-3 text-xs',
+				className
+			)}
+		>
+			<span className="shrink-0 uppercase tracking-wider text-white/40">
+				{label}
+			</span>
 			<span
 				title={valueTitle}
 				className={cn(

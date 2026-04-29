@@ -58,6 +58,9 @@ const Stepper: React.FC<StepperProps> = ({
 
 	return (
 		<div className={cn('flex items-center', gapClasses[size], className)}>
+			<div className="sr-only" aria-live="polite" aria-atomic="true">
+				Step {currentStep} of {totalSteps}
+			</div>
 			{Array.from({ length: totalSteps }, (_, index) => {
 				const stepNumber = index + 1;
 				const isActive = stepNumber <= currentStep;
