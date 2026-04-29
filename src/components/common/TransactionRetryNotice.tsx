@@ -1,6 +1,7 @@
-import { AlertTriangle, RotateCcw } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import TransactionStatusIcon from '@/components/common/TransactionStatusIcon';
 
 interface TransactionRetryNoticeProps {
 	message: string;
@@ -29,9 +30,7 @@ const TransactionRetryNotice: React.FC<TransactionRetryNoticeProps> = ({
 			)}
 		>
 			<div className="flex items-start gap-3">
-				<div className="mt-0.5 rounded-full bg-red-500/15 p-2 text-red-300">
-					<AlertTriangle className="size-4" />
-				</div>
+				<TransactionStatusIcon status="failed" className="mt-0.5" />
 				<div className="min-w-0 flex-1">
 					<p className="font-jakarta text-sm font-bold text-white">{title}</p>
 					<p className="mt-1 font-jakarta text-sm leading-relaxed text-white/70">

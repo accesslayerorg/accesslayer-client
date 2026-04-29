@@ -103,7 +103,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 					<MiniStatChip label="Level" value={creator.level || 'Open'} />
 				</div>
 				<CreatorListRowDivider className="my-4" />
-				<div className="mt-3 space-y-1.5">
+				<div className="mt-3 space-y-2">
 					<CardMetaRow
 						label={
 							<span className="inline-flex items-center gap-1.5">
@@ -139,6 +139,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 					className="mt-4"
 				/>
 			</div>
+			<CreatorListRowDivider className="mt-4 mb-2" />
 
 			<div className="flex items-center justify-end gap-4">
 				<Button
@@ -152,15 +153,15 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 					)}
 				>
 					{transactionState === 'success' && (
-						<TransactionStatusIcon status="success" className="mr-2" />
+						<TransactionStatusIcon status="success" />
 					)}
 					{transactionState === 'submitting' && (
-						<TransactionStatusIcon status="pending" className="mr-2" />
+						<TransactionStatusIcon status="pending" />
 					)}
 					{transactionState === 'failed' && (
-						<TransactionStatusIcon status="failed" className="mr-2" />
+						<TransactionStatusIcon status="failed" />
 					)}
-					<ShoppingCart className="mr-2 size-4" />
+					<ShoppingCart className="size-4" />
 					{transactionState === 'submitting'
 						? 'Processing...'
 						: transactionState === 'success'
