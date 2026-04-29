@@ -26,6 +26,7 @@ import CreatorBio from '@/components/common/CreatorBio';
 import { useTransactionTelemetry } from '@/hooks/useTransactionTelemetry';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
 import { formatCompactNumber, formatNumber, formatFollowerCount } from '@/utils/numberFormat.utils';
+import { truncateCreatorName } from '@/utils/creatorName.utils';
 
 interface CreatorCardProps {
 	creator: Course;
@@ -138,8 +139,8 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 
 			<div className="mb-4">
 				<div className="flex items-center gap-2 flex-wrap">
-					<h3 className="font-jakarta text-lg font-bold text-white">
-						{creator.title}
+					<h3 className="font-jakarta text-lg font-bold text-white" title={creator.title}>
+						{truncateCreatorName(creator.title)}
 					</h3>
 					<VerifiedBadge
 						verified={Boolean(creator.isVerified)}
