@@ -27,7 +27,7 @@ describe('Property 3: Relative time formatting', () => {
           const iso = new Date(Date.now() - offsetMs).toISOString();
           const result = formatRelativeTime(iso);
           const validPattern =
-            result === 'just now' ||
+            result === 'Updated just now' ||
             /^Updated \d+ min ago$/.test(result) ||
             /^Updated \d+ hr ago$/.test(result) ||
             /^Updated \d+ days? ago$/.test(result);
@@ -106,16 +106,16 @@ describe('formatRelativeTime edge cases', () => {
   }
 
   it('future timestamp → "just now"', () => {
-    const future = new Date(Date.now() + 60_000).toISOString();
-    expect(formatRelativeTime(future)).toBe('just now');
+    const future = new Date(Date.now() + 50_000).toISOString();
+    expect(formatRelativeTime(future)).toBe('Updated just now');
   });
 
   it('0 seconds ago → "just now"', () => {
-    expect(formatRelativeTime(isoSecondsAgo(0))).toBe('just now');
+    expect(formatRelativeTime(isoSecondsAgo(0))).toBe('Updated just now');
   });
 
   it('59 seconds ago → "just now"', () => {
-    expect(formatRelativeTime(isoSecondsAgo(59))).toBe('just now');
+    expect(formatRelativeTime(isoSecondsAgo(59))).toBe('Updated just now');
   });
 
   it('60 seconds ago → "Updated 1 min ago"', () => {

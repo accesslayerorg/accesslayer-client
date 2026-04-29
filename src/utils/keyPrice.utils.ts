@@ -20,7 +20,7 @@ export function formatTimestampTooltip(iso: string | null | undefined): {
 } {
 	if (iso == null) return { display: 'Last updated: N/A', title: null };
 	const relative = sharedFormatRelativeTime(iso, { prefix: 'Updated' });
-	return relative === 'N/A'
+	return relative.includes('N/A')
 		? { display: 'Last updated: N/A', title: null }
 		: { display: relative, title: null };
 }
@@ -32,5 +32,5 @@ export function formatTimestampTooltip(iso: string | null | undefined): {
 export function formatRelativeTime(iso: string | null | undefined): string {
 	if (iso == null) return 'Last updated: N/A';
 	const relative = sharedFormatRelativeTime(iso, { prefix: 'Updated' });
-	return relative === 'N/A' ? 'Last updated: N/A' : relative;
+	return relative.includes('N/A') ? 'Last updated: N/A' : relative;
 }
