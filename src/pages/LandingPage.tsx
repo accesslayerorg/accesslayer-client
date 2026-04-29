@@ -26,6 +26,7 @@ import NetworkMismatchBanner from '@/components/common/NetworkMismatchBanner';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
 import showToast from '@/utils/toast.util';
 import { formatCompactNumber, formatNumber } from '@/utils/numberFormat.utils';
+import PrecisionModeToggle, { type PrecisionMode } from '@/components/common/PrecisionModeToggle';
 
 const FEATURED_CREATOR_FACTS = [
 	{ label: 'Membership', value: 'Collectors Circle' },
@@ -143,6 +144,7 @@ function LandingPage() {
 		return PROFILE_TABS.includes(hash) ? hash : 'overview';
 	});
 	const [featuredHoldings, setFeaturedHoldings] = useState(3);
+	const [precisionMode, setPrecisionMode] = useState<PrecisionMode>('compact');
 	const [tradeSide, setTradeSide] = useState<TradeSide>('buy');
 	const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
 	const [tradeSubmitting, setTradeSubmitting] = useState(false);
@@ -602,9 +604,22 @@ function LandingPage() {
 								},
 							]}
 						/>
+						<div className="flex items-center justify-between gap-2">
+							<span className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-white/40">
+								Metrics display
+							</span>
+							<PrecisionModeToggle
+								mode={precisionMode}
+								onChange={setPrecisionMode}
+							/>
+						</div>
 						<CreatorLabeledStatRow
 							label="Creator Share Supply"
-							value={`${formatCompactNumber(250)} shares available`}
+							value={
+								precisionMode === 'compact'
+									? `${formatCompactNumber(250)} shares available`
+									: `${formatNumber(250)} shares available`
+							}
 						/>
 						{isNetworkMismatch && <NetworkMismatchBanner />}
 						<div className="hidden md:flex items-center gap-3">
