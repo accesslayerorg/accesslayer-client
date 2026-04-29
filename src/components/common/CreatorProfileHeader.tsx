@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
 import CreatorInitialsAvatar from '@/components/common/CreatorInitialsAvatar';
 import CreatorBio from '@/components/common/CreatorBio';
+import { truncateCreatorName } from '@/utils/creatorName.utils';
 
 interface CreatorProfileHeaderProps {
 	name: string;
@@ -72,8 +73,8 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 				</div>
 				<div className="min-w-0 space-y-1">
 					<div className="flex items-center gap-2 overflow-hidden">
-						<h1 className="truncate font-grotesque text-3xl font-black tracking-tight text-white md:text-4xl">
-							{name}
+						<h1 className="truncate font-grotesque text-3xl font-black tracking-tight text-white md:text-4xl" title={name}>
+							{truncateCreatorName(name, 32)}
 						</h1>
 						{isVerified && <div className="shrink-0"><VerifiedBadge verified={true} /></div>}
 					</div>
