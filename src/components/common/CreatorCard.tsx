@@ -1,11 +1,14 @@
 import { useRef, useState } from 'react';
 import { useAccount } from 'wagmi';
-import { AsyncButton } from '@/components/ui/async-button';
 import type { Course } from '@/services/course.service';
 import { cn } from '@/lib/utils';
 import { ShoppingCart, Link as LinkIcon, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import showToast from '@/utils/toast.util';
+import { formatCompactNumber, formatNumber } from '@/utils/numberFormat.utils';
+import { AsyncButton } from '@/components/ui/async-button';
+import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
+import { useTransactionTelemetry } from '@/hooks/useTransactionTelemetry';
 import TransactionRetryNotice from '@/components/common/TransactionRetryNotice';
 import TransactionFailureDrawer from '@/components/common/TransactionFailureDrawer';
 import type { TransactionFailureDetails } from '@/components/common/TransactionFailureDrawer';
@@ -21,10 +24,8 @@ import Change24hBadge from '@/components/common/Change24hBadge';
 import KeySupplyBadge from '@/components/common/KeySupplyBadge';
 import CreatorListRowDivider from '@/components/common/CreatorListRowDivider';
 import BuyActionHelperText from '@/components/common/BuyActionHelperText';
+import NetworkFeeHint from '@/components/common/NetworkFeeHint';
 import CreatorBio from '@/components/common/CreatorBio';
-import { useTransactionTelemetry } from '@/hooks/useTransactionTelemetry';
-import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
-import { formatCompactNumber, formatNumber } from '@/utils/numberFormat.utils';
 
 interface CreatorCardProps {
 	creator: Course;
@@ -218,7 +219,8 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 			</div>
 			<CreatorListRowDivider className="mt-4 mb-2" />
 
-			<div className="flex items-center justify-end gap-4">
+			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+				<NetworkFeeHint className="shrink-0" />
 				<AsyncButton
 					onClick={handleBuy}
 					variant={isConnected ? 'default' : 'outline'}
