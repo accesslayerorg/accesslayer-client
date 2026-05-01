@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import { useAccount } from 'wagmi';
-import { AsyncButton } from '@/components/ui/async-button';
 import type { Course } from '@/services/course.service';
 import { cn } from '@/lib/utils';
 import { ShoppingCart, Link as LinkIcon, TrendingUp } from 'lucide-react';
@@ -21,7 +20,6 @@ import Change24hBadge from '@/components/common/Change24hBadge';
 import KeySupplyBadge from '@/components/common/KeySupplyBadge';
 import CreatorListRowDivider from '@/components/common/CreatorListRowDivider';
 import BuyActionHelperText from '@/components/common/BuyActionHelperText';
-import CreatorLabeledStatRow from '@/components/common/CreatorLabeledStatRow';
 import NetworkFeeHint from '@/components/common/NetworkFeeHint';
 
 interface CreatorCardProps {
@@ -247,7 +245,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 							: transactionState === 'failed'
 								? 'Retry Purchase'
 								: 'Buy Key'}
-				</AsyncButton>
+				</Button>
 			</div>
 
 			<BuyActionHelperText

@@ -11,7 +11,7 @@ const NetworkFeeHint = ({
 	fee = '~0.0001 ETH',
 	className,
 	variant = 'chip',
-}) => {
+}: NetworkFeeHintProps) => {
 	if (variant === 'text') {
 		return (
 			<div className={cn('flex items-center gap-1.5 text-xs text-white/40', className)}>
