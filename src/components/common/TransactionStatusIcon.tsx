@@ -18,46 +18,28 @@ const TransactionStatusIcon: React.FC<TransactionStatusIconProps> = ({
 	status,
 	className,
 }) => {
-	if (status === 'success') {
-		return (
-			<span
-				aria-label="Transaction success"
-				className={cn(
-					'inline-flex rounded-full p-1.5',
-					statusStyles.success,
-					className
-				)}
-			>
-				<CheckCircle2 className="size-4" />
-			</span>
-		);
-	}
+	const Icon =
+		status === 'success' ? CheckCircle2 : status === 'pending' ? Clock3 : XCircle;
 
-	if (status === 'pending') {
-		return (
-			<span
-				aria-label="Transaction pending"
-				className={cn(
-					'inline-flex rounded-full p-1.5',
-					statusStyles.pending,
-					className
-				)}
-			>
-				<Clock3 className="size-4 animate-pulse" />
-			</span>
-		);
-	}
+	const label =
+		status === 'success'
+			? 'Transaction success'
+			: status === 'pending'
+				? 'Transaction pending'
+				: 'Transaction failed';
 
 	return (
 		<span
-			aria-label="Transaction failed"
+			aria-label={label}
 			className={cn(
-				'inline-flex rounded-full p-1.5',
-				statusStyles.failed,
+				'inline-flex items-center justify-center rounded-full p-1.5',
+				statusStyles[status],
+				status === 'pending' &&
+					'motion-safe:animate-pulse motion-reduce:animate-none',
 				className
 			)}
 		>
-			<XCircle className="size-4" />
+			<Icon className="size-4" />
 		</span>
 	);
 };

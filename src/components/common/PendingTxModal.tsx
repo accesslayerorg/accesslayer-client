@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import CircularSpinner from '@/components/common/CircularSpinnerProps';
 import { cn } from '@/lib/utils';
+import TransactionHashRow from '@/components/common/TransactionHashRow';
 
 export interface PendingTxModalProps {
 	open: boolean;
@@ -18,6 +19,10 @@ export interface PendingTxModalProps {
 	isLoading?: boolean;
 	title?: string;
 	description?: string;
+	/** Optional transaction hash to display */
+	txHash?: string;
+	/** Optional explorer link for the transaction */
+	explorerUrl?: string;
 	/** Prevent the user from dismissing the modal while loading */
 	blockDismissal?: boolean;
 	/** Optional footer action (e.g. "View on explorer") */
@@ -33,6 +38,8 @@ const PendingTxModal: React.FC<PendingTxModalProps> = ({
 	isLoading = false,
 	title = 'Transaction pending',
 	description = 'Your transaction has been submitted and is awaiting confirmation.',
+	txHash,
+	explorerUrl,
 	blockDismissal = false,
 	action,
 }) => {
@@ -45,6 +52,7 @@ const PendingTxModal: React.FC<PendingTxModalProps> = ({
 		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent
 				showCloseButton={!(blockDismissal && isLoading)}
+				showEscapeHint={!(blockDismissal && isLoading)}
 				className="max-w-sm"
 				// Prevent closing via Escape when dismissal is blocked
 				onEscapeKeyDown={(e: KeyboardEvent) => {
@@ -86,6 +94,16 @@ const PendingTxModal: React.FC<PendingTxModalProps> = ({
 						{description}
 					</DialogDescription>
 				</DialogHeader>
+
+				{txHash && (
+					<div className="mt-2 border-t border-white/5 pt-4">
+						<TransactionHashRow
+							hash={txHash}
+							explorerUrl={explorerUrl}
+							className="bg-white/5 rounded-lg px-3 py-2"
+						/>
+					</div>
+				)}
 
 				{(action || !blockDismissal) && (
 					<DialogFooter className="sm:justify-center">

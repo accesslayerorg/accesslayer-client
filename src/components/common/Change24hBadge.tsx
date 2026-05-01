@@ -1,5 +1,6 @@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatPercent } from '@/utils/numberFormat.utils';
 
 interface Change24hBadgeProps {
 	/** Percentage change over 24h. Positive = up, negative = down, undefined = no data. */
@@ -10,6 +11,7 @@ interface Change24hBadgeProps {
 const Change24hBadge: React.FC<Change24hBadgeProps> = ({ change, className }) => {
 	const isPositive = change !== undefined && change > 0;
 	const isNegative = change !== undefined && change < 0;
+	const formatted = formatPercent(change, { signed: true });
 
 	return (
 		<div
@@ -20,16 +22,12 @@ const Change24hBadge: React.FC<Change24hBadgeProps> = ({ change, className }) =>
 				!isPositive && !isNegative && 'border-white/10 bg-white/[0.06] text-white/40',
 				className
 			)}
-			title={change !== undefined ? `${change > 0 ? '+' : ''}${change.toFixed(2)}% (24h)` : 'No 24h data'}
+			title={change !== undefined ? `${formatted} (24h)` : 'No 24h data'}
 		>
 			{isPositive && <TrendingUp className="size-3" />}
 			{isNegative && <TrendingDown className="size-3" />}
 			{!isPositive && !isNegative && <Minus className="size-3" />}
-			<span>
-				{change !== undefined
-					? `${change > 0 ? '+' : ''}${change.toFixed(2)}%`
-					: '—'}
-			</span>
+			<span>{formatted}</span>
 		</div>
 	);
 };

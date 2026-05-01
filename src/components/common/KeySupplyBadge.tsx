@@ -2,7 +2,11 @@ import * as React from 'react';
 import { Key } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip } from '@/components/ui/tooltip';
-import { formatRelativeTime, type TooltipContent } from '@/utils/keyPrice.utils';
+import {
+	formatTimestampTooltip,
+	type TooltipContent,
+} from '@/utils/keyPrice.utils';
+import { formatCompactNumber, formatNumber } from '@/utils/numberFormat.utils';
 
 interface KeySupplyBadgeProps {
 	/** Total key supply. Undefined or null renders a graceful placeholder. */
@@ -11,29 +15,25 @@ interface KeySupplyBadgeProps {
 	tooltipContent?: TooltipContent;
 }
 
-function formatSupply(supply: number): string {
-	if (supply >= 1_000_000) {
-		return `${(supply / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
-	}
-	if (supply >= 1_000) {
-		return `${(supply / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
-	}
-	return supply.toString();
-}
-
 function KeyPriceTooltipContent({ lastUpdated, quoteSource }: TooltipContent) {
-	const timeLabel = formatRelativeTime(lastUpdated);
-	const sourceLabel = quoteSource?.trim() ? `Source: ${quoteSource}` : 'Source: N/A';
+	const timestamp = formatTimestampTooltip(lastUpdated);
+	const sourceLabel = quoteSource?.trim()
+		? `Source: ${quoteSource}`
+		: 'Source: N/A';
 
 	return (
 		<div>
-			<div>{timeLabel}</div>
+			<div title={timestamp.title ?? undefined}>{timestamp.display}</div>
 			<div>{sourceLabel}</div>
 		</div>
 	);
 }
 
-const KeySupplyBadge: React.FC<KeySupplyBadgeProps> = ({ supply, className, tooltipContent }) => {
+const KeySupplyBadge: React.FC<KeySupplyBadgeProps> = ({
+	supply,
+	className,
+	tooltipContent,
+}) => {
 	const hasData = supply != null && supply >= 0;
 
 	const badge = (
@@ -45,10 +45,14 @@ const KeySupplyBadge: React.FC<KeySupplyBadgeProps> = ({ supply, className, tool
 					: 'border-white/10 bg-white/[0.06] text-white/40',
 				className
 			)}
-			title={hasData ? `${supply} keys available` : 'Supply not available'}
+			title={
+				hasData
+					? `${formatNumber(supply)} keys available`
+					: 'Supply not available'
+			}
 		>
 			<Key className="size-3" aria-hidden="true" />
-			<span>{hasData ? formatSupply(supply!) : '—'}</span>
+			<span>{hasData ? formatCompactNumber(supply!) : '—'}</span>
 		</span>
 	);
 
