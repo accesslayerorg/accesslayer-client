@@ -5,6 +5,10 @@ import { cn } from '@/lib/utils';
 import { ShoppingCart, Link as LinkIcon, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import showToast from '@/utils/toast.util';
+import { formatCompactNumber, formatNumber } from '@/utils/numberFormat.utils';
+import { AsyncButton } from '@/components/ui/async-button';
+import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
+import { useTransactionTelemetry } from '@/hooks/useTransactionTelemetry';
 import TransactionRetryNotice from '@/components/common/TransactionRetryNotice';
 import TransactionFailureDrawer from '@/components/common/TransactionFailureDrawer';
 import type { TransactionFailureDetails } from '@/components/common/TransactionFailureDrawer';
@@ -21,6 +25,7 @@ import KeySupplyBadge from '@/components/common/KeySupplyBadge';
 import CreatorListRowDivider from '@/components/common/CreatorListRowDivider';
 import BuyActionHelperText from '@/components/common/BuyActionHelperText';
 import NetworkFeeHint from '@/components/common/NetworkFeeHint';
+import CreatorBio from '@/components/common/CreatorBio';
 
 interface CreatorCardProps {
 	creator: Course;
@@ -216,7 +221,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 
 			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 				<NetworkFeeHint className="shrink-0" />
-				<Button
+				<AsyncButton
 					onClick={handleBuy}
 					variant={isConnected ? 'default' : 'outline'}
 					size="sm"
@@ -245,7 +250,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 							: transactionState === 'failed'
 								? 'Retry Purchase'
 								: 'Buy Key'}
-				</Button>
+				</AsyncButton>
 			</div>
 
 			<BuyActionHelperText
