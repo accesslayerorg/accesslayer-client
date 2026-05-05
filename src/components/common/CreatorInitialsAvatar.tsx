@@ -38,8 +38,10 @@ const CreatorInitialsAvatar: React.FC<CreatorInitialsAvatarProps> = ({
 	if (!imageSrc || hasError) {
 		return (
 			<div
+				role="img"
+				aria-label={`${name} avatar`}
 				className={cn(
-					'flex size-full items-center justify-center text-3xl font-black tracking-wide',
+					'flex size-full flex-col items-center justify-center gap-0.5 text-3xl font-black tracking-wide',
 					className
 				)}
 				style={{
@@ -47,7 +49,12 @@ const CreatorInitialsAvatar: React.FC<CreatorInitialsAvatarProps> = ({
 					color: fallbackColors.textColor,
 				}}
 			>
-				<span aria-label={`${name} initials avatar`}>{initials}</span>
+				<span aria-hidden="true">{initials}</span>
+				{hasError && (
+					<span className="text-[0.5rem] font-semibold uppercase tracking-widest opacity-60">
+						No image
+					</span>
+				)}
 			</div>
 		);
 	}
@@ -55,7 +62,7 @@ const CreatorInitialsAvatar: React.FC<CreatorInitialsAvatarProps> = ({
 	return (
 		<img
 			src={imageSrc}
-			alt={name}
+			alt={`${name} avatar`}
 			onError={() => setHasError(true)}
 			className={cn('size-full object-cover', imageClassName, className)}
 		/>

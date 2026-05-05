@@ -1,11 +1,14 @@
 import { useRef, useState } from 'react';
 import { useAccount } from 'wagmi';
-import { AsyncButton } from '@/components/ui/async-button';
 import type { Course } from '@/services/course.service';
 import { cn } from '@/lib/utils';
 import { ShoppingCart, Link as LinkIcon, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import showToast from '@/utils/toast.util';
+import { formatCompactNumber, formatNumber } from '@/utils/numberFormat.utils';
+import { AsyncButton } from '@/components/ui/async-button';
+import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
+import { useTransactionTelemetry } from '@/hooks/useTransactionTelemetry';
 import TransactionRetryNotice from '@/components/common/TransactionRetryNotice';
 import TransactionFailureDrawer from '@/components/common/TransactionFailureDrawer';
 import type { TransactionFailureDetails } from '@/components/common/TransactionFailureDrawer';
@@ -21,12 +24,8 @@ import Change24hBadge from '@/components/common/Change24hBadge';
 import KeySupplyBadge from '@/components/common/KeySupplyBadge';
 import CreatorListRowDivider from '@/components/common/CreatorListRowDivider';
 import BuyActionHelperText from '@/components/common/BuyActionHelperText';
-import CreatorLabeledStatRow from '@/components/common/CreatorLabeledStatRow';
+import NetworkFeeHint from '@/components/common/NetworkFeeHint';
 import CreatorBio from '@/components/common/CreatorBio';
-import { useTransactionTelemetry } from '@/hooks/useTransactionTelemetry';
-import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
-import { formatCompactNumber, formatNumber, formatFollowerCount } from '@/utils/numberFormat.utils';
-import { truncateCreatorName } from '@/utils/creatorName.utils';
 
 interface CreatorCardProps {
 	creator: Course;
@@ -181,18 +180,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 					<MiniStatChip label="Level" value={creator.level || 'Open'} />
 				</div>
 				<CreatorListRowDivider className="my-4" />
-				<div className="mt-3 space-y-1.5">
-					<CreatorLabeledStatRow
-						label="Creator Share Supply"
-						value={
-							creator.creatorShareSupply
-								? `${formatFollowerCount(creator.creatorShareSupply)} shares`
-								: 'Supply pending'
-						}
-						className="px-3 py-3"
-						labelClassName="text-[0.6rem]"
-						valueClassName="text-sm md:text-sm"
-					/>
+				<div className="mt-3 space-y-2">
 					<CardMetaRow
 						label={
 							<span className="inline-flex items-center gap-1.5">
@@ -223,13 +211,16 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 						valueClassName="font-grotesque text-base font-black text-amber-400"
 					/>
 				</div>
+				<CreatorListRowDivider className="my-4" />
 				<CreatorSocialLinksList
 					handle={creator.socialHandle}
 					className="mt-4"
 				/>
 			</div>
+			<CreatorListRowDivider className="mt-4 mb-2" />
 
-			<div className="flex items-center justify-end gap-4">
+			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+				<NetworkFeeHint className="shrink-0" />
 				<AsyncButton
 					onClick={handleBuy}
 					variant={isConnected ? 'default' : 'outline'}
@@ -243,17 +234,22 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator, className }) => {
 					)}
 				>
 					{transactionState === 'success' && (
-						<TransactionStatusIcon status="success" className="mr-2" />
+						<TransactionStatusIcon status="success" />
+					)}
+					{transactionState === 'submitting' && (
+						<TransactionStatusIcon status="pending" />
 					)}
 					{transactionState === 'failed' && (
-						<TransactionStatusIcon status="failed" className="mr-2" />
+						<TransactionStatusIcon status="failed" />
 					)}
-					<ShoppingCart className="mr-2 size-4" />
-					{transactionState === 'success'
-						? 'Completed'
-						: transactionState === 'failed'
-							? 'Retry Purchase'
-							: 'Buy Key'}
+					<ShoppingCart className="size-4" />
+					{transactionState === 'submitting'
+						? 'Processing...'
+						: transactionState === 'success'
+							? 'Completed'
+							: transactionState === 'failed'
+								? 'Retry Purchase'
+								: 'Buy Key'}
 				</AsyncButton>
 			</div>
 
