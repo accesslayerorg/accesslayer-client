@@ -322,6 +322,10 @@ function LandingPage() {
 
 	const handleResetSearch = () => setSearchQuery('');
 
+	const scrollToMarketplace = () => {
+		document.getElementById('creator-marketplace')?.scrollIntoView({ behavior: 'smooth' });
+	};
+
 	const openTradeDialog = (side: TradeSide) => {
 		setTradeSide(side);
 		setTradeDialogOpen(true);
@@ -399,6 +403,7 @@ function LandingPage() {
 
 				<SectionDivider title="Discover creators" spacing="relaxed" />
 
+				<div id="creator-marketplace">
 				<StickyFilterBar
 					eyebrow="Marketplace filters"
 					title="Find creators without losing your place"
@@ -530,6 +535,8 @@ function LandingPage() {
 						</div>
 					)}
 				</MarketplaceSection>
+
+				</div>
 
 				<SectionDivider title="Creator profile pattern" spacing="relaxed" />
 
@@ -679,7 +686,7 @@ function LandingPage() {
 					spacing="relaxed"
 				/>
 				<MarketplaceSection spacing="relaxed">
-					<EmptyTransactionTimelineState />
+					<EmptyTransactionTimelineState onDiscover={scrollToMarketplace} />
 				</MarketplaceSection>
 			</div>
 
