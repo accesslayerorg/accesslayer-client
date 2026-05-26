@@ -5,6 +5,7 @@ import CreatorProfileStatItem from './CreatorProfileStatItem';
 interface CreatorProfileInfoItem {
 	label: string;
 	value: ReactNode;
+	helperText?: ReactNode;
 }
 
 interface CreatorProfileInfoGridProps {
@@ -28,6 +29,7 @@ const CreatorProfileInfoGrid: React.FC<CreatorProfileInfoGridProps> = ({
 					key={item.label}
 					label={item.label}
 					value={item.value}
+					helperText={item.helperText}
 				/>
 			))}
 		</div>

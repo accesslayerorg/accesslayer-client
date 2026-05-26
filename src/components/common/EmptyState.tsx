@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
+import { EMPTY_STATE_ILLUSTRATION_SIZES } from './emptyStateIllustration.config';
 
 interface EmptyStateProps {
 	image: string;
@@ -26,11 +27,19 @@ const EmptyState: React.FC<EmptyStateProps> = ({
 			role="status"
 			aria-label={title}
 		>
-			<div className="relative mb-6">
+			<div
+				className={cn(
+					'relative mb-6 flex items-center justify-center',
+					EMPTY_STATE_ILLUSTRATION_SIZES.heroFrame
+				)}
+			>
 				<div className="absolute inset-0 size-full rounded-full bg-amber-500/10 blur-2xl" />
 				<img
 					src={image}
-					className="relative z-10 size-[180px] object-contain opacity-60 grayscale transition-all duration-500 hover:opacity-80 hover:grayscale-0"
+					className={cn(
+						'relative z-10 opacity-60 grayscale transition-all duration-500 hover:opacity-80 hover:grayscale-0',
+						EMPTY_STATE_ILLUSTRATION_SIZES.heroVisual
+					)}
 					alt=""
 					aria-hidden="true"
 				/>

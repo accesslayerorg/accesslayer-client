@@ -4,12 +4,14 @@ import { cn } from '@/lib/utils';
 interface CreatorProfileStatItemProps {
 	label: string;
 	value: ReactNode;
+	helperText?: ReactNode;
 	className?: string;
 }
 
 const CreatorProfileStatItem: React.FC<CreatorProfileStatItemProps> = ({
 	label,
 	value,
+	helperText,
 	className,
 }) => {
 	return (
@@ -26,6 +28,11 @@ const CreatorProfileStatItem: React.FC<CreatorProfileStatItemProps> = ({
 			<div className="relative z-10 mt-2.5 font-jakarta text-base font-bold text-white md:text-[1.05rem]">
 				{value}
 			</div>
+			{helperText && (
+				<p className="relative z-10 mt-1.5 text-xs text-white/45">
+					{helperText}
+				</p>
+			)}
 		</div>
 	);
 };

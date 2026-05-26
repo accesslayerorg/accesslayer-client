@@ -35,6 +35,8 @@ const FEATURED_CREATOR_FACTS = [
 	{ label: 'Community', value: 'Private behind-the-scenes notes' },
 ];
 
+const FEATURED_CREATOR_FOLLOWER_COUNT: number | null = null;
+
 // Fallback demo data in case API fails
 const DEMO_CREATORS: Course[] = [
 	{
@@ -598,6 +600,19 @@ function LandingPage() {
 						<CreatorProfileInfoGrid
 							items={[
 								...FEATURED_CREATOR_FACTS,
+								{
+									label: 'Followers',
+									value:
+										FEATURED_CREATOR_FOLLOWER_COUNT != null
+											? formatCompactNumber(
+													FEATURED_CREATOR_FOLLOWER_COUNT
+												)
+											: 'Not available',
+									helperText:
+										FEATURED_CREATOR_FOLLOWER_COUNT != null
+											? undefined
+											: 'Follower count not available yet.',
+								},
 								{
 									label: 'Your holdings',
 									value: `${formatNumber(featuredHoldings)} keys`,

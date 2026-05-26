@@ -17,6 +17,9 @@ interface CreatorProfileHeaderProps {
 	className?: string;
 }
 
+const CREATOR_PROFILE_SUBTITLE_WRAP_CLASS_NAME =
+	'max-w-full whitespace-normal break-words [overflow-wrap:anywhere]';
+
 const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 	name,
 	handle,
@@ -77,7 +80,14 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 						</h1>
 						{isVerified && <div className="shrink-0"><VerifiedBadge verified={true} /></div>}
 					</div>
-					<p className="truncate font-jakarta text-lg text-white/50">@{handle}</p>
+					<p
+						className={cn(
+							'font-jakarta text-lg text-white/50',
+							CREATOR_PROFILE_SUBTITLE_WRAP_CLASS_NAME
+						)}
+					>
+						@{handle}
+					</p>
 					<CreatorBio bio={bio} variant="profile" className="mt-2 max-w-md" />
 				</div>
 			</div>

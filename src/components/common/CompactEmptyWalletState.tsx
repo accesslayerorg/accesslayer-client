@@ -1,5 +1,6 @@
 import { WalletMinimal } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EMPTY_STATE_ILLUSTRATION_SIZES } from './emptyStateIllustration.config';
 
 interface CompactEmptyWalletStateProps {
 	title?: string;
@@ -19,8 +20,18 @@ const CompactEmptyWalletState: React.FC<CompactEmptyWalletStateProps> = ({
 				className
 			)}
 		>
-			<div className="mt-0.5 rounded-lg bg-amber-300/20 p-1.5">
-				<WalletMinimal className="size-4 text-amber-200" />
+			<div
+				className={cn(
+					'mt-0.5 flex items-center justify-center rounded-lg bg-amber-300/20',
+					EMPTY_STATE_ILLUSTRATION_SIZES.compactBadgeFrame
+				)}
+			>
+				<WalletMinimal
+					className={cn(
+						'text-amber-200',
+						EMPTY_STATE_ILLUSTRATION_SIZES.compactBadgeIcon
+					)}
+				/>
 			</div>
 			<div>
 				<p className="text-sm font-semibold text-amber-100">{title}</p>
