@@ -130,4 +130,12 @@ describe('TradeDialog focus order', () => {
 			)
 		).toBeInTheDocument();
 	});
+
+	it('shows balance loading copy instead of stale holdings while switching networks', () => {
+		renderDialog({ availableHoldings: 10, isBalanceLoading: true });
+
+		expect(screen.getByText('Holdings: Loading...')).toBeInTheDocument();
+		expect(screen.queryByText('Holdings: 10 keys')).not.toBeInTheDocument();
+		expect(screen.getByTestId('trade-dialog-confirm')).toBeDisabled();
+	});
 });

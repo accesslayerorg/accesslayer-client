@@ -28,7 +28,8 @@ export interface TradeDialogProps {
 	open: boolean;
 	side: TradeSide;
 	creatorName: string;
-	availableHoldings: number;
+	availableHoldings: number | null;
+	isBalanceLoading?: boolean;
 	/** Per-key price in stroops, shown on the buy confirmation step. */
 	keyPriceStroops?: number | null;
 	onOpenChange: (open: boolean) => void;
@@ -46,6 +47,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	side,
 	creatorName,
 	availableHoldings,
+	isBalanceLoading = false,
 	keyPriceStroops,
 	onOpenChange,
 	onConfirm,
@@ -70,7 +72,9 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	const amountValid =
 		Number.isFinite(parsedAmount) &&
 		parsedAmount > 0 &&
-		(side !== 'sell' || parsedAmount <= availableHoldings);
+		!isBalanceLoading &&
+		(side !== 'sell' ||
+			(availableHoldings != null && parsedAmount <= availableHoldings));
 
 	const displayCreatorName =
 		normalizeCreatorDisplayName(creatorName) || 'Unnamed creator';
@@ -191,11 +195,23 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 					/>
 					<div className="flex flex-wrap items-center gap-2 text-xs text-white/45">
 						<span
-							aria-label={`Current wallet holdings: ${formatNumber(availableHoldings)} keys`}
+							aria-busy={isBalanceLoading || undefined}
+							aria-label={
+								isBalanceLoading || availableHoldings == null
+									? 'Current wallet holdings loading'
+									: `Current wallet holdings: ${formatNumber(
+										availableHoldings
+									)} keys`
+							}
+							role="status"
 						>
-							Holdings: {formatNumber(availableHoldings)} keys
+							{isBalanceLoading || availableHoldings == null
+								? 'Holdings: Loading...'
+								: `Holdings: ${formatNumber(availableHoldings)} keys`}
 						</span>
 						{side === 'sell' &&
+							!isBalanceLoading &&
+							availableHoldings != null &&
 							availableHoldings > 0 &&
 							Number.isFinite(parsedAmount) &&
 							parsedAmount > 0 && (
@@ -216,11 +232,14 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 						fee={networkFeeCopy}
 						className="text-white/45"
 					/>
-					{side === 'sell' && parsedAmount > availableHoldings && (
-						<div className="text-xs text-red-300">
-							You can’t sell more than your current holdings.
-						</div>
-					)}
+					{side === 'sell' &&
+						!isBalanceLoading &&
+						availableHoldings != null &&
+						parsedAmount > availableHoldings && (
+							<div className="text-xs text-red-300">
+								You can’t sell more than your current holdings.
+							</div>
+						)}
 				</div>
 
 				{/*
