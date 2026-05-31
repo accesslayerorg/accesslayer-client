@@ -507,6 +507,16 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 								? 'Retry Purchase'
 								: 'Buy Key'}
 				</AsyncButton>
+				<div className="flex items-center gap-2">
+  <BuyButton creator={creator} />
+
+  <span
+    className="hidden md:inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] text-muted-foreground"
+    aria-label="Quick buy keyboard shortcut"
+  >
+    ⌘K
+  </span>
+</div>
 			</div>
 
 			<BuyActionHelperText

@@ -45,3 +45,11 @@ pnpm build
 - Browse the maintainer issue inventory in [docs/open-source/issue-backlog.md](./docs/open-source/issue-backlog.md).
 - Use the issue templates in [`.github/ISSUE_TEMPLATE`](./.github/ISSUE_TEMPLATE).
 - Review [SECURITY.md](./SECURITY.md) before reporting vulnerabilities.
+
+### Quick Buy Shortcut
+
+On desktop, creator cards display a keyboard shortcut hint.
+
+Press `K` while focused on a creator card to open the Quick Buy flow.
+
+Mobile behavior remains unchanged.
