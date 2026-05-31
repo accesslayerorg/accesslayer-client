@@ -65,6 +65,7 @@ const FEATURED_CREATOR_FACTS = [
 const FEATURED_CREATOR_FOLLOWER_COUNT: number | null = null;
 const FEATURED_CREATOR_KEY_HOLDER_COUNT = 0;
 
+
 const getFeaturedCreatorKeyHolderCopy = (count: number | null) => {
 	if (count == null) {
 		return {
@@ -86,6 +87,7 @@ const getFeaturedCreatorKeyHolderCopy = (count: number | null) => {
 		explanation: 'Number of wallets that currently hold at least one key.',
 	};
 };
+ useQuickBuyShortcut();
 
 // Fallback demo data in case API fails
 const DEMO_CREATORS: Course[] = [
