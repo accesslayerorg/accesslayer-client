@@ -12,6 +12,11 @@ export const KEY_PRICE_BOUNDS = {
 	MAX_PRICE: 100,
 } as const;
 
+export const BUY_QUANTITY_BOUNDS = {
+	MIN_QTY: 1,
+	MAX_QTY: 100,
+} as const;
+
 export const TRADE_FEE_ESTIMATE = {
 	DEFAULT_NETWORK_FEE: 0.0001,
 	UNIT: 'ETH',

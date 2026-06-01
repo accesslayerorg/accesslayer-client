@@ -15,6 +15,7 @@ import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import PercentageBadge from '@/components/common/PercentageBadge';
 import NetworkFeeHint from '@/components/common/NetworkFeeHint';
 import { TRADE_FEE_ESTIMATE } from '@/constants/fees';
+import { clampBuyQuantity } from '@/utils/buyQuantity';
 import {
 	fetchTradeNetworkFeeEstimate,
 	formatTransactionFeeDisplay,
@@ -57,11 +58,35 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	const [amountText, setAmountText] = useState('1');
 	const [networkFeeEstimate, setNetworkFeeEstimate] =
 		useState<NetworkFeeEstimateState>({ status: 'idle', fee: null });
+	const [adjustmentNote, setAdjustmentNote] = useState<string | null>(null);
 	const amountInputRef = useRef<HTMLInputElement | null>(null);
 
 	useEffect(() => {
-		if (open) setAmountText('1');
+		if (open) {
+			setAmountText('1');
+			setAdjustmentNote(null);
+		}
 	}, [open]);
+
+	const handleBlur = () => {
+		if (side !== 'buy') return;
+
+		const trimmed = amountText.trim();
+		const res = clampBuyQuantity(trimmed);
+
+		if (res.adjusted) {
+			setAmountText(res.value.toString());
+			if (res.reason === 'below_min') {
+				setAdjustmentNote(`Quantity adjusted to the minimum of ${res.value}.`);
+			} else if (res.reason === 'above_max') {
+				setAdjustmentNote(`Quantity adjusted to the maximum of ${res.value}.`);
+			} else {
+				setAdjustmentNote(`Quantity rounded to ${res.value}.`);
+			}
+		} else {
+			setAdjustmentNote(null);
+		}
+	};
 
 	const parsedAmount = useMemo(() => {
 		const normalized = amountText.trim();
@@ -180,7 +205,11 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 						ref={amountInputRef}
 						inputMode="decimal"
 						value={amountText}
-						onChange={event => setAmountText(event.target.value)}
+						onChange={event => {
+							setAmountText(event.target.value);
+							setAdjustmentNote(null);
+						}}
+						onBlur={handleBlur}
 						disabled={isSubmitting}
 						className={cn(
 							'w-full rounded-xl border bg-white/[0.04] px-3 py-2 text-white outline-none transition-colors',
@@ -193,6 +222,11 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 						data-focus-order="1"
 						data-testid="trade-dialog-amount"
 					/>
+					{side === 'buy' && adjustmentNote && (
+						<div className="text-xs text-amber-400 font-medium animate-in fade-in duration-200" data-testid="buy-qty-adjustment-note">
+							{adjustmentNote}
+						</div>
+					)}
 					<div className="flex flex-wrap items-center gap-2 text-xs text-white/45">
 						<span
 							aria-busy={isBalanceLoading || undefined}

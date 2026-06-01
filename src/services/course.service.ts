@@ -21,6 +21,8 @@ export interface Course {
 	volume24h?: number;
 	change24h?: number;
 	joinedAt?: string;
+	/** Whether this creator is pinned in the marketplace list. */
+	isPinned?: boolean;
 }
 
 export interface GetCoursesParams {

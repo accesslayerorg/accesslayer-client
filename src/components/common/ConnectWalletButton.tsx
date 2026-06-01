@@ -1,5 +1,9 @@
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { shortenAddress } from '@/lib/web3/format';
+import {
+	WALLET_CONNECTION_AD_BLOCKER_MESSAGE,
+	useWalletConnectionStallDetection,
+} from '@/hooks/useWalletConnectionStallDetection';
 
 function ConnectWalletButton() {
 	const { address, isConnected } = useAccount();
@@ -7,6 +11,10 @@ function ConnectWalletButton() {
 	const { disconnect } = useDisconnect();
 
 	const primaryConnector = connectors[0];
+	const showAdBlockerSuggestion = useWalletConnectionStallDetection({
+		isAwaitingWalletResponse: isPending,
+		hasWalletResponse: isConnected || Boolean(error),
+	});
 
 	if (isConnected && address) {
 		return (
@@ -34,6 +42,11 @@ function ConnectWalletButton() {
 			</button>
 			{error ? (
 				<p className="text-sm text-red-600">{error.message}</p>
+			) : null}
+			{showAdBlockerSuggestion ? (
+				<p role="status" className="max-w-sm text-sm text-amber-700">
+					{WALLET_CONNECTION_AD_BLOCKER_MESSAGE}
+				</p>
 			) : null}
 		</div>
 	);
