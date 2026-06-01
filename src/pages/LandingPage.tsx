@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutGroup, motion } from 'framer-motion';
+<<<<<<< HEAD
 import { useAccount, useChainId } from 'wagmi';
+=======
+import { useSearchParams } from 'react-router';
+>>>>>>> upstream/main
 import { courseService, type Course } from '@/services/course.service';
 import SkipToContent from '@/components/common/SkipToContent';
 import { cn } from '@/lib/utils';
@@ -31,7 +35,6 @@ import EmptyTransactionTimelineState from '@/components/common/EmptyTransactionT
 import TradeDialog, { type TradeSide } from '@/components/common/TradeDialog';
 import NetworkMismatchBanner from '@/components/common/NetworkMismatchBanner';
 import StellarConnectionQualityBadge from '@/components/common/StellarConnectionQualityBadge';
-import { useEthersProvider } from '@/hooks/useEthersProvider';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
 import { useNetworkAwareBalance } from '@/hooks/useNetworkAwareBalance';
 import showToast from '@/utils/toast.util';
@@ -46,6 +49,8 @@ import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 import StaleDataWarning from '@/components/common/StaleDataWarning';
 import { useScrollPreservation } from '@/hooks/useScrollPreservation';
 import { useStaleData } from '@/hooks/useStaleData';
+import { useIdleRefreshPrompt } from '@/hooks/useIdleRefreshPrompt';
+import IdleRefreshPrompt from '@/components/common/IdleRefreshPrompt';
 import {
 	CREATOR_CARD_ENTRY_CLASS,
 	creatorCardEntryStyle,
@@ -280,7 +285,13 @@ function LandingPage() {
 	const { isMismatch: isNetworkMismatch } = useNetworkMismatch();
 	const [isLoading, setIsLoading] = useState(true);
 	const [isFilterLoading, setIsFilterLoading] = useState(false);
-	const [searchQuery, setSearchQuery] = useState('');
+	const [searchParams, setSearchParams] = useSearchParams();
+	const [searchQuery, setSearchQuery] = useState(() => {
+		const q = searchParams.get('q');
+		return q ?? '';
+	});
+	const searchQueryRef = useRef(searchQuery);
+	const sortOptionRef = useRef<SortOption>('featured');
 	const [activeProfileTab, setActiveProfileTab] = useState(() => {
 		if (typeof window === 'undefined') return 'overview';
 		const PROFILE_TABS = ['overview', 'creations', 'collectors', 'activity'];
@@ -292,14 +303,23 @@ function LandingPage() {
 	const [tradeSide, setTradeSide] = useState<TradeSide>('buy');
 	const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
 	const [tradeSubmitting, setTradeSubmitting] = useState(false);
-	const tradeFeeEstimateProvider = useEthersProvider();
 	const prefersReducedMotion = usePrefersReducedMotion();
 	const [sortOption, setSortOption] = useState<SortOption>(() => {
-		if (typeof window === 'undefined') return 'featured';
-		const saved = window.localStorage.getItem(
-			CREATOR_SORT_KEY
-		) as SortOption | null;
-		return saved ?? 'featured';
+		const sort = searchParams.get('sort') as SortOption | null;
+		if (sort && ['featured', 'price-asc', 'price-desc', 'supply-desc'].includes(sort)) {
+			sortOptionRef.current = sort;
+			return sort;
+		}
+		if (typeof window !== 'undefined') {
+			const saved = window.localStorage.getItem(
+				CREATOR_SORT_KEY
+			) as SortOption | null;
+			if (saved) {
+				sortOptionRef.current = saved;
+				return saved;
+			}
+		}
+		return 'featured';
 	});
 	const [fetchRetryAttempt, setFetchRetryAttempt] = useState(0);
 	const [fetchRequestId, setFetchRequestId] = useState(0);
@@ -319,6 +339,15 @@ function LandingPage() {
 	});
 	const pendingScrollRestoreRef = useRef<number | null>(null);
 
+	// Keep refs in sync with state
+	useEffect(() => {
+		searchQueryRef.current = searchQuery;
+	}, [searchQuery]);
+
+	useEffect(() => {
+		sortOptionRef.current = sortOption;
+	}, [sortOption]);
+
 	// Use scroll preservation for profile tabs
 	useScrollPreservation(activeProfileTab, {
 		storageKey: 'accesslayer.profile-tab-scroll',
@@ -337,6 +366,36 @@ function LandingPage() {
 			window.localStorage.setItem(CREATOR_SORT_KEY, sortOption);
 		}
 	}, [sortOption]);
+
+	useEffect(() => {
+		const newParams = new URLSearchParams(searchParams);
+		if (searchQuery.trim()) {
+			newParams.set('q', searchQuery.trim());
+		} else {
+			newParams.delete('q');
+		}
+		if (sortOption !== 'featured') {
+			newParams.set('sort', sortOption);
+		} else {
+			newParams.delete('sort');
+		}
+		setSearchParams(newParams, { replace: true });
+	}, [searchQuery, sortOption, searchParams, setSearchParams]);
+
+	useEffect(() => {
+		const q = searchParams.get('q');
+		if (q !== null && q !== searchQueryRef.current) {
+			setSearchQuery(q);
+		} else if (q === null && searchQueryRef.current !== '') {
+			setSearchQuery('');
+		}
+		const sort = searchParams.get('sort') as SortOption | null;
+		if (sort && ['featured', 'price-asc', 'price-desc', 'supply-desc'].includes(sort) && sort !== sortOptionRef.current) {
+			setSortOption(sort);
+		} else if (sort === null && sortOptionRef.current !== 'featured') {
+			setSortOption('featured');
+		}
+	}, [searchParams]);
 
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
@@ -566,6 +625,20 @@ function LandingPage() {
 			onStale: handleRetryCreatorFetch,
 		}
 	);
+
+	// Idle-refresh prompt: after 5 minutes of inactivity, show a subtle
+	// banner offering to refresh the creator list. Any user interaction
+	// dismisses it automatically without refreshing.
+	const {
+		isPromptVisible: isIdlePromptVisible,
+		dismissPrompt: dismissIdlePrompt,
+		resetTimer: resetIdleTimer,
+	} = useIdleRefreshPrompt({ thresholdMs: 5 * 60 * 1000 });
+
+	const handleIdleRefresh = () => {
+		resetIdleTimer();
+		handleRetryCreatorFetch();
+	};
 
 	const heldKeyPositions = useMemo(
 		() =>
@@ -1318,11 +1391,15 @@ function LandingPage() {
 				isBalanceLoading={isWalletBalanceLoading}
 				keyPriceStroops={resolveCreatorKeyPriceStroops(featuredCreator)}
 				isSubmitting={tradeSubmitting}
-				networkFeeEstimateProvider={tradeFeeEstimateProvider}
 				onOpenChange={setTradeDialogOpen}
 				onConfirm={handleConfirmTrade}
 			/>
 			<ScrollToTop />
+			<IdleRefreshPrompt
+				visible={isIdlePromptVisible}
+				onRefresh={handleIdleRefresh}
+				onDismiss={dismissIdlePrompt}
+			/>
 		</div>
 	);
 }
