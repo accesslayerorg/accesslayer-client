@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutGroup, motion } from 'framer-motion';
+<<<<<<< HEAD
+import { useAccount, useChainId } from 'wagmi';
+=======
 import { useSearchParams } from 'react-router';
+>>>>>>> upstream/main
 import { courseService, type Course } from '@/services/course.service';
 import SkipToContent from '@/components/common/SkipToContent';
 import { cn } from '@/lib/utils';
@@ -33,6 +37,7 @@ import TradeDialog, { type TradeSide } from '@/components/common/TradeDialog';
 import NetworkMismatchBanner from '@/components/common/NetworkMismatchBanner';
 import StellarConnectionQualityBadge from '@/components/common/StellarConnectionQualityBadge';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
+import { useNetworkAwareBalance } from '@/hooks/useNetworkAwareBalance';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 import { formatCompactNumber, formatNumber } from '@/utils/numberFormat.utils';
@@ -195,6 +200,7 @@ const CREATOR_SCROLL_KEY = 'accesslayer.creator-scrollY';
 const MAX_CREATOR_FETCH_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 800;
 const PAGE_SIZE = 6;
+const WALLET_HOLDINGS_BALANCE_LOAD_DELAY_MS = 250;
 const FETCH_RETRY_ACTION_LABEL = 'Try again';
 const DEMO_HELD_KEY_QUANTITIES = [0, 2, 1] as const;
 const FINAL_FETCH_ERROR_COPY =
@@ -205,6 +211,7 @@ const CREATOR_REFRESH_SHORTCUT_DURATION_MS = 1800;
 const getFetchRetryHelperCopy = (attempt: number, maxAttempts: number) =>
 	`We couldn't load live creators yet. Retrying automatically (attempt ${attempt} of ${maxAttempts}).`;
 
+<<<<<<< HEAD
 const isEditableShortcutTarget = (target: EventTarget | null) => {
 	if (!(target instanceof Element)) return false;
 
@@ -228,7 +235,33 @@ const isCreatorRefreshShortcut = (event: KeyboardEvent) =>
 	!event.shiftKey &&
 	event.key.toLowerCase() === 'r';
 
+=======
+const fetchFeaturedWalletHoldingsBalance = async (holdings: number) => {
+	await new Promise<void>(resolve =>
+		window.setTimeout(resolve, WALLET_HOLDINGS_BALANCE_LOAD_DELAY_MS)
+	);
+	return holdings;
+};
+
+>>>>>>> 55dd18451378da76a8e2d9db9968461cce3556c6
 type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'supply-desc';
+
+const WalletBalanceLoadingIndicator: React.FC<{ className?: string }> = ({
+	className,
+}) => (
+	<span
+		role="status"
+		aria-busy="true"
+		aria-live="polite"
+		className={cn('inline-flex items-center gap-2 text-white/70', className)}
+	>
+		<RefreshCw
+			className="size-3.5 animate-spin motion-reduce:animate-none"
+			aria-hidden="true"
+		/>
+		Loading balance
+	</span>
+);
 
 interface CreatorProfileLoadErrorProps {
 	onRetry: () => void;
@@ -291,7 +324,7 @@ function LandingPage() {
 		const hash = window.location.hash.slice(1);
 		return PROFILE_TABS.includes(hash) ? hash : 'overview';
 	});
-	const [featuredHoldings, setFeaturedHoldings] = useState(3);
+	const [featuredHoldingsSource, setFeaturedHoldingsSource] = useState(3);
 	const [precisionMode, setPrecisionMode] = useState<PrecisionMode>('compact');
 	const [tradeSide, setTradeSide] = useState<TradeSide>('buy');
 	const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
@@ -565,6 +598,36 @@ function LandingPage() {
 	// fall back to the demo featured creator. This keeps the profile panel
 	// reactive to backend updates (supply, price, etc.).
 	const featuredCreator = creators.length > 0 ? creators[0] : DEMO_CREATORS[0];
+	const walletBalanceKey = `${address ?? 'demo-wallet'}:${connectedChainId}:${featuredCreator.id}`;
+	const fetchFeaturedHoldingsBalance = useCallback(
+		() => fetchFeaturedWalletHoldingsBalance(featuredHoldingsSource),
+		[featuredHoldingsSource]
+	);
+	const {
+		balance: featuredHoldings,
+		isLoading: isWalletBalanceLoading,
+	} = useNetworkAwareBalance({
+		balanceKey: walletBalanceKey,
+		fetchBalance: fetchFeaturedHoldingsBalance,
+	});
+	const displayedFeaturedHoldings = featuredHoldings ?? 0;
+	const formattedFeaturedOwnership =
+		featuredHoldings == null
+			? '—'
+			: formatOwnershipPercent(
+				featuredHoldings,
+				featuredCreator?.creatorShareSupply,
+				{
+					maximumFractionDigits: precisionMode === 'compact' ? 1 : 2,
+				}
+			);
+	const mobileFeaturedOwnership =
+		featuredHoldings == null
+			? '—'
+			: formatOwnershipPercent(
+				featuredHoldings,
+				featuredCreator?.creatorShareSupply
+			);
 
 	useEffect(() => {
 		if (pendingScrollRestoreRef.current == null) return;
@@ -685,7 +748,9 @@ function LandingPage() {
 	};
 
 	const handleConfirmTrade = async (amount: number) => {
-		const previousHoldings = featuredHoldings;
+		if (isWalletBalanceLoading || featuredHoldings == null) return;
+
+		const previousHoldings = featuredHoldingsSource;
 		setTradeSubmitting(true);
 
 		try {
@@ -697,7 +762,7 @@ function LandingPage() {
 
 			await new Promise<void>(resolve => window.setTimeout(resolve, 900));
 
-			setFeaturedHoldings(current =>
+			setFeaturedHoldingsSource(current =>
 				tradeSide === 'buy'
 					? current + amount
 					: Math.max(0, current - amount)
@@ -713,7 +778,7 @@ function LandingPage() {
 			);
 			setTradeDialogOpen(false);
 		} catch (error) {
-			setFeaturedHoldings(previousHoldings);
+			setFeaturedHoldingsSource(previousHoldings);
 			showToast.error(getSignatureErrorMessage(error));
 		} finally {
 			setTradeSubmitting(false);
@@ -1285,7 +1350,9 @@ function LandingPage() {
 												tradeSubmitting &&
 													'pointer-events-none select-none opacity-60'
 											)}
-											aria-busy={tradeSubmitting || undefined}
+											aria-busy={
+												tradeSubmitting || isWalletBalanceLoading || undefined
+											}
 										>
 											<Button
 												className="rounded-xl"
@@ -1364,13 +1431,19 @@ function LandingPage() {
 											tradeSubmitting &&
 												'pointer-events-none select-none opacity-60'
 										)}
-										aria-busy={tradeSubmitting || undefined}
+										aria-busy={
+											tradeSubmitting || isWalletBalanceLoading || undefined
+										}
 									>
 										<Button
 											className="rounded-xl"
 											size="sm"
 											onClick={() => openTradeDialog('buy')}
-											disabled={isNetworkMismatch || tradeSubmitting}
+											disabled={
+												isNetworkMismatch ||
+												tradeSubmitting ||
+												isWalletBalanceLoading
+											}
 										>
 											Buy
 										</Button>
@@ -1379,7 +1452,11 @@ function LandingPage() {
 											size="sm"
 											variant="outline"
 											onClick={() => openTradeDialog('sell')}
-											disabled={isNetworkMismatch || tradeSubmitting}
+											disabled={
+												isNetworkMismatch ||
+												tradeSubmitting ||
+												isWalletBalanceLoading
+											}
 										>
 											Sell
 										</Button>
@@ -1413,6 +1490,7 @@ function LandingPage() {
 				side={tradeSide}
 				creatorName="Alex Rivers"
 				availableHoldings={featuredHoldings}
+				isBalanceLoading={isWalletBalanceLoading}
 				keyPriceStroops={resolveCreatorKeyPriceStroops(featuredCreator)}
 				isSubmitting={tradeSubmitting}
 				onOpenChange={setTradeDialogOpen}
