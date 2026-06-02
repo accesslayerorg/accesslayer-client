@@ -71,6 +71,13 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	const amountValid = validationError === null;
 	const showError = touched && validationError !== null;
 
+	const estimatedProceedsStroops = useMemo(() => {
+		if (side !== 'sell') return null;
+		if (!keyPriceStroops || !Number.isFinite(keyPriceStroops)) return null;
+		if (!parsedAmount || !Number.isFinite(parsedAmount) || parsedAmount <= 0) return null;
+		return keyPriceStroops * parsedAmount;
+	}, [side, keyPriceStroops, parsedAmount]);
+
 	const title = side === 'buy' ? 'Buy keys' : 'Sell keys';
 	const confirmLabel = side === 'buy' ? 'Confirm buy' : 'Confirm sell';
 	const estimatedNetworkFee = formatTransactionFeeDisplay(
@@ -176,6 +183,20 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 							fee={estimatedNetworkFee}
 							className="text-white/45"
 						/>
+					)}
+					{side === 'sell' && (
+						<div className="text-xs text-white/45">
+							{estimatedProceedsStroops != null ? (
+								<>
+									Approximate proceeds:{' '}
+									<span className="font-semibold text-amber-300/90 tabular-nums">
+										{formatDisplayKeyPrice(estimatedProceedsStroops)}
+									</span>
+								</>
+							) : (
+								'Approximate proceeds unavailable'
+							)}
+						</div>
 					)}
 				</div>
 
