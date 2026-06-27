@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutGroup, motion } from 'framer-motion';
+import { useSearchParams } from 'react-router';
 import { courseService, type Course } from '@/services/course.service';
 import SkipToContent from '@/components/common/SkipToContent';
 import { cn } from '@/lib/utils';
@@ -8,12 +9,14 @@ import StickyFilterBar from '@/components/common/StickyFilterBar';
 import CreatorCard from '@/components/common/CreatorCard';
 import {
 	CreatorGridSkeleton,
+	CreatorHoldingsListSkeleton,
 	CreatorProfileHeaderSkeleton,
 } from '@/components/common/CreatorSkeleton';
 import EmptyState from '@/components/common/EmptyState';
 import EmptySearchSuggestions from '@/components/common/EmptySearchSuggestions';
 import SectionDivider from '@/components/common/SectionDivider';
 import { Button } from '@/components/ui/button';
+import { Kbd } from '@/components/ui/kbd';
 import { UnavailableAction } from '@/components/ui/unavailable-action';
 import SectionHeading from '@/components/common/SectionHeading';
 import CompactSectionSubtitle from '@/components/common/CompactSectionSubtitle';
@@ -42,16 +45,27 @@ import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 import StaleDataWarning from '@/components/common/StaleDataWarning';
 import { useScrollPreservation } from '@/hooks/useScrollPreservation';
 import { useStaleData } from '@/hooks/useStaleData';
+import { useIdleRefreshPrompt } from '@/hooks/useIdleRefreshPrompt';
+import IdleRefreshPrompt from '@/components/common/IdleRefreshPrompt';
 import {
 	CREATOR_CARD_ENTRY_CLASS,
 	creatorCardEntryStyle,
 } from '@/utils/cardEntryAnimation.utils';
-import { resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
+import {
+	formatDisplayKeyPrice,
+	resolveCreatorKeyPriceStroops,
+} from '@/utils/keyPriceDisplay.utils';
+import {
+	calculatePortfolioValue,
+	formatPortfolioValueDisplay,
+	getPortfolioValueHelperText,
+} from '@/utils/portfolioValue.utils';
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
 import { CREATOR_LIST_SORT_LAYOUT_TRANSITION } from '@/utils/creatorListSortTransition';
 import { AlertCircle, ChevronDown, RefreshCw } from 'lucide-react';
 import ClearedFiltersEmptyState from '@/components/common/ClearedFiltersEmptyState';
 import CreatorListPagination from '@/components/common/CreatorListPagination';
+import CreatorListGroupSeparator from '@/components/common/CreatorListGroupSeparator';
 import MarketplaceSidebar from '@/components/common/MarketplaceSidebar';
 
 const FEATURED_CREATOR_FACTS = [
@@ -100,6 +114,7 @@ const DEMO_CREATORS: Course[] = [
 		category: 'Art',
 		level: 'BEGINNER',
 		isVerified: true,
+		isPinned: true,
 		thumbnail:
 			'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
 	},
@@ -114,6 +129,7 @@ const DEMO_CREATORS: Course[] = [
 		category: 'Tech',
 		level: 'ADVANCED',
 		isVerified: true,
+		isPinned: true,
 		thumbnail:
 			'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop',
 	},
@@ -180,11 +196,37 @@ const MAX_CREATOR_FETCH_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 800;
 const PAGE_SIZE = 6;
 const FETCH_RETRY_ACTION_LABEL = 'Try again';
+const DEMO_HELD_KEY_QUANTITIES = [0, 2, 1] as const;
 const FINAL_FETCH_ERROR_COPY =
 	'Unable to load live creators right now. Showing fallback creators.';
+const CREATOR_REFRESH_SHORTCUT_LABEL = 'Ctrl/Cmd + Alt + R';
+const CREATOR_REFRESH_SHORTCUT_DURATION_MS = 1800;
 
 const getFetchRetryHelperCopy = (attempt: number, maxAttempts: number) =>
 	`We couldn't load live creators yet. Retrying automatically (attempt ${attempt} of ${maxAttempts}).`;
+
+const isEditableShortcutTarget = (target: EventTarget | null) => {
+	if (!(target instanceof Element)) return false;
+
+	let element: Element | null = target;
+	while (element) {
+		if (
+			element.matches('input, textarea, select, [role="textbox"]') ||
+			(element instanceof HTMLElement && element.isContentEditable)
+		) {
+			return true;
+		}
+		element = element.parentElement;
+	}
+
+	return false;
+};
+
+const isCreatorRefreshShortcut = (event: KeyboardEvent) =>
+	(event.ctrlKey || event.metaKey) &&
+	event.altKey &&
+	!event.shiftKey &&
+	event.key.toLowerCase() === 'r';
 
 type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'supply-desc';
 
@@ -233,14 +275,19 @@ function LandingPage() {
 	// Last successful fetch timestamp (#301). `null` means we've never
 	// resolved a load yet — the staleness helper treats that as "stale"
 	// so the warning surfaces if the load hangs.
-	const [creatorsFetchedAt, setCreatorsFetchedAt] = useState<number | null>(null);
+	const [creatorsFetchedAt, setCreatorsFetchedAt] = useState<number | null>(
+		null
+	);
 	const { isMismatch: isNetworkMismatch } = useNetworkMismatch();
 	const [isLoading, setIsLoading] = useState(true);
 	const [isFilterLoading, setIsFilterLoading] = useState(false);
+	const [searchParams, setSearchParams] = useSearchParams();
 	const [searchQuery, setSearchQuery] = useState('');
+	const searchQueryRef = useRef<string>('');
+	const sortOptionRef = useRef<SortOption>('featured');
+	const PROFILE_TABS = ['overview', 'creations', 'collectors', 'activity'];
 	const [activeProfileTab, setActiveProfileTab] = useState(() => {
 		if (typeof window === 'undefined') return 'overview';
-		const PROFILE_TABS = ['overview', 'creations', 'collectors', 'activity'];
 		const hash = window.location.hash.slice(1);
 		return PROFILE_TABS.includes(hash) ? hash : 'overview';
 	});
@@ -251,11 +298,21 @@ function LandingPage() {
 	const [tradeSubmitting, setTradeSubmitting] = useState(false);
 	const prefersReducedMotion = usePrefersReducedMotion();
 	const [sortOption, setSortOption] = useState<SortOption>(() => {
-		if (typeof window === 'undefined') return 'featured';
-		const saved = window.localStorage.getItem(
-			CREATOR_SORT_KEY
-		) as SortOption | null;
-		return saved ?? 'featured';
+		const sort = searchParams.get('sort') as SortOption | null;
+		if (sort && ['featured', 'price-asc', 'price-desc', 'supply-desc'].includes(sort)) {
+			sortOptionRef.current = sort;
+			return sort;
+		}
+		if (typeof window !== 'undefined') {
+			const saved = window.localStorage.getItem(
+				CREATOR_SORT_KEY
+			) as SortOption | null;
+			if (saved) {
+				sortOptionRef.current = saved;
+				return saved;
+			}
+		}
+		return 'featured';
 	});
 	const [fetchRetryAttempt, setFetchRetryAttempt] = useState(0);
 	const [fetchRequestId, setFetchRequestId] = useState(0);
@@ -267,6 +324,8 @@ function LandingPage() {
 	// pipeline lands. `prefers-reduced-motion` disables the simulation so we
 	// don't surface a non-essential animation to users who opted out.
 	const [isPriceRefreshing, setIsPriceRefreshing] = useState(false);
+	const [showShortcutConfirmation, setShowShortcutConfirmation] =
+		useState(false);
 	const [page, setPage] = useState(() => {
 		if (typeof window === 'undefined') return 0;
 		const saved = window.sessionStorage.getItem(CREATOR_PAGE_KEY);
@@ -274,6 +333,16 @@ function LandingPage() {
 		return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 	});
 	const pendingScrollRestoreRef = useRef<number | null>(null);
+	const shortcutConfirmationTimerRef = useRef<number | null>(null);
+
+	// Keep refs in sync with state
+	useEffect(() => {
+		searchQueryRef.current = searchQuery;
+	}, [searchQuery]);
+
+	useEffect(() => {
+		sortOptionRef.current = sortOption;
+	}, [sortOption]);
 
 	// Use scroll preservation for profile tabs
 	useScrollPreservation(activeProfileTab, {
@@ -293,6 +362,36 @@ function LandingPage() {
 			window.localStorage.setItem(CREATOR_SORT_KEY, sortOption);
 		}
 	}, [sortOption]);
+
+	useEffect(() => {
+		const newParams = new URLSearchParams(searchParams);
+		if (searchQuery.trim()) {
+			newParams.set('q', searchQuery.trim());
+		} else {
+			newParams.delete('q');
+		}
+		if (sortOption !== 'featured') {
+			newParams.set('sort', sortOption);
+		} else {
+			newParams.delete('sort');
+		}
+		setSearchParams(newParams, { replace: true });
+	}, [searchQuery, sortOption, searchParams, setSearchParams]);
+
+	useEffect(() => {
+		const q = searchParams.get('q');
+		if (q !== null && q !== searchQueryRef.current) {
+			setSearchQuery(q);
+		} else if (q === null && searchQueryRef.current !== '') {
+			setSearchQuery('');
+		}
+		const sort = searchParams.get('sort') as SortOption | null;
+		if (sort && ['featured', 'price-asc', 'price-desc', 'supply-desc'].includes(sort) && sort !== sortOptionRef.current) {
+			setSortOption(sort);
+		} else if (sort === null && sortOptionRef.current !== 'featured') {
+			setSortOption('featured');
+		}
+	}, [searchParams]);
 
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
@@ -332,6 +431,14 @@ function LandingPage() {
 			window.setTimeout(() => setIsPriceRefreshing(false), 800);
 		}, 30_000);
 		return () => window.clearInterval(intervalId);
+	}, []);
+
+	useEffect(() => {
+		return () => {
+			if (shortcutConfirmationTimerRef.current != null) {
+				window.clearTimeout(shortcutConfirmationTimerRef.current);
+			}
+		};
 	}, []);
 
 	useEffect(() => {
@@ -475,12 +582,44 @@ function LandingPage() {
 
 	const handleResetSearch = () => setSearchQuery('');
 
-	const handleRetryCreatorFetch = () => {
+	const handleRetryCreatorFetch = useCallback(() => {
 		setFinalFetchError('');
 		setShowRetryBanner(false);
 		setFetchRetryAttempt(0);
 		setFetchRequestId(requestId => requestId + 1);
-	};
+	}, []);
+
+	const showCreatorRefreshShortcutConfirmation = useCallback(() => {
+		if (shortcutConfirmationTimerRef.current != null) {
+			window.clearTimeout(shortcutConfirmationTimerRef.current);
+		}
+
+		setShowShortcutConfirmation(true);
+		shortcutConfirmationTimerRef.current = window.setTimeout(() => {
+			setShowShortcutConfirmation(false);
+			shortcutConfirmationTimerRef.current = null;
+		}, CREATOR_REFRESH_SHORTCUT_DURATION_MS);
+	}, []);
+
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (
+				event.defaultPrevented ||
+				event.repeat ||
+				!isCreatorRefreshShortcut(event) ||
+				isEditableShortcutTarget(event.target)
+			) {
+				return;
+			}
+
+			event.preventDefault();
+			handleRetryCreatorFetch();
+			showCreatorRefreshShortcutConfirmation();
+		};
+
+		window.addEventListener('keydown', handleKeyDown);
+		return () => window.removeEventListener('keydown', handleKeyDown);
+	}, [handleRetryCreatorFetch, showCreatorRefreshShortcutConfirmation]);
 
 	// Stale-data detection (#301). 60s freshness window; when we cross it,
 	// the hook fires a background refresh exactly once until the next
@@ -491,6 +630,53 @@ function LandingPage() {
 			thresholdMs: 60_000,
 			onStale: handleRetryCreatorFetch,
 		}
+	);
+
+	// Idle-refresh prompt: after 5 minutes of inactivity, show a subtle
+	// banner offering to refresh the creator list. Any user interaction
+	// dismisses it automatically without refreshing.
+	const {
+		isPromptVisible: isIdlePromptVisible,
+		dismissPrompt: dismissIdlePrompt,
+		resetTimer: resetIdleTimer,
+	} = useIdleRefreshPrompt({ thresholdMs: 5 * 60 * 1000 });
+
+	const handleIdleRefresh = () => {
+		resetIdleTimer();
+		handleRetryCreatorFetch();
+	};
+
+	const heldKeyPositions = useMemo(
+		() =>
+			creators.map((creator, index) => ({
+				creatorId: creator.id,
+				quantity:
+					index === 0
+						? featuredHoldings
+						: (DEMO_HELD_KEY_QUANTITIES[index] ?? 0),
+				priceStroops: creator.priceStroops,
+				price: creator.price,
+				isPriceLoading: isPriceRefreshing,
+				isPriceStale: creatorsAreStale,
+			})),
+		[creators, creatorsAreStale, featuredHoldings, isPriceRefreshing]
+	);
+	const portfolioValue = useMemo(
+		() => calculatePortfolioValue(heldKeyPositions),
+		[heldKeyPositions]
+	);
+	const displayedPortfolioValue = isLoading
+		? {
+				...portfolioValue,
+				status: 'loading' as const,
+				totalStroops: null,
+			}
+		: portfolioValue;
+	const portfolioValueDisplay = formatPortfolioValueDisplay(
+		displayedPortfolioValue
+	);
+	const portfolioValueHelperText = getPortfolioValueHelperText(
+		displayedPortfolioValue
 	);
 
 	const openTradeDialog = (side: TradeSide) => {
@@ -536,7 +722,23 @@ function LandingPage() {
 
 	return (
 		<div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(160deg,#08111f_0%,#10213b_45%,#f0b14d_160%)] px-6 pt-12 pb-28 md:px-12 md:pb-12">
-			<SkipToContent targetId="main-creator-list" label="Skip to creator list" />
+			<SkipToContent
+				targetId="main-creator-list"
+				label="Skip to creator list"
+			/>
+			{showShortcutConfirmation && (
+				<div
+					role="status"
+					aria-live="polite"
+					className="fixed right-4 top-4 z-50 inline-flex items-center gap-2 rounded-full border border-amber-400/35 bg-slate-950/90 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-amber-100 shadow-2xl shadow-black/30 backdrop-blur-md md:right-6 md:top-6"
+				>
+					<RefreshCw
+						className="size-3.5 animate-spin motion-reduce:animate-none"
+						aria-hidden="true"
+					/>
+					Creator list refresh requested
+				</div>
+			)}
 			{/* #306: the outer wrapper is just a decorative shell; the actual
 			    landmark structure is a top-level <header> sibling of the <main>
 			    below, so screen-reader landmark navigation lands directly on the
@@ -614,9 +816,33 @@ function LandingPage() {
 								>
 									<option value="featured">Featured</option>
 									<option value="price-asc">Price: Low to high</option>
-									<option value="price-desc">Price: High to low</option>
-									<option value="supply-desc">Supply: High to low</option>
+									<option value="price-desc">
+										Price: High to low
+									</option>
+									<option value="supply-desc">
+										Supply: High to low
+									</option>
 								</select>
+							</div>
+							<div
+								aria-label={`${CREATOR_REFRESH_SHORTCUT_LABEL} refreshes creator list data`}
+								className="flex flex-wrap items-center gap-2 text-xs text-white/55"
+							>
+								<span className="font-semibold uppercase tracking-[0.16em] text-white/40">
+									Shortcut
+								</span>
+								<span className="inline-flex items-center gap-1" aria-hidden="true">
+									<Kbd className="border border-white/10 bg-white/10 text-white/70">
+										Ctrl/Cmd
+									</Kbd>
+									<Kbd className="border border-white/10 bg-white/10 text-white/70">
+										Alt
+									</Kbd>
+									<Kbd className="border border-white/10 bg-white/10 text-white/70">
+										R
+									</Kbd>
+								</span>
+								<span>Refresh creators</span>
 							</div>
 						</div>
 					</StickyFilterBar>
@@ -644,7 +870,11 @@ function LandingPage() {
 									</div>
 									<div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 opacity-50">
 										{pagedCreators.map(creator => (
-											<CreatorCard key={creator.id} creator={creator} isPriceRefreshing={isPriceRefreshing} />
+											<CreatorCard
+												key={creator.id}
+												creator={creator}
+												isPriceRefreshing={isPriceRefreshing}
+											/>
 										))}
 									</div>
 								</div>
@@ -680,27 +910,58 @@ function LandingPage() {
 									)}
 									<LayoutGroup>
 										<div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-											{pagedCreators.map((creator, index) => (
-												// #300: staggered entry animation; the
-												// helper no-ops on prefers-reduced-motion.
-												// #355: layout transition when sort order changes.
-												<motion.div
-													key={creator.id}
-													layout={!prefersReducedMotion}
-													transition={
-														CREATOR_LIST_SORT_LAYOUT_TRANSITION
-													}
-													className={CREATOR_CARD_ENTRY_CLASS}
-													style={creatorCardEntryStyle(index, {
-														prefersReducedMotion,
-													})}
-												>
-													<CreatorCard
-														creator={creator}
-														isPriceRefreshing={isPriceRefreshing}
-													/>
-												</motion.div>
-											))}
+											{/* Render pinned creators first */}
+											{pagedCreators
+												.filter(creator => creator.isPinned)
+												.map((creator, index) => (
+													// #300: staggered entry animation; the
+													// helper no-ops on prefers-reduced-motion.
+													// #355: layout transition when sort order changes.
+													<motion.div
+														key={creator.id}
+														layout={!prefersReducedMotion}
+														transition={
+															CREATOR_LIST_SORT_LAYOUT_TRANSITION
+														}
+														className={CREATOR_CARD_ENTRY_CLASS}
+														style={creatorCardEntryStyle(index, {
+															prefersReducedMotion,
+														})}
+													>
+														<CreatorCard
+															creator={creator}
+															isPriceRefreshing={isPriceRefreshing}
+														/>
+													</motion.div>
+												))}
+
+											{/* Separator between pinned and unpinned */}
+											{pagedCreators.some(creator => creator.isPinned) &&
+												pagedCreators.some(creator => !creator.isPinned) && (
+													<CreatorListGroupSeparator label="Other creators" />
+												)}
+
+											{/* Render unpinned creators */}
+											{pagedCreators
+												.filter(creator => !creator.isPinned)
+												.map((creator, index) => (
+													<motion.div
+														key={creator.id}
+														layout={!prefersReducedMotion}
+														transition={
+															CREATOR_LIST_SORT_LAYOUT_TRANSITION
+														}
+														className={CREATOR_CARD_ENTRY_CLASS}
+														style={creatorCardEntryStyle(index, {
+															prefersReducedMotion,
+														})}
+													>
+														<CreatorCard
+															creator={creator}
+															isPriceRefreshing={isPriceRefreshing}
+														/>
+													</motion.div>
+												))}
 										</div>
 									</LayoutGroup>
 									<CreatorListPagination
@@ -714,11 +975,16 @@ function LandingPage() {
 											<Button
 												type="button"
 												variant="outline"
-												onClick={() => handlePageChange(safePage + 1)}
+												onClick={() =>
+													handlePageChange(safePage + 1)
+												}
 												aria-label="Load more creators"
 												className="sr-only rounded-full border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-white shadow-none focus:not-sr-only focus:flex focus:items-center focus:gap-2 focus:outline-none focus:ring-2 focus:ring-amber-400/60 focus:ring-offset-2 focus:ring-offset-slate-950"
 											>
-												<ChevronDown className="size-4" aria-hidden="true" />
+												<ChevronDown
+													className="size-4"
+													aria-hidden="true"
+												/>
 												Load more creators
 											</Button>
 										</div>
@@ -762,7 +1028,98 @@ function LandingPage() {
 						</MarketplaceSection>
 					</SectionErrorBoundary>
 
-					<SectionDivider title="Creator profile pattern" spacing="relaxed" />
+					<SectionDivider title="Holdings overview" spacing="relaxed" />
+					<MarketplaceSection
+						aria-labelledby="holdings-overview-heading"
+						spacing="default"
+						className="marketplace-card-surface rounded-[2rem] border p-6 shadow-[0_24px_80px_-60px_rgba(8,17,31,0.95)] backdrop-blur-sm md:p-8"
+					>
+						<div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
+							<div>
+								<p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-amber-300/80">
+									Your holdings
+								</p>
+								<h2
+									id="holdings-overview-heading"
+									className="font-grotesque text-2xl font-black tracking-tight text-white"
+								>
+									Total portfolio value
+								</h2>
+								<p className="mt-2 max-w-2xl font-jakarta text-sm leading-relaxed text-white/60">
+									Aggregates every creator key position currently held
+									by this wallet using the latest available key prices.
+								</p>
+							</div>
+							<div
+								role="status"
+								aria-live="polite"
+								aria-busy={
+									displayedPortfolioValue.status === 'loading' ||
+									undefined
+								}
+								className="rounded-2xl border border-white/10 bg-slate-950/45 px-5 py-4 text-left md:min-w-64"
+							>
+								<div className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-white/45">
+									Portfolio total
+								</div>
+								<div className="mt-1 flex items-center gap-2 font-grotesque text-3xl font-black text-white">
+									{displayedPortfolioValue.status === 'loading' && (
+										<span
+											className="size-4 animate-spin rounded-full border-2 border-amber-400/25 border-t-amber-400"
+											aria-hidden="true"
+										/>
+									)}
+									{portfolioValueDisplay}
+								</div>
+								<p className="mt-2 text-xs leading-relaxed text-white/55">
+									{portfolioValueHelperText}
+								</p>
+							</div>
+						</div>
+						{isLoading ? (
+							<CreatorHoldingsListSkeleton className="mt-6" />
+						) : (
+							<div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+								{heldKeyPositions
+									.filter(
+										position =>
+											position.quantity && position.quantity > 0
+									)
+									.map(position => {
+										const creator = creators.find(
+											item => item.id === position.creatorId
+										);
+										return (
+											<div
+												key={position.creatorId}
+												className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+											>
+												<div className="truncate text-sm font-bold text-white">
+													{creator?.title ?? 'Unknown creator'}
+												</div>
+												<div className="mt-1 text-xs text-white/55">
+													{formatNumber(position.quantity)} keys ·{' '}
+													{position.isPriceLoading
+														? 'Refreshing price'
+														: position.isPriceStale
+															? 'Price stale'
+															: formatDisplayKeyPrice(
+																	resolveCreatorKeyPriceStroops(
+																		position
+																	)
+																)}
+												</div>
+											</div>
+										);
+									})}
+							</div>
+						)}
+					</MarketplaceSection>
+
+					<SectionDivider
+						title="Creator profile pattern"
+						spacing="relaxed"
+					/>
 
 					<div className="mb-8 space-y-6">
 						<CreatorBreadcrumb
@@ -788,7 +1145,10 @@ function LandingPage() {
 						</SectionErrorBoundary>
 					</div>
 
-					<SectionErrorBoundary sectionName="Creator Profile" minHeight={300}>
+					<SectionErrorBoundary
+						sectionName="Creator Profile"
+						minHeight={300}
+					>
 						{finalFetchError ? (
 							<CreatorProfileLoadError
 								onRetry={handleRetryCreatorFetch}
@@ -818,9 +1178,10 @@ function LandingPage() {
 										className="mb-4"
 									/>
 									<CompactSectionSubtitle className="max-w-xl">
-										Use the same subtitle pattern beneath headings, then
-										drop repeated creator facts into one responsive grid
-										that stays tidy on mobile and desktop.
+										Use the same subtitle pattern beneath headings,
+										then drop repeated creator facts into one
+										responsive grid that stays tidy on mobile and
+										desktop.
 									</CompactSectionSubtitle>
 									<div
 										id={`profile-panel-${activeProfileTab}`}
@@ -837,7 +1198,9 @@ function LandingPage() {
 											<MiniStatChip
 												label="Audience"
 												value={featuredCreatorKeyHolderCopy.value}
-												explanation={featuredCreatorKeyHolderCopy.explanation}
+												explanation={
+													featuredCreatorKeyHolderCopy.explanation
+												}
 											/>
 											<MiniStatChip
 												label="Access"
@@ -856,8 +1219,8 @@ function LandingPage() {
 												value:
 													FEATURED_CREATOR_FOLLOWER_COUNT != null
 														? formatCompactNumber(
-															FEATURED_CREATOR_FOLLOWER_COUNT
-														)
+																FEATURED_CREATOR_FOLLOWER_COUNT
+															)
 														: 'Not available',
 												helperText:
 													FEATURED_CREATOR_FOLLOWER_COUNT != null
@@ -866,24 +1229,30 @@ function LandingPage() {
 											},
 											{
 												label: 'Your holdings',
-												value: `${formatNumber(featuredHoldings)} keys${formatOwnershipPercent(
-													featuredHoldings,
-													featuredCreator?.creatorShareSupply,
-													{
-														maximumFractionDigits:
-															precisionMode === 'compact' ? 1 : 2,
-													}
-												) !== '—'
-													? ` (${formatOwnershipPercent(
+												value: `${formatNumber(featuredHoldings)} keys${
+													formatOwnershipPercent(
 														featuredHoldings,
 														featuredCreator?.creatorShareSupply,
 														{
 															maximumFractionDigits:
-																precisionMode === 'compact' ? 1 : 2,
+																precisionMode === 'compact'
+																	? 1
+																	: 2,
 														}
-													)})`
-													: ''
-													}`,
+													) !== '—'
+														? ` (${formatOwnershipPercent(
+																featuredHoldings,
+																featuredCreator?.creatorShareSupply,
+																{
+																	maximumFractionDigits:
+																		precisionMode ===
+																		'compact'
+																			? 1
+																			: 2,
+																}
+															)})`
+														: ''
+												}`,
 											},
 										]}
 									/>
@@ -901,11 +1270,11 @@ function LandingPage() {
 										value={
 											precisionMode === 'compact'
 												? `${formatCompactNumber(
-													featuredCreator?.creatorShareSupply
-												)} shares available`
+														featuredCreator?.creatorShareSupply
+													)} shares available`
 												: `${formatNumber(
-													featuredCreator?.creatorShareSupply
-												)} shares available`
+														featuredCreator?.creatorShareSupply
+													)} shares available`
 										}
 									/>
 									{isNetworkMismatch && <NetworkMismatchBanner />}
@@ -913,14 +1282,17 @@ function LandingPage() {
 										<div
 											className={cn(
 												'hidden md:flex items-center gap-3 transition-opacity duration-200',
-												tradeSubmitting && 'pointer-events-none select-none opacity-60'
+												tradeSubmitting &&
+													'pointer-events-none select-none opacity-60'
 											)}
 											aria-busy={tradeSubmitting || undefined}
 										>
 											<Button
 												className="rounded-xl"
 												onClick={() => openTradeDialog('buy')}
-												disabled={isNetworkMismatch || tradeSubmitting}
+												disabled={
+													isNetworkMismatch || tradeSubmitting
+												}
 											>
 												Buy
 											</Button>
@@ -928,7 +1300,9 @@ function LandingPage() {
 												className="rounded-xl"
 												variant="outline"
 												onClick={() => openTradeDialog('sell')}
-												disabled={isNetworkMismatch || tradeSubmitting}
+												disabled={
+													isNetworkMismatch || tradeSubmitting
+												}
 											>
 												Sell
 											</Button>
@@ -957,14 +1331,27 @@ function LandingPage() {
 									className="truncate font-jakarta text-sm font-bold text-white/85"
 									aria-label={`Wallet holdings: ${formatNumber(
 										featuredHoldings
-									)} keys${formatOwnershipPercent(featuredHoldings, featuredCreator?.creatorShareSupply) !== '—'
-										? ` (${formatOwnershipPercent(featuredHoldings, featuredCreator?.creatorShareSupply)})`
-										: ''}`}
+									)} keys${
+										formatOwnershipPercent(
+											featuredHoldings,
+											featuredCreator?.creatorShareSupply
+										) !== '—'
+											? ` (${formatOwnershipPercent(featuredHoldings, featuredCreator?.creatorShareSupply)})`
+											: ''
+									}`}
 								>
 									{formatNumber(featuredHoldings)} keys
-									{formatOwnershipPercent(featuredHoldings, featuredCreator?.creatorShareSupply) !== '—' && (
+									{formatOwnershipPercent(
+										featuredHoldings,
+										featuredCreator?.creatorShareSupply
+									) !== '—' && (
 										<span className="ml-2 text-xs font-normal text-white/60">
-											({formatOwnershipPercent(featuredHoldings, featuredCreator?.creatorShareSupply)})
+											(
+											{formatOwnershipPercent(
+												featuredHoldings,
+												featuredCreator?.creatorShareSupply
+											)}
+											)
 										</span>
 									)}
 								</div>
@@ -974,7 +1361,8 @@ function LandingPage() {
 									<div
 										className={cn(
 											'flex items-center gap-2 transition-opacity duration-200',
-											tradeSubmitting && 'pointer-events-none select-none opacity-60'
+											tradeSubmitting &&
+												'pointer-events-none select-none opacity-60'
 										)}
 										aria-busy={tradeSubmitting || undefined}
 									>
@@ -1031,6 +1419,11 @@ function LandingPage() {
 				onConfirm={handleConfirmTrade}
 			/>
 			<ScrollToTop />
+			<IdleRefreshPrompt
+				visible={isIdlePromptVisible}
+				onRefresh={handleIdleRefresh}
+				onDismiss={dismissIdlePrompt}
+			/>
 		</div>
 	);
 }

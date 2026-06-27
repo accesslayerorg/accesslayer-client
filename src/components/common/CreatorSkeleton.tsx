@@ -121,4 +121,48 @@ export const CreatorProfileHeaderSkeleton: React.FC<{
 	);
 };
 
+/**
+ * Loading skeleton for a single creator holding card (#304). Matches the
+ * structure in `LandingPage` (rounded-2xl, border, p-4) with placeholders for
+ * the creator title and holdings/price metadata.
+ */
+export const CreatorHoldingsSkeleton: React.FC<{
+	className?: string;
+	disableShimmer?: boolean;
+}> = ({ className, disableShimmer = false }) => {
+	const blockClass = disableShimmer
+		? skeletonStaticBlockClass
+		: skeletonBlockClass;
+
+	return (
+		<div
+			className={cn(
+				'rounded-2xl border border-white/10 bg-white/[0.03] p-4',
+				className
+			)}
+		>
+			<div className={cn('h-5 w-2/3', blockClass)} />
+			<div className={cn('mt-1 h-4 w-1/2', blockClass)} />
+		</div>
+	);
+};
+
+/**
+ * A grid of creator holdings skeletons to be shown while the portfolio is
+ * loading. Matches the 3-column responsive grid used for the live list.
+ */
+export const CreatorHoldingsListSkeleton: React.FC<{
+	count?: number;
+	disableShimmer?: boolean;
+	className?: string;
+}> = ({ count = 3, disableShimmer = false, className }) => {
+	return (
+		<div className={cn('grid gap-3 sm:grid-cols-2 lg:grid-cols-3', className)}>
+			{Array.from({ length: count }).map((_, i) => (
+				<CreatorHoldingsSkeleton key={i} disableShimmer={disableShimmer} />
+			))}
+		</div>
+	);
+};
+
 export default CreatorSkeleton;

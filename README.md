@@ -25,6 +25,12 @@ The client is responsible for:
 - frontend infrastructure is in place for future marketplace routes
 - older template-era code still needs to be replaced with Stellar-specific flows
 
+## Keyboard shortcuts
+
+- `Ctrl/Cmd + Alt + R` refreshes creator list data from the marketplace
+  page. The shortcut is ignored while focus is inside text inputs,
+  textareas, selects, or editable text regions.
+
 ## Local setup
 
 ```bash

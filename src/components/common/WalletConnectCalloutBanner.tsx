@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Wallet } from 'lucide-react';
 import { useAccount, useConnect, useReconnect } from 'wagmi';
 import { cn } from '@/lib/utils';
+import {
+	WALLET_CONNECTION_AD_BLOCKER_MESSAGE,
+	useWalletConnectionStallDetection,
+} from '@/hooks/useWalletConnectionStallDetection';
 import showToast from '@/utils/toast.util';
 
 interface WalletConnectCalloutBannerProps {
@@ -21,6 +25,10 @@ const WalletConnectCalloutBanner: React.FC<WalletConnectCalloutBannerProps> = ({
 	const [isReconnecting, setIsReconnecting] = useState(false);
 
 	const retryConnector = reconnectConnectors[0] ?? connectConnectors[0];
+	const showAdBlockerSuggestion = useWalletConnectionStallDetection({
+		isAwaitingWalletResponse: isReconnecting,
+		hasWalletResponse: isConnected,
+	});
 
 	const handleReconnect = async () => {
 		if (isReconnecting) {
@@ -95,6 +103,11 @@ const WalletConnectCalloutBanner: React.FC<WalletConnectCalloutBannerProps> = ({
 					</button>
 				</div>
 			</div>
+			{showAdBlockerSuggestion ? (
+				<p role="status" className="mt-3 text-xs text-amber-100/85">
+					{WALLET_CONNECTION_AD_BLOCKER_MESSAGE}
+				</p>
+			) : null}
 		</div>
 	);
 };

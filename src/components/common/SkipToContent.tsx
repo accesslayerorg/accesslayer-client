@@ -44,8 +44,11 @@ const SkipToContent: React.FC<SkipToContentProps> = ({
 		if (target) {
 			// Set focus to the target
 			target.focus({ preventScroll: true });
-			// Scroll it into view smoothly
-			target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			// Scroll it into view smoothly if supported by the environment
+			const maybeTarget = target as HTMLElement & { scrollIntoView?: (options?: ScrollIntoViewOptions) => void };
+			if (typeof maybeTarget.scrollIntoView === 'function') {
+				maybeTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}
 		}
 	};
 

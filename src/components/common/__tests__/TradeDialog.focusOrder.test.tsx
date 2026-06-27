@@ -101,4 +101,33 @@ describe('TradeDialog focus order', () => {
 
 		expect(ordered).toEqual(['1', '2', '3']);
 	});
+
+	it('shows an approximate network fee estimate before confirmation', async () => {
+		renderDialog({
+			networkFeeEstimateProvider: {
+				getFeeData: vi.fn().mockResolvedValue({
+					gasPrice: 1_000_000_000n,
+				}),
+			},
+		});
+
+		expect(screen.getByTestId('trade-dialog-confirm')).toBeInTheDocument();
+		expect(
+			await screen.findByText('Approx. network fee: ~0.00018 ETH')
+		).toBeInTheDocument();
+	});
+
+	it('shows a cannot estimate message when the fee estimate fails', async () => {
+		renderDialog({
+			networkFeeEstimateProvider: {
+				getFeeData: vi.fn().mockRejectedValue(new Error('RPC unavailable')),
+			},
+		});
+
+		expect(
+			await screen.findByText(
+				'Approx. network fee: Cannot estimate network fee'
+			)
+		).toBeInTheDocument();
+	});
 });

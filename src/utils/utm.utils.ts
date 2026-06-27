@@ -54,7 +54,11 @@ export const appendUtmParams = (
 	if (!hasAny) return inputUrl;
 
 	try {
-		const url = new URL(inputUrl);
+		// Prefer absolute parsing; if inputUrl is relative, provide a base
+		const base = typeof window !== 'undefined' && window.location?.origin
+			? window.location.origin
+			: 'https://example.com';
+		const url = new URL(inputUrl, base);
 		const search = url.searchParams;
 
 		if (configured.utm_source) search.set('utm_source', configured.utm_source);
@@ -64,6 +68,13 @@ export const appendUtmParams = (
 		if (configured.utm_term) search.set('utm_term', configured.utm_term);
 		if (configured.utm_content)
 			search.set('utm_content', configured.utm_content);
+
+		// If inputUrl was relative (starts with '/'), return a relative string
+		if (inputUrl.startsWith('/')) {
+			const path = url.pathname + (url.search ? `?${url.searchParams.toString()}` : '');
+			const hash = url.hash || '';
+			return `${path}${hash}`;
+		}
 
 		// Preserve hash and other parts — URL.toString() keeps them
 		return url.toString();

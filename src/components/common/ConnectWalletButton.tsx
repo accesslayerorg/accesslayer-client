@@ -1,22 +1,73 @@
+import { useState } from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { shortenAddress } from '@/lib/web3/format';
+import {
+	WALLET_CONNECTION_AD_BLOCKER_MESSAGE,
+	useWalletConnectionStallDetection,
+} from '@/hooks/useWalletConnectionStallDetection';
 
 function ConnectWalletButton() {
+	const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
 	const { address, isConnected } = useAccount();
 	const { connect, connectors, error, isPending } = useConnect();
 	const { disconnect } = useDisconnect();
 
 	const primaryConnector = connectors[0];
+	const showAdBlockerSuggestion = useWalletConnectionStallDetection({
+		isAwaitingWalletResponse: isPending,
+		hasWalletResponse: isConnected || Boolean(error),
+	});
 
 	if (isConnected && address) {
 		return (
-			<button
-				type="button"
-				onClick={() => disconnect()}
-				className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+			<Dialog
+				open={showDisconnectDialog}
+				onOpenChange={setShowDisconnectDialog}
 			>
-				{shortenAddress(address)}
-			</button>
+				<DialogTrigger asChild>
+					<button
+						type="button"
+						className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+					>
+						{shortenAddress(address)}
+					</button>
+				</DialogTrigger>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Disconnect wallet?</DialogTitle>
+						<DialogDescription>
+							Disconnecting clears your current wallet session and any
+							pending wallet state. You will need to reconnect to continue.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<DialogClose asChild>
+							<Button variant="outline">Cancel</Button>
+						</DialogClose>
+						<Button
+							type="button"
+							variant="destructive"
+							onClick={() => {
+								disconnect();
+								setShowDisconnectDialog(false);
+							}}
+						>
+							Disconnect
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		);
 	}
 
@@ -34,6 +85,11 @@ function ConnectWalletButton() {
 			</button>
 			{error ? (
 				<p className="text-sm text-red-600">{error.message}</p>
+			) : null}
+			{showAdBlockerSuggestion ? (
+				<p role="status" className="max-w-sm text-sm text-amber-700">
+					{WALLET_CONNECTION_AD_BLOCKER_MESSAGE}
+				</p>
 			) : null}
 		</div>
 	);

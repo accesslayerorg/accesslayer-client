@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Manrope:wght@200..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
@@ -49,6 +50,7 @@
 	--font-manrope: 'Manrope', sans-serif;
 	--font-inter: 'Inter', sans-serif;
 	--font-jakarta: 'Plus Jakarta Sans', sans-serif;
+	--font-pt-serif: 'PT Serif', serif;
 	--spacing-section-compact: clamp(1rem, 4vh, 1.25rem);
 	--spacing-section-default: clamp(1.5rem, 6vh, 2rem);
 	--spacing-section-relaxed: clamp(2rem, 8vh, 3rem);
@@ -220,6 +222,111 @@
 				rgba(255, 255, 255, 0.08)
 			);
 		}
+	}
+}
+
+@keyframes header-enter {
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.header-animate {
+	animation: header-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+	animation-delay: 200ms;
+}
+
+@keyframes scroll-reveal {
+	from {
+		opacity: 0;
+		transform: translateY(28px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.scroll-reveal {
+	opacity: 0;
+}
+
+.scroll-reveal.is-visible {
+	animation: scroll-reveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.header-animate {
+		animation: none;
+	}
+	.scroll-reveal {
+		opacity: 1;
+	}
+	.scroll-reveal.is-visible {
+		animation: none;
+	}
+}
+
+@keyframes hero-fade-up {
+	from {
+		opacity: 0;
+		transform: translateY(18px);
+		filter: blur(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+		filter: blur(0px);
+	}
+}
+
+@keyframes hero-zoom-out {
+	from {
+		transform: scale(1.08);
+	}
+	to {
+		transform: scale(1);
+	}
+}
+
+.hero-bg-animate {
+	animation: hero-zoom-out 1.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.hero-animate {
+	animation: hero-fade-up 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.hero-animate {
+		animation: none;
+	}
+	.hero-bg-animate {
+		animation: none;
+	}
+}
+
+@keyframes marquee {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+.animate-marquee {
+	animation: marquee 55s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.animate-marquee {
+		animation: none;
 	}
 }
 

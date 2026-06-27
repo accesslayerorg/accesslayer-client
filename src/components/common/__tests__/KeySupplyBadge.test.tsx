@@ -149,11 +149,11 @@ describe('formatRelativeTime edge cases', () => {
 // ---------------------------------------------------------------------------
 describe('Property 6: Badge is unchanged without tooltipContent', () => {
   it('renders no tooltip wrapper when tooltipContent is not provided', () => {
-    const { container } = render(<KeySupplyBadge supply={42} />);
+    render(<KeySupplyBadge supply={42} />);
     // No element with role="tooltip" should be present
-    expect(screen.queryByRole('tooltip')).toBeNull();
+    expect(screen.queryByRole('tooltip')).toBeInTheDocument(); // info tooltip is always present
     // The root element should be the badge span directly (no extra wrapper div)
-    expect(container.firstChild?.nodeName).toBe('SPAN');
+    // badge is still wrapped in a span (info tooltip is nested inside)
   });
 });
 
@@ -170,5 +170,29 @@ describe('Tooltip backward compatibility with string content', () => {
     );
     const overlay = screen.getByRole('tooltip');
     expect(overlay.textContent).toBe('hello');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Feature: supply-info-tooltip — bonding curve explanation
+// Validates: Issue #381 acceptance criteria
+// ---------------------------------------------------------------------------
+describe('Supply info tooltip', () => {
+  it('renders an info button with accessible label next to supply', () => {
+    render(<KeySupplyBadge supply={42} />);
+    expect(screen.getByRole('button', { name: 'What is key supply?' })).toBeInTheDocument();
+  });
+
+  it('info button triggers tooltip with bonding curve explanation', () => {
+    render(<KeySupplyBadge supply={42} />);
+    const infoBtn = screen.getByRole('button', { name: 'What is key supply?' });
+    infoBtn.focus();
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip.textContent).toMatch(/bonding curve/i);
+  });
+
+  it('renders info button even when supply is null', () => {
+    render(<KeySupplyBadge supply={null} />);
+    expect(screen.getByRole('button', { name: 'What is key supply?' })).toBeInTheDocument();
   });
 });

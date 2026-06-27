@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import AccessibleInfoTrigger from '@/components/common/AccessibleInfoTrigger';
+import { TruncatedText } from '@/components/ui/truncated-text';
 
 interface MiniStatChipProps {
 	label: string;
@@ -30,9 +31,11 @@ const MiniStatChip: React.FC<MiniStatChipProps> = ({
 			<span className="shrink-0 uppercase tracking-[0.18em] text-white/42">
 				{label}
 			</span>
-			<span className="truncate font-jakarta text-xs font-semibold text-white">
-				{value}
-			</span>
+			<TruncatedText
+				text={value}
+				maxWidth={120}
+				className="font-jakarta text-xs font-semibold text-white"
+			/>
 			{explanation && (
 				<AccessibleInfoTrigger
 					explanation={explanation}

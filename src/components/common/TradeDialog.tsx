@@ -16,7 +16,6 @@ import PercentageBadge from '@/components/common/PercentageBadge';
 import NetworkFeeHint from '@/components/common/NetworkFeeHint';
 import { TRADE_FEE_ESTIMATE } from '@/constants/fees';
 import { formatTransactionFeeDisplay } from '@/utils/transactionFee.utils';
-import { normalizeCreatorDisplayName } from '@/utils/creatorDisplayName.utils';
 
 export type TradeSide = 'buy' | 'sell';
 
@@ -43,10 +42,14 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	isSubmitting = false,
 }) => {
 	const [amountText, setAmountText] = useState('1');
+	const [touched, setTouched] = useState(false);
 	const amountInputRef = useRef<HTMLInputElement | null>(null);
 
 	useEffect(() => {
-		if (open) setAmountText('1');
+		if (open) {
+			setAmountText('1');
+			setTouched(false);
+		}
 	}, [open]);
 
 	const parsedAmount = useMemo(() => {
@@ -55,13 +58,19 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		return Number(normalized);
 	}, [amountText]);
 
-	const amountValid =
-		Number.isFinite(parsedAmount) &&
-		parsedAmount > 0 &&
-		(side !== 'sell' || parsedAmount <= availableHoldings);
+	const validationError = useMemo((): string | null => {
+		const normalized = amountText.trim();
+		if (!normalized) return 'Please enter an amount.';
+		if (!Number.isFinite(parsedAmount)) return 'Amount must be a valid number.';
+		if (parsedAmount <= 0) return 'Amount must be greater than zero.';
+		if (side === 'sell' && parsedAmount > availableHoldings)
+			return `You can't sell more than your holdings (${formatNumber(availableHoldings)} keys).`;
+		return null;
+	}, [amountText, parsedAmount, side, availableHoldings]);
 
-	const displayCreatorName =
-		normalizeCreatorDisplayName(creatorName) || 'Unnamed creator';
+	const amountValid = validationError === null;
+	const showError = touched && validationError !== null;
+
 	const title = side === 'buy' ? 'Buy keys' : 'Sell keys';
 	const confirmLabel = side === 'buy' ? 'Confirm buy' : 'Confirm sell';
 	const estimatedNetworkFee = formatTransactionFeeDisplay(
@@ -93,8 +102,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 					<DialogTitle>{title}</DialogTitle>
 					<DialogDescription>
 						{side === 'buy'
-							? `Purchase creator keys for ${displayCreatorName}.`
-							: `Sell creator keys for ${displayCreatorName}.`}
+							? `Purchase creator keys for ${creatorName}.`
+							: `Sell creator keys for ${creatorName}.`}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -113,19 +122,33 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 						ref={amountInputRef}
 						inputMode="decimal"
 						value={amountText}
-						onChange={event => setAmountText(event.target.value)}
+						onChange={event => {
+							setAmountText(event.target.value);
+							setTouched(true);
+						}}
+						onBlur={() => setTouched(true)}
 						disabled={isSubmitting}
 						className={cn(
 							'w-full rounded-xl border bg-white/[0.04] px-3 py-2 text-white outline-none transition-colors',
 							'border-white/10 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/15',
-							!amountValid && amountText.trim()
-								? 'border-red-500/40'
-								: ''
+							showError ? 'border-red-500/60' : ''
 						)}
 						aria-label="Trade amount"
+						aria-describedby={showError ? 'trade-amount-error' : undefined}
+						aria-invalid={showError || undefined}
 						data-focus-order="1"
 						data-testid="trade-dialog-amount"
 					/>
+					{showError && (
+						<p
+							id="trade-amount-error"
+							role="alert"
+							className="text-xs text-red-300"
+							data-testid="trade-dialog-amount-error"
+						>
+							{validationError}
+						</p>
+					)}
 					<div className="flex flex-wrap items-center gap-2 text-xs text-white/45">
 						<span
 							aria-label={`Current wallet holdings: ${formatNumber(availableHoldings)} keys`}
@@ -153,11 +176,6 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 							fee={estimatedNetworkFee}
 							className="text-white/45"
 						/>
-					)}
-					{side === 'sell' && parsedAmount > availableHoldings && (
-						<div className="text-xs text-red-300">
-							You can’t sell more than your current holdings.
-						</div>
 					)}
 				</div>
 

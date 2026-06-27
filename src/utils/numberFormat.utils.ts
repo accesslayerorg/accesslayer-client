@@ -15,10 +15,16 @@ function getNumberFormatter({
 		maximumFractionDigits ?? (style === 'compact' ? 1 : 2);
 	const resolvedMinimumFractionDigits = minimumFractionDigits ?? 0;
 
+	// Ensure minimumFractionDigits does not exceed maximumFractionDigits
+	const finalMaximumFractionDigits = Math.max(
+		resolvedMaximumFractionDigits,
+		resolvedMinimumFractionDigits
+	);
+
 	return new Intl.NumberFormat(undefined, {
 		notation: style === 'compact' ? 'compact' : 'standard',
 		compactDisplay: 'short',
-		maximumFractionDigits: resolvedMaximumFractionDigits,
+		maximumFractionDigits: finalMaximumFractionDigits,
 		minimumFractionDigits: resolvedMinimumFractionDigits,
 	});
 }

@@ -3,20 +3,29 @@ import { Zap } from 'lucide-react';
 
 interface NetworkFeeHintProps {
 	fee?: string;
+	label?: string;
 	className?: string;
 	variant?: 'chip' | 'text';
 }
 
 const NetworkFeeHint = ({
 	fee = '~0.0001 ETH',
+	label = 'Network fee',
 	className,
 	variant = 'chip',
 }: NetworkFeeHintProps) => {
 	if (variant === 'text') {
 		return (
-			<div className={cn('flex items-center gap-1.5 text-xs text-white/40', className)}>
+			<div
+				className={cn(
+					'flex items-center gap-1.5 text-xs text-white/40',
+					className
+				)}
+			>
 				<Zap className="size-3 text-amber-500/50" />
-				<span>Network fee: {fee}</span>
+				<span>
+					{label}: {fee}
+				</span>
 			</div>
 		);
 	}
