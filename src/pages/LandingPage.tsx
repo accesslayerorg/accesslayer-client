@@ -1184,6 +1184,37 @@ function LandingPage() {
 						</div>
 						{isLoading ? (
 							<CreatorHoldingsListSkeleton className="mt-6" />
+						) : heldKeyPositions.filter(
+							position => position.quantity && position.quantity > 0
+						).length === 0 ? (
+							<div
+								className="mt-6 flex flex-col items-center justify-center rounded-[2rem] border border-white/10 bg-white/5 px-8 py-14 text-center backdrop-blur-xl"
+								role="status"
+								aria-label="No holdings"
+							>
+								<div className="relative mb-6 flex items-center justify-center">
+									<div className="absolute inset-0 size-full rounded-full bg-amber-500/10 blur-2xl" />
+									<img
+										src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=400&fit=crop"
+										className="relative z-10 size-24 opacity-60 grayscale transition-all duration-500 hover:opacity-80 hover:grayscale-0"
+										alt=""
+										aria-hidden="true"
+									/>
+								</div>
+								<h2 className="font-grotesque text-2xl font-black tracking-tight text-white">
+									No creator keys yet
+								</h2>
+								<p className="mt-2 max-w-md font-jakarta text-sm leading-relaxed text-white/60">
+									This wallet doesn’t hold any creator keys right now.
+									Browse creators and secure your first key.
+								</p>
+								<a
+									href="/creators"
+									className="mt-5 inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-6 py-2.5 font-bold text-white transition-all hover:border-amber-500/30 hover:bg-amber-500/10"
+								>
+									Browse creators
+								</a>
+							</div>
 						) : (
 							<div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 								{heldKeyPositions
