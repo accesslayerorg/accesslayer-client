@@ -42,6 +42,7 @@ import PrecisionModeToggle, {
 } from '@/components/common/PrecisionModeToggle';
 import ScrollToTop from '@/components/common/ScrollToTop';
 import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
+import TradePanelErrorBoundary from '@/components/common/TradePanelErrorBoundary';
 import StaleDataWarning from '@/components/common/StaleDataWarning';
 import { useScrollPreservation } from '@/hooks/useScrollPreservation';
 import { useStaleData } from '@/hooks/useStaleData';
@@ -1278,44 +1279,46 @@ function LandingPage() {
 										}
 									/>
 									{isNetworkMismatch && <NetworkMismatchBanner />}
-									<div className="relative">
-										<div
-											className={cn(
-												'hidden md:flex items-center gap-3 transition-opacity duration-200',
-												tradeSubmitting &&
-													'pointer-events-none select-none opacity-60'
-											)}
-											aria-busy={tradeSubmitting || undefined}
-										>
-											<Button
-												className="rounded-xl"
-												onClick={() => openTradeDialog('buy')}
-												disabled={
-													isNetworkMismatch || tradeSubmitting
-												}
+									<TradePanelErrorBoundary>
+										<div className="relative">
+											<div
+												className={cn(
+													'hidden md:flex items-center gap-3 transition-opacity duration-200',
+													tradeSubmitting &&
+														'pointer-events-none select-none opacity-60'
+												)}
+												aria-busy={tradeSubmitting || undefined}
 											>
-												Buy
-											</Button>
-											<Button
-												className="rounded-xl"
-												variant="outline"
-												onClick={() => openTradeDialog('sell')}
-												disabled={
-													isNetworkMismatch || tradeSubmitting
-												}
-											>
-												Sell
-											</Button>
-										</div>
-										{tradeSubmitting && (
-											<div className="absolute inset-0 hidden items-center justify-center rounded-[1.25rem] border border-white/10 bg-slate-950/65 backdrop-blur-sm md:flex">
-												<div className="flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/80 px-3 py-1.5 text-xs font-bold text-white/85 shadow-lg">
-													<div className="size-3.5 animate-spin rounded-full border-2 border-amber-400/25 border-t-amber-400" />
-													Submitting trade
-												</div>
+												<Button
+													className="rounded-xl"
+													onClick={() => openTradeDialog('buy')}
+													disabled={
+														isNetworkMismatch || tradeSubmitting
+													}
+												>
+													Buy
+												</Button>
+												<Button
+													className="rounded-xl"
+													variant="outline"
+													onClick={() => openTradeDialog('sell')}
+													disabled={
+														isNetworkMismatch || tradeSubmitting
+													}
+												>
+													Sell
+												</Button>
 											</div>
-										)}
-									</div>
+											{tradeSubmitting && (
+												<div className="absolute inset-0 hidden items-center justify-center rounded-[1.25rem] border border-white/10 bg-slate-950/65 backdrop-blur-sm md:flex">
+													<div className="flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/80 px-3 py-1.5 text-xs font-bold text-white/85 shadow-lg">
+														<div className="size-3.5 animate-spin rounded-full border-2 border-amber-400/25 border-t-amber-400" />
+														Submitting trade
+													</div>
+												</div>
+											)}
+										</div>
+									</TradePanelErrorBoundary>
 								</div>
 							</MarketplaceSection>
 						)}
@@ -1357,42 +1360,44 @@ function LandingPage() {
 								</div>
 							</div>
 							<div className="flex items-center gap-2">
-								<div className="relative">
-									<div
-										className={cn(
-											'flex items-center gap-2 transition-opacity duration-200',
-											tradeSubmitting &&
-												'pointer-events-none select-none opacity-60'
-										)}
-										aria-busy={tradeSubmitting || undefined}
-									>
-										<Button
-											className="rounded-xl"
-											size="sm"
-											onClick={() => openTradeDialog('buy')}
-											disabled={isNetworkMismatch || tradeSubmitting}
+								<TradePanelErrorBoundary>
+									<div className="relative">
+										<div
+											className={cn(
+												'flex items-center gap-2 transition-opacity duration-200',
+												tradeSubmitting &&
+													'pointer-events-none select-none opacity-60'
+											)}
+											aria-busy={tradeSubmitting || undefined}
 										>
-											Buy
-										</Button>
-										<Button
-											className="rounded-xl"
-											size="sm"
-											variant="outline"
-											onClick={() => openTradeDialog('sell')}
-											disabled={isNetworkMismatch || tradeSubmitting}
-										>
-											Sell
-										</Button>
-									</div>
-									{tradeSubmitting && (
-										<div className="absolute inset-0 flex items-center justify-center rounded-xl border border-white/10 bg-slate-950/65 px-3 backdrop-blur-sm">
-											<div className="flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/80 px-3 py-1.5 text-[11px] font-bold text-white/85 shadow-lg">
-												<div className="size-3 animate-spin rounded-full border-2 border-amber-400/25 border-t-amber-400" />
-												Submitting trade
-											</div>
+											<Button
+												className="rounded-xl"
+												size="sm"
+												onClick={() => openTradeDialog('buy')}
+												disabled={isNetworkMismatch || tradeSubmitting}
+											>
+												Buy
+											</Button>
+											<Button
+												className="rounded-xl"
+												size="sm"
+												variant="outline"
+												onClick={() => openTradeDialog('sell')}
+												disabled={isNetworkMismatch || tradeSubmitting}
+											>
+												Sell
+											</Button>
 										</div>
-									)}
-								</div>
+										{tradeSubmitting && (
+											<div className="absolute inset-0 flex items-center justify-center rounded-xl border border-white/10 bg-slate-950/65 px-3 backdrop-blur-sm">
+												<div className="flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/80 px-3 py-1.5 text-[11px] font-bold text-white/85 shadow-lg">
+													<div className="size-3 animate-spin rounded-full border-2 border-amber-400/25 border-t-amber-400" />
+													Submitting trade
+												</div>
+											</div>
+										)}
+									</div>
+								</TradePanelErrorBoundary>
 							</div>
 						</div>
 					</div>
