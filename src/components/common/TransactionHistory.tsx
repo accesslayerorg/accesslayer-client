@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useFormatXlm, useRelativeTime } from '@/hooks/formatting';
 
 interface Transaction {
 	id: string;
@@ -69,17 +70,150 @@ const SAMPLE_TRANSACTIONS: Transaction[] = [
 	},
 ];
 
-const formatTimestamp = (timestamp: number) => {
-	const now = Date.now();
-	const diff = now - timestamp;
-	const minutes = Math.floor(diff / (1000 * 60));
-	const hours = Math.floor(diff / (1000 * 60 * 60));
-	const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+const getTransactionIcon = (type: Transaction['type']) => {
+	switch (type) {
+		case 'buy':
+			return <ArrowUpRight className="size-4 text-emerald-400" />;
+		case 'sell':
+			return <ArrowDownRight className="size-4 text-rose-400" />;
+		default:
+			return <Minus className="size-4 text-white/40" />;
+	}
+};
 
-	if (minutes < 1) return 'Just now';
-	if (minutes < 60) return `${minutes}m ago`;
-	if (hours < 24) return `${hours}h ago`;
-	return `${days}d ago`;
+const getTransactionTypeLabel = (type: Transaction['type']) => {
+	switch (type) {
+		case 'buy':
+			return 'Buy';
+		case 'sell':
+			return 'Sell';
+		default:
+			return 'Unknown';
+	}
+};
+
+interface TransactionRowProps {
+	tx: Transaction;
+	isCompact: boolean;
+	isExpanded: boolean;
+	onToggleExpansion: (id: string) => void;
+}
+
+const TransactionRow: React.FC<TransactionRowProps> = ({
+	tx,
+	isCompact,
+	isExpanded,
+	onToggleExpansion,
+}) => {
+	const relativeTime = useRelativeTime(tx.timestamp);
+	const totalAmount = useFormatXlm(tx.amount * tx.price, 4);
+
+	return (
+		<div
+			className={cn(
+				'group rounded-xl border border-white/10 bg-white/[0.02] transition-all duration-200 hover:border-white/20 hover:bg-white/[0.04]',
+				isCompact && !isExpanded && 'py-2',
+				(!isCompact || isExpanded) && 'p-4'
+			)}
+		>
+			<div className="flex items-center gap-4">
+				<div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/5">
+					{getTransactionIcon(tx.type)}
+				</div>
+
+				<div className="flex min-w-0 flex-1 items-center gap-4">
+					<div className="min-w-0 flex-1">
+						<div className="flex items-center gap-2">
+							<span className="font-semibold text-white">
+								{getTransactionTypeLabel(tx.type)}
+							</span>
+							<span className="text-white/40">•</span>
+							<span className="text-white/90">{tx.creator}</span>
+						</div>
+						{(!isCompact || isExpanded) && (
+							<div className="mt-1 flex items-center gap-3 text-xs text-white/50">
+								<span>{tx.amount} keys</span>
+								<span className="text-white/30">•</span>
+								<span>{tx.price} ETH</span>
+								<span className="text-white/30">•</span>
+								<span>{relativeTime}</span>
+							</div>
+						)}
+					</div>
+
+					{(!isCompact || isExpanded) && (
+						<div className="hidden shrink-0 items-center gap-4 text-right sm:flex">
+							<div className="text-sm">
+								<div className="font-semibold text-white">
+									{tx.type === 'buy' ? '+' : '-'}
+									{totalAmount} ETH
+								</div>
+								<div className="text-xs text-white/50">
+									{tx.txHash}
+								</div>
+							</div>
+							<div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1">
+								<div className="size-1.5 rounded-full bg-emerald-400" />
+								<span className="text-xs font-semibold text-emerald-400">
+									{tx.status}
+								</span>
+							</div>
+						</div>
+					)}
+
+					{isCompact && !isExpanded && (
+						<div className="flex shrink-0 items-center gap-3">
+							<div className="text-right">
+								<div className="text-sm font-semibold text-white">
+									{tx.type === 'buy' ? '+' : '-'}
+									{totalAmount} ETH
+								</div>
+							</div>
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => onToggleExpansion(tx.id)}
+								className="h-8 w-8 rounded-lg p-0 text-white/50 hover:bg-white/10 hover:text-white"
+							>
+								<ChevronDown className="size-4" />
+							</Button>
+						</div>
+					)}
+
+					{isCompact && isExpanded && (
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => onToggleExpansion(tx.id)}
+							className="h-8 w-8 rounded-lg p-0 text-white/50 hover:bg-white/10 hover:text-white"
+						>
+							<ChevronUp className="size-4" />
+						</Button>
+					)}
+				</div>
+			</div>
+
+			{isCompact && isExpanded && (
+				<div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-xs">
+					<div className="flex items-center gap-3 text-white/50">
+						<span>{tx.amount} keys</span>
+						<span className="text-white/30">•</span>
+						<span>{tx.price} ETH</span>
+						<span className="text-white/30">•</span>
+						<span>{relativeTime}</span>
+						<span className="text-white/30">•</span>
+						<span>{tx.txHash}</span>
+					</div>
+					<div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1">
+						<div className="size-1.5 rounded-full bg-emerald-400" />
+						<span className="text-xs font-semibold text-emerald-400">
+							{tx.status}
+						</span>
+					</div>
+				</div>
+			)}
+		</div>
+	);
 };
 
 const TransactionHistory: React.FC = () => {
@@ -110,28 +244,6 @@ const TransactionHistory: React.FC = () => {
 		});
 	};
 
-	const getTransactionIcon = (type: Transaction['type']) => {
-		switch (type) {
-			case 'buy':
-				return <ArrowUpRight className="size-4 text-emerald-400" />;
-			case 'sell':
-				return <ArrowDownRight className="size-4 text-rose-400" />;
-			default:
-				return <Minus className="size-4 text-white/40" />;
-		}
-	};
-
-	const getTransactionTypeLabel = (type: Transaction['type']) => {
-		switch (type) {
-			case 'buy':
-				return 'Buy';
-			case 'sell':
-				return 'Sell';
-			default:
-				return 'Unknown';
-		}
-	};
-
 	return (
 		<section className="rounded-2xl border border-white/10 bg-white/5 p-6 md:p-8">
 			<div className="mb-6 flex items-center justify-between">
@@ -154,116 +266,15 @@ const TransactionHistory: React.FC = () => {
 			</div>
 
 			<div className="space-y-2">
-				{SAMPLE_TRANSACTIONS.map(tx => {
-					const isExpanded = expandedRows.has(tx.id) || !isCompact;
-					return (
-						<div
-							key={tx.id}
-							className={cn(
-								'group rounded-xl border border-white/10 bg-white/[0.02] transition-all duration-200 hover:border-white/20 hover:bg-white/[0.04]',
-								isCompact && !isExpanded && 'py-2',
-								(!isCompact || isExpanded) && 'p-4'
-							)}
-						>
-							<div className="flex items-center gap-4">
-								<div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/5">
-									{getTransactionIcon(tx.type)}
-								</div>
-								
-								<div className="flex min-w-0 flex-1 items-center gap-4">
-									<div className="min-w-0 flex-1">
-										<div className="flex items-center gap-2">
-											<span className="font-semibold text-white">
-												{getTransactionTypeLabel(tx.type)}
-											</span>
-											<span className="text-white/40">•</span>
-											<span className="text-white/90">{tx.creator}</span>
-										</div>
-										{(!isCompact || isExpanded) && (
-											<div className="mt-1 flex items-center gap-3 text-xs text-white/50">
-												<span>{tx.amount} keys</span>
-												<span className="text-white/30">•</span>
-												<span>{tx.price} ETH</span>
-												<span className="text-white/30">•</span>
-												<span>{formatTimestamp(tx.timestamp)}</span>
-											</div>
-										)}
-									</div>
-
-									{(!isCompact || isExpanded) && (
-										<div className="hidden shrink-0 items-center gap-4 text-right sm:flex">
-											<div className="text-sm">
-												<div className="font-semibold text-white">
-													{tx.type === 'buy' ? '+' : '-'}
-													{(tx.amount * tx.price).toFixed(4)} ETH
-												</div>
-												<div className="text-xs text-white/50">
-													{tx.txHash}
-												</div>
-											</div>
-											<div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1">
-												<div className="size-1.5 rounded-full bg-emerald-400" />
-												<span className="text-xs font-semibold text-emerald-400">
-													{tx.status}
-												</span>
-											</div>
-										</div>
-									)}
-
-									{isCompact && !isExpanded && (
-										<div className="flex shrink-0 items-center gap-3">
-											<div className="text-right">
-												<div className="text-sm font-semibold text-white">
-													{tx.type === 'buy' ? '+' : '-'}
-													{(tx.amount * tx.price).toFixed(4)} ETH
-												</div>
-											</div>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => toggleRowExpansion(tx.id)}
-												className="h-8 w-8 rounded-lg p-0 text-white/50 hover:bg-white/10 hover:text-white"
-											>
-												<ChevronDown className="size-4" />
-											</Button>
-										</div>
-									)}
-
-									{isCompact && isExpanded && (
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => toggleRowExpansion(tx.id)}
-											className="h-8 w-8 rounded-lg p-0 text-white/50 hover:bg-white/10 hover:text-white"
-										>
-											<ChevronUp className="size-4" />
-										</Button>
-									)}
-								</div>
-							</div>
-
-							{isCompact && isExpanded && (
-								<div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-xs">
-									<div className="flex items-center gap-3 text-white/50">
-										<span>{tx.amount} keys</span>
-										<span className="text-white/30">•</span>
-										<span>{tx.price} ETH</span>
-										<span className="text-white/30">•</span>
-										<span>{formatTimestamp(tx.timestamp)}</span>
-										<span className="text-white/30">•</span>
-										<span>{tx.txHash}</span>
-									</div>
-									<div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1">
-										<div className="size-1.5 rounded-full bg-emerald-400" />
-										<span className="text-xs font-semibold text-emerald-400">
-											{tx.status}
-										</span>
-									</div>
-								</div>
-							)}
-						</div>
-					);
-				})}
+				{SAMPLE_TRANSACTIONS.map(tx => (
+					<TransactionRow
+						key={tx.id}
+						tx={tx}
+						isCompact={isCompact}
+						isExpanded={expandedRows.has(tx.id) || !isCompact}
+						onToggleExpansion={toggleRowExpansion}
+					/>
+				))}
 			</div>
 		</section>
 	);

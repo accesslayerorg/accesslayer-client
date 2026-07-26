@@ -2,15 +2,22 @@ import makeBlockie from 'ethereum-blockies-base64';
 import { Users, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router';
 import type { Course } from '@/services/course.service';
+import { useFormatXlm } from '@/hooks/formatting';
 
 type Props = { creator: Course & { walletAddress: string } };
 
 export default function TrendingCreatorCard({ creator }: Props) {
 	const name = creator.title || 'Unnamed creator';
 	const avatar = makeBlockie(creator.walletAddress);
-	const priceXlm = creator.priceStroops
-		? (creator.priceStroops / 1e7).toFixed(2)
-		: creator.price.toFixed(2);
+	// Raw stroops arrive as an integer count → pass as bigint so the hook applies
+	// the shared STROOPS_PER_XLM conversion; the legacy `price` field is already
+	// denominated in whole XLM and passes through as a number.
+	const priceXlm = useFormatXlm(
+		creator.priceStroops
+			? BigInt(Math.round(creator.priceStroops))
+			: creator.price,
+		2
+	);
 
 	return (
 		<article className="group relative overflow-hidden rounded-2xl border border-black/8 bg-white transition-all duration-300 hover:-translate-y-0.5">
