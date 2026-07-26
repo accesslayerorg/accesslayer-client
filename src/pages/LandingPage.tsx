@@ -1078,6 +1078,23 @@ function LandingPage() {
 						</div>
 						{isLoading ? (
 							<CreatorHoldingsListSkeleton className="mt-6" />
+						) : heldKeyPositions.filter(
+								position => position.quantity && position.quantity > 0
+						  ).length === 0 ? (
+							<EmptyState
+								className="mt-6"
+								image="/images/no-results.png"
+								title="No holdings yet"
+								description="You don't currently hold any creator keys. Discover creators to get started."
+								cta={{
+									label: 'Discover creators',
+									onClick: () => {
+										document
+											.getElementById('main-creator-list')
+											?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+									},
+								}}
+							/>
 						) : (
 							<div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 								{heldKeyPositions

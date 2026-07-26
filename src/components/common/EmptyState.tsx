@@ -3,12 +3,20 @@ import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
 import { EMPTY_STATE_ILLUSTRATION_SIZES } from './emptyStateIllustration.config';
 
+interface EmptyStateCta {
+	label: string;
+	onClick: () => void;
+}
+
 interface EmptyStateProps {
 	image: string;
 	title: string;
 	description: string;
 	className?: string;
+	/** @deprecated Use `cta` — kept for the existing search-reset callers. */
 	onReset?: () => void;
+	/** Generic optional call-to-action, e.g. linking a zero-result list back to discovery. */
+	cta?: EmptyStateCta;
 }
 
 const EmptyState: React.FC<EmptyStateProps> = ({
@@ -17,6 +25,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
 	description,
 	className,
 	onReset,
+	cta,
 }: EmptyStateProps) => {
 	return (
 		<div
@@ -60,6 +69,16 @@ const EmptyState: React.FC<EmptyStateProps> = ({
 				>
 					<RotateCcw className="mr-2 size-4" aria-hidden="true" />
 					Reset Search
+				</Button>
+			)}
+
+			{!onReset && cta && (
+				<Button
+					onClick={cta.onClick}
+					variant="outline"
+					className="rounded-xl border-white/10 bg-white/5 px-6 font-bold text-white transition-all hover:border-amber-500/30 hover:bg-amber-500/10"
+				>
+					{cta.label}
 				</Button>
 			)}
 		</div>
