@@ -88,6 +88,14 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		return estimateSellProceeds(keyPriceStroops, currentSupply, parsedAmount);
 	}, [side, keyPriceStroops, currentSupply, parsedAmount]);
 
+	const estimatedTotalStroops = useMemo(() => {
+		if (side !== 'buy' || !Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+			return null;
+		}
+		if (keyPriceStroops == null) return null;
+		return keyPriceStroops * parsedAmount;
+	}, [side, keyPriceStroops, parsedAmount]);
+
 	return (
 		<Dialog
 			open={open}
@@ -186,6 +194,14 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 							fee={estimatedNetworkFee}
 							className="text-white/45"
 						/>
+					)}
+					{side === 'buy' && estimatedTotalStroops != null && (
+						<div className="text-xs text-white/45 mt-2">
+							Estimated total (approximate):{' '}
+							<span className="font-semibold text-amber-300/90 tabular-nums">
+								{formatDisplayKeyPrice(estimatedTotalStroops)}
+							</span>
+						</div>
 					)}
 					{side === 'sell' && (
 						<div className="text-xs text-white/45 mt-2">
