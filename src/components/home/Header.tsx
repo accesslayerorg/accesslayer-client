@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import WalletStatusChip from '@/components/common/WalletStatusChip';
+import NotificationBell from '@/components/common/NotificationBell';
+import { useProfileStore } from '@/hooks/useProfileStore';
 import { Link } from 'react-router';
 
 const navLinks = [
@@ -10,6 +12,7 @@ const navLinks = [
 
 export default function Header() {
 	const [scrolled, setScrolled] = useState(false);
+	const profile = useProfileStore(state => state.profile);
 
 	useEffect(() => {
 		const onScroll = () => {
@@ -66,10 +69,21 @@ export default function Header() {
 					)}
 				</nav>
 
-				{/* CTA — #686: a persistent wallet status chip replaces the bare
-				    Connect link. WalletStatusChip renders the same link itself when
-				    no wallet is connected, so the slot is never empty. */}
-				<WalletStatusChip />
+				{/* Right-side actions: notification bell (#720) + wallet status chip (#686).
+				    NotificationBell is only rendered when a user profile is available. */}
+				<div className="flex items-center gap-2">
+					{profile && (
+						<NotificationBell
+							userId={profile.id}
+							className={
+								scrolled
+									? 'text-gray-600 hover:bg-black/5 hover:text-gray-900'
+									: ''
+							}
+						/>
+					)}
+					<WalletStatusChip />
+				</div>
 			</div>
 		</header>
 	);

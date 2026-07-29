@@ -30,4 +30,8 @@ export const queryKeys = {
 		holdings: (address: string) => ['wallet', address, 'holdings'] as const,
 		activity: (address: string) => ['wallet', address, 'activity'] as const,
 	},
+	notifications: {
+		all: () => ['notifications'] as const,
+		list: (userId: string) => ['notifications', userId, 'list'] as const,
+	},
 } as const;

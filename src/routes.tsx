@@ -1,6 +1,7 @@
 import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
 import CreatorDetailPage from './pages/CreatorDetailPage';
+import NotificationsPage from './pages/NotificationsPage';
 
 export const routes = [
 	{
@@ -18,6 +19,10 @@ export const routes = [
 	{
 		path: '/creators/:id',
 		element: <CreatorDetailPage />,
+	},
+	{
+		path: '/notifications',
+		element: <NotificationsPage />,
 	},
 	{
 		path: '*',
