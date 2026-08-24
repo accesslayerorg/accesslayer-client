@@ -178,9 +178,9 @@ describe('VirtualizedHolderList Performance Tests (#757)', () => {
 		const mockGetHolders = vi.mocked(holderService.getHolders);
 		
 		let callCount = 0;
-		mockGetHolders.mockImplementation(async ({ cursor }) => {
+		mockGetHolders.mockImplementation(async () => {
 			callCount++;
-			const page = cursor ? parseInt(cursor) : 0;
+			const page = 0;
 			
 			return {
 				holders: generateMockHolders(50, page * 50),
