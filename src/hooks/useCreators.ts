@@ -3,6 +3,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import {
 	courseService,
 	type GetCoursesParams,
+	type PriceHistoryInterval,
 } from '@/services/course.service';
 
 export function useCreatorList(params?: GetCoursesParams) {
@@ -20,3 +21,10 @@ export function useCreatorDetail(id: string) {
 	});
 }
 
+export function usePriceHistory(id: string, interval: PriceHistoryInterval) {
+	return useQuery({
+		queryKey: queryKeys.creators.priceHistory(id, interval),
+		queryFn: () => courseService.getPriceHistory(id, interval),
+		enabled: !!id,
+	});
+}

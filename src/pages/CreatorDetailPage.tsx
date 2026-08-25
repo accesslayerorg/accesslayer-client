@@ -1,5 +1,5 @@
 import { useParams } from 'react-router';
-import { useCreatorDetail } from '@/hooks/useCreators';
+import { useCreatorDetail, usePriceHistory } from '@/hooks/useCreators';
 import { useCreatorProfileStaleIndicator } from '@/hooks/useCreatorProfileStaleIndicator';
 import CreatorBreadcrumb from '@/components/common/CreatorBreadcrumb';
 import CreatorProfileHeader from '@/components/common/CreatorProfileHeader';
@@ -12,6 +12,9 @@ import { resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
 import CreatorPageErrorBoundary from '@/components/common/CreatorPageErrorBoundary';
 import { ApiError } from '@/services/api.service';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
+import { useState } from 'react';
+import { PriceHistoryChart } from '@/components/common/PriceHistoryChart';
+import type { PriceHistoryInterval } from '@/services/course.service';
 
 function CreatorDetailPageContent() {
 	const { id } = useParams<{ id: string }>();
@@ -22,6 +25,9 @@ function CreatorDetailPageContent() {
 		isFetching,
 		refetch,
 	} = useCreatorDetail(id || '');
+	const [interval, setInterval] = useState<PriceHistoryInterval>('24h');
+	const { data: priceHistory, isLoading: isPriceHistoryLoading } =
+		usePriceHistory(id || '', interval);
 	useNavigationTiming('creator_profile');
 
 	// Track stale data indicator
@@ -79,7 +85,13 @@ function CreatorDetailPageContent() {
 					bio={creator.description}
 					priceStroops={resolveCreatorKeyPriceStroops(creator)}
 				/>
-				<div className="mt-8 rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8">
+				<PriceHistoryChart
+					data={priceHistory}
+					interval={interval}
+					isLoading={isPriceHistoryLoading}
+					onIntervalChange={setInterval}
+				/>
+				<div className="mt-8 rounded-4xl border border-white/10 bg-white/2 p-6 shadow-2xl backdrop-blur-md md:p-8">
 					<div className="flex items-center justify-between gap-4 mb-6">
 						<h2 className="font-grotesque text-xl font-black tracking-tight text-white">
 							Fee Structure
@@ -92,7 +104,7 @@ function CreatorDetailPageContent() {
 					</div>
 					<CreatorProfileInfoGrid items={feeItems} />
 				</div>
-				<div className="mt-8 rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8">
+				<div className="mt-8 rounded-4xl border border-white/10 bg-white/2 p-6 shadow-2xl backdrop-blur-md md:p-8">
 					<h2 className="font-grotesque text-xl font-black tracking-tight text-white mb-6">
 						Activity
 					</h2>

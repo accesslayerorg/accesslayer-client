@@ -42,6 +42,13 @@ export interface GetCoursesParams {
 	sort?: Exclude<CourseSortOption, 'featured'>;
 }
 
+export type PriceHistoryInterval = '1h' | '24h' | '7d';
+
+export interface PriceHistoryPoint {
+	timestamp: string;
+	price: number;
+}
+
 /** Raw envelope shape for a paginated /courses response. */
 interface CoursesPageEnvelope {
 	items?: Course[];
@@ -136,6 +143,23 @@ class CourseService extends BaseApiService {
 			const data = response.data.data;
 			cacheManager.set(cacheKey, data, this.PROFILE_CACHE_TTL);
 			return data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Get bonding curve price history - GET /keys/:keyId/price-history
+	async getPriceHistory(
+		keyId: string,
+		interval: PriceHistoryInterval
+	): Promise<PriceHistoryPoint[]> {
+		try {
+			const response = await this.api.get<APIResponse<PriceHistoryPoint[]>>(
+				`/keys/${keyId}/price-history`,
+				{ params: { interval } }
+			);
+
+			return response.data.data;
 		} catch (error) {
 			throw this.handleError(error);
 		}

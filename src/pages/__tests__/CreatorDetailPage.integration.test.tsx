@@ -11,6 +11,7 @@ import { queryKeys } from '@/lib/queryKeys';
 vi.mock('@/services/course.service', () => ({
 	courseService: {
 		getCourse: vi.fn(),
+		getPriceHistory: vi.fn(),
 	},
 }));
 
@@ -42,6 +43,7 @@ vi.mock('framer-motion', async () => {
 });
 
 const mockGetCourse = vi.mocked(courseService.getCourse);
+const mockGetPriceHistory = vi.mocked(courseService.getPriceHistory);
 
 function makeFreshQueryClient() {
 	return new QueryClient({
@@ -67,6 +69,7 @@ describe('CreatorDetailPage Integration', () => {
 	beforeEach(() => {
 		queryClient = makeFreshQueryClient();
 		mockGetCourse.mockReset();
+		mockGetPriceHistory.mockResolvedValue([]);
 		consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 	});
 
@@ -163,7 +166,9 @@ describe('CreatorDetailPage Integration', () => {
 		);
 
 		expect(await screen.findByText('100.00 XLM')).toBeInTheDocument();
-		expect(screen.queryByLabelText(/loading creator profile/i)).not.toBeInTheDocument();
+		expect(
+			screen.queryByLabelText(/loading creator profile/i)
+		).not.toBeInTheDocument();
 
 		await act(async () => {
 			void queryClient.invalidateQueries({
@@ -172,7 +177,9 @@ describe('CreatorDetailPage Integration', () => {
 		});
 
 		expect(screen.getByText('100.00 XLM')).toBeInTheDocument();
-		expect(screen.queryByLabelText(/loading creator profile/i)).not.toBeInTheDocument();
+		expect(
+			screen.queryByLabelText(/loading creator profile/i)
+		).not.toBeInTheDocument();
 
 		refetchDeferred.resolve(updatedCreator);
 
