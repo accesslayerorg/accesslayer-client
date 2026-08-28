@@ -101,6 +101,12 @@ export interface KeyHoldersPage {
 	nextCursor: string | null;
 }
 
+export interface KeyTwap {
+	/** 24-hour time-weighted average price in stroops. */
+	priceStroops: number | null;
+	window?: string;
+}
+
 class CourseService extends BaseApiService {
 	private readonly PROFILE_CACHE_TTL = 30000; // 30 seconds
 
@@ -198,6 +204,19 @@ class CourseService extends BaseApiService {
 				{ params }
 			);
 
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Get the time-weighted average price - GET /keys/:keyId/twap
+	async getKeyTwap(keyId: string, window = '24h'): Promise<KeyTwap> {
+		try {
+			const response = await this.api.get<APIResponse<KeyTwap>>(
+				`/keys/${keyId}/twap`,
+				{ params: { window } }
+			);
 			return response.data.data;
 		} catch (error) {
 			throw this.handleError(error);
