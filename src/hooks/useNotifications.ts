@@ -9,6 +9,8 @@ import {
 const MAX_DROPDOWN_NOTIFICATIONS = 5;
 
 export interface UseNotificationsResult {
+	/** All notifications, sorted newest first. */
+	notifications: Notification[];
 	/** Up to five most recent notifications for the dropdown. */
 	recent: Notification[];
 	/** Total number of unread notifications. */
@@ -17,14 +19,13 @@ export interface UseNotificationsResult {
 	isError: boolean;
 	/** Mark a single notification as read by its id. */
 	markAsRead: (notificationId: string) => void;
+	/** Mark all notifications as read and clear unread count. */
+	markAllAsRead: () => void;
 }
 
 /**
- * Fetches the current user's notifications and exposes a helper to mark
- * individual items as read with an optimistic update.
- *
- * The queryFn is injected so tests can supply a stub without module-level
- * patching (matches the pattern used in `useCreatorActivityFeed`).
+ * Fetches the current user's notifications, polls every 60s, and exposes helpers
+ * to mark individual or all items as read with optimistic updates.
  */
 export function useNotifications(
 	userId: string,
@@ -40,13 +41,12 @@ export function useNotifications(
 		queryKey,
 		queryFn: () => fetchNotifications(userId),
 		enabled: !!userId,
+		refetchInterval: 60000,
 	});
 
 	const { mutate: markAsRead } = useMutation({
 		mutationFn: (notificationId: string) =>
 			notificationService.markAsRead(notificationId),
-		// Optimistic update: flip the `read` flag and decrement the count
-		// so the badge responds instantly without waiting for the server.
 		onMutate: async (notificationId: string) => {
 			await queryClient.cancelQueries({ queryKey });
 
@@ -65,7 +65,6 @@ export function useNotifications(
 			return { previous };
 		},
 		onError: (_err, _id, context) => {
-			// Roll back the optimistic update on failure.
 			if (context?.previous) {
 				queryClient.setQueryData<NotificationsResponse>(
 					queryKey,
@@ -78,14 +77,53 @@ export function useNotifications(
 		},
 	});
 
-	const allNotifications = data?.notifications ?? [];
-	const recent = allNotifications.slice(0, MAX_DROPDOWN_NOTIFICATIONS);
+	const { mutate: markAllAsRead } = useMutation({
+		mutationFn: () => notificationService.markAllAsRead(userId),
+		onMutate: async () => {
+			await queryClient.cancelQueries({ queryKey });
+
+			const previous =
+				queryClient.getQueryData<NotificationsResponse>(queryKey);
+
+			if (previous) {
+				queryClient.setQueryData<NotificationsResponse>(queryKey, {
+					notifications: previous.notifications.map(n => ({
+						...n,
+						read: true,
+					})),
+					unreadCount: 0,
+				});
+			}
+
+			return { previous };
+		},
+		onError: (_err, _vars, context) => {
+			if (context?.previous) {
+				queryClient.setQueryData<NotificationsResponse>(
+					queryKey,
+					context.previous
+				);
+			}
+		},
+		onSettled: () => {
+			void queryClient.invalidateQueries({ queryKey });
+		},
+	});
+
+	const rawNotifications = data?.notifications ?? [];
+	// Sort newest first by createdAt timestamp
+	const notifications = [...rawNotifications].sort(
+		(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+	);
+	const recent = notifications.slice(0, MAX_DROPDOWN_NOTIFICATIONS);
 
 	return {
+		notifications,
 		recent,
 		unreadCount: data?.unreadCount ?? 0,
 		isLoading,
 		isError,
 		markAsRead,
+		markAllAsRead,
 	};
 }

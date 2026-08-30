@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { Copy, Check, Loader2 } from 'lucide-react';
 import {
@@ -21,7 +21,6 @@ import {
 	WALLET_CONNECTION_AD_BLOCKER_MESSAGE,
 	useWalletConnectionStallDetection,
 } from '@/hooks/useWalletConnectionStallDetection';
-import { useWalletReconnect } from '@/hooks/useWalletReconnect';
 import { useCopySuccessAnnouncement } from '@/hooks/useCopySuccessAnnouncement';
 import CopySuccessAnnouncement from '@/components/common/CopySuccessAnnouncement';
 import showToast from '@/utils/toast.util';
@@ -33,6 +32,8 @@ function ConnectWalletButton() {
 	const [copied, setCopied] = useState(false);
 	const connectedAtRef = useRef<number | null>(null);
 	const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
+	const [showConnectDialog, setShowConnectDialog] = useState(false);
+	const [connectError, setConnectError] = useState<string | null>(null);
 	const { address, isConnected } = useAccount();
 	const { connect, connectors, error, isPending } = useConnect();
 	const { disconnect } = useDisconnect();
@@ -44,17 +45,13 @@ function ConnectWalletButton() {
 		hasWalletResponse: isConnected || Boolean(error),
 	});
 
-	const { showWaiting, showFailed, cancelAndReset } = useWalletReconnect({
-		isPending,
-		isConnected,
-		hasError: Boolean(error),
-		onRetry: useCallback(() => {
-			if (primaryConnector) connect({ connector: primaryConnector });
-		}, [connect, primaryConnector]),
-	});
-
 	const handleConnect = () => {
-		cancelAndReset();
+		setConnectError(null);
+		if (primaryConnector) connect({ connector: primaryConnector });
+	};
+
+	const handleRetry = () => {
+		setConnectError(null);
 		if (primaryConnector) connect({ connector: primaryConnector });
 	};
 
@@ -76,6 +73,8 @@ function ConnectWalletButton() {
 	useEffect(() => {
 		if (isConnected && address && connectedAtRef.current == null) {
 			connectedAtRef.current = Date.now();
+			setShowConnectDialog(false);
+			setConnectError(null);
 			return;
 		}
 
@@ -83,6 +82,12 @@ function ConnectWalletButton() {
 			connectedAtRef.current = null;
 		}
 	}, [address, isConnected]);
+
+	useEffect(() => {
+		if (error && !isConnected) {
+			setConnectError(error.message);
+		}
+	}, [error, isConnected]);
 
 	if (isConnected && address) {
 		return (
@@ -188,38 +193,71 @@ function ConnectWalletButton() {
 		);
 	}
 
-	const connectLabel = showWaiting
-		? 'Waiting for wallet…'
-		: isPending
-			? 'Connecting...'
-			: 'Connect Wallet';
+	const connectLabel = isPending ? 'Connecting...' : 'Connect Wallet';
 
 	return (
-		<div className="flex flex-col gap-2">
+		<>
 			<button
 				type="button"
-				onClick={handleConnect}
-				disabled={!primaryConnector || isPending}
-				className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+				onClick={() => setShowConnectDialog(true)}
+				className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
 			>
-				{showWaiting ? (
-					<Loader2 className="size-4 animate-spin" aria-hidden="true" />
-				) : null}
 				{connectLabel}
 			</button>
-			{showFailed ? (
-				<p role="alert" className="text-sm text-red-600">
-					Could not connect &mdash; please try again
-				</p>
-			) : error ? (
-				<p className="text-sm text-red-600">{error.message}</p>
-			) : null}
-			{showAdBlockerSuggestion ? (
-				<p role="status" className="max-w-sm text-sm text-amber-700">
-					{WALLET_CONNECTION_AD_BLOCKER_MESSAGE}
-				</p>
-			) : null}
-		</div>
+			<Dialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Connect Wallet</DialogTitle>
+						<DialogDescription>
+							Connect your Stellar wallet to access the marketplace and
+							trade creator keys.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="flex flex-col gap-4">
+						<button
+							type="button"
+							onClick={handleConnect}
+							disabled={!primaryConnector || isPending}
+							className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+						>
+							{isPending ? (
+								<Loader2 className="size-4 animate-spin" aria-hidden="true" />
+							) : null}
+							{isPending ? 'Connecting...' : 'Connect Wallet'}
+						</button>
+						{connectError ? (
+							<div className="flex flex-col gap-2">
+								<p role="alert" className="text-sm text-red-600">
+									Wallet signature failed. Please try again.
+								</p>
+								{connectError && (
+									<p className="text-xs text-red-500">
+										{connectError}
+									</p>
+								)}
+								<button
+									type="button"
+									onClick={handleRetry}
+									className="rounded-lg border border-blue-600 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100"
+								>
+									Retry
+								</button>
+							</div>
+						) : null}
+						{showAdBlockerSuggestion ? (
+							<p role="status" className="max-w-sm text-sm text-amber-700">
+								{WALLET_CONNECTION_AD_BLOCKER_MESSAGE}
+							</p>
+						) : null}
+					</div>
+					<DialogFooter>
+						<DialogClose asChild>
+							<Button variant="outline">Cancel</Button>
+						</DialogClose>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</>
 	);
 }
 

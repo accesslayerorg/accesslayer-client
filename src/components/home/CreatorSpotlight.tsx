@@ -142,8 +142,8 @@ export default function CreatorSpotlight() {
 	const gridRef = useRef<HTMLDivElement>(null);
 
 	const { data: creators, isLoading } = useQuery({
-		queryKey: queryKeys.creators.list({ sort: 'supply-desc', limit: 3 }),
-		queryFn: () => courseService.getCourses({ sort: 'supply-desc', limit: 3 }),
+		queryKey: queryKeys.creators.list({ sort: 'volume_desc', limit: 3 }),
+		queryFn: () => courseService.getCourses({ sort: 'volume_desc', limit: 3 }),
 	});
 
 	useEffect(() => {

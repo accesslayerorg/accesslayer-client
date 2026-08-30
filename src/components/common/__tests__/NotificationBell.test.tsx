@@ -46,11 +46,13 @@ describe('NotificationBell', () => {
 
 	it('does not show the unread badge when unreadCount is 0', () => {
 		mockUseNotifications.mockReturnValue({
+			notifications: [],
 			recent: [],
 			unreadCount: 0,
 			isLoading: false,
 			isError: false,
 			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
 		});
 
 		renderBell();
@@ -62,11 +64,13 @@ describe('NotificationBell', () => {
 
 	it('shows the unread badge with the correct count when unreadCount > 0', () => {
 		mockUseNotifications.mockReturnValue({
+			notifications: [makeNotification('n1')],
 			recent: [makeNotification('n1')],
 			unreadCount: 3,
 			isLoading: false,
 			isError: false,
 			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
 		});
 
 		renderBell();
@@ -78,11 +82,13 @@ describe('NotificationBell', () => {
 
 	it('caps the badge display at 99+ when unreadCount > 99', () => {
 		mockUseNotifications.mockReturnValue({
+			notifications: [],
 			recent: [],
 			unreadCount: 150,
 			isLoading: false,
 			isError: false,
 			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
 		});
 
 		renderBell();
@@ -96,11 +102,13 @@ describe('NotificationBell', () => {
 
 	it('gives the bell button an accessible label mentioning unread count', () => {
 		mockUseNotifications.mockReturnValue({
+			notifications: [],
 			recent: [],
 			unreadCount: 2,
 			isLoading: false,
 			isError: false,
 			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
 		});
 
 		renderBell();
@@ -112,11 +120,13 @@ describe('NotificationBell', () => {
 
 	it('uses a generic label when unreadCount is 0', () => {
 		mockUseNotifications.mockReturnValue({
+			notifications: [],
 			recent: [],
 			unreadCount: 0,
 			isLoading: false,
 			isError: false,
 			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
 		});
 
 		renderBell();
@@ -126,16 +136,18 @@ describe('NotificationBell', () => {
 		).toBeInTheDocument();
 	});
 
-	// ── Dropdown content ─────────────────────────────────────────────────────
+	// ── Dropdown content & Drawer ─────────────────────────────────────────────
 
-	it('opens the dropdown when the bell is clicked', async () => {
+	it('opens the dropdown drawer when the bell is clicked', async () => {
 		const user = userEvent.setup();
 		mockUseNotifications.mockReturnValue({
+			notifications: [],
 			recent: [],
 			unreadCount: 0,
 			isLoading: false,
 			isError: false,
 			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
 		});
 
 		renderBell();
@@ -147,14 +159,60 @@ describe('NotificationBell', () => {
 		).toBeInTheDocument();
 	});
 
+	it('calls markAllAsRead when drawer opens with unread items', async () => {
+		const user = userEvent.setup();
+		const markAllAsRead = vi.fn();
+		mockUseNotifications.mockReturnValue({
+			notifications: [makeNotification('n1')],
+			recent: [makeNotification('n1')],
+			unreadCount: 1,
+			isLoading: false,
+			isError: false,
+			markAsRead: vi.fn(),
+			markAllAsRead,
+		});
+
+		renderBell();
+		await user.click(screen.getByRole('button', { name: /notifications/i }));
+
+		expect(markAllAsRead).toHaveBeenCalled();
+	});
+
+	it('renders distinct icons for trade_completed, lockup_expiring, and price_moved', async () => {
+		const user = userEvent.setup();
+		const recent = [
+			makeNotification('n1', { type: 'trade_completed', message: 'Trade executed' }),
+			makeNotification('n2', { type: 'lockup_expiring', message: 'Lockup expiring soon' }),
+			makeNotification('n3', { type: 'price_moved', message: 'Price surged 15%' }),
+		];
+		mockUseNotifications.mockReturnValue({
+			notifications: recent,
+			recent,
+			unreadCount: 0,
+			isLoading: false,
+			isError: false,
+			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
+		});
+
+		renderBell();
+		await user.click(screen.getByRole('button', { name: /notifications/i }));
+
+		expect(screen.getByTestId('icon-trade_completed')).toBeInTheDocument();
+		expect(screen.getByTestId('icon-lockup_expiring')).toBeInTheDocument();
+		expect(screen.getByTestId('icon-price_moved')).toBeInTheDocument();
+	});
+
 	it('shows the empty state when there are no notifications', async () => {
 		const user = userEvent.setup();
 		mockUseNotifications.mockReturnValue({
+			notifications: [],
 			recent: [],
 			unreadCount: 0,
 			isLoading: false,
 			isError: false,
 			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
 		});
 
 		renderBell();
@@ -171,11 +229,13 @@ describe('NotificationBell', () => {
 	it('shows skeleton rows while loading', async () => {
 		const user = userEvent.setup();
 		mockUseNotifications.mockReturnValue({
+			notifications: [],
 			recent: [],
 			unreadCount: 0,
 			isLoading: true,
 			isError: false,
 			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
 		});
 
 		renderBell();
@@ -197,11 +257,13 @@ describe('NotificationBell', () => {
 			makeNotification('n5'),
 		];
 		mockUseNotifications.mockReturnValue({
+			notifications: recent,
 			recent,
 			unreadCount: 5,
 			isLoading: false,
 			isError: false,
 			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
 		});
 
 		renderBell();
@@ -218,11 +280,13 @@ describe('NotificationBell', () => {
 		const user = userEvent.setup();
 		const recent = [makeNotification('n1', { message: 'Alice followed you' })];
 		mockUseNotifications.mockReturnValue({
+			notifications: recent,
 			recent,
 			unreadCount: 1,
 			isLoading: false,
 			isError: false,
 			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
 		});
 
 		renderBell();
@@ -238,11 +302,13 @@ describe('NotificationBell', () => {
 		const markAsRead = vi.fn();
 		const recent = [makeNotification('n1')];
 		mockUseNotifications.mockReturnValue({
+			notifications: recent,
 			recent,
 			unreadCount: 1,
 			isLoading: false,
 			isError: false,
 			markAsRead,
+			markAllAsRead: vi.fn(),
 		});
 
 		renderBell();
@@ -257,11 +323,13 @@ describe('NotificationBell', () => {
 	it('renders a "View all" link in the dropdown', async () => {
 		const user = userEvent.setup();
 		mockUseNotifications.mockReturnValue({
+			notifications: [],
 			recent: [],
 			unreadCount: 0,
 			isLoading: false,
 			isError: false,
 			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
 		});
 
 		renderBell();
@@ -282,6 +350,10 @@ describe('NotificationBell', () => {
 
 		// Start with count = 2
 		mockUseNotifications.mockReturnValue({
+			notifications: [
+				makeNotification('n1', { read: false }),
+				makeNotification('n2', { read: false }),
+			],
 			recent: [
 				makeNotification('n1', { read: false }),
 				makeNotification('n2', { read: false }),
@@ -290,6 +362,7 @@ describe('NotificationBell', () => {
 			isLoading: false,
 			isError: false,
 			markAsRead,
+			markAllAsRead: vi.fn(),
 		});
 
 		const { rerender } = renderBell();
@@ -300,6 +373,10 @@ describe('NotificationBell', () => {
 
 		// Simulate the hook returning updated state after markAsRead is called
 		mockUseNotifications.mockReturnValue({
+			notifications: [
+				makeNotification('n1', { read: true }),
+				makeNotification('n2', { read: false }),
+			],
 			recent: [
 				makeNotification('n1', { read: true }),
 				makeNotification('n2', { read: false }),
@@ -308,6 +385,7 @@ describe('NotificationBell', () => {
 			isLoading: false,
 			isError: false,
 			markAsRead,
+			markAllAsRead: vi.fn(),
 		});
 
 		rerender(

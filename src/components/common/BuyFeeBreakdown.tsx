@@ -4,8 +4,9 @@
  */
 
 import React from 'react';
-import { AlertCircle, RotateCcw } from 'lucide-react';
+import { AlertCircle, HelpCircle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import type { FeeBreakdown } from '@/utils/pricePreview.utils';
 
@@ -22,7 +23,7 @@ export interface BuyFeeBreakdownProps {
 
 /**
  * Displays a detailed fee breakdown for a buy transaction.
- * Renders gross cost, protocol fee (%), creator fee (%), and total cost.
+ * Renders base price, protocol fee (%), creator royalty (%), and total cost.
  * Shows loading and error states with inline retry capability.
  */
 const BuyFeeBreakdown: React.FC<BuyFeeBreakdownProps> = ({
@@ -89,12 +90,12 @@ const BuyFeeBreakdown: React.FC<BuyFeeBreakdownProps> = ({
 			className="space-y-2 rounded-lg border border-white/10 bg-white/[0.02] p-3"
 			data-testid="buy-fee-breakdown"
 		>
-			{/* Gross cost row */}
+			{/* Base Price row */}
 			<div
 				className="flex justify-between items-center text-xs"
 				data-testid="buy-fee-breakdown-gross"
 			>
-				<span className="text-white/70">Gross cost</span>
+				<span className="text-white/70">Base Price</span>
 				<span className="font-mono text-white/90">
 					{formatDisplayKeyPrice(breakdown.grossCostStroops)}
 				</span>
@@ -106,8 +107,17 @@ const BuyFeeBreakdown: React.FC<BuyFeeBreakdownProps> = ({
 					className="flex justify-between items-center text-xs"
 					data-testid="buy-fee-breakdown-protocol"
 				>
-					<span className="text-white/70">
-						Protocol fee ({protocolFeePercentage}%)
+					<span className="text-white/70 flex items-center gap-1">
+						<span>Protocol Fee ({protocolFeePercentage}%)</span>
+						<Tooltip content="Protocol fees fund platform maintenance, network operations, and ecosystem development.">
+							<span
+								className="inline-flex cursor-help text-white/50 hover:text-white/80"
+								data-testid="protocol-fee-tooltip"
+								aria-label="Protocol Fee info"
+							>
+								<HelpCircle className="h-3 w-3" />
+							</span>
+						</Tooltip>
 					</span>
 					<span className="font-mono text-white/90">
 						{formatDisplayKeyPrice(breakdown.protocolFeeStroops)}
@@ -115,14 +125,14 @@ const BuyFeeBreakdown: React.FC<BuyFeeBreakdownProps> = ({
 				</div>
 			)}
 
-			{/* Creator fee row */}
+			{/* Creator Royalty row */}
 			{breakdown.creatorFeeBps > 0 && (
 				<div
 					className="flex justify-between items-center text-xs"
 					data-testid="buy-fee-breakdown-creator"
 				>
 					<span className="text-white/70">
-						Creator fee ({creatorFeePercentage}%)
+						Creator Royalty ({creatorFeePercentage}%)
 					</span>
 					<span className="font-mono text-white/90">
 						{formatDisplayKeyPrice(breakdown.creatorFeeStroops)}
@@ -135,7 +145,7 @@ const BuyFeeBreakdown: React.FC<BuyFeeBreakdownProps> = ({
 				className="flex justify-between items-center text-xs pt-2 border-t border-white/10"
 				data-testid="buy-fee-breakdown-total"
 			>
-				<span className="font-semibold text-white">Total cost</span>
+				<span className="font-semibold text-white">Total</span>
 				<span className="font-mono font-semibold text-amber-300/90">
 					{formatDisplayKeyPrice(breakdown.totalCostStroops)}
 				</span>

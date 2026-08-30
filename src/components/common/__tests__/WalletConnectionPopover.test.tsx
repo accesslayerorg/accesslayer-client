@@ -184,7 +184,7 @@ describe('WalletConnectionPopover — disconnected state', () => {
 describe('WalletConnectionPopover — connected state', () => {
 	const FULL_ADDRESS = '0xAbCdEf1234567890AbCdEf1234567890AbCdEf12';
 	// shortenAddress defaults: first 6 chars + '...' + last 4 chars
-	const TRUNCATED_ADDRESS = '0xAbCd...f12'.slice(0, 6) + '...' + FULL_ADDRESS.slice(-4);
+	const TRUNCATED_ADDRESS = `${FULL_ADDRESS.slice(0, 4)}...${FULL_ADDRESS.slice(-4)}`;
 
 	beforeEach(() => {
 		vi.clearAllMocks();

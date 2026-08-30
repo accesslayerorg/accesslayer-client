@@ -1,10 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 import {
 	courseService,
+	type Course,
 	type GetCoursesParams,
 	type PriceHistoryInterval,
 } from '@/services/course.service';
+import showToast from '@/utils/toast.util';
 
 export function useCreatorList(params?: GetCoursesParams) {
 	return useQuery({
@@ -26,5 +28,31 @@ export function usePriceHistory(id: string, interval: PriceHistoryInterval) {
 		queryKey: queryKeys.creators.priceHistory(id, interval),
 		queryFn: () => courseService.getPriceHistory(id, interval),
 		enabled: !!id,
+	});
+}
+
+export function useSetCoCreator(courseId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ address, splitBps }: { address: string; splitBps: number }) =>
+			courseService.setCoCreator(courseId, address, splitBps),
+		onSuccess: (updatedCourse: Course) => {
+			if (updatedCourse) {
+				queryClient.setQueryData(
+					queryKeys.creators.detail(courseId),
+					updatedCourse
+				);
+			}
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(courseId),
+			});
+			showToast.success('Co-creator configured successfully');
+		},
+		onError: (error: unknown) => {
+			const message =
+				error instanceof Error ? error.message : 'Failed to set co-creator';
+			showToast.error(message);
+		},
 	});
 }

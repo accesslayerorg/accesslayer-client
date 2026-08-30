@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback } from 'react';
+import { Link } from 'react-router';
 import { useAccount } from 'wagmi';
 import type { Course } from '@/services/course.service';
 import { cn } from '@/lib/utils';
@@ -225,6 +226,9 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 		runPurchaseAttempt();
 	}, [isConnected, isNetworkMismatch, expectedChainName, displayCreatorName, runPurchaseAttempt]);
 
+	const resolvedHolderCount =
+		creator.holderCount ?? creator.holdersCount ?? creator.holders ?? creator.creatorShareSupply;
+
 	return (
 		<div
 			ref={cardRef}
@@ -314,7 +318,13 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 						id={`creator-name-${creator.id}`}
 						className="font-jakarta text-lg font-bold text-white"
 					>
-						{displayCreatorName}
+						<Link
+							to={`/creator/${creator.id}`}
+							data-testid="creator-profile-link"
+							className="hover:underline"
+						>
+							{displayCreatorName}
+						</Link>
 					</h3>
 					<VerifiedBadge
 						verified={Boolean(creator.isVerified)}
@@ -502,6 +512,17 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 						truncateValue={false}
 						valueClassName="font-grotesque text-base font-black text-amber-400"
 					/>
+					{resolvedHolderCount != null && (
+						<CardMetaRow
+							label="Holders"
+							value={
+								<span data-testid="creator-card-holders">
+									{`${resolvedHolderCount} holders`}
+								</span>
+							}
+							valueClassName="text-white/75"
+						/>
+					)}
 				</div>
 				<CreatorListRowDivider className="my-4" />
 				<CreatorSocialLinksList

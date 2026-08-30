@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import WalletStatusChip from '@/components/common/WalletStatusChip';
 import NotificationBell from '@/components/common/NotificationBell';
+import MarketplaceHeaderSearch from '@/components/common/MarketplaceHeaderSearch';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import { useTheme } from '@/hooks/useTheme';
 import { Link } from 'react-router';
+import BatchBuyModal from '@/components/common/BatchBuyModal';
 
 const navLinks = [
 	{ label: 'Marketplace', href: '/marketplace', external: false },
@@ -14,6 +16,7 @@ const navLinks = [
 
 export default function Header() {
 	const [scrolled, setScrolled] = useState(false);
+	const [batchOpen, setBatchOpen] = useState(false);
 	const profile = useProfileStore(state => state.profile);
 	const { theme, toggleTheme } = useTheme();
 
@@ -34,9 +37,9 @@ export default function Header() {
 					: 'top-2'
 			}`}
 		>
-			<div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
+			<div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-5">
 				{/* Logo */}
-				<Link to="/" className="flex items-center gap-2.5">
+				<Link to="/" className="flex items-center gap-2.5 shrink-0">
 					<img
 						src="/icons/logo.svg"
 						alt="Access Layer"
@@ -48,7 +51,7 @@ export default function Header() {
 				</Link>
 
 				{/* Nav */}
-				<nav className="hidden items-center gap-8 md:flex">
+				<nav className="hidden items-center gap-8 md:flex shrink-0">
 					{navLinks.map(link =>
 						link.external ? (
 							<a
@@ -72,9 +75,22 @@ export default function Header() {
 					)}
 				</nav>
 
+				{/* Marketplace Header Search */}
+				<div className="flex-1 max-w-xs mx-2">
+					<MarketplaceHeaderSearch />
+				</div>
+
 				{/* Right-side actions: dark mode toggle (#750) + notification bell (#720) + wallet status chip (#686).
 				    NotificationBell is only rendered when a user profile is available. */}
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-2 shrink-0">
+					<button
+						type="button"
+						onClick={() => setBatchOpen(true)}
+						className={`rounded-xl border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 ${scrolled ? '' : ''}`}
+					>
+						Batch Buy
+					</button>
+					<BatchBuyModal open={batchOpen} onOpenChange={setBatchOpen} />
 					<button
 						type="button"
 						onClick={toggleTheme}

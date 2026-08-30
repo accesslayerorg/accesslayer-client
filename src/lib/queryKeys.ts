@@ -31,9 +31,18 @@ export const queryKeys = {
 	wallet: {
 		holdings: (address: string) => ['wallet', address, 'holdings'] as const,
 		activity: (address: string) => ['wallet', address, 'activity'] as const,
+		tradeHistory: (address: string) =>
+			['wallet', address, 'tradeHistory'] as const,
 	},
 	notifications: {
 		all: () => ['notifications'] as const,
 		list: (userId: string) => ['notifications', userId, 'list'] as const,
+	},
+	leaderboard: {
+		all: () => ['leaderboard'] as const,
+		volume: () => ['leaderboard', 'volume'] as const,
+	},
+	admin: {
+		oracleCallers: () => ['admin', 'oracle', 'callers'] as const,
 	},
 } as const;
