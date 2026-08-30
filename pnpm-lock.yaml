@@ -7,6 +7,18 @@ settings:
 importers:
    .:
       dependencies:
+         '@ledgerhq/hw-app-str':
+            specifier: 7.7.7
+            version: 7.7.7
+         '@ledgerhq/hw-transport-webhid':
+            specifier: 6.36.0
+            version: 6.36.0
+         '@stellar/freighter-api':
+            specifier: 6.0.1
+            version: 6.0.1
+         '@stellar/stellar-sdk':
+            specifier: 17.0.1
+            version: 17.0.1
          '@radix-ui/react-dialog':
             specifier: ^1.1.15
             version: 1.1.23(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -7321,6 +7333,116 @@ packages:
          use-sync-external-store:
             optional: true
 
+   '@ledgerhq/devices@8.16.0':
+      resolution:
+         integrity: sha512-brXLPzkvGM3D5YNsWQ25P5G4SmWdSNBed9W8wKoOIRLGdRfvE+bg9mzFty0iZ+aRLBkLoXwX7xKIL9zUi6LBKQ==
+   '@ledgerhq/devices@8.17.0':
+      resolution:
+         integrity: sha512-l+rrVQEjR1hSWOLD00LFX4zbS8yB1M/Mb6UYPmSHGO7TmE1CFbZ4CmDJC/kZSl3hdrXCJ+YUNpvaLCcSWDwA+Q==
+   '@ledgerhq/errors@6.37.0':
+      resolution:
+         integrity: sha512-T5yiKI5UX7ugeocdTF3TUsCIN2BH41Bio4ZeN410YFjFOf3es08n/5JyMzzKwzRgP0blG3HfBf7s7vJKqCSAeg==
+   '@ledgerhq/errors@7.0.0':
+      resolution:
+         integrity: sha512-+Q/vykUlNeIxiM+I3cu1B660WLkzlmIsHLTV9QNV5D2/Ocplx3QMg52NYq2X7OAfGQnfH1rQvhn/NrjT+t9wBA==
+   '@ledgerhq/hw-app-str@7.7.7':
+      resolution:
+         integrity: sha512-RNOacpfB9YI82o8Nw7oleec1I4a5jAmBtxyNeoyTPayXcnhbnLy6v14fzz7M4cNsNHOqFtWZ17LmrclOaU1P/g==
+   '@ledgerhq/hw-transport-webhid@6.36.0':
+      resolution:
+         integrity: sha512-1mKWm3LyGOgmaYlAiqbmaGoupOZHbj2Kow5sXLxKZzQa4kFvQuUdinYOWhs7T8hqJyAkz9WlHYyKM7aIs8kjNg==
+   '@ledgerhq/hw-transport@6.35.5':
+      resolution:
+         integrity: sha512-P4+wtLewLWgxPtIb90h5kjpzXVlC6f4IBQBmvowVFkInvZt34ffXkX7wa5KfMzu4l3cqCcpNSqtPSCMp+0vuqg==
+   '@ledgerhq/hw-transport@6.35.7':
+      resolution:
+         integrity: sha512-vVhAVQ56+7A5FY5Mr09HY+bmf3H6TXpwsj+/xbadNkjl//e/YzTWfpXk4eBnj3hwk1PQ9Mn6pKFH0BHjS2BKlg==
+   '@ledgerhq/logs@6.17.0':
+      resolution:
+         integrity: sha512-yra33g5q/AU7+PwAws+GaVpQGUuxnDREjVBnviJjcaJLVKuLzI4pnj8Bd3nY3fypM5k1yZEYKEXfUuGFUjP2+w==
+   '@noble/ed25519@3.2.0':
+      resolution:
+         integrity: sha512-criDgRlnUA09hchYrTy/JUWPIEap5rZxQe6wDWzRx51oWWpDRcUpuNzlgPxDJaOK6AsW9c0wKcj3rKRv6t+bPQ==
+   '@noble/hashes@2.4.0':
+      resolution:
+         integrity: sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA==
+      engines:
+         node: '>= 20.19.0'
+   '@stellar/freighter-api@6.0.1':
+      resolution:
+         integrity: sha512-eqwakEqSg+zoLuPpSbKyrX0pG8DQFzL/J5GtbfuMCmJI+h+oiC9pQ5C6QLc80xopZQKdGt8dUAFCmDMNdAG95w==
+   '@stellar/js-xdr@5.0.0':
+      resolution:
+         integrity: sha512-HBDNKnxr+ecdaEmbZ0mcKkirOF8tXXEbWSw34P3wT40Tn3g+u+cCH17xAWZymzscq8cojHB8340pR8QNVaD32w==
+      engines:
+         node: '>=22.0.0'
+         pnpm: '>=10.0.0'
+   '@stellar/stellar-sdk@17.0.1':
+      resolution:
+         integrity: sha512-fsHHbzJ14N5Ttq5Qpz4AX0ytmPSLCzcy4XC3uIgSQz0cBkEgv0Zb4KE6tWEd3nDQUk/1qP8ZX9cRonIaUXO3Sw==
+      engines:
+         node: '>=22.12.0'
+      hasBin: true
+   axios@1.18.0:
+      resolution:
+         integrity: sha512-E32NzpYKp++W7XRe52rHiXV2ehxmh3wbdgO7MHeFM+vqxLBYHzt0ElkiImtOBxtOmyp0yoC8C6uESVV84Y2/hw==
+   bignumber.js@11.1.5:
+      resolution:
+         integrity: sha512-6WmzCNtUnfKpbozq+hOgWaZMMzORmYBwF1xZScyoIX3QRYWeKTtxxwDOW5tIz7C9BdjkIYHGTcelCLkXg0mndw==
+   bip32-path@0.4.2:
+      resolution:
+         integrity: sha512-ZBMCELjJfcNMkz5bDuJ1WrYvjlhEF5k6mQ8vUr4N7MbVRsXei7ZOg8VhhwMfNiW68NWmLkgkc6WvTickrLGprQ==
+   commander@14.0.3:
+      resolution:
+         integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==
+      engines:
+         node: '>=20'
+   eventsource-parser@3.1.1:
+      resolution:
+         integrity: sha512-EKN1vKAMcZ8MlYMpaNuxN6R9yakzH6uajHcHVTqWJzvu5pWw9DyhbP35HH8MVBQ+dZjAfDxk+A8NiR9KWaXiyQ==
+      engines:
+         node: '>=18.0.0'
+   eventsource@4.1.1:
+      resolution:
+         integrity: sha512-D6bTRWh6KahHTK/m4WnjPQyEinNPf9eFLEZSEoj7d6fTibspnAVYfzHvirL7u/aoX5d9YYfIkBVAhmigUELk9w==
+      engines:
+         node: '>=20.0.0'
+   feaxios@0.0.23:
+      resolution:
+         integrity: sha512-eghR0A21fvbkcQBgZuMfQhrXxJzC0GNUGC9fXhBge33D+mFDTwl0aJ35zoQQn575BhyjQitRc5N4f+L4cP708g==
+   form-data@4.0.5:
+      resolution:
+         integrity: sha512-8RipRLol37bNs2bhoV67fiTEvdTrbMUYcFTiy3+wuuOnUog2QBHCZWXDRijWQfAkhBj2Uf5UnVaiWwA5vdd82w==
+      engines:
+         node: '>= 6'
+   is-retry-allowed@3.0.0:
+      resolution:
+         integrity: sha512-9xH0xvoggby+u0uGF7cZXdrutWiBiaFG8ZT4YFPXL8NzkyAwX3AKGLeFQLvzDpM430+nDFBZ1LHkie/8ocL06A==
+      engines:
+         node: '>=12'
+   semver@7.7.1:
+      resolution:
+         integrity: sha512-hlq8tAfn0m/61p4BVRcPzIGr6LKiMwo4VM6dGi6pt4qcRkmNzTcWq6eCEjEh+qXjkMDvPlOFFSGwQjoEa6gyMA==
+      engines:
+         node: '>=10'
+      hasBin: true
+   semver@7.7.3:
+      resolution:
+         integrity: sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q==
+      engines:
+         node: '>=10'
+      hasBin: true
+   smol-toml@1.8.0:
+      resolution:
+         integrity: sha512-kCZr2V3ch9i00x8zXRhjUNVcjG9ijES5dDudkXvUVCT5QlJNQWElSJdZqyPemffHoLNUYwOcou0Fy+ojN0uHSQ==
+      engines:
+         node: '>= 18'
+   uint8array-extras@1.5.0:
+      resolution:
+         integrity: sha512-rvKSBiC5zqCCiDZ9kAOszZcDvdAHwwIKJG33Ykj43OKcWsnmcBRL09YTU4nOeHZ8Y2a7l1MgTd08SBe9A8Qj6A==
+      engines:
+         node: '>=18'
+
 snapshots:
    '@adobe/css-tools@4.5.0': {}
 
@@ -12495,3 +12617,92 @@ snapshots:
          immer: 11.1.15
          react: 19.2.8
          use-sync-external-store: 1.4.0(react@19.2.8)
+   '@exodus/bytes@1.15.1(@noble/hashes@2.4.0)':
+      optionalDependencies:
+         '@noble/hashes': 2.4.0
+   '@ledgerhq/devices@8.16.0':
+      dependencies:
+         semver: 7.7.3
+   '@ledgerhq/devices@8.17.0':
+      dependencies:
+         semver: 7.7.3
+   '@ledgerhq/errors@6.37.0': {}
+   '@ledgerhq/errors@7.0.0': {}
+   '@ledgerhq/hw-app-str@7.7.7':
+      dependencies:
+         '@ledgerhq/hw-transport': 6.35.7
+         bip32-path: 0.4.2
+   '@ledgerhq/hw-transport-webhid@6.36.0':
+      dependencies:
+         '@ledgerhq/devices': 8.16.0
+         '@ledgerhq/errors': 6.37.0
+         '@ledgerhq/hw-transport': 6.35.5
+         '@ledgerhq/logs': 6.17.0
+   '@ledgerhq/hw-transport@6.35.5':
+      dependencies:
+         '@ledgerhq/devices': 8.16.0
+         '@ledgerhq/errors': 6.37.0
+         '@ledgerhq/logs': 6.17.0
+         events: 3.3.0
+   '@ledgerhq/hw-transport@6.35.7':
+      dependencies:
+         '@ledgerhq/devices': 8.17.0
+         '@ledgerhq/errors': 7.0.0
+         '@ledgerhq/logs': 6.17.0
+         events: 3.3.0
+   '@ledgerhq/logs@6.17.0': {}
+   '@noble/ed25519@3.2.0': {}
+   '@noble/hashes@2.4.0': {}
+   '@stellar/freighter-api@6.0.1':
+      dependencies:
+         buffer: 6.0.3
+         semver: 7.7.1
+   '@stellar/js-xdr@5.0.0': {}
+   '@stellar/stellar-sdk@17.0.1':
+      dependencies:
+         '@exodus/bytes': 1.15.1(@noble/hashes@2.4.0)
+         '@noble/ed25519': 3.2.0
+         '@noble/hashes': 2.4.0
+         '@stellar/js-xdr': 5.0.0
+         '@types/json-schema': 7.0.15
+         axios: 1.18.0
+         bignumber.js: 11.1.5
+         commander: 14.0.3
+         eventsource: 4.1.1
+         feaxios: 0.0.23
+         smol-toml: 1.8.0
+         uint8array-extras: 1.5.0
+      transitivePeerDependencies:
+         - debug
+         - supports-color
+   axios@1.18.0:
+      dependencies:
+         follow-redirects: 1.16.0
+         form-data: 4.0.5
+         https-proxy-agent: 5.0.1
+         proxy-from-env: 2.1.0
+      transitivePeerDependencies:
+         - debug
+         - supports-color
+   bignumber.js@11.1.5: {}
+   bip32-path@0.4.2: {}
+   commander@14.0.3: {}
+   eventsource-parser@3.1.1: {}
+   eventsource@4.1.1:
+      dependencies:
+         eventsource-parser: 3.1.1
+   feaxios@0.0.23:
+      dependencies:
+         is-retry-allowed: 3.0.0
+   form-data@4.0.5:
+      dependencies:
+         asynckit: 0.4.0
+         combined-stream: 1.0.8
+         es-set-tostringtag: 2.1.0
+         hasown: 2.0.4
+         mime-types: 2.1.35
+   is-retry-allowed@3.0.0: {}
+   semver@7.7.1: {}
+   semver@7.7.3: {}
+   smol-toml@1.8.0: {}
+   uint8array-extras@1.5.0: {}
