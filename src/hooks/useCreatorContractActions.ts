@@ -84,3 +84,22 @@ export function useCancelAuctionMutation(creatorId: string) {
 		},
 	});
 }
+
+export function useSetLaunchPenaltyMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'set_launch_penalty', creatorId],
+		mutationFn: (penaltyBps: number) =>
+			submitContractCall('set_launch_penalty', { creatorId, penaltyBps }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Launch penalty updated');
+		},
+	});
+}

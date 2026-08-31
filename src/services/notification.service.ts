@@ -2,7 +2,13 @@
 import { BaseApiService, type APIResponse } from './api.service';
 
 /** The kind of event that generated a notification. */
-export type NotificationType = 'new_follower' | 'key_purchase' | 'price_milestone';
+export type NotificationType =
+	| 'trade_completed'
+	| 'lockup_expiring'
+	| 'price_moved'
+	| 'new_follower'
+	| 'key_purchase'
+	| 'price_milestone';
 
 /** A single notification entry returned from the API. */
 export interface Notification {
@@ -39,6 +45,15 @@ class NotificationService extends BaseApiService {
 	async markAsRead(notificationId: string): Promise<void> {
 		try {
 			await this.api.patch(`/notifications/${notificationId}/read`);
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/** Mark all notifications as read — PATCH /notifications/read-all */
+	async markAllAsRead(userId: string): Promise<void> {
+		try {
+			await this.api.patch(`/notifications/read-all`, { userId });
 		} catch (error) {
 			throw this.handleError(error);
 		}

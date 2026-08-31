@@ -72,9 +72,8 @@ import {
 	CREATOR_CARD_ENTRY_CLASS,
 	creatorCardEntryStyle,
 } from '@/utils/cardEntryAnimation.utils';
-import {
-	resolveCreatorKeyPriceStroops,
-} from '@/utils/keyPriceDisplay.utils';
+import { resolveCreatorKeyPriceStroops, formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
+import { estimateReinvest } from '@/utils/reinvestDividend.utils';
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { CREATOR_LIST_SORT_LAYOUT_TRANSITION } from '@/utils/creatorListSortTransition';
@@ -816,6 +815,7 @@ function LandingPage() {
 						isPriceLoading: isPriceRefreshing,
 						isPriceStale: creatorsAreStale,
 						pending: cached?.pending ?? false,
+						unclaimedDividend: cached?.unclaimedDividend ?? 0,
 					};
 				})
 			),
@@ -830,6 +830,10 @@ function LandingPage() {
 	);
 	const portfolioValue = useMemo(
 		() => calculatePortfolioValue(heldKeyPositions),
+		[heldKeyPositions]
+	);
+	const pnlSummary = useMemo(
+		() => calculatePnLSummary(heldKeyPositions),
 		[heldKeyPositions]
 	);
 	const displayedPortfolioValue = isLoading
@@ -1507,6 +1511,42 @@ function LandingPage() {
 								</span>
 							</div>
 						</div>
+						{pnlSummary.status === 'ready' && pnlSummary.totalInvested > 0 && (
+							<div
+								data-testid="pnl-summary-card"
+								className="mt-4 rounded-xl border border-white/10 bg-slate-950/30 px-4 py-3"
+							>
+								<div className="flex items-center gap-6 text-sm">
+									<div>
+										<span className="text-white/45">Total Invested</span>
+										<span className="ml-2 font-grotesque font-bold text-white">
+											{formatPnLDisplay(pnlSummary.totalInvested)}
+										</span>
+									</div>
+									<div>
+										<span className="text-white/45">Current Value</span>
+										<span className="ml-2 font-grotesque font-bold text-white">
+											{formatPnLDisplay(pnlSummary.currentValue)}
+										</span>
+									</div>
+									<div>
+										<span className="text-white/45">Unrealised PnL</span>
+										<span
+											className={`ml-2 font-grotesque font-bold ${
+												pnlSummary.unrealisedPnL > 0
+													? 'text-emerald-400'
+													: pnlSummary.unrealisedPnL < 0
+														? 'text-red-400'
+														: 'text-white'
+											}`}
+										>
+											{formatPnLDisplay(pnlSummary.unrealisedPnL)} (
+											{formatPnLPercentage(pnlSummary.pnlPercentage)})
+										</span>
+									</div>
+								</div>
+							</div>
+						)}
 						{isLoading ? (
 							<CreatorHoldingsListSkeleton className="mt-6" />
 						) : heldKeyPositions.filter(
@@ -1535,6 +1575,7 @@ function LandingPage() {
 														onFreeze={position => openSelfFreezeDialog('freeze', position)}
 														onUnfreeze={position => openSelfFreezeDialog('unfreeze', position)}
 												isSubmitting={tradeSubmitting}
+												isReinvesting={reinvestMutation.isPending}
 												isNetworkMismatch={isNetworkMismatch}
 											/>
 										);

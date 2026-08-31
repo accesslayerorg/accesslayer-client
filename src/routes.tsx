@@ -1,11 +1,13 @@
 import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 import CreatorDetailPage from './pages/CreatorDetailPage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
 import NotificationsPage from './pages/NotificationsPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import ProfilePage from './pages/ProfilePage';
 import FollowingPage from './pages/FollowingPage';
+import ComparePage from './pages/ComparePage';
 
 export const routes = [
 	{
@@ -47,6 +49,14 @@ export const routes = [
 	{
 		path: '/following',
 		element: <FollowingPage />,
+	},
+	{
+		path: '/compare',
+		element: <ComparePage />,
+	},
+	{
+		path: '/admin/dashboard',
+		element: <AdminDashboardPage />,
 	},
 	{
 		path: '*',

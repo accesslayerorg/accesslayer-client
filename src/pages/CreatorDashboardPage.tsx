@@ -4,10 +4,12 @@ import { CreatorDashboardSkeleton } from '@/components/common/CreatorSkeleton';
 import { ProfileTabPillGroup } from '@/components/common/ProfileTabPill';
 import CreatorMetadataForm from '@/components/common/CreatorMetadataForm';
 import AuctionSetupPanel from '@/components/common/AuctionSetupPanel';
+import LaunchPenaltyPanel from '@/components/common/LaunchPenaltyPanel';
 import {
 	useCancelAuctionMutation,
 	useConfigureAuctionMutation,
 	useUpdateMetadataMutation,
+	useSetLaunchPenaltyMutation,
 } from '@/hooks/useCreatorContractActions';
 import { formatDisplayKeyPrice, resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
 import { formatNumber } from '@/utils/numberFormat.utils';
@@ -34,6 +36,7 @@ export default function CreatorDashboardPage() {
 	const metadataMutation = useUpdateMetadataMutation(id);
 	const configureAuction = useConfigureAuctionMutation(id);
 	const cancelAuction = useCancelAuctionMutation(id);
+	const setLaunchPenalty = useSetLaunchPenaltyMutation(id);
 
 	const setTab = (value: string) => {
 		setSearchParams(
@@ -160,6 +163,21 @@ export default function CreatorDashboardPage() {
 								isSubmitting={configureAuction.isPending || cancelAuction.isPending}
 								onConfigure={input => configureAuction.mutate(input)}
 								onCancel={() => cancelAuction.mutate()}
+							/>
+						</section>
+
+						<section className={CARD_CLASS} data-testid="launch-penalty-section">
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Launch Penalty
+							</h2>
+							<p className="mb-6 text-sm text-white/50">
+								Charge early sellers a percentage fee during the first 7 days
+								after key creation.
+							</p>
+							<LaunchPenaltyPanel
+								launchPenaltyBps={creator.launchPenaltyBps}
+								isSubmitting={setLaunchPenalty.isPending}
+								onSubmit={penaltyBps => setLaunchPenalty.mutate(penaltyBps)}
 							/>
 						</section>
 					</div>

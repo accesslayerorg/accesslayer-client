@@ -3,64 +3,85 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useFormatXlm } from '@/hooks/useFormatXlm';
 import showToast from '@/utils/toast.util';
-import { useBatchBuyMutation } from '@/hooks/useWallet';
+import { useBatchBuyMutation, type BatchOrder } from '@/hooks/useWallet';
 
 export interface BatchOrderRow {
-  creatorId: string;
-  priceStroops: number;
+  address: string;
+  creatorId?: string;
+  priceStroops?: number;
   quantity: number;
 }
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  liquidBalance?: number;
+  initialRows?: BatchOrderRow[];
 }
 
 const MAX_KEYS = 5;
+const DEFAULT_LIQUID_BALANCE = 100;
+const STELLAR_ADDRESS_PATTERN = /^G[A-Z2-7]{55}$/;
 
-export default function BatchBuyModal({ open, onOpenChange }: Props) {
-  const [rows, setRows] = useState<BatchOrderRow[]>([]);
+export default function BatchBuyModal({
+  open,
+  onOpenChange,
+  liquidBalance = DEFAULT_LIQUID_BALANCE,
+  initialRows = [],
+}: Props) {
+  const [rows, setRows] = useState<BatchOrderRow[]>(initialRows);
   const [addInput, setAddInput] = useState('');
   const { format } = useFormatXlm();
   const mutation = useBatchBuyMutation();
 
-  const totalStroops = useMemo(() => {
-    return rows.reduce((acc, r) => acc + (r.priceStroops * r.quantity), 0);
-  }, [rows]);
-
-  const totalXlm = format(totalStroops);
+  const totalQuantity = useMemo(
+    () => rows.reduce((total, row) => total + row.quantity, 0),
+    [rows]
+  );
+  const totalStroops = useMemo(
+    () => rows.reduce((total, row) => total + (row.priceStroops ?? 0) * row.quantity, 0),
+    [rows]
+  );
+  const invalidAddress = rows.some(row => !STELLAR_ADDRESS_PATTERN.test(row.address));
+  const balanceExceeded = totalQuantity > liquidBalance;
+  const validationError = invalidAddress
+    ? 'Enter valid Stellar addresses for every recipient.'
+    : balanceExceeded
+      ? `Total quantity cannot exceed your liquid balance of ${liquidBalance} keys.`
+      : undefined;
+  const canSubmit = rows.length > 0 && !validationError;
 
   const handleAdd = () => {
-    if (!addInput) return;
+    const address = addInput.trim();
+    if (!address) return;
     if (rows.length >= MAX_KEYS) {
       showToast.error(`Maximum ${MAX_KEYS} keys per batch`);
       return;
     }
 
-    // For demo: assume price 1 XLM = 10_000_000 stroops
-    const defaultPrice = 10_000_000;
-    const newRow: BatchOrderRow = {
-      creatorId: addInput,
-      priceStroops: defaultPrice,
-      quantity: 1,
-    };
-    setRows(r => [...r, newRow]);
+    setRows(rows => [
+      ...rows,
+      { address, creatorId: address, priceStroops: 10_000_000, quantity: 1 },
+    ]);
     setAddInput('');
   };
 
   const handleRemove = (idx: number) => {
-    setRows(r => r.filter((_, i) => i !== idx));
+    setRows(rows => rows.filter((_, i) => i !== idx));
   };
 
-  const handleQuantityChange = (idx: number, q: number) => {
-    setRows(r => r.map((row, i) => (i === idx ? { ...row, quantity: q } : row)));
+  const handleQuantityChange = (idx: number, quantity: number) => {
+    setRows(rows =>
+      rows.map((row, i) => (i === idx ? { ...row, quantity: Math.max(1, quantity) } : row))
+    );
   };
 
   const handleConfirm = async () => {
-    if (rows.length === 0) return;
+    if (!canSubmit) return;
     try {
       showToast.loading('Submitting batch buy...');
-      await mutation.mutateAsync({ orders: rows });
+      const orders: BatchOrder[] = rows.map(({ address, quantity }) => ({ address, quantity }));
+      await mutation.mutateAsync({ orders });
       showToast.transactionSuccess('Batch buy submitted');
       onOpenChange(false);
       setRows([]);
@@ -81,7 +102,8 @@ export default function BatchBuyModal({ open, onOpenChange }: Props) {
             <input
               value={addInput}
               onChange={e => setAddInput(e.target.value)}
-              placeholder="Search or enter creator id"
+              placeholder="Enter Stellar recipient address"
+              aria-label="Recipient address"
               className="flex-1 rounded-xl bg-white/[0.04] px-3 py-2 text-white"
             />
             <Button onClick={handleAdd}>Add</Button>
@@ -92,18 +114,19 @@ export default function BatchBuyModal({ open, onOpenChange }: Props) {
           ) : (
             <div className="space-y-2">
               {rows.map((row, idx) => (
-                <div key={row.creatorId} className="flex items-center gap-2">
-                  <div className="w-40 text-sm truncate">{row.creatorId}</div>
-                  <div className="w-28 text-sm">{format(row.priceStroops)}</div>
+                <div key={`${row.address}-${idx}`} className="flex items-center gap-2">
+                  <div className="w-40 truncate text-sm">{row.address}</div>
+                  <div className="w-28 text-sm">{format(row.priceStroops ?? 0)}</div>
                   <input
                     type="number"
                     min={1}
                     value={row.quantity}
-                    onChange={e => handleQuantityChange(idx, Math.max(1, Number(e.target.value || 1)))}
+                    aria-label={`Quantity for ${row.address}`}
+                    onChange={e => handleQuantityChange(idx, Number(e.target.value || 1))}
                     className="w-24 rounded-xl bg-white/[0.04] px-2 py-1 text-white"
                   />
                   <div className="flex-1 text-sm text-white/60">
-                    Subtotal: {format(row.priceStroops * row.quantity)} XLM
+                    Subtotal: {format((row.priceStroops ?? 0) * row.quantity)} XLM
                   </div>
                   <Button variant="ghost" onClick={() => handleRemove(idx)}>Remove</Button>
                 </div>
@@ -111,16 +134,23 @@ export default function BatchBuyModal({ open, onOpenChange }: Props) {
             </div>
           )}
 
-          <div className="flex items-center justify-between pt-4 border-t border-white/5">
-            <div className="text-sm text-white/60">Total</div>
-            <div className="font-bold text-white">{totalXlm} XLM</div>
+          <div className="flex items-center justify-between border-t border-white/5 pt-4">
+            <div className="text-sm text-white/60">
+              Total: {totalQuantity} / {liquidBalance} keys
+            </div>
+            <div className="font-bold text-white">{format(totalStroops)} XLM</div>
           </div>
+          {validationError && (
+            <p role="alert" data-testid="batch-buy-validation-error" className="text-sm text-red-400">
+              {validationError}
+            </p>
+          )}
         </div>
 
         <DialogFooter>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={handleConfirm} disabled={rows.length === 0}>Confirm</Button>
+            <Button onClick={handleConfirm} disabled={!canSubmit}>Confirm</Button>
           </div>
         </DialogFooter>
       </DialogContent>
