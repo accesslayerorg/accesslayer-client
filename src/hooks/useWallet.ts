@@ -59,6 +59,14 @@ export interface TradeVariables {
 	price: number | null | undefined;
 	/** Optional referral wallet address forwarded from a referral link */
 	ref?: string | null;
+	/**
+	 * Slippage-tolerance bound (#872) forwarded to the on-chain contract call.
+	 * Buys pass `maxPriceStroops` (reject if price rises above this); sells
+	 * pass `minPriceStroops` (reject if price falls below this). Only the
+	 * bound relevant to the trade direction is expected to be set.
+	 */
+	maxPriceStroops?: number | null;
+	minPriceStroops?: number | null;
 }
 
 export function useTradeMutation(address: string) {
@@ -67,9 +75,12 @@ export function useTradeMutation(address: string) {
 	const mutation = useMutation({
 		mutationKey: ['trade', address],
 		mutationFn: async (variables: TradeVariables) => {
-			// In production this would call the on-chain contract; here we
-			// simulate latency. The `ref` field is accepted and can be used
-			// by instrumentation or contract calls.
+			// In production this would call the on-chain contract, passing
+			// `maxPriceStroops`/`minPriceStroops` as the contract's
+			// `max_price`/`min_price` slippage-protection arguments so the
+			// chain reverts the trade if the executed price moves against the
+			// user beyond their selected tolerance (#872). The `ref` field is
+			// accepted and can be used by instrumentation or contract calls.
 			void variables;
 			await new Promise<void>(resolve => window.setTimeout(resolve, 900));
 			return { success: true as const };
@@ -317,6 +328,79 @@ export function useReinvestDividendMutation(address: string) {
 					invalidated_at: new Date().toISOString(),
 				});
 			}
+		},
+	});
+
+	return mutation;
+}
+
+export interface RedeemDeprecatedKeyVariables {
+	/** The deprecated creator key being redeemed. */
+	creatorId: string;
+	/** Quantity of keys being redeemed (the full held quantity). */
+	quantity: number;
+}
+
+/**
+ * Redeems a held position in a deprecated key for its current value (#871).
+ * Removes the position from the holder's wallet on success.
+ */
+export function useRedeemDeprecatedKeyMutation(address: string) {
+	const queryClient = useQueryClient();
+
+	const mutation = useMutation({
+		mutationKey: ['redeem-deprecated-key', address],
+		mutationFn: async (variables: RedeemDeprecatedKeyVariables) => {
+			// In production this would call the on-chain `redeem` contract
+			// function for a deprecated key. Here we simulate latency.
+			void variables;
+			await new Promise<void>(resolve => window.setTimeout(resolve, 900));
+			return { success: true as const };
+		},
+		onMutate: async ({ creatorId }: RedeemDeprecatedKeyVariables) => {
+			const queryKey = queryKeys.wallet.holdings(address);
+
+			await queryClient.cancelQueries({ queryKey });
+
+			const previousHoldings =
+				queryClient.getQueryData<HeldKeyPosition[]>(queryKey) ?? [];
+
+			queryClient.setQueryData<HeldKeyPosition[]>(queryKey, (old = []) =>
+				old.map(h =>
+					h.creatorId === creatorId ? { ...h, pending: true } : h
+				)
+			);
+
+			return { previousHoldings };
+		},
+		onError: (error, _variables, context) => {
+			const holdingsKey = queryKeys.wallet.holdings(address);
+
+			if (context?.previousHoldings) {
+				queryClient.setQueryData(holdingsKey, context.previousHoldings);
+			} else if (process.env.NODE_ENV !== 'test') {
+				console.warn('[optimistic-rollback]', {
+					cache_key: JSON.stringify(holdingsKey),
+					action: 'redeem_deprecated_key',
+					reason: 'snapshot_missing',
+					failed_at: new Date().toISOString(),
+				});
+			}
+
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: (_data, variables) => {
+			// Redemption removes the position entirely.
+			queryClient.setQueryData<HeldKeyPosition[]>(
+				queryKeys.wallet.holdings(address),
+				(old = []) =>
+					old.filter(h => h.creatorId !== variables.creatorId)
+			);
+		},
+		onSettled: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.wallet.holdings(address),
+			});
 		},
 	});
 

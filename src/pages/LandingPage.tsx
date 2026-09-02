@@ -3,7 +3,11 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { LayoutGroup, motion } from 'framer-motion';
 import { useSearchParams } from 'react-router';
-import { courseService, type Course, type CourseSortOption } from '@/services/course.service';
+import {
+	courseService,
+	type Course,
+	type CourseSortOption,
+} from '@/services/course.service';
 import SkipToContent from '@/components/common/SkipToContent';
 import { cn } from '@/lib/utils';
 import SearchBar from '@/components/common/SearchBar';
@@ -36,12 +40,19 @@ import CreatorProfileErrorState from '@/components/common/CreatorProfileErrorSta
 import TransactionRetryNotice from '@/components/common/TransactionRetryNotice';
 import EmptyTransactionTimelineState from '@/components/common/EmptyTransactionTimelineState';
 import TradeDialog, { type TradeSide } from '@/components/common/TradeDialog';
+import type { FeeBreakdown } from '@/utils/pricePreview.utils';
+import type { SlippageBounds } from '@/utils/slippageTolerance.utils';
 import TradePanelErrorBoundary from '@/components/common/TradePanelErrorBoundary';
 import NetworkMismatchBanner from '@/components/common/NetworkMismatchBanner';
 import StellarConnectionQualityBadge from '@/components/common/StellarConnectionQualityBadge';
 import { useAccount } from 'wagmi';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
-import { useTradeMutation, useWalletHoldings, useReinvestDividendMutation } from '@/hooks/useWallet';
+import {
+	useTradeMutation,
+	useWalletHoldings,
+	useReinvestDividendMutation,
+	useRedeemDeprecatedKeyMutation,
+} from '@/hooks/useWallet';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 import { formatCompactNumber, formatNumber } from '@/utils/numberFormat.utils';
@@ -51,6 +62,9 @@ import {
 	formatPortfolioValueDisplay,
 	getPortfolioValueHelperText,
 	sortHoldingsByTotalValue,
+	calculatePnLSummary,
+	formatPnLDisplay,
+	formatPnLPercentage,
 } from '@/utils/portfolioValue.utils';
 import PrecisionModeToggle, {
 	type PrecisionMode,
@@ -66,10 +80,14 @@ import {
 	CREATOR_CARD_ENTRY_CLASS,
 	creatorCardEntryStyle,
 } from '@/utils/cardEntryAnimation.utils';
-import { resolveCreatorKeyPriceStroops, formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
+import {
+	resolveCreatorKeyPriceStroops,
+	formatDisplayKeyPrice,
+} from '@/utils/keyPriceDisplay.utils';
 import { estimateReinvest } from '@/utils/reinvestDividend.utils';
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { CREATOR_LIST_SORT_LAYOUT_TRANSITION } from '@/utils/creatorListSortTransition';
 import { creatorListKey } from '@/utils/creatorListKey.utils';
 import { Check, ChevronDown, Copy, RefreshCw } from 'lucide-react';
@@ -241,6 +259,7 @@ type CreatorListMode = 'pagination' | 'infinite';
 
 function LandingPage() {
 	useNavigationTiming('portfolio');
+	useDocumentTitle('Marketplace — AccessLayer');
 
 	const [creators, setCreators] = useState<Course[]>([]);
 	// Creators used for wallet holdings; kept separate from the marketplace
@@ -400,7 +419,8 @@ function LandingPage() {
 		}
 		const sort = searchParams.get('sort') as CourseSortOption | null;
 		const validSort: CourseSortOption =
-			sort && ['volume_desc', 'price_asc', 'price_desc', 'newest'].includes(sort)
+			sort &&
+			['volume_desc', 'price_asc', 'price_desc', 'newest'].includes(sort)
 				? (sort as CourseSortOption)
 				: 'volume_desc';
 		if (validSort !== sortOptionRef.current) {
@@ -573,9 +593,11 @@ function LandingPage() {
 
 		// Apply category filter
 		const categoryFiltered = categoryFilter
-			? filtered.filter(creator =>
-					creator.category?.toLowerCase() === categoryFilter.toLowerCase()
-			  )
+			? filtered.filter(
+					creator =>
+						creator.category?.toLowerCase() ===
+						categoryFilter.toLowerCase()
+				)
 			: filtered;
 
 		const sorted = [...categoryFiltered];
@@ -591,8 +613,12 @@ function LandingPage() {
 				break;
 			case 'newest':
 				sorted.sort((a, b) => {
-					const dateA = a.nextDropAt ? new Date(a.nextDropAt).getTime() : 0;
-					const dateB = b.nextDropAt ? new Date(b.nextDropAt).getTime() : 0;
+					const dateA = a.nextDropAt
+						? new Date(a.nextDropAt).getTime()
+						: 0;
+					const dateB = b.nextDropAt
+						? new Date(b.nextDropAt).getTime()
+						: 0;
 					return dateB - dateA;
 				});
 				break;
@@ -605,7 +631,13 @@ function LandingPage() {
 				break;
 		}
 		return sorted;
-	}, [creators, trimmedSearchQuery, hasInvalidSearchInput, sortOption, categoryFilter]);
+	}, [
+		creators,
+		trimmedSearchQuery,
+		hasInvalidSearchInput,
+		sortOption,
+		categoryFilter,
+	]);
 
 	// Add loading state for filter changes
 	useEffect(() => {
@@ -775,6 +807,7 @@ function LandingPage() {
 
 	const tradeMutation = useTradeMutation(activeWalletAddress);
 	const reinvestMutation = useReinvestDividendMutation(activeWalletAddress);
+	const redeemMutation = useRedeemDeprecatedKeyMutation(activeWalletAddress);
 	const { data: cachedHoldings = [] } = useWalletHoldings(activeWalletAddress);
 
 	// Merged: keep total-value sorting (feature/holdings-sorting-tests) while
@@ -816,6 +849,10 @@ function LandingPage() {
 	);
 	const portfolioValue = useMemo(
 		() => calculatePortfolioValue(heldKeyPositions),
+		[heldKeyPositions]
+	);
+	const pnlSummary = useMemo(
+		() => calculatePnLSummary(heldKeyPositions),
 		[heldKeyPositions]
 	);
 	const displayedPortfolioValue = isLoading
@@ -870,21 +907,28 @@ function LandingPage() {
 		}
 	};
 
-	const handleConfirmTrade = async (amount: number) => {
+	const handleConfirmTrade = async (
+		amount: number,
+		_pricePreview?: FeeBreakdown | null,
+		slippage?: SlippageBounds | null
+	) => {
 		setTradeSubmitting(true);
 		try {
-		    if (tradeSide === 'buy') {
+			if (tradeSide === 'buy') {
 				showToast.loading(
 					`Submitting buy for ${amount} key${amount === 1 ? '' : 's'}...`
 				);
-					const urlRef = new URL(window.location.href).searchParams.get('ref');
-					await tradeMutation.mutateAsync({
-						creatorId: '1',
-						amount,
-						priceStroops: resolveCreatorKeyPriceStroops(featuredCreator),
-						price: featuredCreator?.price,
-						ref: urlRef,
-					});
+				const urlRef = new URL(window.location.href).searchParams.get(
+					'ref'
+				);
+				await tradeMutation.mutateAsync({
+					creatorId: '1',
+					amount,
+					priceStroops: resolveCreatorKeyPriceStroops(featuredCreator),
+					price: featuredCreator?.price,
+					ref: urlRef,
+					maxPriceStroops: slippage?.maxPriceStroops ?? null,
+				});
 				setFeaturedHoldings(current => current + amount);
 				showToast.transactionSuccess(
 					'Trade confirmed',
@@ -894,9 +938,14 @@ function LandingPage() {
 				showToast.loading(
 					`Submitting sell for ${amount} key${amount === 1 ? '' : 's'}...`
 				);
-				await new Promise<void>(resolve => window.setTimeout(resolve, 900));
+				await tradeMutation.mutateAsync({
+					creatorId: '1',
+					amount: -amount,
+					priceStroops: resolveCreatorKeyPriceStroops(featuredCreator),
+					price: featuredCreator?.price,
+					minPriceStroops: slippage?.minPriceStroops ?? null,
+				});
 				setFeaturedHoldings(current => Math.max(0, current - amount));
-				await new Promise<void>(resolve => window.setTimeout(resolve, 250));
 				showToast.transactionSuccess(
 					'Trade confirmed',
 					`Sold ${formatNumber(amount)} key${amount === 1 ? '' : 's'} from ${FEATURED_CREATOR_NAME}`
@@ -993,7 +1042,9 @@ function LandingPage() {
 						description="Search by creator name or handle while you keep scrolling through the marketplace. The filter shell stays visible and compact so you can refine results without losing your place."
 						resultCount={filteredCreators.length}
 						onReset={handleResetSearch}
-						showReset={searchQuery.length > 0 || categoryFilter.length > 0}
+						showReset={
+							searchQuery.length > 0 || categoryFilter.length > 0
+						}
 					>
 						<div className="space-y-3">
 							<SearchBar
@@ -1018,7 +1069,9 @@ function LandingPage() {
 									}
 									className="h-9 rounded-lg border border-white/15 bg-slate-950/80 px-3 text-sm text-white outline-none focus:border-amber-400/60"
 								>
-									<option value="volume_desc">Volume: High to low</option>
+									<option value="volume_desc">
+										Volume: High to low
+									</option>
 									<option value="price_asc">Price: Low to high</option>
 									<option value="price_desc">
 										Price: High to low
@@ -1044,8 +1097,8 @@ function LandingPage() {
 										new Set(
 											creators
 												.map(c => c.category)
-												.filter(
-													(cat): cat is string => Boolean(cat)
+												.filter((cat): cat is string =>
+													Boolean(cat)
 												)
 										)
 									)
@@ -1467,6 +1520,53 @@ function LandingPage() {
 								</span>
 							</div>
 						</div>
+						{pnlSummary.status === 'ready' &&
+							pnlSummary.totalInvested > 0 && (
+								<div
+									data-testid="pnl-summary-card"
+									className="mt-4 rounded-xl border border-white/10 bg-slate-950/30 px-4 py-3"
+								>
+									<div className="flex items-center gap-6 text-sm">
+										<div>
+											<span className="text-white/45">
+												Total Invested
+											</span>
+											<span className="ml-2 font-grotesque font-bold text-white">
+												{formatPnLDisplay(pnlSummary.totalInvested)}
+											</span>
+										</div>
+										<div>
+											<span className="text-white/45">
+												Current Value
+											</span>
+											<span className="ml-2 font-grotesque font-bold text-white">
+												{formatPnLDisplay(pnlSummary.currentValue)}
+											</span>
+										</div>
+										<div>
+											<span className="text-white/45">
+												Unrealised PnL
+											</span>
+											<span
+												className={`ml-2 font-grotesque font-bold ${
+													pnlSummary.unrealisedPnL > 0
+														? 'text-emerald-400'
+														: pnlSummary.unrealisedPnL < 0
+															? 'text-red-400'
+															: 'text-white'
+												}`}
+											>
+												{formatPnLDisplay(pnlSummary.unrealisedPnL)}{' '}
+												(
+												{formatPnLPercentage(
+													pnlSummary.pnlPercentage
+												)}
+												)
+											</span>
+										</div>
+									</div>
+								</div>
+							)}
 						{isLoading ? (
 							<CreatorHoldingsListSkeleton className="mt-6" />
 						) : heldKeyPositions.filter(
@@ -1497,7 +1597,9 @@ function LandingPage() {
 														p => p.creatorId === creatorId
 													);
 													const keyPriceStroops =
-														resolveCreatorKeyPriceStroops(pos ?? {});
+														resolveCreatorKeyPriceStroops(
+															pos ?? {}
+														);
 													const estimate = estimateReinvest(
 														pos?.unclaimedDividend ?? 0,
 														keyPriceStroops
@@ -1517,8 +1619,21 @@ function LandingPage() {
 														`Reinvested ${formatDisplayKeyPrice(estimate.unclaimedStroops)} — received ${formatNumber(estimate.wholeKeys)} keys`
 													);
 												}}
+												onRedeem={async creatorId => {
+													const pos = heldKeyPositions.find(
+														p => p.creatorId === creatorId
+													);
+													await redeemMutation.mutateAsync({
+														creatorId,
+														quantity: pos?.quantity ?? 0,
+													});
+													showToast.success(
+														`Redeemed your ${creator?.title ?? 'deprecated'} key position`
+													);
+												}}
 												isSubmitting={tradeSubmitting}
 												isReinvesting={reinvestMutation.isPending}
+												isRedeeming={redeemMutation.isPending}
 												isNetworkMismatch={isNetworkMismatch}
 											/>
 										);
@@ -1865,6 +1980,7 @@ function LandingPage() {
 					keyPriceStroops={resolveCreatorKeyPriceStroops(featuredCreator)}
 					protocolFeeBps={250}
 					creatorFeeBps={250}
+					maxBuyQuantity={featuredCreator?.maxBuyQuantity ?? null}
 					isSubmitting={tradeSubmitting}
 					onOpenChange={setTradeDialogOpen}
 					onConfirm={handleConfirmTrade}

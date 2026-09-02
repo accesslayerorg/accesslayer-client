@@ -7,6 +7,7 @@ import NotificationsPage from './pages/NotificationsPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import ProfilePage from './pages/ProfilePage';
 import FollowingPage from './pages/FollowingPage';
+import ComparePage from './pages/ComparePage';
 
 export const routes = [
 	{
@@ -48,6 +49,10 @@ export const routes = [
 	{
 		path: '/following',
 		element: <FollowingPage />,
+	},
+	{
+		path: '/compare',
+		element: <ComparePage />,
 	},
 	{
 		path: '/admin/dashboard',

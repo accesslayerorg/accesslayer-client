@@ -17,6 +17,14 @@ export interface HeldKeyPosition extends CreatorKeyPriceFields {
 	 * compounds the balance back into more creator keys.
 	 */
 	unclaimedDividend?: number | null;
+	/**
+	 * Timestamp after which this user may next buy this key, enforcing a
+	 * per-user buy cooldown (#873). `null`/absent means no cooldown is in
+	 * effect. Populated by the backend/contract once a buy-cooldown concept
+	 * lands there; the key detail page's countdown simply reflects whatever
+	 * value is present here.
+	 */
+	nextBuyAllowedAt?: number | string | null;
 }
 
 export type PortfolioValueStatus = 'ready' | 'loading' | 'unavailable';
@@ -172,4 +180,90 @@ export function sortHoldingsByTotalValue(
 		// Secondary sort: stable by creator ID for equal values
 		return a.creatorId.localeCompare(b.creatorId);
 	});
+}
+
+export interface PnLSummary {
+	totalInvested: number;
+	currentValue: number;
+	unrealisedPnL: number;
+	pnlPercentage: number;
+	status: 'ready' | 'loading' | 'unavailable';
+}
+
+/**
+ * Calculates PnL summary for portfolio holdings.
+ * Note: costBasis is not available in the current data model, so totalInvested
+ * is computed as currentValue (assuming positions were bought at current price).
+ * This results in 0 PnL until cost basis data is added to the data model.
+ */
+export function calculatePnLSummary(
+	positions: HeldKeyPosition[]
+): PnLSummary {
+	const heldPositions = positions.filter(
+		position => normalizeHeldQuantity(position.quantity) > 0
+	);
+
+	if (heldPositions.length === 0) {
+		return {
+			totalInvested: 0,
+			currentValue: 0,
+			unrealisedPnL: 0,
+			pnlPercentage: 0,
+			status: 'ready',
+		};
+	}
+
+	if (heldPositions.some(position => position.isPriceLoading)) {
+		return {
+			totalInvested: 0,
+			currentValue: 0,
+			unrealisedPnL: 0,
+			pnlPercentage: 0,
+			status: 'loading',
+		};
+	}
+
+	const hasMissingPrices = heldPositions.some(
+		position => resolveCreatorKeyPriceStroops(position) == null
+	);
+	if (hasMissingPrices) {
+		return {
+			totalInvested: 0,
+			currentValue: 0,
+			unrealisedPnL: 0,
+			pnlPercentage: 0,
+			status: 'unavailable',
+		};
+	}
+
+	const currentValue = heldPositions.reduce((total, position) => {
+		const priceStroops = resolveCreatorKeyPriceStroops(position);
+		return total + (priceStroops ?? 0) * normalizeHeldQuantity(position.quantity);
+	}, 0);
+
+	// TODO: Replace with actual costBasis when available in data model
+	const totalInvested = currentValue;
+	const unrealisedPnL = currentValue - totalInvested;
+	const pnlPercentage = totalInvested > 0 ? (unrealisedPnL / totalInvested) * 100 : 0;
+
+	return {
+		totalInvested,
+		currentValue,
+		unrealisedPnL,
+		pnlPercentage,
+		status: 'ready',
+	};
+}
+
+export function formatPnLDisplay(pnl: number): string {
+	const xlm = pnl / 10_000_000;
+	if (xlm === 0) return '0.00 XLM';
+	const sign = xlm > 0 ? '+' : '';
+	return `${sign}${xlm.toFixed(2)} XLM`;
+}
+
+export function formatPnLPercentage(percentage: number): string {
+	if (percentage === 0) return '0%';
+	const sign = percentage >= 0 ? '+' : '';
+	return `${sign}${percentage.toFixed(1)}%`;
 }

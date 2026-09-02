@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, Monitor } from 'lucide-react';
 import WalletStatusChip from '@/components/common/WalletStatusChip';
 import NotificationBell from '@/components/common/NotificationBell';
 import MarketplaceHeaderSearch from '@/components/common/MarketplaceHeaderSearch';
@@ -91,22 +91,20 @@ export default function Header() {
 						Batch Buy
 					</button>
 					<BatchBuyModal open={batchOpen} onOpenChange={setBatchOpen} />
-					<button
-						type="button"
-						onClick={toggleTheme}
-						aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-						className={`rounded-md p-1.5 transition-colors duration-200 ${
-							scrolled
-								? 'text-gray-600 hover:bg-black/5 hover:text-gray-900'
-								: 'text-white/60 hover:text-white/90'
-						}`}
-					>
-						{theme === 'dark' ? (
-							<Sun className="size-4" aria-hidden="true" />
-						) : (
-							<Moon className="size-4" aria-hidden="true" />
-						)}
-					</button>
+				<button
+					type="button"
+					onClick={toggleTheme}
+					aria-label={`Current theme: ${theme}. Click to cycle themes.`}
+					className={`rounded-md p-1.5 transition-colors duration-200 ${
+						scrolled
+							? 'text-gray-600 hover:bg-black/5 hover:text-gray-900'
+							: 'text-white/60 hover:text-white/90'
+					}`}
+				>
+					{theme === 'dark' && <Sun className="size-4" aria-hidden="true" />}
+					{theme === 'light' && <Moon className="size-4" aria-hidden="true" />}
+					{theme === 'system' && <Monitor className="size-4" aria-hidden="true" />}
+				</button>
 					{profile && (
 						<NotificationBell
 							userId={profile.id}

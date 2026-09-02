@@ -103,3 +103,22 @@ export function useSetLaunchPenaltyMutation(creatorId: string) {
 		},
 	});
 }
+
+export function useSetMaxBuyQuantityMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'set_max_buy_quantity', creatorId],
+		mutationFn: (maxBuyQuantity: number) =>
+			submitContractCall('set_max_buy_quantity', { creatorId, maxBuyQuantity }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Max buy quantity updated');
+		},
+	});
+}

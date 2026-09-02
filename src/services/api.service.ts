@@ -93,6 +93,12 @@ export class BaseApiService {
 		});
 	}
 
+	// Read back the current access token, if any (#878 — used to decode
+	// the JWT's expiry so a session-expiry warning can be scheduled).
+	public getAuthToken(): string | undefined {
+		return Cookies.get(this.ACCESS_TOKEN);
+	}
+
 	// Common error handler
 	protected handleError(error: unknown): ApiError {
 		if (axios.isAxiosError(error)) {

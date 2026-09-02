@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import LockupCountdown from '@/components/common/LockupCountdown';
 import ReinvestDividendDialog from '@/components/common/ReinvestDividendDialog';
+import DeprecationNotice from '@/components/common/DeprecationNotice';
+import RedeemKeyDialog from '@/components/common/RedeemKeyDialog';
 import { computeRemainingLockupSeconds } from '@/utils/lockupCountdown.utils';
 import { formatNumber } from '@/utils/numberFormat.utils';
 import { formatDisplayKeyPrice, resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
 import { hasUnclaimedDividend, xlmToStroops } from '@/utils/reinvestDividend.utils';
+import { isKeyDeprecated } from '@/utils/keyDeprecation.utils';
 import { TrendingUp } from 'lucide-react';
 import type { HeldKeyPosition } from '@/utils/portfolioValue.utils';
 import type { Course } from '@/services/course.service';
@@ -17,8 +20,10 @@ export interface PortfolioHoldingRowProps {
 	onBuy?: (creatorId: string) => void;
 	onSell?: (creatorId: string) => void;
 	onReinvest?: (creatorId: string) => Promise<void> | void;
+	onRedeem?: (creatorId: string) => Promise<void> | void;
 	isSubmitting?: boolean;
 	isReinvesting?: boolean;
+	isRedeeming?: boolean;
 	isNetworkMismatch?: boolean;
 }
 
@@ -28,21 +33,31 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	onBuy,
 	onSell,
 	onReinvest,
+	onRedeem,
 	isSubmitting = false,
 	isReinvesting = false,
+	isRedeeming = false,
 	isNetworkMismatch = false,
 }) => {
 	const initialRemaining = computeRemainingLockupSeconds(position.last_buy_timestamp);
 	const [isLocked, setIsLocked] = useState(initialRemaining > 0);
 	const [reinvestOpen, setReinvestOpen] = useState(false);
+	const [redeemOpen, setRedeemOpen] = useState(false);
 
 	const hasDividends = hasUnclaimedDividend(position.unclaimedDividend);
 	const keyPriceStroops = resolveCreatorKeyPriceStroops(position);
+	const deprecated = isKeyDeprecated(creator);
 
 	const handleConfirmReinvest = async () => {
 		if (!onReinvest) return;
 		await onReinvest(position.creatorId);
 		setReinvestOpen(false);
+	};
+
+	const handleConfirmRedeem = async () => {
+		if (!onRedeem) return;
+		await onRedeem(position.creatorId);
+		setRedeemOpen(false);
 	};
 
 	return (
@@ -64,6 +79,9 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 							<span className="size-2.5 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
 							Pending
 						</span>
+					)}
+					{deprecated && (
+						<DeprecationNotice reason={creator?.deprecationReason} />
 					)}
 				</div>
 				<div className="mt-1 text-xs text-white/55">
@@ -89,46 +107,64 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 			</div>
 
 			<div className="flex items-center gap-3 shrink-0">
-				<LockupCountdown
-					lastBuyTimestamp={position.last_buy_timestamp}
-					onExpire={() => setIsLocked(false)}
-				/>
+				{!deprecated && (
+					<LockupCountdown
+						lastBuyTimestamp={position.last_buy_timestamp}
+						onExpire={() => setIsLocked(false)}
+					/>
+				)}
 
 				<div className="flex items-center gap-2">
-					{onReinvest && hasDividends && (
-						<Button
-							size="sm"
-							variant="outline"
-							className="rounded-xl"
-							onClick={() => setReinvestOpen(true)}
-							disabled={isNetworkMismatch || isSubmitting || isReinvesting}
-							data-testid="holding-reinvest-button"
-						>
-							Reinvest
-						</Button>
-					)}
-					{onBuy && (
-						<Button
-							size="sm"
-							className="rounded-xl"
-							onClick={() => onBuy(position.creatorId)}
-							disabled={isNetworkMismatch || isSubmitting}
-							data-testid="holding-buy-button"
-						>
-							Buy
-						</Button>
-					)}
-					{onSell && (
-						<Button
-							size="sm"
-							variant="outline"
-							className="rounded-xl"
-							onClick={() => onSell(position.creatorId)}
-							disabled={isLocked || isNetworkMismatch || isSubmitting}
-							data-testid="holding-sell-button"
-						>
-							Sell
-						</Button>
+					{deprecated ? (
+						onRedeem && (
+							<Button
+								size="sm"
+								className="rounded-xl"
+								onClick={() => setRedeemOpen(true)}
+								disabled={isNetworkMismatch || isSubmitting || isRedeeming}
+								data-testid="holding-redeem-button"
+							>
+								Redeem
+							</Button>
+						)
+					) : (
+						<>
+							{onReinvest && hasDividends && (
+								<Button
+									size="sm"
+									variant="outline"
+									className="rounded-xl"
+									onClick={() => setReinvestOpen(true)}
+									disabled={isNetworkMismatch || isSubmitting || isReinvesting}
+									data-testid="holding-reinvest-button"
+								>
+									Reinvest
+								</Button>
+							)}
+							{onBuy && (
+								<Button
+									size="sm"
+									className="rounded-xl"
+									onClick={() => onBuy(position.creatorId)}
+									disabled={isNetworkMismatch || isSubmitting}
+									data-testid="holding-buy-button"
+								>
+									Buy
+								</Button>
+							)}
+							{onSell && (
+								<Button
+									size="sm"
+									variant="outline"
+									className="rounded-xl"
+									onClick={() => onSell(position.creatorId)}
+									disabled={isLocked || isNetworkMismatch || isSubmitting}
+									data-testid="holding-sell-button"
+								>
+									Sell
+								</Button>
+							)}
+						</>
 					)}
 				</div>
 			</div>
@@ -143,6 +179,19 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 				onOpenChange={setReinvestOpen}
 				onConfirm={handleConfirmReinvest}
 				isSubmitting={isReinvesting}
+			/>
+		)}
+
+		{deprecated && onRedeem && (
+			<RedeemKeyDialog
+				open={redeemOpen}
+				creatorName={creator?.title ?? 'this creator'}
+				quantity={position.quantity ?? 0}
+				priceFields={position}
+				deprecationReason={creator?.deprecationReason}
+				onOpenChange={setRedeemOpen}
+				onConfirm={handleConfirmRedeem}
+				isSubmitting={isRedeeming}
 			/>
 		)}
 		</>
