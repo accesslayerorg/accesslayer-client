@@ -7,6 +7,8 @@ import {
 export interface HeldKeyPosition extends CreatorKeyPriceFields {
 	creatorId: string;
 	quantity: number | null | undefined;
+	frozenQuantity?: number | null;
+	liquidQuantity?: number | null;
 	isPriceLoading?: boolean;
 	isPriceStale?: boolean;
 	pending?: boolean;

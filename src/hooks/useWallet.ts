@@ -225,6 +225,87 @@ export function useTradeMutation(address: string) {
 	return mutation;
 }
 
+export type SelfFreezeAction = 'freeze' | 'unfreeze';
+
+export interface SelfFreezeVariables {
+	creatorId: string;
+	amount: number;
+	action: SelfFreezeAction;
+}
+
+async function submitWalletContractCall(
+	functionName: 'self_freeze' | 'self_unfreeze',
+	args: { creatorId: string; quantity: number }
+) {
+	void functionName;
+	void args;
+	await new Promise<void>(resolve => window.setTimeout(resolve, 900));
+	return { success: true as const };
+}
+
+export function useSelfFreezeMutation(address: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'self_freeze', address],
+		mutationFn: async ({ creatorId, amount, action }: SelfFreezeVariables) => {
+			const contractFunction = action === 'freeze' ? 'self_freeze' : 'self_unfreeze';
+			return submitWalletContractCall(contractFunction, {
+				creatorId,
+				quantity: amount,
+			});
+		},
+		onMutate: async ({ creatorId, amount, action }) => {
+			const queryKey = queryKeys.wallet.holdings(address);
+			await queryClient.cancelQueries({ queryKey });
+			const previousHoldings =
+				queryClient.getQueryData<HeldKeyPosition[]>(queryKey) ?? [];
+
+			queryClient.setQueryData<HeldKeyPosition[]>(queryKey, holdings =>
+				(holdings ?? []).map(holding => {
+					if (holding.creatorId !== creatorId) return holding;
+					const frozen = holding.frozenQuantity ?? 0;
+					const liquid = holding.liquidQuantity ?? holding.quantity ?? 0;
+					const delta = action === 'freeze' ? amount : -amount;
+					return {
+						...holding,
+						frozenQuantity: frozen + delta,
+						liquidQuantity: liquid - delta,
+						pending: true,
+					};
+				})
+			);
+
+			return { previousHoldings };
+		},
+		onError: (error, _variables, context) => {
+			if (context?.previousHoldings) {
+				queryClient.setQueryData(
+					queryKeys.wallet.holdings(address),
+					context.previousHoldings
+				);
+			}
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: (_data, variables) => {
+			queryClient.setQueryData<HeldKeyPosition[]>(
+				queryKeys.wallet.holdings(address),
+				(holdings = []) =>
+					holdings.map(holding =>
+						holding.creatorId === variables.creatorId
+							? { ...holding, pending: false }
+							: holding
+					)
+			);
+		},
+		onSettled: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.wallet.holdings(address),
+			});
+		},
+	});
+}
+
 export interface BatchOrder {
 	address: string;
 	quantity: number;

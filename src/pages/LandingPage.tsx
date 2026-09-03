@@ -48,10 +48,10 @@ import StellarConnectionQualityBadge from '@/components/common/StellarConnection
 import { useAccount } from 'wagmi';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
 import {
+	useSelfFreezeMutation,
 	useTradeMutation,
 	useWalletHoldings,
-	useReinvestDividendMutation,
-	useRedeemDeprecatedKeyMutation,
+	type SelfFreezeAction,
 } from '@/hooks/useWallet';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
@@ -62,9 +62,7 @@ import {
 	formatPortfolioValueDisplay,
 	getPortfolioValueHelperText,
 	sortHoldingsByTotalValue,
-	calculatePnLSummary,
-	formatPnLDisplay,
-	formatPnLPercentage,
+	type HeldKeyPosition,
 } from '@/utils/portfolioValue.utils';
 import PrecisionModeToggle, {
 	type PrecisionMode,
@@ -96,6 +94,7 @@ import CreatorListPagination from '@/components/common/CreatorListPagination';
 import CreatorListGroupSeparator from '@/components/common/CreatorListGroupSeparator';
 import MarketplaceSidebar from '@/components/common/MarketplaceSidebar';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
+import SelfFreezeDialog from '@/components/common/SelfFreezeDialog';
 
 const FEATURED_CREATOR_FACTS = [
 	{ label: 'Membership', value: 'Collectors Circle' },
@@ -299,6 +298,10 @@ function LandingPage() {
 	const [tradeSide, setTradeSide] = useState<TradeSide>('buy');
 	const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
 	const [tradeSubmitting, setTradeSubmitting] = useState(false);
+	const [selfFreezeDialog, setSelfFreezeDialog] = useState<{
+		action: SelfFreezeAction;
+		position: HeldKeyPosition;
+	} | null>(null);
 	const [stellarAddressCopied, setStellarAddressCopied] = useState(false);
 	const prefersReducedMotion = usePrefersReducedMotion();
 	const [sortOption, setSortOption] = useState<CourseSortOption>(() => {
@@ -806,8 +809,7 @@ function LandingPage() {
 	const activeWalletAddress = connectedAddress || DEMO_WALLET_ADDRESS;
 
 	const tradeMutation = useTradeMutation(activeWalletAddress);
-	const reinvestMutation = useReinvestDividendMutation(activeWalletAddress);
-	const redeemMutation = useRedeemDeprecatedKeyMutation(activeWalletAddress);
+	const selfFreezeMutation = useSelfFreezeMutation(activeWalletAddress);
 	const { data: cachedHoldings = [] } = useWalletHoldings(activeWalletAddress);
 
 	// Merged: keep total-value sorting (feature/holdings-sorting-tests) while
@@ -831,6 +833,9 @@ function LandingPage() {
 						quantity: cached?.quantity ?? baseQuantity,
 						priceStroops: creator.priceStroops,
 						price: creator.price,
+										frozenQuantity: cached?.frozenQuantity ?? 0,
+										liquidQuantity:
+											cached?.liquidQuantity ?? cached?.quantity ?? baseQuantity,
 						isPriceLoading: isPriceRefreshing,
 						isPriceStale: creatorsAreStale,
 						pending: cached?.pending ?? false,
@@ -873,6 +878,32 @@ function LandingPage() {
 		setTradeSide(side);
 		setTradeDialogOpen(true);
 	}, []);
+
+	const openSelfFreezeDialog = useCallback(
+		(action: SelfFreezeAction, position: HeldKeyPosition) => {
+			setSelfFreezeDialog({ action, position });
+		},
+		[]
+	);
+
+	const handleConfirmSelfFreeze = async (amount: number) => {
+		if (!selfFreezeDialog) return;
+		const { action, position } = selfFreezeDialog;
+		try {
+			await selfFreezeMutation.mutateAsync({
+				creatorId: position.creatorId,
+				amount,
+				action,
+			});
+			setSelfFreezeDialog(null);
+			showToast.transactionSuccess(
+				`${action === 'freeze' ? 'Freeze' : 'Unfreeze'} confirmed`,
+				`${action === 'freeze' ? 'Froze' : 'Unfroze'} ${formatNumber(amount)} key${amount === 1 ? '' : 's'}`
+			);
+		} catch {
+			// The mutation reports the signing error and restores its optimistic cache.
+		}
+	};
 
 	// Issue 554: T key opens the trade panel from the creator profile page.
 	useEffect(() => {
@@ -1592,45 +1623,8 @@ function LandingPage() {
 												creator={creator}
 												onBuy={() => openTradeDialog('buy')}
 												onSell={() => openTradeDialog('sell')}
-												onReinvest={async creatorId => {
-													const pos = heldKeyPositions.find(
-														p => p.creatorId === creatorId
-													);
-													const keyPriceStroops =
-														resolveCreatorKeyPriceStroops(
-															pos ?? {}
-														);
-													const estimate = estimateReinvest(
-														pos?.unclaimedDividend ?? 0,
-														keyPriceStroops
-													);
-													if (!estimate) {
-														showToast.error(
-															'Reinvest estimate unavailable. Please refresh prices and try again.'
-														);
-														return;
-													}
-													await reinvestMutation.mutateAsync({
-														keyId: creatorId,
-														amount: pos?.unclaimedDividend ?? 0,
-														keys: estimate.wholeKeys,
-													});
-													showToast.success(
-														`Reinvested ${formatDisplayKeyPrice(estimate.unclaimedStroops)} — received ${formatNumber(estimate.wholeKeys)} keys`
-													);
-												}}
-												onRedeem={async creatorId => {
-													const pos = heldKeyPositions.find(
-														p => p.creatorId === creatorId
-													);
-													await redeemMutation.mutateAsync({
-														creatorId,
-														quantity: pos?.quantity ?? 0,
-													});
-													showToast.success(
-														`Redeemed your ${creator?.title ?? 'deprecated'} key position`
-													);
-												}}
+														onFreeze={position => openSelfFreezeDialog('freeze', position)}
+														onUnfreeze={position => openSelfFreezeDialog('unfreeze', position)}
 												isSubmitting={tradeSubmitting}
 												isReinvesting={reinvestMutation.isPending}
 												isRedeeming={redeemMutation.isPending}
@@ -1641,6 +1635,22 @@ function LandingPage() {
 							</div>
 						)}
 					</MarketplaceSection>
+					<SelfFreezeDialog
+						open={selfFreezeDialog !== null}
+						action={selfFreezeDialog?.action ?? 'freeze'}
+						creatorName={
+							creators.find(item => item.id === selfFreezeDialog?.position.creatorId)?.title ??
+							'creator'
+						}
+						availableQuantity={
+							selfFreezeDialog?.action === 'unfreeze'
+								? selfFreezeDialog.position.frozenQuantity ?? 0
+								: selfFreezeDialog?.position.liquidQuantity ?? 0
+						}
+						isSubmitting={selfFreezeMutation.isPending}
+						onOpenChange={open => !open && setSelfFreezeDialog(null)}
+						onConfirm={handleConfirmSelfFreeze}
+					/>
 
 					<SectionDivider
 						title="Creator profile pattern"
