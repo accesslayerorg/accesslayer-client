@@ -5,11 +5,13 @@ import { ProfileTabPillGroup } from '@/components/common/ProfileTabPill';
 import CreatorMetadataForm from '@/components/common/CreatorMetadataForm';
 import AuctionSetupPanel from '@/components/common/AuctionSetupPanel';
 import LaunchPenaltyPanel from '@/components/common/LaunchPenaltyPanel';
+import MaxBuyQuantityPanel from '@/components/common/MaxBuyQuantityPanel';
 import {
 	useCancelAuctionMutation,
 	useConfigureAuctionMutation,
 	useUpdateMetadataMutation,
 	useSetLaunchPenaltyMutation,
+	useSetMaxBuyQuantityMutation,
 } from '@/hooks/useCreatorContractActions';
 import { formatDisplayKeyPrice, resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
 import { formatNumber } from '@/utils/numberFormat.utils';
@@ -37,6 +39,7 @@ export default function CreatorDashboardPage() {
 	const configureAuction = useConfigureAuctionMutation(id);
 	const cancelAuction = useCancelAuctionMutation(id);
 	const setLaunchPenalty = useSetLaunchPenaltyMutation(id);
+	const setMaxBuyQuantity = useSetMaxBuyQuantityMutation(id);
 
 	const setTab = (value: string) => {
 		setSearchParams(
@@ -178,6 +181,20 @@ export default function CreatorDashboardPage() {
 								launchPenaltyBps={creator.launchPenaltyBps}
 								isSubmitting={setLaunchPenalty.isPending}
 								onSubmit={penaltyBps => setLaunchPenalty.mutate(penaltyBps)}
+							/>
+						</section>
+
+						<section className={CARD_CLASS} data-testid="max-buy-quantity-section">
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Max Buy Per Transaction
+							</h2>
+							<p className="mb-6 text-sm text-white/50">
+								Limit how many keys a wallet can buy in a single transaction.
+							</p>
+							<MaxBuyQuantityPanel
+								maxBuyQuantity={creator.maxBuyQuantity}
+								isSubmitting={setMaxBuyQuantity.isPending}
+								onSubmit={value => setMaxBuyQuantity.mutate(value)}
 							/>
 						</section>
 					</div>

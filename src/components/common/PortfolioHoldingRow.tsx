@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import LockupCountdown from '@/components/common/LockupCountdown';
 import ReinvestDividendDialog from '@/components/common/ReinvestDividendDialog';
+import DeprecationNotice from '@/components/common/DeprecationNotice';
+import RedeemKeyDialog from '@/components/common/RedeemKeyDialog';
 import { computeRemainingLockupSeconds } from '@/utils/lockupCountdown.utils';
 import { formatNumber } from '@/utils/numberFormat.utils';
 import { formatDisplayKeyPrice, resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
 import { hasUnclaimedDividend, xlmToStroops } from '@/utils/reinvestDividend.utils';
+import { isKeyDeprecated } from '@/utils/keyDeprecation.utils';
 import { TrendingUp } from 'lucide-react';
 import type { HeldKeyPosition } from '@/utils/portfolioValue.utils';
 import type { Course } from '@/services/course.service';
@@ -22,6 +25,7 @@ export interface PortfolioHoldingRowProps {
 	onBurn?: (creatorId: string) => void;
 	isSubmitting?: boolean;
 	isReinvesting?: boolean;
+	isRedeeming?: boolean;
 	isNetworkMismatch?: boolean;
 }
 
@@ -36,6 +40,7 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	onBurn,
 	isSubmitting = false,
 	isReinvesting = false,
+	isRedeeming = false,
 	isNetworkMismatch = false,
 }) => {
 	const initialRemaining = computeRemainingLockupSeconds(position.last_buy_timestamp);
@@ -44,6 +49,12 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	const frozenQuantity = position.frozenQuantity ?? 0;
 	const liquidQuantity = position.liquidQuantity ?? position.quantity ?? 0;
 	const isLiquidEmpty = liquidQuantity <= 0;
+
+	const handleConfirmRedeem = async () => {
+		if (!onRedeem) return;
+		await onRedeem(position.creatorId);
+		setRedeemOpen(false);
+	};
 
 	return (
 		<>
@@ -89,10 +100,12 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 			</div>
 
 			<div className="flex items-center gap-3 shrink-0">
-				<LockupCountdown
-					lastBuyTimestamp={position.last_buy_timestamp}
-					onExpire={() => setIsLocked(false)}
-				/>
+				{!deprecated && (
+					<LockupCountdown
+						lastBuyTimestamp={position.last_buy_timestamp}
+						onExpire={() => setIsLocked(false)}
+					/>
+				)}
 
 				<div className="flex items-center gap-2">
 					{onReinvest && hasDividends && (
@@ -162,6 +175,19 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 				onOpenChange={setReinvestOpen}
 				onConfirm={handleConfirmReinvest}
 				isSubmitting={isReinvesting}
+			/>
+		)}
+
+		{deprecated && onRedeem && (
+			<RedeemKeyDialog
+				open={redeemOpen}
+				creatorName={creator?.title ?? 'this creator'}
+				quantity={position.quantity ?? 0}
+				priceFields={position}
+				deprecationReason={creator?.deprecationReason}
+				onOpenChange={setRedeemOpen}
+				onConfirm={handleConfirmRedeem}
+				isSubmitting={isRedeeming}
 			/>
 		)}
 		</>

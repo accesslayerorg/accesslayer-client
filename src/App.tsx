@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import AppErrorBoundary from './components/common/AppErrorBoundary';
 import OfflineBanner from './components/common/OfflineBanner';
+import SessionExpiryWatcher from './components/common/SessionExpiryWatcher';
 import { routes } from './routes';
 import { useRouteChangeLogging } from './hooks/useRouteChangeLogging';
 
@@ -36,6 +37,7 @@ function App() {
 					},
 				}}
 			/>
+			<SessionExpiryWatcher navigate={path => router.navigate(path)} />
 			<RouterProvider router={router} />
 		</AppErrorBoundary>
 	);

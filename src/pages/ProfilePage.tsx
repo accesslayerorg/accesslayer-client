@@ -4,6 +4,7 @@ import ReferralLinkPanel from '@/components/common/ReferralLinkPanel';
 import TradeHistoryTable from '@/components/common/TradeHistoryTable';
 import { ProfileTabPillGroup } from '@/components/common/ProfileTabPill';
 import { useProfileStore } from '@/hooks/useProfileStore';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 const TABS = [
 	{ label: 'Holdings', value: 'holdings', icon: <BarChart2 /> },
@@ -11,7 +12,8 @@ const TABS = [
 ];
 
 // Mock wallet address – in a real app this would come from the wallet provider.
-const DEMO_WALLET = 'GDEMOWALLET0000000000000000000000000000000000000000000000001';
+const DEMO_WALLET =
+	'GDEMOWALLET0000000000000000000000000000000000000000000000001';
 
 // For demo purposes, generate some mock keys. In a real app these would
 // come from the backend (the user's keys / most traded key etc.).
@@ -24,6 +26,7 @@ const keys = [
 export default function ProfilePage() {
 	const profile = useProfileStore(state => state.profile);
 	const [activeTab, setActiveTab] = useState('holdings');
+	useDocumentTitle('My Portfolio — AccessLayer');
 
 	return (
 		<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">

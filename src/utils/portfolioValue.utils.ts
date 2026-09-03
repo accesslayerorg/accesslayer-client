@@ -19,6 +19,14 @@ export interface HeldKeyPosition extends CreatorKeyPriceFields {
 	 * compounds the balance back into more creator keys.
 	 */
 	unclaimedDividend?: number | null;
+	/**
+	 * Timestamp after which this user may next buy this key, enforcing a
+	 * per-user buy cooldown (#873). `null`/absent means no cooldown is in
+	 * effect. Populated by the backend/contract once a buy-cooldown concept
+	 * lands there; the key detail page's countdown simply reflects whatever
+	 * value is present here.
+	 */
+	nextBuyAllowedAt?: number | string | null;
 }
 
 export type PortfolioValueStatus = 'ready' | 'loading' | 'unavailable';
