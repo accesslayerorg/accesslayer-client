@@ -4,6 +4,7 @@ import {
 	courseService,
 	type Course,
 	type GetCoursesParams,
+	type PriceHistoryInterval,
 } from '@/services/course.service';
 import showToast from '@/utils/toast.util';
 
@@ -18,6 +19,14 @@ export function useCreatorDetail(id: string) {
 	return useQuery({
 		queryKey: queryKeys.creators.detail(id),
 		queryFn: () => courseService.getCourse(id),
+		enabled: !!id,
+	});
+}
+
+export function usePriceHistory(id: string, interval: PriceHistoryInterval) {
+	return useQuery({
+		queryKey: queryKeys.creators.priceHistory(id, interval),
+		queryFn: () => courseService.getPriceHistory(id, interval),
 		enabled: !!id,
 	});
 }
@@ -47,5 +56,3 @@ export function useSetCoCreator(courseId: string) {
 		},
 	});
 }
-
-

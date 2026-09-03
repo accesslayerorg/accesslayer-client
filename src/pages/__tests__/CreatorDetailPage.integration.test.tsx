@@ -12,6 +12,7 @@ import { queryKeys } from '@/lib/queryKeys';
 vi.mock('@/services/course.service', () => ({
 	courseService: {
 		getCourse: vi.fn(),
+		getPriceHistory: vi.fn(),
 		getHoldersPage: vi.fn(),
 	},
 }));
@@ -44,6 +45,7 @@ vi.mock('framer-motion', async () => {
 });
 
 const mockGetCourse = vi.mocked(courseService.getCourse);
+const mockGetPriceHistory = vi.mocked(courseService.getPriceHistory);
 const mockGetHoldersPage = vi.mocked(courseService.getHoldersPage);
 
 function makeFreshQueryClient() {
@@ -70,6 +72,7 @@ describe('CreatorDetailPage Integration', () => {
 	beforeEach(() => {
 		queryClient = makeFreshQueryClient();
 		mockGetCourse.mockReset();
+		mockGetPriceHistory.mockResolvedValue([]);
 		mockGetHoldersPage.mockReset();
 		mockGetHoldersPage.mockResolvedValue({
 			holders: [],
@@ -278,6 +281,7 @@ describe('CreatorDetailPage Integration', () => {
 			</QueryClientProvider>
 		);
 
+		expect(await screen.findByText('100.00 XLM')).toBeInTheDocument();
 		expect(await screen.findAllByText('100.00 XLM')).not.toHaveLength(0);
 		expect(
 			screen.queryByLabelText(/loading creator profile/i)
@@ -289,6 +293,7 @@ describe('CreatorDetailPage Integration', () => {
 			});
 		});
 
+		expect(screen.getByText('100.00 XLM')).toBeInTheDocument();
 		expect(screen.getAllByText('100.00 XLM')).not.toHaveLength(0);
 		expect(
 			screen.queryByLabelText(/loading creator profile/i)

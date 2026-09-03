@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useEffect, useState } from 'react';
-import { useCreatorDetail } from '@/hooks/useCreators';
+import { useCreatorDetail, usePriceHistory } from '@/hooks/useCreators';
 import { useCreatorProfileStaleIndicator } from '@/hooks/useCreatorProfileStaleIndicator';
 import CreatorBreadcrumb from '@/components/common/CreatorBreadcrumb';
 import CreatorProfileHeader from '@/components/common/CreatorProfileHeader';
@@ -28,6 +28,8 @@ import { useProfileStore } from '@/hooks/useProfileStore';
 import { useWalletHoldings } from '@/hooks/useWallet';
 import CoCreatorSection from '@/components/creator/CoCreatorSection';
 import ShareTwitterButton from '@/components/common/ShareTwitterButton';
+import { PriceHistoryChart } from '@/components/common/PriceHistoryChart';
+import type { PriceHistoryInterval } from '@/services/course.service';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 function CreatorDetailPageContent() {
@@ -42,6 +44,11 @@ function CreatorDetailPageContent() {
 		isFetching,
 		refetch,
 	} = useCreatorDetail(id || '');
+
+	const [interval, setInterval] = useState<PriceHistoryInterval>('24h');
+	const { data: priceHistory, isLoading: isPriceHistoryLoading } =
+		usePriceHistory(id || '', interval);
+
 	useNavigationTiming('creator_profile');
 	useDocumentTitle(creator ? `${creator.title} — AccessLayer` : null);
 
@@ -158,7 +165,6 @@ function CreatorDetailPageContent() {
 				recentFeeInflow: creator.recentFeeInflow,
 			}
 		: {
-				// Demo values until the key detail API returns staking pool stats.
 				stakingPoolBalance: 4820,
 				totalStaked: creator.creatorShareSupply
 					? Math.floor(creator.creatorShareSupply / 4)
@@ -193,6 +199,14 @@ function CreatorDetailPageContent() {
 					}}
 				/>
 
+				{/* Historical Price Chart */}
+				<PriceHistoryChart
+					data={priceHistory}
+					interval={interval}
+					isLoading={isPriceHistoryLoading}
+					onIntervalChange={setInterval}
+				/>
+
 				{/* 4 Stat Cards */}
 				<div data-testid="creator-stat-cards">
 					<CreatorProfileStatRow items={statItems} />
@@ -219,7 +233,7 @@ function CreatorDetailPageContent() {
 				{/* Staking Rewards */}
 				<StakingRewardsSection {...stakingStats} isLoading={isLoading} />
 
-				{/* Price Chart */}
+				{/* Price Curve Chart */}
 				<div
 					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
 					data-testid="creator-chart-container"
