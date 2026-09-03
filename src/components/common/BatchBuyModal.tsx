@@ -151,8 +151,9 @@ export default function BatchBuyModal({
 
   // Cleanup timers on unmount
   useEffect(() => {
+    const timers = debounceTimers.current;
     return () => {
-      debounceTimers.current.forEach(t => clearTimeout(t));
+      timers.forEach(t => clearTimeout(t));
     };
   }, []);
 

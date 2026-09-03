@@ -4,20 +4,13 @@ import {
 	SLIPPAGE_TOLERANCE_PRESETS,
 	SLIPPAGE_TOLERANCE_BOUNDS,
 	validateSlippageTolerancePercent,
-} from '@/utils/slippageTolerance.utils';
-
-export interface SlippageToleranceSelectorProps {
-	/** Currently selected tolerance, as a percentage (e.g. 1 = 1%). */
-	value: number;
-	onChange: (percent: number) => void;
-	disabled?: boolean;
 	computeSlippagePriceBounds,
 	validateSlippageTolerance,
-	SLIPPAGE_TOLERANCE_PRESETS,
 	type TradeSide,
 } from '@/utils/slippageTolerance.utils';
 
-export interface SlippageToleranceSelectorProps {
+/** New (#877) prop interface — self-contained with preview price and side. */
+export interface SlippageToleranceSelectorNewProps {
 	/** The quoted/preview price the tolerance is applied against. */
 	previewPrice: number;
 	/** Whether this trade is a buy (computes max_price) or sell (min_price). */
@@ -37,17 +30,50 @@ export interface SlippageToleranceSelectorProps {
 	className?: string;
 }
 
+/** Legacy (#872) prop interface — controlled value managed by the parent. */
+export interface SlippageToleranceSelectorLegacyProps {
+	/** Currently selected tolerance, as a percentage (e.g. 1 = 1%). */
+	value: number;
+	onChange: (percent: number) => void;
+	disabled?: boolean;
+	className?: string;
+}
+
+export type SlippageToleranceSelectorProps =
+	| SlippageToleranceSelectorNewProps
+	| SlippageToleranceSelectorLegacyProps;
+
+function isNewProps(
+	props: SlippageToleranceSelectorProps
+): props is SlippageToleranceSelectorNewProps {
+	return 'previewPrice' in props && 'side' in props;
+}
+
 /**
- * Preset + custom slippage tolerance picker used by the buy/sell trade
- * dialogs (#872). Presets are 0.5% / 1% / 5%; a custom input accepts any
- * value in [0, 50]. Selecting a preset clears any custom-input error state.
+ * Slippage tolerance selector — issue #872 / #877 trade flow.
+ *
+ * Supports two prop interfaces:
+ * - **New (#877)**: self-contained with `previewPrice`/`side`, shows
+ *   XLM-denominated bounds and a confirm button.
+ * - **Legacy (#872)**: controlled via `value`/`onChange`/`disabled`,
+ *   used by TradeDialog.
  */
-const SlippageToleranceSelector: React.FC<SlippageToleranceSelectorProps> = ({
-	value,
-	onChange,
-	disabled = false,
-	className,
-}) => {
+const SlippageToleranceSelector: React.FC<SlippageToleranceSelectorProps> = (
+	props
+) => {
+	if (isNewProps(props)) {
+		return <SlippageToleranceSelectorNew {...props} />;
+	}
+	return <SlippageToleranceSelectorLegacy {...props} />;
+};
+
+// ---------------------------------------------------------------------------
+// Legacy (#872) — controlled value/onChange, preset buttons + custom input
+// ---------------------------------------------------------------------------
+
+const SlippageToleranceSelectorLegacy: React.FC<
+	SlippageToleranceSelectorLegacyProps
+> = ({ value, onChange, disabled = false, className }) => {
 	const isPresetSelected = (
 		SLIPPAGE_TOLERANCE_PRESETS as readonly number[]
 	).includes(value);
@@ -79,63 +105,6 @@ const SlippageToleranceSelector: React.FC<SlippageToleranceSelectorProps> = ({
 		const parsed = Number(normalized);
 		if (validateSlippageTolerancePercent(parsed) === null) {
 			onChange(parsed);
- * Slippage tolerance selector — issue #877 / #784 trade flow.
- *
- * Lets the user pick a preset tolerance (0.5% / 1% / 5%) or enter a custom
- * percentage, and displays the resulting max_price (buy) / min_price (sell)
- * bound. A custom tolerance above 50% is rejected with a validation error
- * and disables the confirm action.
- */
-const SlippageToleranceSelector: React.FC<SlippageToleranceSelectorProps> = ({
-	previewPrice,
-	side,
-	onToleranceChange,
-	onValidityChange,
-	onConfirm,
-	className,
-}) => {
-	const [selectedPreset, setSelectedPreset] = useState<number | null>(
-		SLIPPAGE_TOLERANCE_PRESETS[0]
-	);
-	const [customValue, setCustomValue] = useState('');
-	const [isCustom, setIsCustom] = useState(false);
-
-	const activeToleranceText = isCustom
-		? customValue
-		: String(selectedPreset ?? '');
-	const parsedTolerance = activeToleranceText.trim()
-		? Number(activeToleranceText)
-		: NaN;
-
-	const validation = useMemo(
-		() => validateSlippageTolerance(parsedTolerance),
-		[parsedTolerance]
-	);
-
-	const bounds = useMemo(() => {
-		if (!validation.valid) return { maxPrice: null, minPrice: null };
-		return computeSlippagePriceBounds(previewPrice, parsedTolerance, side);
-	}, [validation.valid, previewPrice, parsedTolerance, side]);
-
-	const canConfirm = validation.valid;
-
-	const selectPreset = (preset: number) => {
-		setIsCustom(false);
-		setSelectedPreset(preset);
-		onToleranceChange?.(preset);
-		onValidityChange?.(true);
-	};
-
-	const handleCustomChange = (rawValue: string) => {
-		setIsCustom(true);
-		setSelectedPreset(null);
-		setCustomValue(rawValue);
-
-		const parsed = rawValue.trim() ? Number(rawValue) : NaN;
-		const result = validateSlippageTolerance(parsed);
-		onValidityChange?.(result.valid);
-		if (result.valid) {
-			onToleranceChange?.(parsed);
 		}
 	};
 
@@ -209,6 +178,63 @@ const SlippageToleranceSelector: React.FC<SlippageToleranceSelectorProps> = ({
 				{SLIPPAGE_TOLERANCE_BOUNDS.MAX_PERCENT}%. The trade will revert if the
 				price moves beyond your tolerance before it executes.
 			</p>
+		</div>
+	);
+};
+
+// ---------------------------------------------------------------------------
+// New (#877) — self-contained with preview price, shows XLM bounds + confirm
+// ---------------------------------------------------------------------------
+
+const SlippageToleranceSelectorNew: React.FC<
+	SlippageToleranceSelectorNewProps
+> = ({ previewPrice, side, onToleranceChange, onValidityChange, onConfirm, className }) => {
+	const [selectedPreset, setSelectedPreset] = useState<number | null>(
+		SLIPPAGE_TOLERANCE_PRESETS[0]
+	);
+	const [customValue, setCustomValue] = useState('');
+	const [isCustom, setIsCustom] = useState(false);
+
+	const activeToleranceText = isCustom
+		? customValue
+		: String(selectedPreset ?? '');
+	const parsedTolerance = activeToleranceText.trim()
+		? Number(activeToleranceText)
+		: NaN;
+
+	const validation = useMemo(
+		() => validateSlippageTolerance(parsedTolerance),
+		[parsedTolerance]
+	);
+
+	const bounds = useMemo(() => {
+		if (!validation.valid) return { maxPrice: null, minPrice: null };
+		return computeSlippagePriceBounds(previewPrice, parsedTolerance, side);
+	}, [validation.valid, previewPrice, parsedTolerance, side]);
+
+	const canConfirm = validation.valid;
+
+	const selectPreset = (preset: number) => {
+		setIsCustom(false);
+		setSelectedPreset(preset);
+		onToleranceChange?.(preset);
+		onValidityChange?.(true);
+	};
+
+	const handleCustomChange = (rawValue: string) => {
+		setIsCustom(true);
+		setSelectedPreset(null);
+		setCustomValue(rawValue);
+
+		const parsed = rawValue.trim() ? Number(rawValue) : NaN;
+		const result = validateSlippageTolerance(parsed);
+		onValidityChange?.(result.valid);
+		if (result.valid) {
+			onToleranceChange?.(parsed);
+		}
+	};
+
+	return (
 		<div className={cn('space-y-2', className)}>
 			<div className="text-sm text-white/70">Slippage tolerance</div>
 			<div className="flex flex-wrap items-center gap-2">
