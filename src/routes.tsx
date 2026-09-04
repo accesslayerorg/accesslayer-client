@@ -8,6 +8,7 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import ProfilePage from './pages/ProfilePage';
 import FollowingPage from './pages/FollowingPage';
 import ComparePage from './pages/ComparePage';
+import GovernancePage from './pages/GovernancePage';
 
 export const routes = [
 	{
@@ -53,6 +54,10 @@ export const routes = [
 	{
 		path: '/compare',
 		element: <ComparePage />,
+	},
+	{
+		path: '/governance',
+		element: <GovernancePage />,
 	},
 	{
 		path: '/admin/dashboard',

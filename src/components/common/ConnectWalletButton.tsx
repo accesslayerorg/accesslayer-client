@@ -109,7 +109,7 @@ function ConnectWalletButton() {
 							<div className="flex flex-col gap-3">
 								<div className="flex items-center justify-between">
 									<span className="text-sm font-medium text-gray-900">
-										Connected Wallet
+										Wallet address
 									</span>
 									<button
 										type="button"

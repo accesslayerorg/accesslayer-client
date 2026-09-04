@@ -43,4 +43,10 @@ export const queryKeys = {
 	admin: {
 		oracleCallers: () => ['admin', 'oracle', 'callers'] as const,
 	},
+	governance: {
+		all: () => ['governance'] as const,
+		proposals: (creatorId?: string) =>
+			['governance', 'proposals', creatorId ?? null] as const,
+		proposal: (id: string) => ['governance', 'proposal', id] as const,
+	},
 } as const;

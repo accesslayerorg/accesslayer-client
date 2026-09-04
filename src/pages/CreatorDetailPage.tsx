@@ -273,14 +273,13 @@ function CreatorDetailPageContent() {
 					<CreatorProfileInfoGrid items={feeItems} />
 				</div>
 
-				{/* Co-Creator Section */}
-				<CoCreatorSection
-					courseId={creator.id}
-					coCreatorAddress={creator.coCreatorAddress}
-					coCreatorSplitBps={creator.coCreatorSplitBps}
-					totalPaidToCoCreator={creator.totalPaidToCoCreator}
-					totalPaidToCreator={creator.totalPaidToCreator}
-				/>
+				{/* Co-Creator Section */}					<CoCreatorSection
+						courseId={creator.id}
+						coCreatorAddress={creator.coCreatorAddress}
+						coCreatorSplitBps={creator.coCreatorSplitBps}
+						totalPaidToCoCreator={creator.totalPaidToCoCreator}
+						totalPaidToCreator={creator.totalPaidToCreator}
+					/>
 
 				{/* Activity Feed */}
 				<div className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8">
