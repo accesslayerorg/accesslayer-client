@@ -473,3 +473,105 @@ export function useBatchBuyMutation(address?: string) {
 
 	return mutation;
 }
+
+export interface BatchTransferOrder {
+	recipientAddress: string;
+	quantity: number;
+	creatorId: string;
+}
+
+export function useBatchTransferMutation(address: string) {
+	const queryClient = useQueryClient();
+
+	const mutation = useMutation({
+		mutationKey: ['batch-transfer', address],
+		mutationFn: async ({ orders }: { orders: BatchTransferOrder[] }) => {
+			// In production this would call the on-chain `batch_transfer` contract
+			// function. Here we simulate latency and accept the orders payload.
+			void orders;
+			await new Promise<void>(resolve => window.setTimeout(resolve, 1200));
+			return { success: true as const };
+		},
+		onMutate: async ({ orders }: { orders: BatchTransferOrder[] }) => {
+			const queryKey = queryKeys.wallet.holdings(address);
+
+			await queryClient.cancelQueries({ queryKey });
+
+			const previousHoldings =
+				queryClient.getQueryData<HeldKeyPosition[]>(queryKey) ?? [];
+
+			// Optimistically update holdings by reducing the transferred creator's quantity
+			queryClient.setQueryData<HeldKeyPosition[]>(queryKey, (old = []) => {
+				return old.map(h => {
+					const totalTransferred = orders
+						.filter(o => o.creatorId === h.creatorId)
+						.reduce((sum, o) => sum + o.quantity, 0);
+
+					if (totalTransferred > 0) {
+						const nextQuantity = (h.quantity ?? 0) - totalTransferred;
+						return {
+							...h,
+							quantity: Math.max(0, nextQuantity),
+							pending: true,
+						};
+					}
+					return h;
+				});
+			});
+
+			return { previousHoldings };
+		},
+		onError: (error, _variables, context) => {
+			const holdingsKey = queryKeys.wallet.holdings(address);
+
+			if (context?.previousHoldings) {
+				queryClient.setQueryData(holdingsKey, context.previousHoldings);
+			} else if (process.env.NODE_ENV !== 'test') {
+				console.warn('[optimistic-rollback]', {
+					cache_key: JSON.stringify(holdingsKey),
+					action: 'batch-transfer',
+					reason: 'snapshot_missing',
+					failed_at: new Date().toISOString(),
+				});
+			}
+
+			showToast.error(getSignatureErrorMessage(error));
+
+			if (process.env.NODE_ENV !== 'test') {
+				const truncatedAddress = address
+					? `${address.slice(0, 4)}...${address.slice(-4)}`
+					: 'unknown';
+
+				const errorCode =
+					error instanceof Error
+						? error.name || error.message
+						: String(error);
+
+				console.debug('[batch-transfer-failed]', {
+					error_code: errorCode,
+					action: 'batch-transfer',
+					wallet_address: truncatedAddress,
+					failed_at: new Date().toISOString(),
+				});
+			}
+		},
+		onSuccess: (_data, { orders }) => {
+			queryClient.setQueryData<HeldKeyPosition[]>(
+				queryKeys.wallet.holdings(address),
+				(old = []) =>
+					old.map(h => {
+						const hasTransfer = orders.some(o => o.creatorId === h.creatorId);
+						return hasTransfer ? { ...h, pending: false } : h;
+					})
+			);
+		},
+		onSettled: () => {
+			// Invalidate holdings cache to ensure fresh data
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.wallet.holdings(address),
+			});
+		},
+	});
+
+	return mutation;
+}

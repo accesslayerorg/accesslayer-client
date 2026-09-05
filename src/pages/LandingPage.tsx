@@ -40,6 +40,7 @@ import CreatorProfileErrorState from '@/components/common/CreatorProfileErrorSta
 import TransactionRetryNotice from '@/components/common/TransactionRetryNotice';
 import EmptyTransactionTimelineState from '@/components/common/EmptyTransactionTimelineState';
 import TradeDialog, { type TradeSide } from '@/components/common/TradeDialog';
+import BatchTransferModal from '@/components/common/BatchTransferModal';
 import type { FeeBreakdown } from '@/utils/pricePreview.utils';
 import type { SlippageBounds } from '@/utils/slippageTolerance.utils';
 import TradePanelErrorBoundary from '@/components/common/TradePanelErrorBoundary';
@@ -272,6 +273,8 @@ function LandingPage() {
 	const [tradeSide, setTradeSide] = useState<TradeSide>('buy');
 	const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
 	const [tradeSubmitting, setTradeSubmitting] = useState(false);
+	const [batchTransferDialogOpen, setBatchTransferDialogOpen] = useState(false);
+	const [selectedTransferCreatorId, setSelectedTransferCreatorId] = useState<string | null>(null);
 	const [stellarAddressCopied, setStellarAddressCopied] = useState(false);
 	const prefersReducedMotion = usePrefersReducedMotion();
 	const [sortOption, setSortOption] = useState<CourseSortOption>(() => {
@@ -828,6 +831,22 @@ function LandingPage() {
 		setTradeDialogOpen(true);
 	}, []);
 
+	const openTransferDialog = useCallback((creatorId: string) => {
+		setSelectedTransferCreatorId(creatorId);
+		setBatchTransferDialogOpen(true);
+	}, []);
+
+	// Issue 554: T key opens the trade panel from the creator profile page.
+	useEffect(() => {
+		const handleTradeShortcut = (event: KeyboardEvent) => {
+			if (
+				event.defaultPrevented ||
+				event.repeat ||
+				!isTradeShortcut(event) ||
+				isEditableShortcutTarget(event.target)
+			) {
+				return;
+			}
 	// Callback to confirm trade via keyboard shortcut (reads current state)
 	const handleConfirmTradeViaShortcut = useCallback(() => {
 		// Trigger the confirm button click
@@ -1577,6 +1596,7 @@ function LandingPage() {
 												creator={creator}
 												onBuy={() => openTradeDialog('buy')}
 												onSell={() => openTradeDialog('sell')}
+												onTransfer={() => openTransferDialog(position.creatorId)}
 												onReinvest={async creatorId => {
 													const pos = heldKeyPositions.find(
 														p => p.creatorId === creatorId
@@ -1974,6 +1994,23 @@ function LandingPage() {
 					onConfirm={handleConfirmTrade}
 				/>
 			</TradePanelErrorBoundary>
+			{selectedTransferCreatorId && (
+				<BatchTransferModal
+					open={batchTransferDialogOpen}
+					onOpenChange={setBatchTransferDialogOpen}
+					creatorId={selectedTransferCreatorId}
+					creatorName={
+						creators.find(c => c.id === selectedTransferCreatorId)?.title ??
+						'Creator'
+					}
+					availableBalance={
+						cachedHoldings.find(
+							(h) => h.creatorId === selectedTransferCreatorId
+						)?.quantity ?? 0
+					}
+					walletAddress={activeWalletAddress ?? ''}
+				/>
+			)}
 			<TradeShortcutHints open={tradeDialogOpen} side={tradeSide} />
 			<KeyboardShortcutsHelp
 				open={shortcutsHelpOpen}
