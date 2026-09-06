@@ -23,6 +23,7 @@ import {
 } from '@/hooks/useWalletConnectionStallDetection';
 import { useCopySuccessAnnouncement } from '@/hooks/useCopySuccessAnnouncement';
 import CopySuccessAnnouncement from '@/components/common/CopySuccessAnnouncement';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import showToast from '@/utils/toast.util';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
 import { logWalletDisconnectSession } from '@/lib/walletSessionLog';
@@ -180,6 +181,7 @@ function ConnectWalletButton() {
 										);
 									}
 									disconnect();
+									useRecentlyViewed.getState().clear();
 									setShowDisconnectDialog(false);
 								}}
 							>

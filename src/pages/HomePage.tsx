@@ -7,6 +7,7 @@ import CreatorSpotlight from '../components/home/CreatorSpotlight';
 import MarketOverview from '../components/home/MarketOverview';
 import TrendingCreators from '../components/home/TrendingCreators';
 import TrendingLeaderboard from '../components/home/TrendingLeaderboard';
+import RecentlyViewedSection from '../components/home/RecentlyViewedSection';
 import { useNavigationTiming } from '../hooks/useNavigationTiming';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useLocation } from 'react-router';
@@ -30,6 +31,7 @@ export default function HomePage() {
 				<CreatorSpotlight />
 				<TrendingLeaderboard />
 				<TrendingCreators />
+				<RecentlyViewedSection />
 				<FAQ />
 			</main>
 			<Footer />

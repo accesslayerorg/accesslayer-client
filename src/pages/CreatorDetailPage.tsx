@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useEffect, useState } from 'react';
 import { useCreatorDetail } from '@/hooks/useCreators';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useCreatorProfileStaleIndicator } from '@/hooks/useCreatorProfileStaleIndicator';
 import CreatorBreadcrumb from '@/components/common/CreatorBreadcrumb';
 import CreatorProfileHeader from '@/components/common/CreatorProfileHeader';
@@ -22,6 +23,7 @@ import {
 } from '@/utils/keyPriceDisplay.utils';
 import KeyDetailPageErrorBoundary from '@/components/common/KeyDetailPageErrorBoundary';
 import { ApiError } from '@/services/api.service';
+import WatchlistButton from '@/components/common/WatchlistButton';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useKeyHolders } from '@/hooks/useKeyHolders';
 import { useProfileStore } from '@/hooks/useProfileStore';
@@ -54,6 +56,23 @@ function CreatorDetailPageContent() {
 	useEffect(() => {
 		setHasMounted(true);
 	}, []);
+
+	const recordVisit = useRecentlyViewed(state => state.addKey);
+
+	// Record this key as recently viewed once the detail data is available.
+	useEffect(() => {
+		if (!creator) return;
+		recordVisit({
+			id: creator.id,
+			title: creator.title || creator.name || 'Unnamed creator',
+			price: creator.price,
+			priceStroops: creator.priceStroops,
+			change24h: creator.change24h,
+			category: creator.category,
+			avatarUri: creator.avatarUri || creator.thumbnail,
+			walletAddress: creator.instructorId,
+		});
+	}, [creator, recordVisit]);
 
 	const { holders, hasNextPage, isFetchingNextPage, fetchNextPage } =
 		useKeyHolders(id || '');
@@ -185,23 +204,32 @@ function CreatorDetailPageContent() {
 					currentLabel={`${creator.title} Profile`}
 				/>
 
-				<CreatorProfileHeader
-					name={creator.title}
-					handle={creator.socialHandle || creator.instructorId}
-					creatorId={creator.id}
-					isVerified={creator.isVerified}
-					avatarUrl={creator.thumbnail}
-					bio={creator.description}
-					priceStroops={resolveCreatorKeyPriceStroops(creator)}
-					showBackButton={hasMounted}
-					onBack={() => {
-						if (window.history.length > 1 && location.key !== 'default') {
-							navigate(-1);
-							return;
-						}
-						navigate('/creators');
-					}}
-				/>
+				<div className="flex items-start gap-3">
+					<div className="min-w-0 flex-1">
+						<CreatorProfileHeader
+							name={creator.title}
+							handle={creator.socialHandle || creator.instructorId}
+							creatorId={creator.id}
+							isVerified={creator.isVerified}
+							avatarUrl={creator.thumbnail}
+							bio={creator.description}
+							priceStroops={resolveCreatorKeyPriceStroops(creator)}
+							showBackButton={hasMounted}
+							onBack={() => {
+								if (window.history.length > 1 && location.key !== 'default') {
+									navigate(-1);
+									return;
+								}
+								navigate('/creators');
+							}}
+						/>
+					</div>
+					<WatchlistButton
+						creator={creator}
+						labelName={creator.title}
+						className="mt-3 shrink-0"
+					/>
+				</div>
 
 				{/* 4 Stat Cards */}
 				<div data-testid="creator-stat-cards">
