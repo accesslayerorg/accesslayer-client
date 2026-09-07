@@ -19,6 +19,7 @@ export interface PortfolioHoldingRowProps {
 	creator?: Course;
 	onBuy?: (creatorId: string) => void;
 	onSell?: (creatorId: string) => void;
+	onTransfer?: (creatorId: string) => void;
 	onReinvest?: (creatorId: string) => Promise<void> | void;
 	onRedeem?: (creatorId: string) => Promise<void> | void;
 	isSubmitting?: boolean;
@@ -32,6 +33,7 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	creator,
 	onBuy,
 	onSell,
+	onTransfer,
 	onReinvest,
 	onRedeem,
 	isSubmitting = false,
@@ -165,6 +167,18 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 								</Button>
 							)}
 						</>
+					)}
+					{onTransfer && (
+						<Button
+							size="sm"
+							variant="outline"
+							className="rounded-xl"
+							onClick={() => onTransfer(position.creatorId)}
+							disabled={isLocked || isNetworkMismatch || isSubmitting || !position.quantity}
+							data-testid="holding-transfer-button"
+						>
+							Transfer
+						</Button>
 					)}
 				</div>
 			</div>
