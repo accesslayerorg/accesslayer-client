@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useEffect, useState } from 'react';
 import { useCreatorDetail } from '@/hooks/useCreators';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useCreatorProfileStaleIndicator } from '@/hooks/useCreatorProfileStaleIndicator';
 import CreatorBreadcrumb from '@/components/common/CreatorBreadcrumb';
 import CreatorProfileHeader from '@/components/common/CreatorProfileHeader';
@@ -22,15 +23,22 @@ import {
 } from '@/utils/keyPriceDisplay.utils';
 import KeyDetailPageErrorBoundary from '@/components/common/KeyDetailPageErrorBoundary';
 import { ApiError } from '@/services/api.service';
+import WatchlistButton from '@/components/common/WatchlistButton';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useKeyHolders } from '@/hooks/useKeyHolders';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import { useWalletHoldings } from '@/hooks/useWallet';
 import CoCreatorSection from '@/components/creator/CoCreatorSection';
 import ShareTwitterButton from '@/components/common/ShareTwitterButton';
+import { usePurchaseConfetti } from '@/hooks/usePurchaseConfetti';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useKeyTwap } from '@/hooks/useKeyTwap';
+import Skeleton from '@/components/ui/skeleton';
+import { Tooltip } from '@/components/ui/tooltip';
 
 function CreatorDetailPageContent() {
+	usePurchaseConfetti();
+
 	const { id } = useParams<{ id: string }>();
 	const location = useLocation();
 	const navigate = useNavigate();
@@ -49,6 +57,23 @@ function CreatorDetailPageContent() {
 		setHasMounted(true);
 	}, []);
 
+	const recordVisit = useRecentlyViewed(state => state.addKey);
+
+	// Record this key as recently viewed once the detail data is available.
+	useEffect(() => {
+		if (!creator) return;
+		recordVisit({
+			id: creator.id,
+			title: creator.title || creator.name || 'Unnamed creator',
+			price: creator.price,
+			priceStroops: creator.priceStroops,
+			change24h: creator.change24h,
+			category: creator.category,
+			avatarUri: creator.avatarUri || creator.thumbnail,
+			walletAddress: creator.instructorId,
+		});
+	}, [creator, recordVisit]);
+
 	const { holders, hasNextPage, isFetchingNextPage, fetchNextPage } =
 		useKeyHolders(id || '');
 
@@ -63,6 +88,7 @@ function CreatorDetailPageContent() {
 	// return a per-user one. Only shown for authenticated users.
 	const nextBuyAllowedAt =
 		userPosition?.nextBuyAllowedAt ?? creator?.nextBuyAllowedAt ?? null;
+	const { data: twap, isLoading: isTwapLoading } = useKeyTwap(id || '');
 
 	// Track stale data indicator
 	const { shouldShowBadge, handleRefetch } = useCreatorProfileStaleIndicator(
@@ -146,6 +172,9 @@ function CreatorDetailPageContent() {
 		supply: (index + 1) * 20,
 		priceXLM: priceStroops / 10_000_000,
 	}));
+	const spotPrice = resolveCreatorKeyPriceStroops(creator);
+	const twapPrice = twap?.priceStroops ?? null;
+	const twapDelta = twapPrice != null && spotPrice != null ? twapPrice - spotPrice : null;
 
 	const hasRealStakingData =
 		creator.stakingPoolBalance != null ||
@@ -175,23 +204,32 @@ function CreatorDetailPageContent() {
 					currentLabel={`${creator.title} Profile`}
 				/>
 
-				<CreatorProfileHeader
-					name={creator.title}
-					handle={creator.socialHandle || creator.instructorId}
-					creatorId={creator.id}
-					isVerified={creator.isVerified}
-					avatarUrl={creator.thumbnail}
-					bio={creator.description}
-					priceStroops={resolveCreatorKeyPriceStroops(creator)}
-					showBackButton={hasMounted}
-					onBack={() => {
-						if (window.history.length > 1 && location.key !== 'default') {
-							navigate(-1);
-							return;
-						}
-						navigate('/creators');
-					}}
-				/>
+				<div className="flex items-start gap-3">
+					<div className="min-w-0 flex-1">
+						<CreatorProfileHeader
+							name={creator.title}
+							handle={creator.socialHandle || creator.instructorId}
+							creatorId={creator.id}
+							isVerified={creator.isVerified}
+							avatarUrl={creator.thumbnail}
+							bio={creator.description}
+							priceStroops={resolveCreatorKeyPriceStroops(creator)}
+							showBackButton={hasMounted}
+							onBack={() => {
+								if (window.history.length > 1 && location.key !== 'default') {
+									navigate(-1);
+									return;
+								}
+								navigate('/creators');
+							}}
+						/>
+					</div>
+					<WatchlistButton
+						creator={creator}
+						labelName={creator.title}
+						className="mt-3 shrink-0"
+					/>
+				</div>
 
 				{/* 4 Stat Cards */}
 				<div data-testid="creator-stat-cards">
@@ -215,6 +253,27 @@ function CreatorDetailPageContent() {
 						userHoldingsCount={holdingsCount}
 					/>
 				</div>
+
+				{isTwapLoading ? (
+					<div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4" data-testid="twap-price">
+						<div aria-label="Loading 24 hour TWAP" role="status"><Skeleton className="h-3 w-24" /><Skeleton className="mt-2 h-6 w-32" /></div>
+					</div>
+				) : twapPrice != null ? (
+					<div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4" data-testid="twap-price">
+						<div className="flex items-center justify-between gap-4">
+							<div>
+								<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/55">
+									<span className={twapDelta != null ? (twapDelta < 0 ? 'text-emerald-400' : 'text-rose-400') : ''}>TWAP (24h)</span>
+									<Tooltip content="Time-weighted average price over the past 24 hours. Less sensitive to short-term manipulation.">
+										<button type="button" aria-label="What is 24 hour TWAP?" className="text-white/50">ⓘ</button>
+									</Tooltip>
+								</div>
+								<div className="mt-1 text-xl font-bold text-white">{formatDisplayKeyPrice(twapPrice)}</div>
+							</div>
+							{twapDelta != null && <span className={twapDelta < 0 ? 'text-sm font-semibold text-emerald-400' : 'text-sm font-semibold text-rose-400'}>{twapDelta < 0 ? '▼' : '▲'} {formatDisplayKeyPrice(Math.abs(twapDelta))} vs spot</span>}
+						</div>
+					</div>
+				) : null}
 
 				{/* Staking Rewards */}
 				<StakingRewardsSection {...stakingStats} isLoading={isLoading} />
@@ -270,14 +329,13 @@ function CreatorDetailPageContent() {
 					<CreatorProfileInfoGrid items={feeItems} />
 				</div>
 
-				{/* Co-Creator Section */}
-				<CoCreatorSection
-					courseId={creator.id}
-					coCreatorAddress={creator.coCreatorAddress}
-					coCreatorSplitBps={creator.coCreatorSplitBps}
-					totalPaidToCoCreator={creator.totalPaidToCoCreator}
-					totalPaidToCreator={creator.totalPaidToCreator}
-				/>
+				{/* Co-Creator Section */}					<CoCreatorSection
+						courseId={creator.id}
+						coCreatorAddress={creator.coCreatorAddress}
+						coCreatorSplitBps={creator.coCreatorSplitBps}
+						totalPaidToCoCreator={creator.totalPaidToCoCreator}
+						totalPaidToCreator={creator.totalPaidToCreator}
+					/>
 
 				{/* Activity Feed */}
 				<div className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8">

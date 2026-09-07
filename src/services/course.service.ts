@@ -21,6 +21,8 @@ export interface Course {
 	volume24h?: number;
 	change24h?: number;
 	joinedAt?: string;
+	/** ISO timestamp for when the creator key was created. */
+	createdAt?: string;
 	/** Whether this creator is pinned in the marketplace list. */
 	isPinned?: boolean;
 	creatorFeeBps?: number;
@@ -53,6 +55,10 @@ export interface Course {
 	 * Applied to sells within the first 7 days after key creation.
 	 */
 	launchPenaltyBps?: number;
+	/** Ledger sequence at which this key was created; anchors the 7-day launch window. */
+	createdAtLedger?: number;
+	/** Network ledger sequence as of this response, used to evaluate the launch window. */
+	currentLedger?: number;
 	/** Optional co-creator wallet configured for this creator key. */
 	coCreatorAddress?: string;
 	/** Co-creator revenue share in basis points. */
@@ -125,6 +131,12 @@ export interface KeyHolderEntry {
 export interface KeyHoldersPage {
 	holders: KeyHolderEntry[];
 	nextCursor: string | null;
+}
+
+export interface KeyTwap {
+	/** 24-hour time-weighted average price in stroops. */
+	priceStroops: number | null;
+	window?: string;
 }
 
 class CourseService extends BaseApiService {
@@ -224,6 +236,19 @@ class CourseService extends BaseApiService {
 				{ params }
 			);
 
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Get the time-weighted average price - GET /keys/:keyId/twap
+	async getKeyTwap(keyId: string, window = '24h'): Promise<KeyTwap> {
+		try {
+			const response = await this.api.get<APIResponse<KeyTwap>>(
+				`/keys/${keyId}/twap`,
+				{ params: { window } }
+			);
 			return response.data.data;
 		} catch (error) {
 			throw this.handleError(error);

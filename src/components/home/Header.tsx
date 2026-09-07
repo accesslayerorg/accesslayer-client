@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Moon, Sun, Monitor } from 'lucide-react';
+import { Moon, Sun, Monitor, Bookmark } from 'lucide-react';
 import WalletStatusChip from '@/components/common/WalletStatusChip';
 import NotificationBell from '@/components/common/NotificationBell';
 import MarketplaceHeaderSearch from '@/components/common/MarketplaceHeaderSearch';
@@ -7,6 +7,7 @@ import { useProfileStore } from '@/hooks/useProfileStore';
 import { useTheme } from '@/hooks/useTheme';
 import { Link } from 'react-router';
 import BatchBuyModal from '@/components/common/BatchBuyModal';
+import { useConnectedWallet, useWatchlist } from '@/hooks/useWatchlist';
 
 const navLinks = [
 	{ label: 'Marketplace', href: '/marketplace', external: false },
@@ -19,6 +20,8 @@ export default function Header() {
 	const [batchOpen, setBatchOpen] = useState(false);
 	const profile = useProfileStore(state => state.profile);
 	const { theme, toggleTheme } = useTheme();
+	const walletKey = useConnectedWallet(state => state.walletKey);
+	const watchlistCount = useWatchlist(state => state.getWatchlistCount(walletKey));
 
 	useEffect(() => {
 		const onScroll = () => {
@@ -50,7 +53,9 @@ export default function Header() {
 					</span>
 				</Link>
 
-				{/* Nav */}
+				{/* Nav — hidden on mobile (< 768px) because MobileBottomNav handles
+				    primary navigation on small viewports.  `md:flex` keeps it
+				    visible on tablet and desktop. */}
 				<nav className="hidden items-center gap-8 md:flex shrink-0">
 					{navLinks.map(link =>
 						link.external ? (
@@ -73,6 +78,22 @@ export default function Header() {
 							</Link>
 						)
 					)}
+					<Link
+						to="/watchlist"
+						className={`relative inline-flex items-center gap-1.5 font-jakarta text-sm transition-colors duration-300 ${scrolled ? 'text-gray-500 hover:text-gray-900' : 'text-white/45 hover:text-white/80'}`}
+						aria-label={`Watchlist, ${watchlistCount} saved ${watchlistCount === 1 ? 'key' : 'keys'}`}
+					>
+						<Bookmark className="size-4 text-amber-400/80" aria-hidden="true" />
+						Watchlist
+						{watchlistCount > 0 && (
+							<span
+								data-testid="header-watchlist-badge"
+								className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[0.65rem] font-bold text-slate-950"
+							>
+								{watchlistCount}
+							</span>
+						)}
+					</Link>
 				</nav>
 
 				{/* Marketplace Header Search */}

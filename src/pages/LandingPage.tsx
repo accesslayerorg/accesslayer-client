@@ -216,36 +216,6 @@ const CREATOR_REFRESH_SHORTCUT_DURATION_MS = 1800;
 const getFetchRetryHelperCopy = (attempt: number, maxAttempts: number) =>
 	`We couldn't load live creators yet. Retrying automatically (attempt ${attempt} of ${maxAttempts}).`;
 
-const isEditableShortcutTarget = (target: EventTarget | null) => {
-	if (!(target instanceof Element)) return false;
-
-	let element: Element | null = target;
-	while (element) {
-		if (
-			element.matches('input, textarea, select, [role="textbox"]') ||
-			(element instanceof HTMLElement && element.isContentEditable)
-		) {
-			return true;
-		}
-		element = element.parentElement;
-	}
-
-	return false;
-};
-
-const isCreatorRefreshShortcut = (event: KeyboardEvent) =>
-	(event.ctrlKey || event.metaKey) &&
-	event.altKey &&
-	!event.shiftKey &&
-	event.key.toLowerCase() === 'r';
-
-const isTradeShortcut = (event: KeyboardEvent) =>
-	!event.ctrlKey &&
-	!event.metaKey &&
-	!event.altKey &&
-	!event.shiftKey &&
-	event.key.toLowerCase() === 't';
-
 const toPriceFilterValue = (value: string) => {
 	if (!value.trim()) return undefined;
 	const parsed = Number(value);
@@ -327,6 +297,7 @@ function LandingPage() {
 	const [isPriceRefreshing, setIsPriceRefreshing] = useState(false);
 	const [showShortcutConfirmation, setShowShortcutConfirmation] =
 		useState(false);
+	const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
 	const [page, setPage] = useState(() => {
 		if (typeof window === 'undefined') return 0;
 		const saved = window.sessionStorage.getItem(CREATOR_PAGE_KEY);
@@ -760,26 +731,6 @@ function LandingPage() {
 		}, CREATOR_REFRESH_SHORTCUT_DURATION_MS);
 	}, []);
 
-	useEffect(() => {
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (
-				event.defaultPrevented ||
-				event.repeat ||
-				!isCreatorRefreshShortcut(event) ||
-				isEditableShortcutTarget(event.target)
-			) {
-				return;
-			}
-
-			event.preventDefault();
-			handleRetryCreatorFetch();
-			showCreatorRefreshShortcutConfirmation();
-		};
-
-		window.addEventListener('keydown', handleKeyDown);
-		return () => window.removeEventListener('keydown', handleKeyDown);
-	}, [handleRetryCreatorFetch, showCreatorRefreshShortcutConfirmation]);
-
 	// Stale-data detection (#301). 60s freshness window; when we cross it,
 	// the hook fires a background refresh exactly once until the next
 	// successful fetch resets the baseline.
@@ -917,13 +868,47 @@ function LandingPage() {
 				return;
 			}
 
-			event.preventDefault();
-			openTradeDialog('buy');
-		};
+	// Toggle shortcuts help dialog
+	const toggleShortcutsHelp = useCallback(() => {
+		setShortcutsHelpOpen(prev => !prev);
+	}, []);
 
-		window.addEventListener('keydown', handleTradeShortcut);
-		return () => window.removeEventListener('keydown', handleTradeShortcut);
-	}, [openTradeDialog]);
+	// Focus search bar via keyboard shortcut
+	const handleFocusSearch = useCallback(() => {
+		const searchInput = document.querySelector(
+			'[data-testid="search-bar-input"]'
+		) as HTMLInputElement | null;
+		searchInput?.focus();
+		searchInput?.select();
+	}, []);
+
+	// Switch profile tabs via keyboard shortcut
+	const handleTabShortcut = useCallback((tab: string) => {
+		setActiveProfileTab(tab);
+	}, []);
+
+	// Navigate to portfolio page via keyboard shortcut
+	const handleNavigateToPortfolio = useCallback(() => {
+		window.location.assign('/profile');
+	}, []);
+
+	// Centralised keyboard-shortcut manager for power trading
+	useTradeKeyboardShortcuts({
+		tradeDialogOpen,
+		onOpenTradeDialog: openTradeDialog,
+		onConfirmTrade: handleConfirmTradeViaShortcut,
+		isSubmitting: tradeSubmitting,
+		isFormValid: !tradeSubmitting,
+		helpOpen: shortcutsHelpOpen,
+		onToggleHelp: toggleShortcutsHelp,
+		onRefreshCreators: () => {
+			handleRetryCreatorFetch();
+			showCreatorRefreshShortcutConfirmation();
+		},
+		onTabChange: handleTabShortcut,
+		onFocusSearch: handleFocusSearch,
+		onNavigateToPortfolio: handleNavigateToPortfolio,
+	});
 
 	const handleCopyStellarAddress = async () => {
 		try {
@@ -1990,12 +1975,20 @@ function LandingPage() {
 					keyPriceStroops={resolveCreatorKeyPriceStroops(featuredCreator)}
 					protocolFeeBps={250}
 					creatorFeeBps={250}
+					createdAtLedger={featuredCreator?.createdAtLedger}
+					currentLedger={featuredCreator?.currentLedger}
+					launchPenaltyBps={featuredCreator?.launchPenaltyBps}
 					maxBuyQuantity={featuredCreator?.maxBuyQuantity ?? null}
 					isSubmitting={tradeSubmitting}
 					onOpenChange={setTradeDialogOpen}
 					onConfirm={handleConfirmTrade}
 				/>
 			</TradePanelErrorBoundary>
+			<TradeShortcutHints open={tradeDialogOpen} side={tradeSide} />
+			<KeyboardShortcutsHelp
+				open={shortcutsHelpOpen}
+				onOpenChange={setShortcutsHelpOpen}
+			/>
 			<ScrollToTop />
 			<IdleRefreshPrompt
 				visible={isIdlePromptVisible}

@@ -415,6 +415,41 @@ export function useReinvestDividendMutation(address: string) {
 	return mutation;
 }
 
+export interface ClaimStakeVariables {
+	/** The staked key being claimed, passed to the contract as `key_id`. */
+	keyId: string | number;
+}
+
+/**
+ * Claims a key's staked balance once its lock period has expired.
+ *
+ * #815 — used by `StakingPanel`'s Claim button. The on-chain wiring isn't in
+ * the client yet, so this simulates signing latency and resolves; in
+ * production it submits the `claim_stake` contract function with the
+ * holder's `key_id` (`variables.keyId`).
+ */
+export function useClaimStakeMutation(address: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['claim-stake', address],
+		mutationFn: async (variables: ClaimStakeVariables) => {
+			void variables;
+			await new Promise<void>(resolve => window.setTimeout(resolve, 900));
+			return { success: true as const };
+		},
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.wallet.holdings(address),
+			});
+			showToast.success('Stake claimed');
+		},
+	});
+}
+
 export interface RedeemDeprecatedKeyVariables {
 	/** The deprecated creator key being redeemed. */
 	creatorId: string;

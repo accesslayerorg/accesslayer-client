@@ -25,6 +25,8 @@ export const queryKeys = {
 			['creators', creatorId, 'holders'] as const,
 		activity: (creatorId: string) =>
 			['creators', creatorId, 'activity'] as const,
+		twap: (creatorId: string) =>
+			['creators', creatorId, 'twap', '24h'] as const,
 	},
 	wallet: {
 		holdings: (address: string) => ['wallet', address, 'holdings'] as const,
@@ -42,5 +44,11 @@ export const queryKeys = {
 	},
 	admin: {
 		oracleCallers: () => ['admin', 'oracle', 'callers'] as const,
+	},
+	governance: {
+		all: () => ['governance'] as const,
+		proposals: (creatorId?: string) =>
+			['governance', 'proposals', creatorId ?? null] as const,
+		proposal: (id: string) => ['governance', 'proposal', id] as const,
 	},
 } as const;

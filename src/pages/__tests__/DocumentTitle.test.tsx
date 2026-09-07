@@ -13,6 +13,9 @@ vi.mock('@/components/home/Hero', () => ({
 vi.mock('@/components/home/CreatorSpotlight', () => ({
 	default: () => <section>Creator Spotlight</section>,
 }));
+vi.mock('@/components/home/MarketOverview', () => ({
+	default: () => <section>Market Overview</section>,
+}));
 vi.mock('@/components/home/TrendingLeaderboard', () => ({
 	default: () => <section>Trending Leaderboard</section>,
 }));
@@ -24,6 +27,9 @@ vi.mock('@/components/home/FAQ', () => ({
 }));
 vi.mock('@/components/home/Footer', () => ({
 	default: () => <footer>Footer</footer>,
+}));
+vi.mock('@/components/common/ConnectWalletCtaBanner', () => ({
+	default: () => null,
 }));
 vi.mock('@/components/common/ReferralLinkPanel', () => ({
 	default: () => <div>Referral Link Panel</div>,

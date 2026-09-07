@@ -1,6 +1,7 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router';
 import { useAccount } from 'wagmi';
+import { useConnectedWallet } from '@/hooks/useWatchlist';
 import type { Course } from '@/services/course.service';
 import { cn } from '@/lib/utils';
 import {
@@ -55,12 +56,14 @@ import { env } from '@/utils/env.utils';
 import MiniStatChip from '@/components/common/MiniStatChip';
 import Change24hBadge from '@/components/common/Change24hBadge';
 import KeySupplyBadge from '@/components/common/KeySupplyBadge';
+import NewKeyBadge from '@/components/common/NewKeyBadge';
 import CreatorListRowDivider from '@/components/common/CreatorListRowDivider';
 import BuyActionHelperText from '@/components/common/BuyActionHelperText';
 import NetworkFeeHint from '@/components/common/NetworkFeeHint';
 import CreatorBio from '@/components/common/CreatorBio';
 import CreatorDropCountdown from '@/components/common/CreatorDropCountdown';
 import CreatorHandleHoverCard from '@/components/common/CreatorHandleHoverCard';
+import WatchlistButton from '@/components/common/WatchlistButton';
 import { CREATOR_CARD_MEDIA_RADIUS_CLASS } from '@/utils/creatorCardTokens';
 
 interface CreatorCardProps {
@@ -98,7 +101,11 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 		change24h: creator.change24h,
 	});
 	const priceChartDescriptionId = `creator-price-chart-description-${creator.id}`;
-	const { isConnected } = useAccount();
+	const { isConnected, address } = useAccount();
+	const setConnectedWalletKey = useConnectedWallet(state => state.setWalletKey);
+	useEffect(() => {
+		setConnectedWalletKey(address);
+	}, [address, setConnectedWalletKey]);
 	const { isMismatch: isNetworkMismatch, expectedChainName } =
 		useNetworkMismatch();
 	const [transactionState, setTransactionState] = useState<
@@ -238,7 +245,13 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 				className
 			)}
 		>
-			<div className="absolute right-3 top-3 z-20">
+			<div className="absolute right-3 top-3 z-20 flex items-center gap-2">
+				<WatchlistButton
+					creator={creator}
+					size="sm"
+					labelName={displayCreatorName}
+					className="shadow-lg shadow-black/20"
+				/>
 				<DropdownMenu>
 					<DropdownMenuTrigger
 						aria-label={`More actions for ${displayCreatorName}`}
@@ -286,6 +299,10 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 				role="img"
 				aria-labelledby={`creator-name-${creator.id}`}
 			>
+				<NewKeyBadge
+					createdAt={creator.createdAt}
+					className="creator-card-overlay-text absolute left-3 top-3 z-10"
+				/>
 				<CreatorInitialsAvatar
 					name={displayCreatorName}
 					creatorId={creator.id}
@@ -333,6 +350,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 					<Change24hBadge change={creator.change24h} />
 					<KeySupplyBadge supply={creator.creatorShareSupply} />
 					{isRecentlyActive && <RecentActivityBadge />}
+					<NewKeyBadge createdAt={creator.createdAt} />
 				</div>
 				<p className="marketplace-label-muted font-jakarta text-sm">
 					<CreatorHandleHoverCard

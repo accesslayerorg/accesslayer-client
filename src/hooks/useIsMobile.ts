@@ -10,11 +10,12 @@ const MOBILE_MEDIA_QUERY = `(max-width: ${MOBILE_BREAKPOINT_PX - 1}px)`;
  */
 export function useIsMobile(): boolean {
 	const [isMobile, setIsMobile] = useState(() => {
-		if (typeof window === 'undefined') return false;
+		if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
 		return window.matchMedia(MOBILE_MEDIA_QUERY).matches;
 	});
 
 	useEffect(() => {
+		if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
 		const media = window.matchMedia(MOBILE_MEDIA_QUERY);
 		const onChange = (event: MediaQueryListEvent) => {
 			setIsMobile(event.matches);
