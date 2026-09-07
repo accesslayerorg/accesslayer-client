@@ -213,6 +213,48 @@
 		height: 1rem;
 	}
 
+	/* Quorum threshold slider on the creator dashboard governance tab (#828).
+	 * The filled track is painted inline via a linear-gradient background;
+	 * these rules only shape the track and thumb. */
+	.quorum-slider {
+		-webkit-appearance: none;
+		appearance: none;
+		height: 0.375rem;
+		border-radius: 9999px;
+		outline: none;
+	}
+
+	.quorum-slider:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.quorum-slider::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 1.125rem;
+		height: 1.125rem;
+		border-radius: 9999px;
+		background: var(--chart-4);
+		border: 2px solid rgba(255, 255, 255, 0.9);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+		cursor: pointer;
+	}
+
+	.quorum-slider::-moz-range-thumb {
+		width: 1.125rem;
+		height: 1.125rem;
+		border-radius: 9999px;
+		background: var(--chart-4);
+		border: 2px solid rgba(255, 255, 255, 0.9);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+		cursor: pointer;
+	}
+
+	.quorum-slider:focus-visible {
+		box-shadow: 0 0 0 3px var(--ring);
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.skeleton-shimmer {
 			animation: none;

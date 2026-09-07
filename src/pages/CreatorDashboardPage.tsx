@@ -6,12 +6,14 @@ import CreatorMetadataForm from '@/components/common/CreatorMetadataForm';
 import AuctionSetupPanel from '@/components/common/AuctionSetupPanel';
 import LaunchPenaltyPanel from '@/components/common/LaunchPenaltyPanel';
 import MaxBuyQuantityPanel from '@/components/common/MaxBuyQuantityPanel';
+import QuorumSettingsPanel from '@/components/common/QuorumSettingsPanel';
 import {
 	useCancelAuctionMutation,
 	useConfigureAuctionMutation,
 	useUpdateMetadataMutation,
 	useSetLaunchPenaltyMutation,
 	useSetMaxBuyQuantityMutation,
+	useSetQuorumBpsMutation,
 } from '@/hooks/useCreatorContractActions';
 import { formatDisplayKeyPrice, resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
 import { formatNumber } from '@/utils/numberFormat.utils';
@@ -19,6 +21,7 @@ import { formatNumber } from '@/utils/numberFormat.utils';
 const TABS = [
 	{ label: 'Overview', value: 'overview' },
 	{ label: 'Settings', value: 'settings' },
+	{ label: 'Governance', value: 'governance' },
 ];
 
 const CARD_CLASS =
@@ -40,6 +43,7 @@ export default function CreatorDashboardPage() {
 	const cancelAuction = useCancelAuctionMutation(id);
 	const setLaunchPenalty = useSetLaunchPenaltyMutation(id);
 	const setMaxBuyQuantity = useSetMaxBuyQuantityMutation(id);
+	const setQuorumBps = useSetQuorumBpsMutation(id);
 
 	const setTab = (value: string) => {
 		setSearchParams(
@@ -195,6 +199,31 @@ export default function CreatorDashboardPage() {
 								maxBuyQuantity={creator.maxBuyQuantity}
 								isSubmitting={setMaxBuyQuantity.isPending}
 								onSubmit={value => setMaxBuyQuantity.mutate(value)}
+							/>
+						</section>
+					</div>
+				)}
+
+				{activeTab === 'governance' && (
+					<div
+						className="space-y-8"
+						id="profile-panel-governance"
+						role="tabpanel"
+						aria-labelledby="profile-tab-governance"
+						data-testid="dashboard-governance-panel"
+					>
+						<section className={CARD_CLASS} data-testid="quorum-settings-section">
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Quorum Settings
+							</h2>
+							<p className="mb-6 text-sm text-white/50">
+								Set the minimum percentage of holders that must participate
+								in a vote for a proposal to pass.
+							</p>
+							<QuorumSettingsPanel
+								quorumBps={creator.quorumBps}
+								isSubmitting={setQuorumBps.isPending}
+								onSubmit={quorumBps => setQuorumBps.mutate(quorumBps)}
 							/>
 						</section>
 					</div>

@@ -1,12 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
+import { cacheManager } from '@/utils/cache.utils';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 import type { CreatorMetadataChange } from '@/utils/creatorMetadata.utils';
 
 /**
- * Creator-facing contract calls issued from the dashboard settings tab
- * (`update_metadata` — #818, `configure_auction` / `cancel_auction` — #816).
+ * Creator-facing contract calls issued from the dashboard tabs
+ * (`update_metadata` — #818, `configure_auction` / `cancel_auction` — #816,
+ * `set_launch_penalty`, `set_max_buy_quantity`, `set_quorum_bps` — #828).
  *
  * The on-chain wiring is not in the client yet, so each mutation simulates
  * signing latency and resolves. On success the creator detail query is
@@ -119,6 +121,28 @@ export function useSetMaxBuyQuantityMutation(creatorId: string) {
 				queryKey: queryKeys.creators.detail(creatorId),
 			});
 			showToast.success('Max buy quantity updated');
+		},
+	});
+}
+
+export function useSetQuorumBpsMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'set_quorum_bps', creatorId],
+		mutationFn: (quorumBps: number) =>
+			submitContractCall('set_quorum_bps', { creatorId, quorumBps }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			// Drop the 30s course cache entry so the refetch below returns the
+			// freshly committed quorum and the slider reflects it immediately.
+			cacheManager.invalidate(`course_${creatorId}`);
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Quorum threshold updated');
 		},
 	});
 }
