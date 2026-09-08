@@ -13,6 +13,7 @@ import { formatNumber } from '@/utils/numberFormat.utils';
 import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import { estimateRedeemValue, type RedeemEstimate } from '@/utils/keyDeprecation.utils';
 import type { CreatorKeyPriceFields } from '@/utils/keyPriceDisplay.utils';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
 
 export interface RedeemKeyDialogProps {
 	open: boolean;
@@ -112,7 +113,10 @@ const RedeemKeyDialog: React.FC<RedeemKeyDialogProps> = ({
 						<span className="text-white/60">Redemption value</span>
 						<span className="font-semibold text-amber-300/90 tabular-nums">
 							{estimate
-								? formatDisplayKeyPrice(estimate.totalValueStroops)
+								? `${formatNumber(estimate.totalValueStroops / STROOPS_PER_XLM, {
+										minimumFractionDigits: 2,
+										maximumFractionDigits: 2,
+									})} XLM`
 								: 'Unavailable'}
 						</span>
 					</div>

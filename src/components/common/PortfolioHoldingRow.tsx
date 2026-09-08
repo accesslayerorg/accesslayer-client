@@ -19,6 +19,8 @@ export interface PortfolioHoldingRowProps {
 	creator?: Course;
 	onBuy?: (creatorId: string) => void;
 	onSell?: (creatorId: string) => void;
+	onReinvest?: (creatorId: string) => Promise<void> | void;
+	onRedeem?: (creatorId: string) => Promise<void> | void;
 	onFreeze?: (position: HeldKeyPosition) => void;
 	onUnfreeze?: (position: HeldKeyPosition) => void;
 	onTransfer?: (creatorId: string) => void;
@@ -34,6 +36,8 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	creator,
 	onBuy,
 	onSell,
+	onReinvest,
+	onRedeem,
 	onFreeze,
 	onUnfreeze,
 	onTransfer,
@@ -45,10 +49,21 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 }) => {
 	const initialRemaining = computeRemainingLockupSeconds(position.last_buy_timestamp);
 	const [isLocked, setIsLocked] = useState(initialRemaining > 0);
+	const [reinvestOpen, setReinvestOpen] = useState(false);
+	const [redeemOpen, setRedeemOpen] = useState(false);
 	const [isExpanded, setIsExpanded] = useState(false);
 	const frozenQuantity = position.frozenQuantity ?? 0;
 	const liquidQuantity = position.liquidQuantity ?? position.quantity ?? 0;
 	const isLiquidEmpty = liquidQuantity <= 0;
+	const hasDividends = hasUnclaimedDividend(position.unclaimedDividend);
+	const keyPriceStroops = resolveCreatorKeyPriceStroops(position);
+	const deprecated = isKeyDeprecated(creator);
+
+	const handleConfirmReinvest = async () => {
+		if (!onReinvest) return;
+		await onReinvest(position.creatorId);
+		setReinvestOpen(false);
+	};
 
 	const handleConfirmRedeem = async () => {
 		if (!onRedeem) return;
@@ -70,6 +85,7 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 					<span className="truncate text-sm font-bold text-white">
 						{creator?.title ?? 'Unknown creator'}
 					</span>
+					{deprecated && <DeprecationNotice reason={creator?.deprecationReason} />}
 					{position.pending && (
 						<span className="inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
 							<span className="size-2.5 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
@@ -108,40 +124,56 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 				)}
 
 				<div className="flex items-center gap-2">
-					{onReinvest && hasDividends && (
-						<Button
-							size="sm"
-							variant="outline"
-							className="rounded-xl"
-							onClick={() => setReinvestOpen(true)}
-							disabled={isNetworkMismatch || isSubmitting || isReinvesting}
-							data-testid="holding-reinvest-button"
-						>
-							Reinvest
-						</Button>
-					)}
-					{onBuy && (
-						<Button
-							size="sm"
-							className="rounded-xl"
-							onClick={() => onBuy(position.creatorId)}
-							disabled={isNetworkMismatch || isSubmitting}
-							data-testid="holding-buy-button"
-						>
-							Buy
-						</Button>
-					)}
-					{onSell && (
-						<Button
-							size="sm"
-							variant="outline"
-							className="rounded-xl"
-							onClick={() => onSell(position.creatorId)}
-							disabled={isLocked || isLiquidEmpty || isNetworkMismatch || isSubmitting}
-							data-testid="holding-sell-button"
-						>
-							Sell
-						</Button>
+					{deprecated ? (
+						onRedeem && (
+							<Button
+								size="sm"
+								className="rounded-xl"
+								onClick={() => setRedeemOpen(true)}
+								disabled={isNetworkMismatch || isSubmitting || isRedeeming}
+								data-testid="holding-redeem-button"
+							>
+								Redeem
+							</Button>
+						)
+					) : (
+						<>
+							{onReinvest && hasDividends && (
+								<Button
+									size="sm"
+									variant="outline"
+									className="rounded-xl"
+									onClick={() => setReinvestOpen(true)}
+									disabled={isNetworkMismatch || isSubmitting || isReinvesting}
+									data-testid="holding-reinvest-button"
+								>
+									Reinvest
+								</Button>
+							)}
+							{onBuy && (
+								<Button
+									size="sm"
+									className="rounded-xl"
+									onClick={() => onBuy(position.creatorId)}
+									disabled={isNetworkMismatch || isSubmitting}
+									data-testid="holding-buy-button"
+								>
+									Buy
+								</Button>
+							)}
+							{onSell && (
+								<Button
+									size="sm"
+									variant="outline"
+									className="rounded-xl"
+									onClick={() => onSell(position.creatorId)}
+									disabled={isLocked || isLiquidEmpty || isNetworkMismatch || isSubmitting}
+									data-testid="holding-sell-button"
+								>
+									Sell
+								</Button>
+							)}
+						</>
 					)}
 				</div>
 			</div>

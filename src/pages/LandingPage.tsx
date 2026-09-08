@@ -51,6 +51,8 @@ import {
 	useSelfFreezeMutation,
 	useTradeMutation,
 	useWalletHoldings,
+	useReinvestDividendMutation,
+	useRedeemDeprecatedKeyMutation,
 	type SelfFreezeAction,
 } from '@/hooks/useWallet';
 import showToast from '@/utils/toast.util';
@@ -62,6 +64,9 @@ import {
 	formatPortfolioValueDisplay,
 	getPortfolioValueHelperText,
 	sortHoldingsByTotalValue,
+	calculatePnLSummary,
+	formatPnLDisplay,
+	formatPnLPercentage,
 	type HeldKeyPosition,
 } from '@/utils/portfolioValue.utils';
 import PrecisionModeToggle, {
@@ -80,9 +85,11 @@ import {
 } from '@/utils/cardEntryAnimation.utils';
 import {
 	resolveCreatorKeyPriceStroops,
-	formatDisplayKeyPrice,
 } from '@/utils/keyPriceDisplay.utils';
 import { estimateReinvest } from '@/utils/reinvestDividend.utils';
+import { useTradeKeyboardShortcuts } from '@/hooks/useTradeKeyboardShortcuts';
+import KeyboardShortcutsHelp from '@/components/common/KeyboardShortcutsHelp';
+import TradeShortcutHints from '@/components/common/TradeShortcutHints';
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -761,6 +768,8 @@ function LandingPage() {
 
 	const tradeMutation = useTradeMutation(activeWalletAddress);
 	const selfFreezeMutation = useSelfFreezeMutation(activeWalletAddress);
+	const reinvestMutation = useReinvestDividendMutation(activeWalletAddress);
+	const redeemMutation = useRedeemDeprecatedKeyMutation(activeWalletAddress);
 	const { data: cachedHoldings = [] } = useWalletHoldings(activeWalletAddress);
 
 	// Merged: keep total-value sorting (feature/holdings-sorting-tests) while
@@ -830,6 +839,13 @@ function LandingPage() {
 		setTradeDialogOpen(true);
 	}, []);
 
+	const handleConfirmTradeViaShortcut = useCallback(() => {
+		const confirmButton = document.querySelector(
+			'[data-testid="trade-dialog-confirm"]'
+		) as HTMLButtonElement | null;
+		confirmButton?.click();
+	}, []);
+
 	const openSelfFreezeDialog = useCallback(
 		(action: SelfFreezeAction, position: HeldKeyPosition) => {
 			setSelfFreezeDialog({ action, position });
@@ -855,18 +871,6 @@ function LandingPage() {
 			// The mutation reports the signing error and restores its optimistic cache.
 		}
 	};
-
-	// Issue 554: T key opens the trade panel from the creator profile page.
-	useEffect(() => {
-		const handleTradeShortcut = (event: KeyboardEvent) => {
-			if (
-				event.defaultPrevented ||
-				event.repeat ||
-				!isTradeShortcut(event) ||
-				isEditableShortcutTarget(event.target)
-			) {
-				return;
-			}
 
 	// Toggle shortcuts help dialog
 	const toggleShortcutsHelp = useCallback(() => {
@@ -1608,6 +1612,33 @@ function LandingPage() {
 												creator={creator}
 												onBuy={() => openTradeDialog('buy')}
 												onSell={() => openTradeDialog('sell')}
+														onReinvest={async creatorId => {
+															const heldPosition = heldKeyPositions.find(
+																item => item.creatorId === creatorId
+															);
+															const estimate = estimateReinvest(
+																heldPosition?.unclaimedDividend ?? 0,
+																resolveCreatorKeyPriceStroops(heldPosition ?? {})
+															);
+															if (!estimate) {
+																showToast.error(
+																	'Reinvest estimate unavailable. Please refresh prices and try again.'
+																);
+																return;
+															}
+															await reinvestMutation.mutateAsync({
+																keyId: creatorId,
+																amount: heldPosition?.unclaimedDividend ?? 0,
+																keys: estimate.wholeKeys,
+															});
+													}}
+													onRedeem={async creatorId => {
+													await redeemMutation.mutateAsync({
+															creatorId,
+															quantity:
+																heldKeyPositions.find(item => item.creatorId === creatorId)?.quantity ?? 0,
+													});
+												}}
 														onFreeze={position => openSelfFreezeDialog('freeze', position)}
 														onUnfreeze={position => openSelfFreezeDialog('unfreeze', position)}
 												isSubmitting={tradeSubmitting}
