@@ -5,6 +5,7 @@ import {
 	TrendingUp,
 	UserPlus,
 	Key,
+	BellRing,
 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { cn } from '@/lib/utils';
@@ -69,6 +70,21 @@ function renderNotificationIcon(type: NotificationType) {
 				/>
 			);
 		case 'price_milestone':
+			return (
+				<TrendingUp
+					className="size-4 shrink-0 text-amber-400"
+					data-testid="icon-price_milestone"
+					aria-hidden="true"
+				/>
+			);
+		case 'price_alert':
+			return (
+				<BellRing
+					className="size-4 shrink-0 text-emerald-400"
+					data-testid="icon-price_alert"
+					aria-hidden="true"
+				/>
+			);
 		default:
 			return (
 				<Bell
@@ -152,7 +168,10 @@ export function NotificationBell({
 				<DropdownMenuSeparator className="bg-white/10" />
 
 				{isLoading && (
-					<div data-testid="notification-loading" className="space-y-2 p-2">
+					<div
+						data-testid="notification-loading"
+						className="space-y-2 p-2"
+					>
 						{Array.from({ length: 3 }).map((_, i) => (
 							<div
 								key={i}
