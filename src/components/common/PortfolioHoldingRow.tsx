@@ -21,6 +21,10 @@ export interface PortfolioHoldingRowProps {
 	onSell?: (creatorId: string) => void;
 	onReinvest?: (creatorId: string) => Promise<void> | void;
 	onRedeem?: (creatorId: string) => Promise<void> | void;
+	onFreeze?: (position: HeldKeyPosition) => void;
+	onUnfreeze?: (position: HeldKeyPosition) => void;
+	onTransfer?: (creatorId: string) => void;
+	onBurn?: (creatorId: string) => void;
 	isSubmitting?: boolean;
 	isReinvesting?: boolean;
 	isRedeeming?: boolean;
@@ -34,6 +38,10 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	onSell,
 	onReinvest,
 	onRedeem,
+	onFreeze,
+	onUnfreeze,
+	onTransfer,
+	onBurn,
 	isSubmitting = false,
 	isReinvesting = false,
 	isRedeeming = false,
@@ -43,7 +51,10 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	const [isLocked, setIsLocked] = useState(initialRemaining > 0);
 	const [reinvestOpen, setReinvestOpen] = useState(false);
 	const [redeemOpen, setRedeemOpen] = useState(false);
-
+	const [isExpanded, setIsExpanded] = useState(false);
+	const frozenQuantity = position.frozenQuantity ?? 0;
+	const liquidQuantity = position.liquidQuantity ?? position.quantity ?? 0;
+	const isLiquidEmpty = liquidQuantity <= 0;
 	const hasDividends = hasUnclaimedDividend(position.unclaimedDividend);
 	const keyPriceStroops = resolveCreatorKeyPriceStroops(position);
 	const deprecated = isKeyDeprecated(creator);
@@ -70,20 +81,18 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 			data-testid="portfolio-holding-row"
 		>
 			<div className="min-w-0 flex-1">
-				<div className="flex items-center gap-2">
+				<button type="button" className="flex items-center gap-2 text-left" onClick={() => setIsExpanded(value => !value)} aria-expanded={isExpanded} data-testid="holding-expand-button">
 					<span className="truncate text-sm font-bold text-white">
 						{creator?.title ?? 'Unknown creator'}
 					</span>
+					{deprecated && <DeprecationNotice reason={creator?.deprecationReason} />}
 					{position.pending && (
 						<span className="inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
 							<span className="size-2.5 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
 							Pending
 						</span>
 					)}
-					{deprecated && (
-						<DeprecationNotice reason={creator?.deprecationReason} />
-					)}
-				</div>
+				</button>
 				<div className="mt-1 text-xs text-white/55">
 					{formatNumber(position.quantity)} keys ·{' '}
 					{position.isPriceLoading
@@ -158,7 +167,7 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 									variant="outline"
 									className="rounded-xl"
 									onClick={() => onSell(position.creatorId)}
-									disabled={isLocked || isNetworkMismatch || isSubmitting}
+									disabled={isLocked || isLiquidEmpty || isNetworkMismatch || isSubmitting}
 									data-testid="holding-sell-button"
 								>
 									Sell
@@ -168,6 +177,25 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 					)}
 				</div>
 			</div>
+			{isExpanded && (
+				<div className="basis-full border-t border-white/10 pt-4" data-testid="self-freeze-section">
+					<div className="flex flex-wrap items-end justify-between gap-4">
+						<div>
+							<h3 className="text-sm font-bold text-white">Self-freeze</h3>
+							<dl className="mt-2 flex gap-5 text-xs text-white/55">
+								<div><dt>Frozen</dt><dd className="font-semibold text-white">{formatNumber(frozenQuantity)} keys</dd></div>
+								<div><dt>Liquid</dt><dd className="font-semibold text-white">{formatNumber(liquidQuantity)} keys</dd></div>
+							</dl>
+						</div>
+						<div className="flex flex-wrap gap-2">
+							{onFreeze && <Button size="sm" variant="outline" onClick={() => onFreeze(position)} disabled={isLiquidEmpty || isSubmitting} data-testid="holding-freeze-button">Freeze</Button>}
+							{onUnfreeze && <Button size="sm" variant="outline" onClick={() => onUnfreeze(position)} disabled={frozenQuantity <= 0 || isSubmitting} data-testid="holding-unfreeze-button">Unfreeze</Button>}
+							{onTransfer && <Button size="sm" variant="outline" onClick={() => onTransfer(position.creatorId)} disabled={isLiquidEmpty || isSubmitting} data-testid="holding-transfer-button">Transfer</Button>}
+							{onBurn && <Button size="sm" variant="outline" onClick={() => onBurn(position.creatorId)} disabled={isLiquidEmpty || isSubmitting} data-testid="holding-burn-button">Burn</Button>}
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 
 		{onReinvest && hasDividends && position.unclaimedDividend != null && (
