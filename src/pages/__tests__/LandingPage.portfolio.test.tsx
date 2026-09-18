@@ -38,6 +38,15 @@ vi.mock('gsap', () => ({
 	},
 }));
 
+vi.mock('wagmi', async importOriginal => {
+	const actual = await importOriginal<typeof import('wagmi')>();
+	return {
+		...actual,
+		useAccount: vi.fn(() => ({ address: undefined, isConnected: false })),
+		useChainId: vi.fn(() => 1),
+	};
+});
+
 const createMockCourse = (
 	id: string,
 	priceStroops: number | null,
