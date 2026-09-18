@@ -827,17 +827,27 @@ function LandingPage() {
 		return heldKeyPositions
 			.filter(position => (position.quantity ?? 0) > 0)
 			.map(position => {
+				const creator = creators.find(c => c.id === position.creatorId);
 				const priceStroops = resolveCreatorKeyPriceStroops(position) ?? 0;
+				const posAny = position as unknown as Record<string, unknown>;
+				const name =
+					creator?.title ||
+					(typeof posAny.name === 'string' ? posAny.name : '') ||
+					position.creatorId ||
+					'Creator';
+				const handle =
+					creator?.socialHandle ||
+					(typeof posAny.handle === 'string' ? posAny.handle : undefined);
 				return {
-					name: position.name || position.handle || 'Creator',
-					handle: position.handle,
+					name,
+					handle,
 					quantity: position.quantity ?? 0,
 					valueStroops: priceStroops * (position.quantity ?? 0),
 				};
 			})
 			.sort((a, b) => b.valueStroops - a.valueStroops)
 			.slice(0, 3);
-	}, [heldKeyPositions]);
+	}, [heldKeyPositions, creators]);
 	const displayedPortfolioValue = isLoading
 		? {
 				...portfolioValue,
