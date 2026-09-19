@@ -72,6 +72,8 @@ import {
 import PrecisionModeToggle, {
 	type PrecisionMode,
 } from '@/components/common/PrecisionModeToggle';
+import SharePortfolioModal from '@/components/common/SharePortfolioModal';
+import { Share2 } from 'lucide-react';
 import ScrollToTop from '@/components/common/ScrollToTop';
 import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 import StaleDataWarning from '@/components/common/StaleDataWarning';
@@ -820,6 +822,32 @@ function LandingPage() {
 		() => calculatePnLSummary(heldKeyPositions),
 		[heldKeyPositions]
 	);
+	const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+	const topHoldings = useMemo(() => {
+		return heldKeyPositions
+			.filter(position => (position.quantity ?? 0) > 0)
+			.map(position => {
+				const creator = creators.find(c => c.id === position.creatorId);
+				const priceStroops = resolveCreatorKeyPriceStroops(position) ?? 0;
+				const posAny = position as unknown as Record<string, unknown>;
+				const name =
+					creator?.title ||
+					(typeof posAny.name === 'string' ? posAny.name : '') ||
+					position.creatorId ||
+					'Creator';
+				const handle =
+					creator?.socialHandle ||
+					(typeof posAny.handle === 'string' ? posAny.handle : undefined);
+				return {
+					name,
+					handle,
+					quantity: position.quantity ?? 0,
+					valueStroops: priceStroops * (position.quantity ?? 0),
+				};
+			})
+			.sort((a, b) => b.valueStroops - a.valueStroops)
+			.slice(0, 3);
+	}, [heldKeyPositions, creators]);
 	const displayedPortfolioValue = isLoading
 		? {
 				...portfolioValue,
@@ -1546,45 +1574,66 @@ function LandingPage() {
 									data-testid="pnl-summary-card"
 									className="mt-4 rounded-xl border border-white/10 bg-slate-950/30 px-4 py-3"
 								>
-									<div className="flex items-center gap-6 text-sm">
-										<div>
-											<span className="text-white/45">
-												Total Invested
-											</span>
-											<span className="ml-2 font-grotesque font-bold text-white">
-												{formatPnLDisplay(pnlSummary.totalInvested)}
-											</span>
+									<div className="flex flex-wrap items-center justify-between gap-4 text-sm">
+										<div className="flex flex-wrap items-center gap-6">
+											<div>
+												<span className="text-white/45">
+													Total Invested
+												</span>
+												<span className="ml-2 font-grotesque font-bold text-white">
+													{formatPnLDisplay(pnlSummary.totalInvested)}
+												</span>
+											</div>
+											<div>
+												<span className="text-white/45">
+													Current Value
+												</span>
+												<span className="ml-2 font-grotesque font-bold text-white">
+													{formatPnLDisplay(pnlSummary.currentValue)}
+												</span>
+											</div>
+											<div>
+												<span className="text-white/45">
+													Unrealised PnL
+												</span>
+												<span
+													className={`ml-2 font-grotesque font-bold ${
+														pnlSummary.unrealisedPnL > 0
+															? 'text-emerald-400'
+															: pnlSummary.unrealisedPnL < 0
+																? 'text-red-400'
+																: 'text-white'
+													}`}
+												>
+													{formatPnLDisplay(pnlSummary.unrealisedPnL)}{' '}
+													(
+													{formatPnLPercentage(
+														pnlSummary.pnlPercentage
+													)}
+													)
+												</span>
+											</div>
 										</div>
-										<div>
-											<span className="text-white/45">
-												Current Value
-											</span>
-											<span className="ml-2 font-grotesque font-bold text-white">
-												{formatPnLDisplay(pnlSummary.currentValue)}
-											</span>
-										</div>
-										<div>
-											<span className="text-white/45">
-												Unrealised PnL
-											</span>
-											<span
-												className={`ml-2 font-grotesque font-bold ${
-													pnlSummary.unrealisedPnL > 0
-														? 'text-emerald-400'
-														: pnlSummary.unrealisedPnL < 0
-															? 'text-red-400'
-															: 'text-white'
-												}`}
-											>
-												{formatPnLDisplay(pnlSummary.unrealisedPnL)}{' '}
-												(
-												{formatPnLPercentage(
-													pnlSummary.pnlPercentage
-												)}
-												)
-											</span>
-										</div>
+										<Button
+											type="button"
+											data-testid="share-performance-button"
+											onClick={() => setIsShareModalOpen(true)}
+											className="inline-flex items-center gap-1.5 rounded-lg border border-sky-500/20 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-400 hover:bg-sky-500/20 hover:text-sky-300"
+										>
+											<Share2 className="w-3.5 h-3.5" />
+											Share Performance
+										</Button>
 									</div>
+									<SharePortfolioModal
+										open={isShareModalOpen}
+										onOpenChange={setIsShareModalOpen}
+										walletAddress={activeWalletAddress}
+										totalInvested={pnlSummary.totalInvested}
+										currentValue={pnlSummary.currentValue}
+										unrealisedPnL={pnlSummary.unrealisedPnL}
+										pnlPercentage={pnlSummary.pnlPercentage}
+										topHoldings={topHoldings}
+									/>
 								</div>
 							)}
 						{isLoading ? (
