@@ -8,7 +8,8 @@ export type NotificationType =
 	| 'price_moved'
 	| 'new_follower'
 	| 'key_purchase'
-	| 'price_milestone';
+	| 'price_milestone'
+	| 'price_alert';
 
 /** A single notification entry returned from the API. */
 export interface Notification {
