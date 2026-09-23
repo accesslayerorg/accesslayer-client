@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import SlippageToleranceSelector from '@/components/common/SlippageToleranceSelector';
+import SlippageToleranceSelector from '../SlippageToleranceSelector';
 
 describe('SlippageToleranceSelector', () => {
 	function renderSelector(
