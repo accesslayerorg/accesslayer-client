@@ -38,6 +38,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useKeyTwap } from '@/hooks/useKeyTwap';
 import Skeleton from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 function CreatorDetailPageContent() {
 	usePurchaseConfetti();
@@ -80,6 +81,21 @@ function CreatorDetailPageContent() {
 	const { holders, hasNextPage, isFetchingNextPage, fetchNextPage } =
 		useKeyHolders(id || '');
 
+	const [selectedTwapWindow, setSelectedTwapWindow] = useState<'1h' | '24h'>(
+		'24h'
+	);
+	const { data: twap1h, isLoading: isTwap1hLoading } = useKeyTwap(
+		id || '',
+		'1h'
+	);
+	const { data: twap24h, isLoading: isTwap24hLoading } = useKeyTwap(
+		id || '',
+		'24h'
+	);
+	const activeTwap = selectedTwapWindow === '1h' ? twap1h : twap24h;
+	const isTwapLoading =
+		selectedTwapWindow === '1h' ? isTwap1hLoading : isTwap24hLoading;
+
 	// User holdings for Share to X button
 	const profile = useProfileStore(state => state.profile);
 	const userAddress = profile?.id;
@@ -91,7 +107,6 @@ function CreatorDetailPageContent() {
 	// return a per-user one. Only shown for authenticated users.
 	const nextBuyAllowedAt =
 		userPosition?.nextBuyAllowedAt ?? creator?.nextBuyAllowedAt ?? null;
-	const { data: twap, isLoading: isTwapLoading } = useKeyTwap(id || '');
 
 	// Track stale data indicator
 	const { shouldShowBadge, handleRefetch } = useCreatorProfileStaleIndicator(
@@ -340,6 +355,51 @@ function CreatorDetailPageContent() {
 								</span>
 							)}
 						</div>
+						{isTwapLoading ? (
+							<div
+								aria-label="Loading TWAP"
+								role="status"
+								className="mt-2"
+							>
+								<Skeleton className="h-3 w-24" />
+								<Skeleton className="mt-2 h-6 w-32" />
+							</div>
+						) : twapPrice != null ? (
+							<div className="text-right">
+								<div className="mt-1 text-xl font-bold text-white">
+									{formatDisplayKeyPrice(twapPrice)}
+								</div>
+								{twapDelta != null && (
+									<span
+										className={
+											twapDelta < 0
+												? 'text-sm font-semibold text-emerald-400'
+												: 'text-sm font-semibold text-rose-400'
+										}
+									>
+										{twapDelta < 0 ? '▼' : '▲'}{' '}
+										{formatDisplayKeyPrice(Math.abs(twapDelta))} vs
+										spot
+									</span>
+								)}
+								{twapDeviationPercent != null && (
+									<div
+										className={
+											twapDeviationPercent < 0
+												? 'mt-1 text-xs text-emerald-300'
+												: 'mt-1 text-xs text-rose-300'
+										}
+									>
+										{twapDeviationPercent >= 0 ? '+' : ''}
+										{twapDeviationPercent.toFixed(2)}% from spot
+									</div>
+								)}
+							</div>
+						) : (
+							<div className="text-right text-sm text-white/45">
+								TWAP unavailable
+							</div>
+						)}
 					</div>
 				) : null}
 				{/* Staking Rewards */}
@@ -355,6 +415,10 @@ function CreatorDetailPageContent() {
 					<BondingCurveChart
 						data={chartData}
 						currentSupply={creator.creatorShareSupply ?? 100}
+						twapPriceXLM={twapPriceXLM}
+						twapLabel={
+							selectedTwapWindow === '1h' ? '1H TWAP' : '24H TWAP'
+						}
 						height={300}
 					/>
 				</div>

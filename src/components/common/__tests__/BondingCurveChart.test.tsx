@@ -1,11 +1,14 @@
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { BondingCurveChart, type BondingCurveDataPoint } from '../BondingCurveChart';
+import {
+	BondingCurveChart,
+	type BondingCurveDataPoint,
+} from '../BondingCurveChart';
 import * as recharts from 'recharts';
 
 // Mock Recharts library to inspect parameters and test data shapes
-vi.mock('recharts', async (importOriginal) => {
+vi.mock('recharts', async importOriginal => {
 	const original = await importOriginal<typeof import('recharts')>();
 	return {
 		...original,
@@ -19,7 +22,11 @@ vi.mock('recharts', async (importOriginal) => {
 				width?: string | number;
 				height?: string | number;
 			}) => (
-				<div data-testid="responsive-container" data-width={width} data-height={height}>
+				<div
+					data-testid="responsive-container"
+					data-width={width}
+					data-height={height}
+				>
 					{children}
 				</div>
 			)
@@ -34,7 +41,10 @@ vi.mock('recharts', async (importOriginal) => {
 				data?: unknown;
 				'data-testid'?: string;
 			}) => (
-				<div data-testid={testId || 'line-chart'} data-data-shape={JSON.stringify(data)}>
+				<div
+					data-testid={testId || 'line-chart'}
+					data-data-shape={JSON.stringify(data)}
+				>
 					{children}
 				</div>
 			)
@@ -57,9 +67,13 @@ vi.mock('recharts', async (importOriginal) => {
 			)
 		),
 		YAxis: vi.fn(
-			({ dataKey, 'data-testid': testId }: { dataKey?: string; 'data-testid'?: string }) => (
-				<div data-testid={testId || 'y-axis'} data-datakey={dataKey} />
-			)
+			({
+				dataKey,
+				'data-testid': testId,
+			}: {
+				dataKey?: string;
+				'data-testid'?: string;
+			}) => <div data-testid={testId || 'y-axis'} data-datakey={dataKey} />
 		),
 		Tooltip: vi.fn(() => <div data-testid="tooltip" />),
 		CartesianGrid: vi.fn(() => <div data-testid="cartesian-grid" />),
@@ -138,7 +152,9 @@ describe('BondingCurveChart', () => {
 		];
 		const currentSupply = 25;
 
-		render(<BondingCurveChart data={sampleData} currentSupply={currentSupply} />);
+		render(
+			<BondingCurveChart data={sampleData} currentSupply={currentSupply} />
+		);
 
 		const chartElement = screen.getByTestId('bonding-curve-chart');
 		expect(chartElement).toHaveAttribute('data-xaxis-max', '25');
@@ -165,6 +181,28 @@ describe('BondingCurveChart', () => {
 		expect(referenceDot).toHaveClass('highlight');
 		expect(referenceDot).toHaveAttribute('data-x', '2');
 		expect(referenceDot).toHaveAttribute('data-y', '1.1');
+	});
+
+	it('renders a TWAP overlay line when a twap price is supplied', () => {
+		const sampleData: BondingCurveDataPoint[] = [
+			{ supply: 10, priceXLM: 1.5 },
+			{ supply: 20, priceXLM: 2.0, isCurrent: true },
+		];
+
+		render(
+			<BondingCurveChart
+				data={sampleData}
+				currentSupply={20}
+				twapPriceXLM={1.75}
+			/>
+		);
+
+		const lineCalls = vi
+			.mocked(recharts.Line)
+			.mock.calls.map(([props]) => props);
+		expect(lineCalls.some(props => props?.dataKey === 'twapPriceXLM')).toBe(
+			true
+		);
 	});
 
 	it('mocks the chart library and asserts it is called with the correct data shape', () => {
