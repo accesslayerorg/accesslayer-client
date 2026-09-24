@@ -27,6 +27,8 @@ export const queryKeys = {
 			['creators', creatorId, 'activity'] as const,
 		twap: (creatorId: string) =>
 			['creators', creatorId, 'twap', '24h'] as const,
+		auctionBids: (creatorId: string) =>
+			['creators', creatorId, 'auction-bids'] as const,
 		curveConfig: (creatorId: string) =>
 			['creators', creatorId, 'curve-config'] as const,
 	},
