@@ -35,6 +35,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useKeyTwap } from '@/hooks/useKeyTwap';
 import Skeleton from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 function CreatorDetailPageContent() {
 	usePurchaseConfetti();
@@ -77,6 +78,21 @@ function CreatorDetailPageContent() {
 	const { holders, hasNextPage, isFetchingNextPage, fetchNextPage } =
 		useKeyHolders(id || '');
 
+	const [selectedTwapWindow, setSelectedTwapWindow] = useState<'1h' | '24h'>(
+		'24h'
+	);
+	const { data: twap1h, isLoading: isTwap1hLoading } = useKeyTwap(
+		id || '',
+		'1h'
+	);
+	const { data: twap24h, isLoading: isTwap24hLoading } = useKeyTwap(
+		id || '',
+		'24h'
+	);
+	const activeTwap = selectedTwapWindow === '1h' ? twap1h : twap24h;
+	const isTwapLoading =
+		selectedTwapWindow === '1h' ? isTwap1hLoading : isTwap24hLoading;
+
 	// User holdings for Share to X button
 	const profile = useProfileStore(state => state.profile);
 	const userAddress = profile?.id;
@@ -88,7 +104,6 @@ function CreatorDetailPageContent() {
 	// return a per-user one. Only shown for authenticated users.
 	const nextBuyAllowedAt =
 		userPosition?.nextBuyAllowedAt ?? creator?.nextBuyAllowedAt ?? null;
-	const { data: twap, isLoading: isTwapLoading } = useKeyTwap(id || '');
 
 	// Track stale data indicator
 	const { shouldShowBadge, handleRefetch } = useCreatorProfileStaleIndicator(
@@ -173,8 +188,16 @@ function CreatorDetailPageContent() {
 		priceXLM: priceStroops / 10_000_000,
 	}));
 	const spotPrice = resolveCreatorKeyPriceStroops(creator);
-	const twapPrice = twap?.priceStroops ?? null;
-	const twapDelta = twapPrice != null && spotPrice != null ? twapPrice - spotPrice : null;
+	const twapPrice = activeTwap?.priceStroops ?? null;
+	const twapPriceXLM = twapPrice != null ? twapPrice / 10_000_000 : null;
+	const twapDelta =
+		twapPrice != null && spotPrice != null ? twapPrice - spotPrice : null;
+	const twapDeviationPercent =
+		twapPriceXLM != null && spotPrice != null && spotPrice !== 0
+			? ((twapPriceXLM - spotPrice / 10_000_000) /
+					(spotPrice / 10_000_000)) *
+				100
+			: null;
 
 	const hasRealStakingData =
 		creator.stakingPoolBalance != null ||
@@ -203,7 +226,6 @@ function CreatorDetailPageContent() {
 					parentHref="/"
 					currentLabel={`${creator.title} Profile`}
 				/>
-
 				<div className="flex items-start gap-3">
 					<div className="min-w-0 flex-1">
 						<CreatorProfileHeader
@@ -216,7 +238,10 @@ function CreatorDetailPageContent() {
 							priceStroops={resolveCreatorKeyPriceStroops(creator)}
 							showBackButton={hasMounted}
 							onBack={() => {
-								if (window.history.length > 1 && location.key !== 'default') {
+								if (
+									window.history.length > 1 &&
+									location.key !== 'default'
+								) {
 									navigate(-1);
 									return;
 								}
@@ -230,17 +255,14 @@ function CreatorDetailPageContent() {
 						className="mt-3 shrink-0"
 					/>
 				</div>
-
 				{/* 4 Stat Cards */}
 				<div data-testid="creator-stat-cards">
 					<CreatorProfileStatRow items={statItems} />
 				</div>
-
 				{/* Buy Cooldown Countdown (only meaningful for authenticated users) */}
 				{userAddress && (
 					<BuyCooldownCountdown nextBuyAllowedAt={nextBuyAllowedAt} />
 				)}
-
 				{/* Share to X Button (only visible for authenticated holders) */}
 				<div className="flex justify-end">
 					<ShareTwitterButton
@@ -253,31 +275,103 @@ function CreatorDetailPageContent() {
 						userHoldingsCount={holdingsCount}
 					/>
 				</div>
-
-				{isTwapLoading ? (
-					<div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4" data-testid="twap-price">
-						<div aria-label="Loading 24 hour TWAP" role="status"><Skeleton className="h-3 w-24" /><Skeleton className="mt-2 h-6 w-32" /></div>
-					</div>
-				) : twapPrice != null ? (
-					<div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4" data-testid="twap-price">
-						<div className="flex items-center justify-between gap-4">
-							<div>
-								<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/55">
-									<span className={twapDelta != null ? (twapDelta < 0 ? 'text-emerald-400' : 'text-rose-400') : ''}>TWAP (24h)</span>
-									<Tooltip content="Time-weighted average price over the past 24 hours. Less sensitive to short-term manipulation.">
-										<button type="button" aria-label="What is 24 hour TWAP?" className="text-white/50">ⓘ</button>
-									</Tooltip>
-								</div>
-								<div className="mt-1 text-xl font-bold text-white">{formatDisplayKeyPrice(twapPrice)}</div>
+				<div
+					className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4"
+					data-testid="twap-price"
+				>
+					<div className="flex items-center justify-between gap-4">
+						<div>
+							<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/55">
+								<Tooltip content="Time-weighted average price over the selected window. Less sensitive to short-term manipulation.">
+									<button
+										type="button"
+										aria-label="What is TWAP?"
+										className="text-white/50"
+									>
+										ⓘ
+									</button>
+								</Tooltip>
+								<span
+									className={
+										twapDelta != null
+											? twapDelta < 0
+												? 'text-emerald-400'
+												: 'text-rose-400'
+											: ''
+									}
+								>
+									TWAP ({selectedTwapWindow === '1h' ? '1h' : '24h'})
+								</span>
 							</div>
-							{twapDelta != null && <span className={twapDelta < 0 ? 'text-sm font-semibold text-emerald-400' : 'text-sm font-semibold text-rose-400'}>{twapDelta < 0 ? '▼' : '▲'} {formatDisplayKeyPrice(Math.abs(twapDelta))} vs spot</span>}
+							<div className="mt-2 flex items-center gap-3">
+								<div className="inline-flex rounded-full border border-white/10 bg-white/[0.02] p-1">
+									{(['1h', '24h'] as const).map(window => (
+										<button
+											key={window}
+											type="button"
+											onClick={() => setSelectedTwapWindow(window)}
+											className={cn(
+												'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
+												selectedTwapWindow === window
+													? 'bg-emerald-500 text-slate-950'
+													: 'text-white/60 hover:text-white'
+											)}
+										>
+											{window === '1h' ? '1H' : '24H'}
+										</button>
+									))}
+								</div>
+							</div>
 						</div>
+						{isTwapLoading ? (
+							<div
+								aria-label="Loading TWAP"
+								role="status"
+								className="mt-2"
+							>
+								<Skeleton className="h-3 w-24" />
+								<Skeleton className="mt-2 h-6 w-32" />
+							</div>
+						) : twapPrice != null ? (
+							<div className="text-right">
+								<div className="mt-1 text-xl font-bold text-white">
+									{formatDisplayKeyPrice(twapPrice)}
+								</div>
+								{twapDelta != null && (
+									<span
+										className={
+											twapDelta < 0
+												? 'text-sm font-semibold text-emerald-400'
+												: 'text-sm font-semibold text-rose-400'
+										}
+									>
+										{twapDelta < 0 ? '▼' : '▲'}{' '}
+										{formatDisplayKeyPrice(Math.abs(twapDelta))} vs
+										spot
+									</span>
+								)}
+								{twapDeviationPercent != null && (
+									<div
+										className={
+											twapDeviationPercent < 0
+												? 'mt-1 text-xs text-emerald-300'
+												: 'mt-1 text-xs text-rose-300'
+										}
+									>
+										{twapDeviationPercent >= 0 ? '+' : ''}
+										{twapDeviationPercent.toFixed(2)}% from spot
+									</div>
+								)}
+							</div>
+						) : (
+							<div className="text-right text-sm text-white/45">
+								TWAP unavailable
+							</div>
+						)}
 					</div>
-				) : null}
-
+				</div>
 				{/* Staking Rewards */}
 				<StakingRewardsSection {...stakingStats} isLoading={isLoading} />
-
 				{/* Price Chart */}
 				<div
 					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
@@ -289,17 +383,19 @@ function CreatorDetailPageContent() {
 					<BondingCurveChart
 						data={chartData}
 						currentSupply={creator.creatorShareSupply ?? 100}
+						twapPriceXLM={twapPriceXLM}
+						twapLabel={
+							selectedTwapWindow === '1h' ? '1H TWAP' : '24H TWAP'
+						}
 						height={300}
 					/>
 				</div>
-
 				{/* Buy Simulation Tool */}
 				<KeySimulationTool
 					currentSupply={creator.creatorShareSupply ?? 100}
 					protocolFeeBps={creator.protocolFeeBps}
 					creatorFeeBps={creator.creatorFeeBps}
 				/>
-
 				{/* Holder Concentration */}
 				<div
 					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
@@ -313,7 +409,6 @@ function CreatorDetailPageContent() {
 						totalSupply={creator.creatorShareSupply}
 					/>
 				</div>
-
 				{/* Fee Structure */}
 				<div className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8">
 					<div className="flex items-center justify-between gap-4 mb-6">
@@ -328,15 +423,14 @@ function CreatorDetailPageContent() {
 					</div>
 					<CreatorProfileInfoGrid items={feeItems} />
 				</div>
-
-				{/* Co-Creator Section */}					<CoCreatorSection
-						courseId={creator.id}
-						coCreatorAddress={creator.coCreatorAddress}
-						coCreatorSplitBps={creator.coCreatorSplitBps}
-						totalPaidToCoCreator={creator.totalPaidToCoCreator}
-						totalPaidToCreator={creator.totalPaidToCreator}
-					/>
-
+				{/* Co-Creator Section */}{' '}
+				<CoCreatorSection
+					courseId={creator.id}
+					coCreatorAddress={creator.coCreatorAddress}
+					coCreatorSplitBps={creator.coCreatorSplitBps}
+					totalPaidToCoCreator={creator.totalPaidToCoCreator}
+					totalPaidToCreator={creator.totalPaidToCreator}
+				/>
 				{/* Activity Feed */}
 				<div className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8">
 					<h2 className="font-grotesque text-xl font-black tracking-tight text-white mb-6">
