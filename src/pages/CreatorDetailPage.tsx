@@ -15,6 +15,9 @@ import BuyCooldownCountdown from '@/components/common/BuyCooldownCountdown';
 import KeyHolderList from '@/components/common/KeyHolderList';
 import HolderConcentrationChart from '@/components/common/HolderConcentrationChart';
 import StakingRewardsSection from '@/components/common/StakingRewardsSection';
+import DeprecationNotice from '@/components/common/DeprecationNotice';
+import { isKeyDeprecated } from '@/utils/keyDeprecation.utils';
+import { Button } from '@/components/ui/button';
 import { CreatorDashboardSkeleton } from '@/components/common/CreatorSkeleton';
 import { bpsToPercent, formatNumber } from '@/utils/numberFormat.utils';
 import {
@@ -188,16 +191,9 @@ function CreatorDetailPageContent() {
 		priceXLM: priceStroops / 10_000_000,
 	}));
 	const spotPrice = resolveCreatorKeyPriceStroops(creator);
-	const twapPrice = activeTwap?.priceStroops ?? null;
-	const twapPriceXLM = twapPrice != null ? twapPrice / 10_000_000 : null;
+	const twapPrice = twap?.priceStroops ?? null;
 	const twapDelta =
 		twapPrice != null && spotPrice != null ? twapPrice - spotPrice : null;
-	const twapDeviationPercent =
-		twapPriceXLM != null && spotPrice != null && spotPrice !== 0
-			? ((twapPriceXLM - spotPrice / 10_000_000) /
-					(spotPrice / 10_000_000)) *
-				100
-			: null;
 
 	const hasRealStakingData =
 		creator.stakingPoolBalance != null ||
@@ -259,6 +255,34 @@ function CreatorDetailPageContent() {
 				<div data-testid="creator-stat-cards">
 					<CreatorProfileStatRow items={statItems} />
 				</div>
+				{/* Deprecation Notice and Buy Action on Key Detail Page */}
+				{isKeyDeprecated(creator) && (
+					<div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4">
+						<DeprecationNotice reason={creator.deprecationReason} />
+					</div>
+				)}
+				<div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4">
+					<div>
+						<p className="text-xs font-semibold uppercase tracking-wider text-white/55">
+							Key Purchase
+						</p>
+						<p className="mt-0.5 text-sm text-white/80">
+							{isKeyDeprecated(creator)
+								? 'Key is deprecated. New buys are disabled.'
+								: 'Purchase keys for this creator.'}
+						</p>
+					</div>
+					<Button
+						disabled={isKeyDeprecated(creator)}
+						data-testid="key-detail-buy-button"
+						variant={isKeyDeprecated(creator) ? 'outline' : 'default'}
+						className="rounded-xl font-bold"
+					>
+						{isKeyDeprecated(creator)
+							? 'Buy Disabled (Deprecated)'
+							: 'Buy Key'}
+					</Button>
+				</div>
 				{/* Buy Cooldown Countdown (only meaningful for authenticated users) */}
 				{userAddress && (
 					<BuyCooldownCountdown nextBuyAllowedAt={nextBuyAllowedAt} />
@@ -275,53 +299,61 @@ function CreatorDetailPageContent() {
 						userHoldingsCount={holdingsCount}
 					/>
 				</div>
-				<div
-					className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4"
-					data-testid="twap-price"
-				>
-					<div className="flex items-center justify-between gap-4">
-						<div>
-							<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/55">
-								<Tooltip content="Time-weighted average price over the selected window. Less sensitive to short-term manipulation.">
-									<button
-										type="button"
-										aria-label="What is TWAP?"
-										className="text-white/50"
+				{isTwapLoading ? (
+					<div
+						className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4"
+						data-testid="twap-price"
+					>
+						<div aria-label="Loading 24 hour TWAP" role="status">
+							<Skeleton className="h-3 w-24" />
+							<Skeleton className="mt-2 h-6 w-32" />
+						</div>
+					</div>
+				) : twapPrice != null ? (
+					<div
+						className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4"
+						data-testid="twap-price"
+					>
+						<div className="flex items-center justify-between gap-4">
+							<div>
+								<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/55">
+									<span
+										className={
+											twapDelta != null
+												? twapDelta < 0
+													? 'text-emerald-400'
+													: 'text-rose-400'
+												: ''
+										}
 									>
-										ⓘ
-									</button>
-								</Tooltip>
-								<span
-									className={
-										twapDelta != null
-											? twapDelta < 0
-												? 'text-emerald-400'
-												: 'text-rose-400'
-											: ''
-									}
-								>
-									TWAP ({selectedTwapWindow === '1h' ? '1h' : '24h'})
-								</span>
-							</div>
-							<div className="mt-2 flex items-center gap-3">
-								<div className="inline-flex rounded-full border border-white/10 bg-white/[0.02] p-1">
-									{(['1h', '24h'] as const).map(window => (
+										TWAP (24h)
+									</span>
+									<Tooltip content="Time-weighted average price over the past 24 hours. Less sensitive to short-term manipulation.">
 										<button
-											key={window}
 											type="button"
-											onClick={() => setSelectedTwapWindow(window)}
-											className={cn(
-												'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
-												selectedTwapWindow === window
-													? 'bg-emerald-500 text-slate-950'
-													: 'text-white/60 hover:text-white'
-											)}
+											aria-label="What is 24 hour TWAP?"
+											className="text-white/50"
 										>
-											{window === '1h' ? '1H' : '24H'}
+											ⓘ
 										</button>
-									))}
+									</Tooltip>
+								</div>
+								<div className="mt-1 text-xl font-bold text-white">
+									{formatDisplayKeyPrice(twapPrice)}
 								</div>
 							</div>
+							{twapDelta != null && (
+								<span
+									className={
+										twapDelta < 0
+											? 'text-sm font-semibold text-emerald-400'
+											: 'text-sm font-semibold text-rose-400'
+									}
+								>
+									{twapDelta < 0 ? '▼' : '▲'}{' '}
+									{formatDisplayKeyPrice(Math.abs(twapDelta))} vs spot
+								</span>
+							)}
 						</div>
 						{isTwapLoading ? (
 							<div
@@ -369,7 +401,7 @@ function CreatorDetailPageContent() {
 							</div>
 						)}
 					</div>
-				</div>
+				) : null}
 				{/* Staking Rewards */}
 				<StakingRewardsSection {...stakingStats} isLoading={isLoading} />
 				{/* Price Chart */}

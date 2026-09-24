@@ -57,4 +57,8 @@ export const queryKeys = {
 			['governance', 'proposals', creatorId ?? null] as const,
 		proposal: (id: string) => ['governance', 'proposal', id] as const,
 	},
+	staker: {
+		protocolRevenue: (wallet: string) =>
+			['staker', wallet, 'protocol-revenue'] as const,
+	},
 } as const;

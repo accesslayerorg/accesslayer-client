@@ -24,7 +24,9 @@ async function submitContractCall(fn: string, args: unknown) {
 	// In production this signs and submits `fn` with `args` via the wallet.
 	void fn;
 	void args;
-	await new Promise<void>(resolve => window.setTimeout(resolve, SIGN_LATENCY_MS));
+	await new Promise<void>(resolve =>
+		window.setTimeout(resolve, SIGN_LATENCY_MS)
+	);
 	return { success: true as const };
 }
 
@@ -116,7 +118,10 @@ export function useSetMaxBuyQuantityMutation(creatorId: string) {
 	return useMutation({
 		mutationKey: ['contract', 'set_max_buy_quantity', creatorId],
 		mutationFn: (maxBuyQuantity: number) =>
-			submitContractCall('set_max_buy_quantity', { creatorId, maxBuyQuantity }),
+			submitContractCall('set_max_buy_quantity', {
+				creatorId,
+				maxBuyQuantity,
+			}),
 		onError: error => {
 			showToast.error(getSignatureErrorMessage(error));
 		},
@@ -179,7 +184,10 @@ export function useConfigureGraduatedCurveMutation(creatorId: string) {
 	return useMutation({
 		mutationKey: ['contract', 'configure_graduated_curve', creatorId],
 		mutationFn: (milestones: GraduatedCurveConfigInput) =>
-			submitContractCall('configure_graduated_curve', { creatorId, milestones }),
+			submitContractCall('configure_graduated_curve', {
+				creatorId,
+				milestones,
+			}),
 		onError: error => {
 			showToast.error(getSignatureErrorMessage(error));
 		},
@@ -188,6 +196,36 @@ export function useConfigureGraduatedCurveMutation(creatorId: string) {
 				queryKey: queryKeys.creators.detail(creatorId),
 			});
 			showToast.success('Graduated curve configured');
+		},
+	});
+}
+
+export interface DeprecateKeyInput {
+	buybackPrice: number;
+	totalEscrow: number;
+}
+
+export function useDeprecateKeyMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'deprecate_key', creatorId],
+		mutationFn: (input: DeprecateKeyInput) =>
+			submitContractCall('deprecate_key', { creatorId, ...input }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			cacheManager.invalidate(`course_${creatorId}`);
+			queryClient.setQueryData(
+				queryKeys.creators.detail(creatorId),
+				(old: Record<string, unknown> | undefined) =>
+					old ? { ...old, deprecated: true } : old
+			);
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Key deprecated successfully');
 		},
 	});
 }

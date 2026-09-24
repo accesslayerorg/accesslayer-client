@@ -9,6 +9,8 @@ import MaxBuyQuantityPanel from '@/components/common/MaxBuyQuantityPanel';
 import QuorumSettingsPanel from '@/components/common/QuorumSettingsPanel';
 import GraduatedCurvePanel from '@/components/common/GraduatedCurvePanel';
 import BuyCooldownPanel from '@/components/common/BuyCooldownPanel';
+import DeprecateKeyPanel from '@/components/common/DeprecateKeyPanel';
+import { AlertTriangle } from 'lucide-react';
 import {
 	useCancelAuctionMutation,
 	useConfigureAuctionMutation,
@@ -18,8 +20,12 @@ import {
 	useSetQuorumBpsMutation,
 	useConfigureGraduatedCurveMutation,
 	useSetBuyCooldownMutation,
+	useDeprecateKeyMutation,
 } from '@/hooks/useCreatorContractActions';
-import { formatDisplayKeyPrice, resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
+import {
+	formatDisplayKeyPrice,
+	resolveCreatorKeyPriceStroops,
+} from '@/utils/keyPriceDisplay.utils';
 import { formatNumber } from '@/utils/numberFormat.utils';
 
 import { GraduatedCurveMilestoneChart } from '@/components/common/GraduatedCurveMilestoneChart';
@@ -52,6 +58,7 @@ export default function CreatorDashboardPage() {
 	const setQuorumBps = useSetQuorumBpsMutation(id);
 	const configureGraduatedCurve = useConfigureGraduatedCurveMutation(id);
 	const setBuyCooldown = useSetBuyCooldownMutation(id);
+	const deprecateKey = useDeprecateKeyMutation(id);
 
 	const setTab = (value: string) => {
 		setSearchParams(
@@ -78,9 +85,15 @@ export default function CreatorDashboardPage() {
 		return (
 			<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
 				<div className="mx-auto max-w-5xl">
-					<h1 className="font-grotesque text-3xl font-black">Creator dashboard</h1>
-					<p className="mt-4 text-white/60" data-testid="creator-dashboard-error">
-						We couldn&apos;t load this creator&apos;s dashboard. Try again shortly.
+					<h1 className="font-grotesque text-3xl font-black">
+						Creator dashboard
+					</h1>
+					<p
+						className="mt-4 text-white/60"
+						data-testid="creator-dashboard-error"
+					>
+						We couldn&apos;t load this creator&apos;s dashboard. Try again
+						shortly.
 					</p>
 				</div>
 			</main>
@@ -99,7 +112,32 @@ export default function CreatorDashboardPage() {
 					</p>
 				</div>
 
-				<ProfileTabPillGroup tabs={TABS} activeTab={activeTab} onTabChange={setTab} />
+				{creator.deprecated && (
+					<div
+						className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 text-white"
+						data-testid="key-deprecated-banner"
+					>
+						<div className="flex items-center gap-3">
+							<AlertTriangle className="size-6 text-amber-400 shrink-0" />
+							<div>
+								<h2 className="font-grotesque text-xl font-bold text-amber-300">
+									Key deprecated
+								</h2>
+								<p className="mt-1 text-sm text-white/70">
+									This key has been deprecated. All new buys are
+									disabled and holders can redeem their keys for
+									escrowed buyback value.
+								</p>
+							</div>
+						</div>
+					</div>
+				)}
+
+				<ProfileTabPillGroup
+					tabs={TABS}
+					activeTab={activeTab}
+					onTabChange={setTab}
+				/>
 
 				{activeTab === 'overview' && (
 					<div className="space-y-8">
@@ -119,7 +157,9 @@ export default function CreatorDashboardPage() {
 										Current price
 									</dt>
 									<dd className="mt-1 font-jakarta font-bold">
-										{formatDisplayKeyPrice(resolveCreatorKeyPriceStroops(creator))}
+										{formatDisplayKeyPrice(
+											resolveCreatorKeyPriceStroops(creator)
+										)}
 									</dd>
 								</div>
 								<div>
@@ -134,7 +174,9 @@ export default function CreatorDashboardPage() {
 									<dt className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-white/40">
 										Category
 									</dt>
-									<dd className="mt-1 font-jakarta font-bold">{creator.category}</dd>
+									<dd className="mt-1 font-jakarta font-bold">
+										{creator.category}
+									</dd>
 								</div>
 							</dl>
 						</section>
@@ -154,62 +196,81 @@ export default function CreatorDashboardPage() {
 						aria-labelledby="profile-tab-settings"
 						data-testid="dashboard-settings-panel"
 					>
-						<section className={CARD_CLASS} data-testid="edit-profile-section">
+						<section
+							className={CARD_CLASS}
+							data-testid="edit-profile-section"
+						>
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
 								Edit Profile
 							</h2>
 							<p className="mb-6 text-sm text-white/50">
-								Update the display name, bio and avatar stored with your key.
+								Update the display name, bio and avatar stored with your
+								key.
 							</p>
 							<CreatorMetadataForm
 								initialName={creator.name ?? creator.title ?? ''}
 								initialBio={creator.bio ?? creator.description ?? ''}
-								initialAvatarUri={creator.avatarUri ?? creator.thumbnail ?? ''}
+								initialAvatarUri={
+									creator.avatarUri ?? creator.thumbnail ?? ''
+								}
 								isSubmitting={metadataMutation.isPending}
 								onSubmit={change => metadataMutation.mutate(change)}
 							/>
 						</section>
 
-						<section className={CARD_CLASS} data-testid="auction-setup-section">
+						<section
+							className={CARD_CLASS}
+							data-testid="auction-setup-section"
+						>
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
 								Auction Setup
 							</h2>
 							<p className="mb-6 text-sm text-white/50">
-								Set a fixed auction price and supply allocation before your key
-								goes live.
+								Set a fixed auction price and supply allocation before
+								your key goes live.
 							</p>
 							<AuctionSetupPanel
 								auctionPrice={creator.auctionPrice}
 								auctionSupply={creator.auctionSupply}
 								auctionSold={creator.auctionSold}
-								isSubmitting={configureAuction.isPending || cancelAuction.isPending}
+								isSubmitting={
+									configureAuction.isPending || cancelAuction.isPending
+								}
 								onConfigure={input => configureAuction.mutate(input)}
 								onCancel={() => cancelAuction.mutate()}
 							/>
 						</section>
 
-						<section className={CARD_CLASS} data-testid="launch-penalty-section">
+						<section
+							className={CARD_CLASS}
+							data-testid="launch-penalty-section"
+						>
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
 								Launch Penalty
 							</h2>
 							<p className="mb-6 text-sm text-white/50">
-								Charge early sellers a percentage fee during the first 7 days
-								after key creation.
+								Charge early sellers a percentage fee during the first 7
+								days after key creation.
 							</p>
 							<LaunchPenaltyPanel
 								launchPenaltyBps={creator.launchPenaltyBps}
 								isSubmitting={setLaunchPenalty.isPending}
-								onSubmit={penaltyBps => setLaunchPenalty.mutate(penaltyBps)}
+								onSubmit={penaltyBps =>
+									setLaunchPenalty.mutate(penaltyBps)
+								}
 							/>
 						</section>
 
-						<section className={CARD_CLASS} data-testid="buy-cooldown-section">
+						<section
+							className={CARD_CLASS}
+							data-testid="buy-cooldown-section"
+						>
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
 								Buy Cooldown
 							</h2>
 							<p className="mb-6 text-sm text-white/50">
-								Set a delay in minutes between consecutive buys from the same
-								wallet.
+								Set a delay in minutes between consecutive buys from the
+								same wallet.
 							</p>
 							<BuyCooldownPanel
 								buyCooldownLedgers={creator.buyCooldownLedgers}
@@ -220,12 +281,16 @@ export default function CreatorDashboardPage() {
 							/>
 						</section>
 
-						<section className={CARD_CLASS} data-testid="max-buy-quantity-section">
+						<section
+							className={CARD_CLASS}
+							data-testid="max-buy-quantity-section"
+						>
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
 								Max Buy Per Transaction
 							</h2>
 							<p className="mb-6 text-sm text-white/50">
-								Limit how many keys a wallet can buy in a single transaction.
+								Limit how many keys a wallet can buy in a single
+								transaction.
 							</p>
 							<MaxBuyQuantityPanel
 								maxBuyQuantity={creator.maxBuyQuantity}
@@ -234,16 +299,42 @@ export default function CreatorDashboardPage() {
 							/>
 						</section>
 
-						<section className={CARD_CLASS} data-testid="graduated-curve-section">
+						<section
+							className={CARD_CLASS}
+							data-testid="graduated-curve-section"
+						>
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
 								Graduated Curve
 							</h2>
 							<p className="mb-6 text-sm text-white/50">
-								Configure up to five supply milestones and the exponent applied to each tier.
+								Configure up to five supply milestones and the exponent
+								applied to each tier.
 							</p>
 							<GraduatedCurvePanel
 								isSubmitting={configureGraduatedCurve.isPending}
-								onSubmit={milestones => configureGraduatedCurve.mutate(milestones)}
+								onSubmit={milestones =>
+									configureGraduatedCurve.mutate(milestones)
+								}
+							/>
+						</section>
+
+						<section
+							className={CARD_CLASS}
+							data-testid="deprecate-key-section"
+						>
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Deprecate Key
+							</h2>
+							<p className="mb-6 text-sm text-white/50">
+								Initiate a key wind-down by setting a buyback price and
+								escrowing the required XLM.
+							</p>
+							<DeprecateKeyPanel
+								creatorId={id}
+								circulatingSupply={creator.creatorShareSupply ?? 100}
+								isDeprecated={creator.deprecated}
+								isSubmitting={deprecateKey.isPending}
+								onSubmit={params => deprecateKey.mutate(params)}
 							/>
 						</section>
 					</div>
@@ -257,13 +348,16 @@ export default function CreatorDashboardPage() {
 						aria-labelledby="profile-tab-governance"
 						data-testid="dashboard-governance-panel"
 					>
-						<section className={CARD_CLASS} data-testid="quorum-settings-section">
+						<section
+							className={CARD_CLASS}
+							data-testid="quorum-settings-section"
+						>
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
 								Quorum Settings
 							</h2>
 							<p className="mb-6 text-sm text-white/50">
-								Set the minimum percentage of holders that must participate
-								in a vote for a proposal to pass.
+								Set the minimum percentage of holders that must
+								participate in a vote for a proposal to pass.
 							</p>
 							<QuorumSettingsPanel
 								quorumBps={creator.quorumBps}
