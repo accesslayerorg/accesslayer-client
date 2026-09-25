@@ -52,6 +52,10 @@ import WalletConnectCalloutBanner from '@/components/common/WalletConnectCallout
 import NetworkMismatchBanner from '@/components/common/NetworkMismatchBanner';
 import CreatorSocialLinksList from '@/components/common/CreatorSocialLinksList';
 import TransactionStatusIcon from '@/components/common/TransactionStatusIcon';
+import {
+	useContractPausedStore,
+	selectIsPaused,
+} from '@/hooks/useContractPausedStore';
 import { buildStellarExpertTxUrl, truncateTxHash } from '@/constants/stellar';
 import { env } from '@/utils/env.utils';
 import MiniStatChip from '@/components/common/MiniStatChip';
@@ -111,6 +115,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 	}, [address, setConnectedWalletKey]);
 	const { isMismatch: isNetworkMismatch, expectedChainName } =
 		useNetworkMismatch();
+	const isPaused = useContractPausedStore(selectIsPaused);
 	const [transactionState, setTransactionState] = useState<
 		'idle' | 'submitting' | 'failed' | 'success'
 	>('idle');
@@ -219,6 +224,12 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 			}
 		}
 	};
+
+	const handleBuy = () => {
+		if (isPaused) {
+			toast.error('Trading is suspended: contract is paused');
+			return;
+		}
 
 	const handleBuy = useCallback(() => {
 		if (!isConnected) {
@@ -604,6 +615,8 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 					size="sm"
 					isPending={transactionState === 'submitting'}
 					pendingText="Processing..."
+					disabled={isNetworkMismatch || isPaused}
+					title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 					disabled={isNetworkMismatch || isKeyDeprecated(creator)}
 					className={cn(
 						'rounded-xl font-bold',
@@ -636,6 +649,8 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 				state={transactionState}
 				className="mt-4"
 				disabledReason={
+					isPaused
+						? 'Trading is currently suspended because the contract is paused.'
 					isKeyDeprecated(creator)
 						? 'This key has been deprecated and can no longer be bought.'
 						: isNetworkMismatch

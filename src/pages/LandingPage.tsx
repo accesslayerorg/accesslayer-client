@@ -45,6 +45,11 @@ import type { SlippageBounds } from '@/utils/slippageTolerance.utils';
 import TradePanelErrorBoundary from '@/components/common/TradePanelErrorBoundary';
 import NetworkMismatchBanner from '@/components/common/NetworkMismatchBanner';
 import StellarConnectionQualityBadge from '@/components/common/StellarConnectionQualityBadge';
+import AdminPauseControl from '@/components/common/AdminPauseControl';
+import {
+	useContractPausedStore,
+	selectIsPaused,
+} from '@/hooks/useContractPausedStore';
 import { useAccount } from 'wagmi';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
 import {
@@ -836,11 +841,25 @@ function LandingPage() {
 		displayedPortfolioValue
 	);
 
+	const isPaused = useContractPausedStore(selectIsPaused);
+
+	const openTradeDialog = (side: TradeSide) => {
+		if (isPaused) {
+			showToast.error('Trading is suspended: contract is paused');
+			return;
+		}
 	const openTradeDialog = useCallback((side: TradeSide) => {
 		setTradeSide(side);
 		setTradeDialogOpen(true);
 	}, []);
 
+	const handleConfirmTrade = async (amount: number) => {
+		if (isPaused) {
+			showToast.error('Trading is suspended: contract is paused');
+			return;
+		}
+		const previousHoldings = featuredHoldings;
+		setTradeSubmitting(true);
 	const handleConfirmTradeViaShortcut = useCallback(() => {
 		const confirmButton = document.querySelector(
 			'[data-testid="trade-dialog-confirm"]'
@@ -859,6 +878,16 @@ function LandingPage() {
 		if (!selfFreezeDialog) return;
 		const { action, position } = selfFreezeDialog;
 		try {
+			const actionVerb =
+				tradeSide === 'buy'
+					? 'buy'
+					: tradeSide === 'sell'
+						? 'sell'
+						: tradeSide === 'stake'
+							? 'stake'
+							: 'transfer';
+			showToast.loading(
+				`Submitting ${actionVerb} for ${amount} key${amount === 1 ? '' : 's'}...`
 			await selfFreezeMutation.mutateAsync({
 				creatorId: position.creatorId,
 				amount,
@@ -1047,8 +1076,9 @@ function LandingPage() {
 							<Button>Buy Access</Button>
 						</UnavailableAction>
 					</div>
-					<div className="mt-4 flex justify-center">
+					<div className="mt-4 flex flex-col items-center gap-3">
 						<StellarConnectionQualityBadge />
+						<AdminPauseControl className="w-full max-w-md mx-auto" />
 					</div>
 				</MarketplaceSection>
 
@@ -1891,8 +1921,9 @@ function LandingPage() {
 												className="rounded-xl"
 												onClick={() => openTradeDialog('buy')}
 												disabled={
-													isNetworkMismatch || tradeSubmitting
+													isNetworkMismatch || tradeSubmitting || isPaused
 												}
+												title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 											>
 												Buy
 											</Button>
@@ -1901,10 +1932,33 @@ function LandingPage() {
 												variant="outline"
 												onClick={() => openTradeDialog('sell')}
 												disabled={
-													isNetworkMismatch || tradeSubmitting
+													isNetworkMismatch || tradeSubmitting || isPaused
 												}
+												title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 											>
 												Sell
+											</Button>
+											<Button
+												className="rounded-xl"
+												variant="outline"
+												onClick={() => openTradeDialog('stake')}
+												disabled={
+													isNetworkMismatch || tradeSubmitting || isPaused
+												}
+												title={isPaused ? 'Trading suspended: contract is paused' : undefined}
+											>
+												Stake
+											</Button>
+											<Button
+												className="rounded-xl"
+												variant="outline"
+												onClick={() => openTradeDialog('transfer')}
+												disabled={
+													isNetworkMismatch || tradeSubmitting || isPaused
+												}
+												title={isPaused ? 'Trading suspended: contract is paused' : undefined}
+											>
+												Transfer
 											</Button>
 										</div>
 										{tradeSubmitting && (
@@ -1970,7 +2024,8 @@ function LandingPage() {
 											className="rounded-xl"
 											size="sm"
 											onClick={() => openTradeDialog('buy')}
-											disabled={isNetworkMismatch || tradeSubmitting}
+											disabled={isNetworkMismatch || tradeSubmitting || isPaused}
+											title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 										>
 											Buy
 										</Button>
@@ -1979,9 +2034,30 @@ function LandingPage() {
 											size="sm"
 											variant="outline"
 											onClick={() => openTradeDialog('sell')}
-											disabled={isNetworkMismatch || tradeSubmitting}
+											disabled={isNetworkMismatch || tradeSubmitting || isPaused}
+											title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 										>
 											Sell
+										</Button>
+										<Button
+											className="rounded-xl"
+											size="sm"
+											variant="outline"
+											onClick={() => openTradeDialog('stake')}
+											disabled={isNetworkMismatch || tradeSubmitting || isPaused}
+											title={isPaused ? 'Trading suspended: contract is paused' : undefined}
+										>
+											Stake
+										</Button>
+										<Button
+											className="rounded-xl"
+											size="sm"
+											variant="outline"
+											onClick={() => openTradeDialog('transfer')}
+											disabled={isNetworkMismatch || tradeSubmitting || isPaused}
+											title={isPaused ? 'Trading suspended: contract is paused' : undefined}
+										>
+											Transfer
 										</Button>
 									</div>
 									{tradeSubmitting && (
@@ -2008,6 +2084,16 @@ function LandingPage() {
 				</main>
 			</div>
 
+			<TradeDialog
+				open={tradeDialogOpen}
+				side={tradeSide}
+				creatorName="Alex Rivers"
+				creatorId={featuredCreator?.id ?? 'alex-rivers'}
+				availableHoldings={featuredHoldings}
+				keyPriceStroops={resolveCreatorKeyPriceStroops(featuredCreator)}
+				isSubmitting={tradeSubmitting}
+				onOpenChange={setTradeDialogOpen}
+				onConfirm={handleConfirmTrade}
 			<TradePanelErrorBoundary>
 				<TradeDialog
 					open={tradeDialogOpen}
