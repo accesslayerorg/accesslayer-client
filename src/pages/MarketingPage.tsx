@@ -1,11 +1,18 @@
 export default function MarketingPage() {
 	return (
 		<div className="relative min-h-screen overflow-hidden bg-[#04090f] text-white">
-			{/* Background glow */}
+			{/* Background pattern */}
 			<div className="pointer-events-none absolute inset-0">
-				<div className="absolute left-[-6rem] top-[8%] size-96 rounded-full bg-blue-600/10 blur-3xl" />
-				<div className="absolute bottom-[10%] right-[-4rem] size-80 rounded-full bg-blue-500/8 blur-3xl" />
-				<div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.07),transparent_50%)]" />
+				<div
+					className="absolute inset-0 opacity-[0.035]"
+					style={{
+						backgroundImage: `linear-gradient(rgba(99,179,237,0.6) 1px, transparent 1px),
+						linear-gradient(90deg, rgba(99,179,237,0.6) 1px, transparent 1px)`,
+						backgroundSize: '48px 48px',
+					}}
+				/>
+				<div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_0%,rgba(59,130,246,0.08),transparent)]" />
+				<div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_80%_at_100%_100%,rgba(29,78,216,0.06),transparent)]" />
 			</div>
 
 			<div className="relative z-10 mx-auto max-w-3xl px-6 pb-24 pt-36 sm:px-8">

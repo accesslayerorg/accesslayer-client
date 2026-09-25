@@ -5,6 +5,8 @@ import { formatRecentActivityCompactTimestamp } from '@/utils/recentActivityTime
 import { groupEntriesByDate, formatDateHeader } from '@/utils/activityTimeline.utils';
 import CopySuccessAnnouncement from '@/components/common/CopySuccessAnnouncement';
 import { useCopySuccessAnnouncement } from '@/hooks/useCopySuccessAnnouncement';
+import showToast from '@/utils/toast.util';
+import { copyTextToClipboard } from '@/utils/clipboard.utils';
 
 type CopyState = 'idle' | 'success' | 'error';
 
@@ -83,11 +85,14 @@ const EmptyTransactionTimelineState: React.FC<
 
 	const copyTxHash = async (entryId: string, txHash: string) => {
 		try {
-			await navigator.clipboard.writeText(txHash);
+			await copyTextToClipboard(txHash);
 			announceCopySuccess('Transaction hash copied.');
 			setCopyStateById(current => ({ ...current, [entryId]: 'success' }));
 		} catch {
 			setCopyStateById(current => ({ ...current, [entryId]: 'error' }));
+			showToast.error(
+				'Could not copy the transaction hash. Please copy it manually.'
+			);
 		}
 
 		window.setTimeout(() => {

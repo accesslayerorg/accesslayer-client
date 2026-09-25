@@ -27,3 +27,18 @@ dist-ssr
 *.sw?
 issue.md
 pr.md
+
+# MiMoCode
+.mimocode/
+# Test artifacts
+__snapshots__
+*.snap
+coverage
+.nyc_output
+
+# OS artifacts
+Thumbs.db
+
+# Lock files from other package managers
+package-lock.json
+yarn.lock

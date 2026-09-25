@@ -1,3 +1,5 @@
+![Access Layer Client](./accesslayer-client.png)
+
 # Access Layer Client
 
 This repository contains the frontend for Access Layer, a Stellar-native creator keys marketplace where fans buy access keys tied to creators and unlock perks defined by those creators.
@@ -25,12 +27,25 @@ The client is responsible for:
 - frontend infrastructure is in place for future marketplace routes
 - older template-era code still needs to be replaced with Stellar-specific flows
 
+## Keyboard shortcuts
+
+- `Ctrl/Cmd + Alt + R` refreshes creator list data from the marketplace
+  page. The shortcut is ignored while focus is inside text inputs,
+  textareas, selects, or editable text regions.
+- `T` opens the trade panel from the creator profile page. The shortcut is
+  ignored while focus is inside text inputs, textareas, selects, or
+  editable text regions.
+
 ## Local setup
 
 ```bash
 pnpm install
 pnpm dev
 ```
+
+## Environment variables
+
+See [docs/environment-variables.md](./docs/environment-variables.md).
 
 ## Verification
 

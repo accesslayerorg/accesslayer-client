@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { AlertCircle, Copy, Check } from 'lucide-react';
 import showToast from '@/utils/toast.util';
 import { formatTimestampTooltip } from '@/utils/time.utils';
+import { copyTextToClipboard } from '@/utils/clipboard.utils';
 import CopySuccessAnnouncement from '@/components/common/CopySuccessAnnouncement';
 import {
 	COPY_SUCCESS_TOAST_ARIA_PROPS,
@@ -50,7 +51,7 @@ const TransactionFailureDrawer: React.FC<TransactionFailureDrawerProps> = ({
 		field: 'errorCode' | 'txHash'
 	) => {
 		try {
-			await navigator.clipboard.writeText(text);
+			await copyTextToClipboard(text);
 			showToast.success('Copied to clipboard', {
 				ariaProps: COPY_SUCCESS_TOAST_ARIA_PROPS,
 			});
@@ -62,7 +63,11 @@ const TransactionFailureDrawer: React.FC<TransactionFailureDrawerProps> = ({
 			setCopiedField(field);
 			window.setTimeout(() => setCopiedField(null), 2000);
 		} catch {
-			showToast.error('Failed to copy to clipboard');
+			showToast.error(
+				field === 'errorCode'
+					? 'Could not copy the error code. Please copy it manually.'
+					: 'Could not copy the transaction hash. Please copy it manually.'
+			);
 		}
 	};
 

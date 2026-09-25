@@ -3,7 +3,9 @@ import {
 	formatNumber,
 	formatCompactNumber,
 	formatFollowerCount,
+	formatHolderCount,
 	formatPercent,
+	bpsToPercent,
 } from '../numberFormat.utils';
 
 // ---------------------------------------------------------------------------
@@ -110,12 +112,18 @@ describe('formatNumber: Full Value Display for Tooltips', () => {
 // ---------------------------------------------------------------------------
 describe('formatCompactNumber: Configurable precision', () => {
 	it('respects maximumFractionDigits option', () => {
-		expect(formatCompactNumber(1234, { maximumFractionDigits: 0 })).toBe('1K');
-		expect(formatCompactNumber(1234, { maximumFractionDigits: 2 })).toBe('1.23K');
+		expect(formatCompactNumber(1234, { maximumFractionDigits: 0 })).toBe(
+			'1K'
+		);
+		expect(formatCompactNumber(1234, { maximumFractionDigits: 2 })).toBe(
+			'1.23K'
+		);
 	});
 
 	it('respects minimumFractionDigits option', () => {
-		expect(formatCompactNumber(1000000, { minimumFractionDigits: 2 })).toBe('1.00M');
+		expect(formatCompactNumber(1000000, { minimumFractionDigits: 2 })).toBe(
+			'1.00M'
+		);
 	});
 });
 
@@ -142,6 +150,34 @@ describe('formatFollowerCount: Legacy follower abbreviation', () => {
 
 	it('removes ".0" suffix: 1,000 → "1K" not "1.0K"', () => {
 		expect(formatFollowerCount(1000)).toBe('1K');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Feature: Holder count formatting
+// Validates: Issue #438 acceptance criteria
+// ---------------------------------------------------------------------------
+describe('formatHolderCount: Holder count abbreviation', () => {
+	it('returns values under 1000 as a plain string', () => {
+		expect(formatHolderCount(0)).toBe('0');
+		expect(formatHolderCount(42)).toBe('42');
+		expect(formatHolderCount(999)).toBe('999');
+	});
+
+	it('formats values in the K range with one decimal place', () => {
+		expect(formatHolderCount(1200)).toBe('1.2K');
+		expect(formatHolderCount(1500)).toBe('1.5K');
+		expect(formatHolderCount(999_999)).toBe('1000K');
+	});
+
+	it('formats values in the M range with one decimal place', () => {
+		expect(formatHolderCount(2_400_000)).toBe('2.4M');
+		expect(formatHolderCount(1_250_000)).toBe('1.3M');
+	});
+
+	it('handles boundary values at 1000 and 1000000', () => {
+		expect(formatHolderCount(1000)).toBe('1K');
+		expect(formatHolderCount(1_000_000)).toBe('1M');
 	});
 });
 
@@ -211,5 +247,31 @@ describe('Integration: Compact display with full tooltip pattern', () => {
 
 		expect(displayValue).toBe('42');
 		expect(tooltipValue).toBe('42');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Feature: Bps to Percent formatting
+// ---------------------------------------------------------------------------
+describe('bpsToPercent: Basis points to percentage formatting', () => {
+	it('converts 500 bps to "5%"', () => {
+		expect(bpsToPercent(500)).toBe('5%');
+	});
+
+	it('converts 250 bps to "2.5%"', () => {
+		expect(bpsToPercent(250)).toBe('2.5%');
+	});
+
+	it('converts 0 bps to "0%"', () => {
+		expect(bpsToPercent(0)).toBe('0%');
+	});
+
+	it('returns placeholder "—" for null or undefined', () => {
+		expect(bpsToPercent(null)).toBe('—');
+		expect(bpsToPercent(undefined)).toBe('—');
+	});
+
+	it('returns custom placeholder when provided', () => {
+		expect(bpsToPercent(null, { emptyPlaceholder: 'N/A' })).toBe('N/A');
 	});
 });

@@ -1,3 +1,5 @@
+import { formatKeyPrice } from '@/utils/keyPriceDisplay.utils';
+
 interface TimelineEntryWithTimestamp {
   timestamp?: number;
 }
@@ -35,3 +37,16 @@ export const formatDateHeader = (date: Date) => {
     });
   }
 };
+
+/**
+ * Formats an activity amount (buy/sell) with a sign prefix and XLM suffix.
+ * Buys are prefixed with '-', sells with '+'.
+ */
+export function formatActivityAmount(amount: bigint, type: 'buy' | 'sell'): string {
+	if (amount === 0n) {
+		return '+0.00 XLM';
+	}
+	const sign = type === 'buy' ? '-' : '+';
+	const formatted = formatKeyPrice(amount);
+	return `${sign}${formatted}`;
+}

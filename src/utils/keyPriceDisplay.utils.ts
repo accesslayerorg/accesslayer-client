@@ -23,6 +23,31 @@ export function resolveCreatorKeyPriceStroops(
 }
 
 /**
+ * Estimates sell proceeds from current key price, supply, and sell quantity.
+ * Returns null if estimate cannot be computed.
+ */
+export function estimateSellProceeds(
+	keyPriceStroops: number | null | undefined,
+	currentSupply: number | null | undefined,
+	sellQuantity: number
+): number | null {
+	if (
+		keyPriceStroops == null ||
+		!Number.isFinite(keyPriceStroops) ||
+		currentSupply == null ||
+		!Number.isFinite(currentSupply) ||
+		sellQuantity <= 0 ||
+		!Number.isFinite(sellQuantity)
+	) {
+		return null;
+	}
+
+	// For estimate purposes, calculate proceeds as key price multiplied by quantity
+	const estimatedProceeds = keyPriceStroops * sellQuantity;
+	return estimatedProceeds;
+}
+
+/**
  * Formats a stroop amount for display as XLM, falling back to stroops when the
  * XLM value would round to zero at the default display precision.
  */
@@ -58,3 +83,22 @@ export function formatCreatorKeyPriceDisplay(
 ): string {
 	return formatDisplayKeyPrice(resolveCreatorKeyPriceStroops(creator));
 }
+
+/**
+ * Formats a key price in stroops (bigint) to XLM with proper decimal precision.
+ * Always displays 2 decimal places for prices >= 1 XLM, and 4 decimal places for prices < 1 XLM.
+ */
+export function formatKeyPrice(stroops: bigint): string {
+	const STROOPS_PER_XLM_BI = 10_000_000n;
+	const isBelowOneXlm = stroops < STROOPS_PER_XLM_BI;
+	const decimals = isBelowOneXlm ? 4 : 2;
+
+	const xlm = Number(stroops) / 10_000_000;
+	const formattedValue = formatNumber(xlm, {
+		minimumFractionDigits: decimals,
+		maximumFractionDigits: decimals,
+	});
+
+	return `${formattedValue} XLM`;
+}
+

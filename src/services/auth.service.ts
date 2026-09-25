@@ -62,6 +62,28 @@ class AuthService extends BaseApiService {
 		}
 	}
 
+	// Renew the current session - POST /auth/refresh (#878)
+	//
+	// Used by the session-expiry warning's "Renew Session" action to
+	// re-establish a fresh access token without a full logout. If the
+	// response includes a new token it is stored via setAuthToken (the
+	// backend may instead — or additionally — rotate the cookie itself
+	// via Set-Cookie, matching how the response interceptor's own silent
+	// refresh-on-401 call already treats this endpoint).
+	async refreshSession(): Promise<void> {
+		try {
+			const response = await this.api.post<APIResponse<{ token?: string }>>(
+				'/auth/refresh'
+			);
+			const token = response.data?.data?.token;
+			if (token) {
+				this.setAuthToken(token);
+			}
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
 	// Logout - POST /auth/logout
 	async logout(): Promise<void> {
 		try {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCreatorHandle } from '../handleDisplay.utils';
+import { formatCreatorHandle, truncateHandle } from '../handleDisplay.utils';
 
 describe('formatCreatorHandle', () => {
 	it('lowercases mixed-case handles and prepends @', () => {
@@ -32,7 +32,9 @@ describe('formatCreatorHandle', () => {
 	});
 
 	it('is idempotent: formatting an already-formatted handle is a no-op', () => {
-		expect(formatCreatorHandle(formatCreatorHandle('ARivers'))).toBe('@arivers');
+		expect(formatCreatorHandle(formatCreatorHandle('ARivers'))).toBe(
+			'@arivers'
+		);
 	});
 
 	it('does not modify the underlying string the caller passes in', () => {
@@ -42,5 +44,37 @@ describe('formatCreatorHandle', () => {
 		const raw = 'ARivers';
 		formatCreatorHandle(raw);
 		expect(raw).toBe('ARivers');
+	});
+});
+
+describe('truncateHandle', () => {
+	it('returns short handle unchanged (under max length)', () => {
+		expect(truncateHandle('@short', 20)).toBe('@short');
+		expect(truncateHandle('abc', 5)).toBe('abc');
+	});
+
+	it('returns exact max handle unchanged', () => {
+		expect(truncateHandle('12345678901234567890', 20)).toBe(
+			'12345678901234567890'
+		);
+		expect(truncateHandle('abcde', 5)).toBe('abcde');
+	});
+
+	it('truncates one over max handle with ellipsis', () => {
+		expect(truncateHandle('123456789012345678901', 20)).toBe(
+			'12345678901234567890...'
+		);
+		expect(truncateHandle('abcdef', 5)).toBe('abcde...');
+	});
+
+	it('uses default max of 20 characters when maxLength is not specified', () => {
+		// Exactly 20 chars should not be truncated
+		expect(truncateHandle('12345678901234567890')).toBe(
+			'12345678901234567890'
+		);
+		// 21 chars (one over max) should be truncated
+		expect(truncateHandle('123456789012345678901')).toBe(
+			'12345678901234567890...'
+		);
 	});
 });

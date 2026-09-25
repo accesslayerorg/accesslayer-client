@@ -78,4 +78,86 @@ describe('SectionErrorBoundary', () => {
 		expect(alert).toHaveStyle('min-height: 500px');
 		expect(alert).toHaveClass('custom-class');
 	});
+
+	it('renders a custom title when provided', () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		render(
+			<SectionErrorBoundary title="Chart unavailable — try refreshing">
+				<BuggyComponent shouldThrow={true} />
+			</SectionErrorBoundary>
+		);
+
+		expect(
+			screen.getByText('Chart unavailable — try refreshing')
+		).toBeInTheDocument();
+		expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
+	});
+
+	it('omits the description paragraph when description is an empty string', () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		render(
+			<SectionErrorBoundary title="Chart unavailable — try refreshing" description="">
+				<BuggyComponent shouldThrow={true} />
+			</SectionErrorBoundary>
+		);
+
+		expect(
+			screen.getByText('Chart unavailable — try refreshing')
+		).toBeInTheDocument();
+		expect(
+			screen.queryByText(/we encountered an error/i)
+		).not.toBeInTheDocument();
+	});
+
+	it('renders a custom description when provided', () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		render(
+			<SectionErrorBoundary description="Custom explanation text">
+				<BuggyComponent shouldThrow={true} />
+			</SectionErrorBoundary>
+		);
+
+		expect(screen.getByText('Custom explanation text')).toBeInTheDocument();
+	});
+
+	it('does not retry automatically after repeated failures (manual retry only)', () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		const { rerender } = render(
+			<SectionErrorBoundary>
+				<BuggyComponent shouldThrow={true} />
+			</SectionErrorBoundary>
+		);
+
+		expect(screen.getByRole('alert')).toBeInTheDocument();
+
+		// Re-rendering with the same throwing child (e.g. parent re-render)
+		// must NOT clear the error state on its own — only clicking Retry does.
+		rerender(
+			<SectionErrorBoundary>
+				<BuggyComponent shouldThrow={true} />
+			</SectionErrorBoundary>
+		);
+
+		expect(screen.getByRole('alert')).toBeInTheDocument();
+	});
+
+	it('logs the caught error via componentDidCatch when an error occurs', () => {
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		render(
+			<SectionErrorBoundary sectionName="bonding curve chart">
+				<BuggyComponent shouldThrow={true} />
+			</SectionErrorBoundary>
+		);
+
+		expect(consoleSpy).toHaveBeenCalledWith(
+			expect.stringContaining('bonding curve chart'),
+			expect.any(Error),
+			expect.anything()
+		);
+	});
 });

@@ -19,8 +19,25 @@ export const formatCreatorHandle = (raw: string | null | undefined): string => {
 	if (raw == null) return '';
 	const trimmed = raw.trim();
 	if (trimmed === '') return '';
-	const withoutLeadingAt = trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
+	const withoutLeadingAt = trimmed.startsWith('@')
+		? trimmed.slice(1)
+		: trimmed;
 	const normalised = withoutLeadingAt.trim().toLowerCase();
 	if (normalised === '') return '';
 	return `@${normalised}`;
+};
+
+/**
+ * Truncates a creator handle to a maximum length, appending an ellipsis
+ * only when truncation occurs.
+ */
+export const truncateHandle = (
+	handle: string,
+	maxLength: number = 20
+): string => {
+	if (!handle) return '';
+	if (handle.length <= maxLength) {
+		return handle;
+	}
+	return `${handle.slice(0, maxLength)}...`;
 };

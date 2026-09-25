@@ -65,4 +65,27 @@ describe('CreatorCard accessibility', () => {
 			})
 		).toBeInTheDocument();
 	});
+
+	it('updates displayed price when price snapshot data changes', () => {
+		const { rerender } = render(<CreatorCard creator={creator} />);
+
+		// Initial price should be 12 XLM
+		const initialPriceBadge = screen.getByTestId('creator-card-price-badge');
+		expect(initialPriceBadge).toHaveTextContent(/12/i);
+
+		// Update creator with new price
+		const updatedCreator: Course = {
+			...creator,
+			price: 25,
+		};
+
+		rerender(<CreatorCard creator={updatedCreator} />);
+
+		// New price should be 25 XLM
+		const updatedPriceBadge = screen.getByTestId('creator-card-price-badge');
+		expect(updatedPriceBadge).toHaveTextContent(/25/i);
+
+		// Old price (12) should no longer be visible
+		expect(updatedPriceBadge).not.toHaveTextContent(/12/i);
+	});
 });

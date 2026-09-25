@@ -129,13 +129,15 @@ export const CreatorProfileHeaderSkeleton: React.FC<{
 export const CreatorHoldingsSkeleton: React.FC<{
 	className?: string;
 	disableShimmer?: boolean;
-}> = ({ className, disableShimmer = false }) => {
+	'data-testid'?: string;
+}> = ({ className, disableShimmer = false, ...rest }) => {
 	const blockClass = disableShimmer
 		? skeletonStaticBlockClass
 		: skeletonBlockClass;
 
 	return (
 		<div
+			{...rest}
 			className={cn(
 				'rounded-2xl border border-white/10 bg-white/[0.03] p-4',
 				className
@@ -150,6 +152,11 @@ export const CreatorHoldingsSkeleton: React.FC<{
 /**
  * A grid of creator holdings skeletons to be shown while the portfolio is
  * loading. Matches the 3-column responsive grid used for the live list.
+ *
+ * Exposes `role="status"` with an `sr-only` label so screen-reader users know
+ * the holdings list is loading (consistent with `CreatorProfileHeaderSkeleton`),
+ * and a `data-testid` so tests can assert the skeleton is in flight and count
+ * its placeholders.
  */
 export const CreatorHoldingsListSkeleton: React.FC<{
 	count?: number;
@@ -157,10 +164,105 @@ export const CreatorHoldingsListSkeleton: React.FC<{
 	className?: string;
 }> = ({ count = 3, disableShimmer = false, className }) => {
 	return (
-		<div className={cn('grid gap-3 sm:grid-cols-2 lg:grid-cols-3', className)}>
+		<div
+			role="status"
+			aria-label="Loading holdings"
+			data-testid="holdings-list-skeleton"
+			className={cn('grid gap-3 sm:grid-cols-2 lg:grid-cols-3', className)}
+		>
+			<span className="sr-only">Loading holdings</span>
 			{Array.from({ length: count }).map((_, i) => (
-				<CreatorHoldingsSkeleton key={i} disableShimmer={disableShimmer} />
+				<CreatorHoldingsSkeleton
+					key={i}
+					disableShimmer={disableShimmer}
+					data-testid="holdings-skeleton-item"
+				/>
 			))}
+		</div>
+	);
+};
+
+/**
+ * Loading skeleton for creator dashboard / detail page.
+ * Renders header skeleton, 4 stat card skeletons, chart placeholder (height 300px),
+ * and 5 holders table row skeletons to prevent layout shift during loading.
+ */
+export const CreatorDashboardSkeleton: React.FC<{
+	disableShimmer?: boolean;
+}> = ({ disableShimmer = false }) => {
+	const blockClass = disableShimmer
+		? skeletonStaticBlockClass
+		: skeletonBlockClass;
+
+	return (
+		<div
+			role="status"
+			aria-label="Loading creator dashboard"
+			data-testid="creator-dashboard-skeleton"
+			className="space-y-8"
+		>
+			<span className="sr-only">Loading creator dashboard</span>
+
+			{/* Header Skeleton */}
+			<CreatorProfileHeaderSkeleton disableShimmer={disableShimmer} />
+
+			{/* 4 Stat Card Skeletons */}
+			<div
+				className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+				data-testid="creator-stat-cards-skeleton"
+			>
+				{Array.from({ length: 4 }).map((_, i) => (
+					<div
+						key={i}
+						className="relative space-y-2 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 backdrop-blur-md"
+						data-testid="creator-stat-card-skeleton"
+					>
+						<div className={cn('h-3 w-20', blockClass)} />
+						<div className={cn('h-6 w-28', blockClass)} />
+					</div>
+				))}
+			</div>
+
+			{/* Price Chart Skeleton (300px height matching price chart) */}
+			<div
+				className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
+				data-testid="creator-chart-skeleton-container"
+			>
+				<div className={cn('mb-4 h-6 w-32', blockClass)} />
+				<div
+					className={cn('h-[300px] w-full rounded-xl', blockClass)}
+					data-testid="creator-chart-skeleton"
+				/>
+			</div>
+
+			{/* Key Holders Table Skeleton (5 rows) */}
+			<div
+				className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
+				data-testid="creator-holders-skeleton-container"
+			>
+				<div className={cn('mb-4 h-6 w-40', blockClass)} />
+				<div
+					className="divide-y divide-white/5"
+					data-testid="creator-holders-skeleton"
+				>
+					{Array.from({ length: 5 }).map((_, i) => (
+						<div
+							key={i}
+							className="flex items-center justify-between gap-3 py-3"
+							data-testid="creator-holder-row-skeleton"
+						>
+							<div className="flex items-center gap-3">
+								<div className={cn('size-7 rounded-full', blockClass)} />
+								<div className={cn('h-4 w-28', blockClass)} />
+							</div>
+							<div className="flex items-center gap-3">
+								<div className={cn('h-4 w-16', blockClass)} />
+								<div className={cn('h-4 w-12', blockClass)} />
+							</div>
+						</div>
+					))}
+				</div>
+			</div>
 		</div>
 	);
 };

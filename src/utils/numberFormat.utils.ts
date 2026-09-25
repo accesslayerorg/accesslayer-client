@@ -15,10 +15,16 @@ function getNumberFormatter({
 		maximumFractionDigits ?? (style === 'compact' ? 1 : 2);
 	const resolvedMinimumFractionDigits = minimumFractionDigits ?? 0;
 
+	// Ensure minimumFractionDigits does not exceed maximumFractionDigits
+	const finalMaximumFractionDigits = Math.max(
+		resolvedMaximumFractionDigits,
+		resolvedMinimumFractionDigits
+	);
+
 	return new Intl.NumberFormat(undefined, {
 		notation: style === 'compact' ? 'compact' : 'standard',
 		compactDisplay: 'short',
-		maximumFractionDigits: resolvedMaximumFractionDigits,
+		maximumFractionDigits: finalMaximumFractionDigits,
 		minimumFractionDigits: resolvedMinimumFractionDigits,
 	});
 }
@@ -39,7 +45,28 @@ export function formatCompactNumber(
 	return formatNumber(value, { ...options, style: 'compact' });
 }
 
-export function formatFollowerCount(count: number): string {
+/**
+ * Formats an XLM price with two decimal places.
+ */
+export function formatXlmPrice(value: number | null | undefined): string {
+	if (value == null || !Number.isFinite(value)) return '0.00 XLM';
+	const formatted = new Intl.NumberFormat('en-US', {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+		useGrouping: false,
+	}).format(value);
+	return `${formatted} XLM`;
+}
+
+
+/**
+ * Formats holder counts for compact display across creator profile surfaces.
+ *
+ * - Below 1,000: plain string (e.g. `999`)
+ * - 1,000–999,999: one decimal K suffix (e.g. `1.2K`, `1K` at exactly 1,000)
+ * - 1,000,000+: one decimal M suffix (e.g. `2.4M`, `1M` at exactly 1,000,000)
+ */
+export function formatHolderCount(count: number): string {
 	if (count >= 1_000_000) {
 		return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
 	}
@@ -47,6 +74,10 @@ export function formatFollowerCount(count: number): string {
 		return `${(count / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
 	}
 	return count.toString();
+}
+
+export function formatFollowerCount(count: number): string {
+	return formatHolderCount(count);
 }
 
 export interface FormatPercentOptions {
@@ -96,3 +127,15 @@ export function formatPercent(
 	return `${sign}${formatted}%`;
 }
 
+/**
+ * Converts basis points (bps) to a percentage string (e.g. 500 -> "5%", 250 -> "2.5%").
+ */
+export function bpsToPercent(
+	bps: number | null | undefined,
+	options: FormatPercentOptions = {}
+): string {
+	if (bps == null || !Number.isFinite(bps)) {
+		return options.emptyPlaceholder ?? '—';
+	}
+	return formatPercent(bps / 100, options);
+}

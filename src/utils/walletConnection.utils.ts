@@ -21,7 +21,7 @@ export interface WalletReconnectOptions {
 
 /**
  * Determines if wallet session is stale based on connection time
- * 
+ *
  * @param lastConnected - Timestamp of last connection
  * @param staleThresholdMs - Time in ms before considering session stale (default: 1 hour)
  * @returns Whether the session is stale
@@ -31,7 +31,7 @@ export function isSessionStale(
 	staleThresholdMs: number = 60 * 60 * 1000 // 1 hour
 ): boolean {
 	if (!lastConnected) return true;
-	
+
 	const now = Date.now();
 	const timeSinceConnection = now - lastConnected;
 	return timeSinceConnection > staleThresholdMs;
@@ -39,7 +39,7 @@ export function isSessionStale(
 
 /**
  * Gets the appropriate wallet connection status
- * 
+ *
  * @param state - Current wallet connection state
  * @param staleThresholdMs - Time threshold for staleness
  * @returns Connection status object
@@ -59,7 +59,7 @@ export function getWalletConnectionStatus(
 		return {
 			isConnected: false,
 			isStale: false,
-			status: 'disconnected'
+			status: 'disconnected',
 		};
 	}
 
@@ -67,20 +67,20 @@ export function getWalletConnectionStatus(
 		return {
 			isConnected: true,
 			isStale: true,
-			status: 'stale'
+			status: 'stale',
 		};
 	}
 
 	return {
 		isConnected: true,
 		isStale: false,
-		status: 'connected'
+		status: 'connected',
 	};
 }
 
 /**
  * Generates helper text for wallet reconnection scenarios
- * 
+ *
  * @param state - Current wallet connection state
  * @param options - Display options
  * @returns Helper text and action information
@@ -102,7 +102,7 @@ export function getWalletReconnectHelperText(
 } {
 	const { walletName, showDetails = true } = options;
 	const reconnectText = options.reconnectText || 'Reconnect';
-	
+
 	const status = getWalletConnectionStatus(state);
 	const displayName = walletName || state.walletName || 'your wallet';
 
@@ -111,11 +111,11 @@ export function getWalletReconnectHelperText(
 		return {
 			shouldShow: true,
 			message: `${displayName} is not connected`,
-			details: showDetails 
+			details: showDetails
 				? 'Connect your wallet to access creator features and make transactions.'
 				: undefined,
 			actionText: `Connect ${displayName}`,
-			severity: 'info' as const
+			severity: 'info' as const,
 		};
 	}
 
@@ -128,7 +128,7 @@ export function getWalletReconnectHelperText(
 				? 'Your wallet session timed out for security. Please reconnect to continue.'
 				: undefined,
 			actionText: reconnectText,
-			severity: 'warning' as const
+			severity: 'warning' as const,
 		};
 	}
 
@@ -137,13 +137,13 @@ export function getWalletReconnectHelperText(
 		shouldShow: false,
 		message: '',
 		actionText: reconnectText,
-		severity: 'info' as const
+		severity: 'info' as const,
 	};
 }
 
 /**
  * Gets a short status message for compact UI displays
- * 
+ *
  * @param state - Current wallet connection state
  * @param options - Display options
  * @returns Short status message
@@ -154,9 +154,9 @@ export function getWalletStatusMessage(
 ): string {
 	const { walletName } = options;
 	const displayName = walletName || state.walletName || 'Wallet';
-	
+
 	const status = getWalletConnectionStatus(state);
-	
+
 	switch (status.status) {
 		case 'connected':
 			return `${displayName} connected`;
@@ -171,18 +171,20 @@ export function getWalletStatusMessage(
 
 /**
  * Determines if reconnection is recommended
- * 
+ *
  * @param state - Current wallet connection state
  * @returns Whether reconnection should be suggested
  */
-export function shouldRecommendReconnect(state: WalletConnectionState): boolean {
+export function shouldRecommendReconnect(
+	state: WalletConnectionState
+): boolean {
 	const status = getWalletConnectionStatus(state);
 	return status.status === 'disconnected' || status.status === 'stale';
 }
 
 /**
  * Creates a wallet connection state object
- * 
+ *
  * @param isConnected - Whether wallet is connected
  * @param address - Wallet address
  * @param walletName - Wallet name
@@ -200,13 +202,13 @@ export function createWalletConnectionState(
 		address,
 		walletName,
 		lastConnected: lastConnected || (isConnected ? Date.now() : undefined),
-		isStale: false
+		isStale: false,
 	};
 }
 
 /**
  * Updates a wallet connection state with new connection time
- * 
+ *
  * @param state - Existing state
  * @param address - New wallet address
  * @param walletName - Wallet name
@@ -223,22 +225,39 @@ export function updateWalletConnection(
 		address: address || state.address,
 		walletName: walletName || state.walletName,
 		lastConnected: Date.now(),
-		isStale: false
+		isStale: false,
 	};
 }
 
 /**
  * Clears wallet connection state
- * 
+ *
  * @param state - Existing state
  * @returns Cleared state
  */
-export function clearWalletConnection(state: WalletConnectionState): WalletConnectionState {
+export function clearWalletConnection(
+	state: WalletConnectionState
+): WalletConnectionState {
 	return {
 		...state,
 		isConnected: false,
 		address: undefined,
 		lastConnected: undefined,
-		isStale: false
+		isStale: false,
 	};
+}
+
+/**
+ * Determines if a target address belongs to the connected wallet
+ *
+ * @param address - The target address to check
+ * @param connectedAddress - The connected wallet address (null if not connected)
+ * @returns Whether the target address belongs to the connected wallet
+ */
+export function isOwnWallet(
+	address: string,
+	connectedAddress: string | null
+): boolean {
+	if (connectedAddress === null) return false;
+	return address.toLowerCase() === connectedAddress.toLowerCase();
 }

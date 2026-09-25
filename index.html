@@ -46,6 +46,21 @@
 		<!-- Preconnect -->
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+		<!--
+			#750: Applies the stored theme class to <html> before the first
+			paint so there is no flash of the wrong theme on load.
+			Reads localStorage['theme']; falls back to prefers-color-scheme.
+		-->
+		<script>
+			(function () {
+				var stored = localStorage.getItem('theme');
+				var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+				if (stored === 'dark' || (!stored && prefersDark)) {
+					document.documentElement.classList.add('dark');
+				}
+			})();
+		</script>
 	</head>
 	<body>
 		<!--

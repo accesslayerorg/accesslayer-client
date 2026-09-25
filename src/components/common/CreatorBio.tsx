@@ -1,6 +1,9 @@
 import { useId, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { lineClampClassFor } from '@/utils/lineClamp.utils';
+import {
+	lineClampClassFor,
+	creatorCardSubtitleClampClass,
+} from '@/utils/lineClamp.utils';
 
 interface CreatorBioProps {
 	/** Raw bio string from the creator profile. Anything falsy or whitespace-only is treated as missing. */
@@ -141,7 +144,10 @@ const CreatorBio: React.FC<CreatorBioProps> = ({
 	const clampVariant: 'card' | 'profile' = shouldOfferCollapse
 		? 'card'
 		: variant;
-	const clampClass = lineClampClassFor(clampVariant, effectiveMaxLines);
+	const clampClass =
+		clampVariant === 'card'
+			? creatorCardSubtitleClampClass(effectiveMaxLines)
+			: lineClampClassFor(clampVariant, effectiveMaxLines);
 
 	const bioParagraph = (
 		<p

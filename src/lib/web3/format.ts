@@ -1,8 +1,5 @@
-export function shortenAddress(
-	address: string,
-	startLength = 6,
-	endLength = 4
-) {
+export function shortenAddress(address: string) {
 	if (!address) return '';
-	return `${address.slice(0, startLength)}...${address.slice(-endLength)}`;
+	if (address.length < 10) return address;
+	return `${address.slice(0, 4)}...${address.slice(-4)}`;
 }

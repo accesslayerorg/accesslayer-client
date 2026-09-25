@@ -30,3 +30,18 @@ export const lineClampClassFor = (
 			return 'line-clamp-6';
 	}
 };
+
+/**
+ * Default line clamp count for creator card subtitles and bio descriptions.
+ */
+export const DEFAULT_CREATOR_CARD_SUBTITLE_MAX_LINES = 2;
+
+/**
+ * Returns the Tailwind `line-clamp` class for creator card subtitles and bio descriptions.
+ * Uses `DEFAULT_CREATOR_CARD_SUBTITLE_MAX_LINES` (2 lines) if maxLines is omitted.
+ */
+export const creatorCardSubtitleClampClass = (
+	maxLines: number | null | undefined = DEFAULT_CREATOR_CARD_SUBTITLE_MAX_LINES
+): string => {
+	return lineClampClassFor('card', maxLines);
+};

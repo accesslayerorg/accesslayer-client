@@ -9,8 +9,10 @@ interface Change24hBadgeProps {
 }
 
 const Change24hBadge: React.FC<Change24hBadgeProps> = ({ change, className }) => {
-	const isPositive = change !== undefined && change > 0;
-	const isNegative = change !== undefined && change < 0;
+	if (change == null) return null;
+
+	const isPositive = change > 0;
+	const isNegative = change < 0;
 	const formatted = formatPercent(change, { signed: true });
 
 	return (

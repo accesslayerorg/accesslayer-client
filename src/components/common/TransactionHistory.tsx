@@ -2,16 +2,27 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatRelativeTime } from '@/utils/time.utils';
+import { formatCreatorHandle } from '@/utils/handleDisplay.utils';
+import TransactionTypeBadge from '@/components/common/TransactionTypeBadge';
 
-interface Transaction {
+
+export interface Transaction {
 	id: string;
 	type: 'buy' | 'sell';
-	creator: string;
+	/** Raw creator identifier from the API — never shown in the UI. */
+	creatorId: string;
+	/** Human-readable handle used for display (e.g. instructorId). */
+	creatorHandle: string;
 	amount: number;
 	price: number;
 	timestamp: number;
 	txHash: string;
 	status: 'completed' | 'pending' | 'failed';
+}
+
+interface TransactionHistoryProps {
+	transactions?: Transaction[];
 }
 
 const COMPACT_VIEW_KEY = 'accesslayer.transaction-compact-view';
@@ -20,7 +31,8 @@ const SAMPLE_TRANSACTIONS: Transaction[] = [
 	{
 		id: '1',
 		type: 'buy',
-		creator: 'Alex Rivers',
+		creatorId: '1',
+		creatorHandle: 'arivers',
 		amount: 5,
 		price: 0.05,
 		timestamp: Date.now() - 1000 * 60 * 30,
@@ -30,7 +42,8 @@ const SAMPLE_TRANSACTIONS: Transaction[] = [
 	{
 		id: '2',
 		type: 'sell',
-		creator: 'Sarah Chen',
+		creatorId: '2',
+		creatorHandle: 'schen_dev',
 		amount: 3,
 		price: 0.12,
 		timestamp: Date.now() - 1000 * 60 * 60 * 2,
@@ -40,7 +53,8 @@ const SAMPLE_TRANSACTIONS: Transaction[] = [
 	{
 		id: '3',
 		type: 'buy',
-		creator: 'Marcus Thorne',
+		creatorId: '3',
+		creatorHandle: 'mthorne',
 		amount: 10,
 		price: 0.08,
 		timestamp: Date.now() - 1000 * 60 * 60 * 5,
@@ -50,7 +64,8 @@ const SAMPLE_TRANSACTIONS: Transaction[] = [
 	{
 		id: '4',
 		type: 'buy',
-		creator: 'Elena Vance',
+		creatorId: '4',
+		creatorHandle: 'evance_design',
 		amount: 2,
 		price: 0.04,
 		timestamp: Date.now() - 1000 * 60 * 60 * 24,
@@ -60,7 +75,8 @@ const SAMPLE_TRANSACTIONS: Transaction[] = [
 	{
 		id: '5',
 		type: 'sell',
-		creator: 'David Kojo',
+		creatorId: '5',
+		creatorHandle: 'dkojo_beats',
 		amount: 7,
 		price: 0.15,
 		timestamp: Date.now() - 1000 * 60 * 60 * 48,
@@ -69,20 +85,9 @@ const SAMPLE_TRANSACTIONS: Transaction[] = [
 	},
 ];
 
-const formatTimestamp = (timestamp: number) => {
-	const now = Date.now();
-	const diff = now - timestamp;
-	const minutes = Math.floor(diff / (1000 * 60));
-	const hours = Math.floor(diff / (1000 * 60 * 60));
-	const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-	if (minutes < 1) return 'Just now';
-	if (minutes < 60) return `${minutes}m ago`;
-	if (hours < 24) return `${hours}h ago`;
-	return `${days}d ago`;
-};
-
-const TransactionHistory: React.FC = () => {
+const TransactionHistory: React.FC<TransactionHistoryProps> = ({
+	transactions = SAMPLE_TRANSACTIONS,
+}) => {
 	const [isCompact, setIsCompact] = useState(() => {
 		if (typeof window === 'undefined') return false;
 		const saved = localStorage.getItem(COMPACT_VIEW_KEY);
@@ -93,6 +98,14 @@ const TransactionHistory: React.FC = () => {
 	useEffect(() => {
 		localStorage.setItem(COMPACT_VIEW_KEY, String(isCompact));
 	}, [isCompact]);
+
+	const sortedTransactions = [...transactions].sort((left, right) => {
+		if (left.timestamp !== right.timestamp) {
+			return right.timestamp - left.timestamp;
+		}
+
+		return right.id.localeCompare(left.id);
+	});
 
 	const toggleCompact = () => {
 		setIsCompact(!isCompact);
@@ -121,17 +134,6 @@ const TransactionHistory: React.FC = () => {
 		}
 	};
 
-	const getTransactionTypeLabel = (type: Transaction['type']) => {
-		switch (type) {
-			case 'buy':
-				return 'Buy';
-			case 'sell':
-				return 'Sell';
-			default:
-				return 'Unknown';
-		}
-	};
-
 	return (
 		<section className="rounded-2xl border border-white/10 bg-white/5 p-6 md:p-8">
 			<div className="mb-6 flex items-center justify-between">
@@ -154,11 +156,13 @@ const TransactionHistory: React.FC = () => {
 			</div>
 
 			<div className="space-y-2">
-				{SAMPLE_TRANSACTIONS.map(tx => {
+				{sortedTransactions.map(tx => {
+					const displayHandle = formatCreatorHandle(tx.creatorHandle);
 					const isExpanded = expandedRows.has(tx.id) || !isCompact;
 					return (
 						<div
 							key={tx.id}
+							data-testid={`activity-item-${tx.type}`}
 							className={cn(
 								'group rounded-xl border border-white/10 bg-white/[0.02] transition-all duration-200 hover:border-white/20 hover:bg-white/[0.04]',
 								isCompact && !isExpanded && 'py-2',
@@ -173,19 +177,22 @@ const TransactionHistory: React.FC = () => {
 								<div className="flex min-w-0 flex-1 items-center gap-4">
 									<div className="min-w-0 flex-1">
 										<div className="flex items-center gap-2">
-											<span className="font-semibold text-white">
-												{getTransactionTypeLabel(tx.type)}
-											</span>
+											<TransactionTypeBadge type={tx.type} />
 											<span className="text-white/40">•</span>
-											<span className="text-white/90">{tx.creator}</span>
+											<span
+												className="text-white/90"
+												data-testid={`activity-creator-handle-${tx.id}`}
+											>
+												{displayHandle}
+											</span>
 										</div>
 										{(!isCompact || isExpanded) && (
 											<div className="mt-1 flex items-center gap-3 text-xs text-white/50">
 												<span>{tx.amount} keys</span>
 												<span className="text-white/30">•</span>
-												<span>{tx.price} ETH</span>
+												<span>{tx.price} XLM</span>
 												<span className="text-white/30">•</span>
-												<span>{formatTimestamp(tx.timestamp)}</span>
+												<span>{formatRelativeTime(tx.timestamp)}</span>
 											</div>
 										)}
 									</div>
@@ -193,9 +200,12 @@ const TransactionHistory: React.FC = () => {
 									{(!isCompact || isExpanded) && (
 										<div className="hidden shrink-0 items-center gap-4 text-right sm:flex">
 											<div className="text-sm">
-												<div className="font-semibold text-white">
-													{tx.type === 'buy' ? '+' : '-'}
-													{(tx.amount * tx.price).toFixed(4)} ETH
+												<div
+													className="font-semibold text-white"
+													data-testid={`tx-amount-${tx.id}`}
+												>
+													{tx.type === 'buy' ? '-' : '+'}
+													{(tx.amount * tx.price).toFixed(4)} XLM
 												</div>
 												<div className="text-xs text-white/50">
 													{tx.txHash}
@@ -213,9 +223,12 @@ const TransactionHistory: React.FC = () => {
 									{isCompact && !isExpanded && (
 										<div className="flex shrink-0 items-center gap-3">
 											<div className="text-right">
-												<div className="text-sm font-semibold text-white">
-													{tx.type === 'buy' ? '+' : '-'}
-													{(tx.amount * tx.price).toFixed(4)} ETH
+												<div
+													className="text-sm font-semibold text-white"
+													data-testid={`tx-amount-${tx.id}`}
+												>
+													{tx.type === 'buy' ? '-' : '+'}
+													{(tx.amount * tx.price).toFixed(4)} XLM
 												</div>
 											</div>
 											<Button
@@ -247,9 +260,9 @@ const TransactionHistory: React.FC = () => {
 									<div className="flex items-center gap-3 text-white/50">
 										<span>{tx.amount} keys</span>
 										<span className="text-white/30">•</span>
-										<span>{tx.price} ETH</span>
+										<span>{tx.price} XLM</span>
 										<span className="text-white/30">•</span>
-										<span>{formatTimestamp(tx.timestamp)}</span>
+										<span>{formatRelativeTime(tx.timestamp)}</span>
 										<span className="text-white/30">•</span>
 										<span>{tx.txHash}</span>
 									</div>
