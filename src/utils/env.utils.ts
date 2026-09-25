@@ -7,7 +7,9 @@ const envSchema = z.object({
 	VITE_BASE_SEPOLIA_RPC_URL: z.string().default('https://sepolia.base.org'),
 	VITE_SEPOLIA_RPC_URL: z.string().optional(),
 	VITE_MAINNET_RPC_URL: z.string().optional(),
+	VITE_STELLAR_RPC_URL: z.string().optional(),
 	VITE_STELLAR_NETWORK: z.enum(['mainnet', 'testnet']).default('testnet'),
+	VITE_CREATOR_KEYS_CONTRACT_ID: z.string().optional(),
 	// Comma-separated wallet addresses that may access the admin safety panel.
 	// Leaving this unset fails closed and hides the panel.
 	VITE_ADMIN_WALLETS: z.string().optional(),
@@ -26,7 +28,9 @@ export const env = envSchema.parse({
 	VITE_BASE_SEPOLIA_RPC_URL: import.meta.env.VITE_BASE_SEPOLIA_RPC_URL,
 	VITE_SEPOLIA_RPC_URL: import.meta.env.VITE_SEPOLIA_RPC_URL,
 	VITE_MAINNET_RPC_URL: import.meta.env.VITE_MAINNET_RPC_URL,
+	VITE_STELLAR_RPC_URL: import.meta.env.VITE_STELLAR_RPC_URL,
 	VITE_STELLAR_NETWORK: import.meta.env.VITE_STELLAR_NETWORK,
+	VITE_CREATOR_KEYS_CONTRACT_ID: import.meta.env.VITE_CREATOR_KEYS_CONTRACT_ID,
 	VITE_ADMIN_WALLETS: import.meta.env.VITE_ADMIN_WALLETS,
 	VITE_UTM_SOURCE: import.meta.env.VITE_UTM_SOURCE,
 	VITE_UTM_MEDIUM: import.meta.env.VITE_UTM_MEDIUM,

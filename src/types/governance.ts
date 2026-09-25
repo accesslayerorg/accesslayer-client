@@ -8,11 +8,14 @@
 
 /** Current status of a governance proposal. */
 export type ProposalStatus =
-	| 'active'
-	| 'passed'
-	| 'rejected'
-	| 'executed'
-	| 'cancelled';
+	'active' | 'closed' | 'passed' | 'rejected' | 'executed' | 'cancelled';
+
+export type ProposalOutcome = 'passed' | 'failed' | 'quorum_not_met';
+
+export interface ProposalOption {
+	label: string;
+	weight: number;
+}
 
 /** A single vote cast on a proposal. */
 export interface Vote {
@@ -36,12 +39,19 @@ export interface Proposal {
 	title: string;
 	description: string;
 	status: ProposalStatus;
+	options: ProposalOption[];
 	/** Quorum threshold in basis points (e.g. 4000 = 40%). */
 	quorumBps: number;
 	/** Total circulating supply of the creator key. */
 	totalCirculatingSupply: number;
+	eligibleVotingWeight?: number;
 	/** Current total voting weight across all votes. */
 	totalVotingWeight: number;
+	creatorAddress?: string;
+	pollId?: number;
+	snapshotLedger?: number;
+	closedAt?: string;
+	outcome?: ProposalOutcome;
 	/** Timestamp when voting began. */
 	startDate: string;
 	/** Timestamp when voting ends. */
