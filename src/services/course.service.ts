@@ -29,6 +29,11 @@ export interface Course {
 	protocolFeeBps?: number;
 	/** Max keys that can be bought in a single transaction; null means no limit. */
 	maxBuyQuantity?: number | null;
+	/**
+	 * Maximum number of keys a single wallet may hold for this creator key
+	 * (#961). Absent/null means the key has no per-wallet holding cap.
+	 */
+	maxHoldingCap?: number | null;
 	/** Last up to 7 price history points in stroops, oldest to newest. */
 	priceHistory?: number[];
 	holderCount?: number;

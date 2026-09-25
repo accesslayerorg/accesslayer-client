@@ -35,7 +35,6 @@ import {
 	BUY_QUANTITY_BOUNDS,
 } from '@/constants/fees';
 import { formatTransactionFeeDisplay } from '@/utils/transactionFee.utils';
-import { clampBuyQuantity } from '@/utils/buyQuantity';
 import { calculateLaunchPenalty } from '@/utils/launchPenalty.utils';
 import {
 	fetchPricePreview,
@@ -47,6 +46,12 @@ import {
 	calculateTradePriceImpact,
 	PRICE_IMPACT_THRESHOLD_PERCENT,
 } from '@/utils/priceImpact.utils';
+import {
+	clampBuyQuantityToCapacity,
+	computeHoldingCapState,
+	type HoldingCapState,
+} from '@/utils/holdingCap.utils';
+import HoldingCapWarning from '@/components/common/HoldingCapWarning';
 import {
 	DEFAULT_SLIPPAGE_TOLERANCE_PERCENT,
 	computeSlippageBounds,
@@ -76,6 +81,13 @@ export interface TradeDialogProps {
 	launchPenaltyBps?: number | null;
 	/** Max buy quantity allowed per transaction; null means no limit. */
 	maxBuyQuantity?: number | null;
+	/**
+	 * Maximum number of keys one wallet may hold for this key (#961);
+	 * null/undefined means no per-wallet holding cap.
+	 */
+	maxHoldingCap?: number | null;
+	/** Keys currently held by the connected wallet (defaults to 0). */
+	currentHolding?: number;
 	/** Whether to display the confirmation modal step before submission (#919). Defaults to false. */
 	requireConfirmation?: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -103,6 +115,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	currentLedger,
 	launchPenaltyBps,
 	maxBuyQuantity = null,
+	maxHoldingCap = null,
+	currentHolding = 0,
 	requireConfirmation = false,
 	onOpenChange,
 	onConfirm,
@@ -120,6 +134,31 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	const amountInputRef = useRef<HTMLInputElement | null>(null);
 	const pricePreviewFailureLogged = useRef(false);
 	const previewAbortControllerRef = useRef<AbortController | null>(null);
+
+	// Holding cap for the connected wallet (#961). Buy quantities are
+	// clamped to the wallet's remaining capacity under the cap.
+	const capState: HoldingCapState = useMemo(
+		() => computeHoldingCapState(currentHolding, maxHoldingCap),
+		[currentHolding, maxHoldingCap]
+	);
+	const remainingCapacity = capState.remaining;
+
+	const clampBuyForCapacity = useMemo(() => {
+		const perTxCeiling =
+			maxBuyQuantity != null
+				? Math.min(maxBuyQuantity, BUY_QUANTITY_BOUNDS.MAX_QTY)
+				: BUY_QUANTITY_BOUNDS.MAX_QTY;
+		return (value: number | string): number =>
+			clampBuyQuantityToCapacity(value, remainingCapacity, perTxCeiling);
+	}, [maxBuyQuantity, remainingCapacity]);
+
+	const buyCeiling = useMemo(() => {
+		if (side !== 'buy') return BUY_QUANTITY_BOUNDS.MAX_QTY;
+		const perTx = maxBuyQuantity != null ? maxBuyQuantity : BUY_QUANTITY_BOUNDS.MAX_QTY;
+		return remainingCapacity != null
+			? Math.min(perTx, remainingCapacity)
+			: perTx;
+	}, [side, maxBuyQuantity, remainingCapacity]);
 	// TradeDialog is opened via `open`/`onOpenChange` props from several
 	// different external trigger buttons (see LandingPage.tsx), never via
 	// Radix's own <DialogTrigger>. That means Radix's built-in
@@ -177,8 +216,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 
 			if (!event.shiftKey && presets[key] !== undefined) {
 				event.preventDefault();
-				const clamped = clampBuyQuantity(presets[key].toString());
-				setAmountText(clamped.value.toString());
+				setAmountText(clampBuyForCapacity(presets[key]).toString());
 				setTouched(true);
 				return;
 			}
@@ -186,8 +224,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 			// Shift+1 = 10
 			if (key === '!' && event.shiftKey) {
 				event.preventDefault();
-				const clamped = clampBuyQuantity('10');
-				setAmountText(clamped.value.toString());
+				setAmountText(clampBuyForCapacity('10').toString());
 				setTouched(true);
 				return;
 			}
@@ -197,8 +234,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 				event.preventDefault();
 				const current = Number(amountText) || 0;
 				const next = Math.max(1, current + 1);
-				const clamped = clampBuyQuantity(next.toString());
-				setAmountText(clamped.value.toString());
+				setAmountText(clampBuyForCapacity(next).toString());
 				setTouched(true);
 				return;
 			}
@@ -207,8 +243,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 				event.preventDefault();
 				const current = Number(amountText) || 0;
 				const next = Math.max(1, current - 1);
-				const clamped = clampBuyQuantity(next.toString());
-				setAmountText(clamped.value.toString());
+				setAmountText(clampBuyForCapacity(next).toString());
 				setTouched(true);
 				return;
 			}
@@ -216,16 +251,14 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 
 		window.addEventListener('keydown', handleAmountKey);
 		return () => window.removeEventListener('keydown', handleAmountKey);
-	}, [open, isSubmitting, amountText]);
+	}, [open, isSubmitting, amountText, clampBuyForCapacity]);
 
 	const handleBlur = () => {
 		setTouched(true);
 		const normalized = amountText.trim();
 		if (normalized) {
-			const clampedResult = clampBuyQuantity(amountText);
-			if (clampedResult.adjusted) {
-				setAmountText(clampedResult.value.toString());
-			}
+			const clamped = clampBuyForCapacity(amountText);
+			setAmountText(clamped.toString());
 		}
 	};
 
@@ -243,6 +276,20 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		if (parsedAmount <= 0) return 'Amount must be greater than zero.';
 		if (
 			side === 'buy' &&
+			remainingCapacity != null &&
+			remainingCapacity <= 0
+		) {
+			return 'Maximum holding cap reached for this key — buying is disabled.';
+		}
+		if (
+			side === 'buy' &&
+			remainingCapacity != null &&
+			parsedAmount > remainingCapacity
+		) {
+			return `Purchase limited to your remaining capacity of ${formatNumber(remainingCapacity)} keys under the holding cap`;
+		}
+		if (
+			side === 'buy' &&
 			maxBuyQuantity != null &&
 			parsedAmount > maxBuyQuantity
 		) {
@@ -251,7 +298,14 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		if (side === 'sell' && parsedAmount > availableHoldings)
 			return `You can't sell more than your holdings (${formatNumber(availableHoldings)} keys).`;
 		return null;
-	}, [amountText, parsedAmount, side, maxBuyQuantity, availableHoldings]);
+	}, [
+		amountText,
+		parsedAmount,
+		side,
+		maxBuyQuantity,
+		remainingCapacity,
+		availableHoldings,
+	]);
 
 	const amountValid = validationError === null;
 	const showError = touched && validationError !== null;
@@ -337,11 +391,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		if (side === 'sell') {
 			setAmountText(String(Math.max(0, availableHoldings)));
 		} else {
-			const maxVal =
-				maxBuyQuantity != null
-					? maxBuyQuantity
-					: BUY_QUANTITY_BOUNDS.MAX_QTY;
-			setAmountText(String(maxVal));
+			setAmountText(String(buyCeiling));
 		}
 	};
 
@@ -458,6 +508,10 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 					visible={launchPenalty.applies}
 					penaltyBps={launchPenalty.penaltyBps}
 				/>
+			)}
+
+			{side === 'buy' && (
+				<HoldingCapWarning capState={capState} className="mb-3" />
 			)}
 
 			<div className="space-y-2">

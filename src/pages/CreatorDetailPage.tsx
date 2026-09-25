@@ -485,6 +485,8 @@ function CreatorDetailPageContent() {
 						keyPriceStroops={resolveCreatorKeyPriceStroops(creator)}
 						currentSupply={creator.creatorShareSupply}
 						maxBuyQuantity={creator.maxBuyQuantity}
+						maxHoldingCap={creator.maxHoldingCap}
+						currentHolding={holdingsCount}
 						launchPenaltyBps={creator.launchPenaltyBps}
 						onOpenChange={setBuyDialogOpen}
 						onConfirm={handleConfirmBuy}
