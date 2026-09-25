@@ -66,6 +66,13 @@ import ClearedFiltersEmptyState from '@/components/common/ClearedFiltersEmptySta
 import CreatorListPagination from '@/components/common/CreatorListPagination';
 import CreatorListGroupSeparator from '@/components/common/CreatorListGroupSeparator';
 import MarketplaceSidebar from '@/components/common/MarketplaceSidebar';
+import BatchBuyBasket from '@/components/common/BatchBuyBasket';
+import BatchBuyConfirmDialog from '@/components/common/BatchBuyConfirmDialog';
+import BatchBuyBasketTrigger from '@/components/common/BatchBuyBasketTrigger';
+import {
+	useBatchBuyStore,
+	selectItemCount,
+} from '@/hooks/useBatchBuyStore';
 
 const FEATURED_CREATOR_FACTS = [
 	{ label: 'Membership', value: 'Collectors Circle' },
@@ -274,6 +281,55 @@ function LandingPage() {
 	const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
 	const [tradeSubmitting, setTradeSubmitting] = useState(false);
 	const prefersReducedMotion = usePrefersReducedMotion();
+
+	// ── Batch buy basket (#954) ───────────────────────────────────────────
+	const [batchBasketOpen, setBatchBasketOpen] = useState(false);
+	const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
+	const [batchSubmitting, setBatchSubmitting] = useState(false);
+	const batchItemCount = useBatchBuyStore(selectItemCount);
+	const clearBasket = useBatchBuyStore(s => s.clearBasket);
+	const batchItems = useBatchBuyStore(s => s.items);
+
+	const handleBatchCheckout = () => {
+		setBatchBasketOpen(false);
+		setBatchConfirmOpen(true);
+	};
+
+	const handleBatchConfirm = async () => {
+		setBatchSubmitting(true);
+		try {
+			showToast.loading(
+				`Submitting batch purchase of ${batchItemCount} creator key${batchItemCount !== 1 ? 's' : ''}...`
+			);
+			// Simulated batch transaction — mirrors the existing stub pattern.
+			await new Promise<void>(resolve =>
+				window.setTimeout(resolve, 1800)
+			);
+			toast.remove();
+			const fakeTxHash =
+				'0xbatch' +
+				Math.random().toString(16).slice(2, 14).padEnd(12, '0') +
+				'deadbeef';
+			const creatorNames = batchItems
+				.map(i => i.creatorName)
+				.slice(0, 3)
+				.join(', ');
+			const extraCount = batchItems.length > 3 ? ` +${batchItems.length - 3} more` : '';
+			showToast.transactionSuccess(
+				'Batch purchase confirmed!',
+				`Purchased keys for ${creatorNames}${extraCount}.`,
+				fakeTxHash,
+				`https://stellar.expert/explorer/testnet/tx/${fakeTxHash}`
+			);
+			clearBasket();
+			setBatchConfirmOpen(false);
+		} catch {
+			toast.remove();
+			showToast.error('Batch purchase failed. Please try again.');
+		} finally {
+			setBatchSubmitting(false);
+		}
+	};
 	const [sortOption, setSortOption] = useState<SortOption>(() => {
 		const sort = searchParams.get('sort') as SortOption | null;
 		if (sort && ['featured', 'price-asc', 'price-desc', 'supply-desc'].includes(sort)) {
@@ -1319,6 +1375,25 @@ function LandingPage() {
 				onOpenChange={setTradeDialogOpen}
 				onConfirm={handleConfirmTrade}
 			/>
+
+			{/* Batch buy basket (#954) */}
+			<BatchBuyBasketTrigger
+				onClick={() => setBatchBasketOpen(true)}
+			/>
+			<BatchBuyBasket
+				open={batchBasketOpen}
+				onClose={() => setBatchBasketOpen(false)}
+				onCheckout={handleBatchCheckout}
+			/>
+			<BatchBuyConfirmDialog
+				open={batchConfirmOpen}
+				onOpenChange={open => {
+					if (!batchSubmitting) setBatchConfirmOpen(open);
+				}}
+				onConfirm={handleBatchConfirm}
+				isSubmitting={batchSubmitting}
+			/>
+
 			<ScrollToTop />
 			<IdleRefreshPrompt
 				visible={isIdlePromptVisible}

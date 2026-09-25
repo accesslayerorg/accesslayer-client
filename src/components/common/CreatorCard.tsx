@@ -4,13 +4,24 @@ import type { Course } from '@/services/course.service';
 import { cn } from '@/lib/utils';
 import {
 	ShoppingCart,
+	ShoppingBasket,
 	Link as LinkIcon,
 	TrendingUp,
 	MoreVertical,
 	Copy,
 	Share2,
 	ExternalLink,
+	Check,
 } from 'lucide-react';
+import {
+	useBatchBuyStore,
+	selectIsInBasket,
+	selectIsAtCap,
+} from '@/hooks/useBatchBuyStore';
+import {
+	resolveCreatorKeyPriceStroops,
+	formatCreatorKeyPriceDisplay,
+} from '@/utils/keyPriceDisplay.utils';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -23,7 +34,6 @@ import RecentActivityBadge from '@/components/common/RecentActivityBadge';
 import toast from 'react-hot-toast';
 import showToast from '@/utils/toast.util';
 import { formatCompactNumber } from '@/utils/numberFormat.utils';
-import { formatCreatorKeyPriceDisplay } from '@/utils/keyPriceDisplay.utils';
 import { formatCreatorHandle } from '@/utils/handleDisplay.utils';
 import { normalizeCreatorDisplayName } from '@/utils/creatorDisplayName.utils';
 import { getCreatorPriceChartAccessibilityCopy } from '@/utils/creatorPriceChartAccessibility.utils';
@@ -193,6 +203,40 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 		});
 		// Implementation for contract interaction would go here
 		runPurchaseAttempt();
+	};
+
+	// ── Batch buy basket (#954) ───────────────────────────────────────────
+	const addItem = useBatchBuyStore(s => s.addItem);
+	const removeItem = useBatchBuyStore(s => s.removeItem);
+	const isInBasket = useBatchBuyStore(s =>
+		selectIsInBasket(s, creator.id)
+	);
+	const isAtCap = useBatchBuyStore(selectIsAtCap);
+	const priceStroops = resolveCreatorKeyPriceStroops(creator) ?? 0;
+
+	const handleToggleBasket = () => {
+		if (isInBasket) {
+			removeItem(creator.id);
+			toast.success(`Removed ${displayCreatorName} from basket`, {
+				duration: 2000,
+			});
+			return;
+		}
+		if (isAtCap) {
+			toast.error('Batch cap reached. Remove an item first.', {
+				duration: 3000,
+			});
+			return;
+		}
+		addItem({
+			creatorId: creator.id,
+			creatorName: displayCreatorName,
+			priceStroops,
+			thumbnail: creator.thumbnail,
+		});
+		toast.success(`Added ${displayCreatorName} to basket`, {
+			duration: 2000,
+		});
 	};
 
 	return (
@@ -477,36 +521,72 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 					Purchase actions for {displayCreatorName}
 				</span>
 				<NetworkFeeHint className="shrink-0" />
-				<AsyncButton
-					onClick={handleBuy}
-					variant={isConnected ? 'default' : 'outline'}
-					size="sm"
-					isPending={transactionState === 'submitting'}
-					pendingText="Processing..."
-					disabled={isNetworkMismatch}
-					className={cn(
-						'rounded-xl font-bold',
-						!isConnected && 'border-white/10  hover:bg-white/5'
-					)}
-				>
-					{transactionState === 'success' && (
-						<TransactionStatusIcon status="success" />
-					)}
-					{transactionState === 'submitting' && (
-						<TransactionStatusIcon status="pending" />
-					)}
-					{transactionState === 'failed' && (
-						<TransactionStatusIcon status="failed" />
-					)}
-					<ShoppingCart className="creator-action-icon" />
-					{transactionState === 'submitting'
-						? 'Processing...'
-						: transactionState === 'success'
-							? 'Completed'
-							: transactionState === 'failed'
-								? 'Retry Purchase'
-								: 'Buy Key'}
-				</AsyncButton>
+				<div className="flex items-center gap-2">
+					{/* Add to basket button (#954) */}
+					<button
+						type="button"
+						onClick={handleToggleBasket}
+						disabled={!isInBasket && isAtCap}
+						aria-label={
+							isInBasket
+								? `Remove ${displayCreatorName} from batch basket`
+								: `Add ${displayCreatorName} to batch basket`
+						}
+						aria-pressed={isInBasket}
+						title={
+							isInBasket
+								? 'Remove from basket'
+								: isAtCap
+									? 'Batch cap reached'
+									: 'Add to basket'
+						}
+						className={cn(
+							'flex size-8 shrink-0 items-center justify-center rounded-xl border transition-colors',
+							'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60',
+							'disabled:pointer-events-none disabled:opacity-30',
+							isInBasket
+								? 'border-amber-500/60 bg-amber-500/15 text-amber-400 hover:border-red-400/60 hover:bg-red-500/10 hover:text-red-400'
+								: 'border-white/10 bg-transparent text-white/40 hover:border-amber-500/40 hover:text-amber-400'
+						)}
+					>
+						{isInBasket ? (
+							<Check className="size-3.5" aria-hidden="true" />
+						) : (
+							<ShoppingBasket className="size-3.5" aria-hidden="true" />
+						)}
+					</button>
+
+					<AsyncButton
+						onClick={handleBuy}
+						variant={isConnected ? 'default' : 'outline'}
+						size="sm"
+						isPending={transactionState === 'submitting'}
+						pendingText="Processing..."
+						disabled={isNetworkMismatch}
+						className={cn(
+							'rounded-xl font-bold',
+							!isConnected && 'border-white/10  hover:bg-white/5'
+						)}
+					>
+						{transactionState === 'success' && (
+							<TransactionStatusIcon status="success" />
+						)}
+						{transactionState === 'submitting' && (
+							<TransactionStatusIcon status="pending" />
+						)}
+						{transactionState === 'failed' && (
+							<TransactionStatusIcon status="failed" />
+						)}
+						<ShoppingCart className="creator-action-icon" />
+						{transactionState === 'submitting'
+							? 'Processing...'
+							: transactionState === 'success'
+								? 'Completed'
+								: transactionState === 'failed'
+									? 'Retry Purchase'
+									: 'Buy Key'}
+					</AsyncButton>
+				</div>
 			</div>
 
 			<BuyActionHelperText
