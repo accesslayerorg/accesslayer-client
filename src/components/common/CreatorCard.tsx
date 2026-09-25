@@ -43,6 +43,10 @@ import WalletConnectCalloutBanner from '@/components/common/WalletConnectCallout
 import NetworkMismatchBanner from '@/components/common/NetworkMismatchBanner';
 import CreatorSocialLinksList from '@/components/common/CreatorSocialLinksList';
 import TransactionStatusIcon from '@/components/common/TransactionStatusIcon';
+import {
+	useContractPausedStore,
+	selectIsPaused,
+} from '@/hooks/useContractPausedStore';
 import MiniStatChip from '@/components/common/MiniStatChip';
 import Change24hBadge from '@/components/common/Change24hBadge';
 import KeySupplyBadge from '@/components/common/KeySupplyBadge';
@@ -90,6 +94,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 	const { isConnected } = useAccount();
 	const { isMismatch: isNetworkMismatch, expectedChainName } =
 		useNetworkMismatch();
+	const isPaused = useContractPausedStore(selectIsPaused);
 	const [transactionState, setTransactionState] = useState<
 		'idle' | 'submitting' | 'failed' | 'success'
 	>('idle');
@@ -174,6 +179,11 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 	};
 
 	const handleBuy = () => {
+		if (isPaused) {
+			toast.error('Trading is suspended: contract is paused');
+			return;
+		}
+
 		if (!isConnected) {
 			toast.error('Please connect your wallet to purchase keys', {
 				duration: 4000,
@@ -483,7 +493,8 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 					size="sm"
 					isPending={transactionState === 'submitting'}
 					pendingText="Processing..."
-					disabled={isNetworkMismatch}
+					disabled={isNetworkMismatch || isPaused}
+					title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 					className={cn(
 						'rounded-xl font-bold',
 						!isConnected && 'border-white/10  hover:bg-white/5'
@@ -513,9 +524,11 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 				state={transactionState}
 				className="mt-4"
 				disabledReason={
-					isNetworkMismatch
-						? `Switch to ${expectedChainName} to enable purchases.`
-						: undefined
+					isPaused
+						? 'Trading is currently suspended because the contract is paused.'
+						: isNetworkMismatch
+							? `Switch to ${expectedChainName} to enable purchases.`
+							: undefined
 				}
 			/>
 

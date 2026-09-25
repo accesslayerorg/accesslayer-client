@@ -31,6 +31,11 @@ import EmptyTransactionTimelineState from '@/components/common/EmptyTransactionT
 import TradeDialog, { type TradeSide } from '@/components/common/TradeDialog';
 import NetworkMismatchBanner from '@/components/common/NetworkMismatchBanner';
 import StellarConnectionQualityBadge from '@/components/common/StellarConnectionQualityBadge';
+import AdminPauseControl from '@/components/common/AdminPauseControl';
+import {
+	useContractPausedStore,
+	selectIsPaused,
+} from '@/hooks/useContractPausedStore';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
@@ -613,20 +618,36 @@ function LandingPage() {
 		displayedPortfolioValue
 	);
 
+	const isPaused = useContractPausedStore(selectIsPaused);
+
 	const openTradeDialog = (side: TradeSide) => {
+		if (isPaused) {
+			showToast.error('Trading is suspended: contract is paused');
+			return;
+		}
 		setTradeSide(side);
 		setTradeDialogOpen(true);
 	};
 
 	const handleConfirmTrade = async (amount: number) => {
+		if (isPaused) {
+			showToast.error('Trading is suspended: contract is paused');
+			return;
+		}
 		const previousHoldings = featuredHoldings;
 		setTradeSubmitting(true);
 
 		try {
-			showToast.loading(
+			const actionVerb =
 				tradeSide === 'buy'
-					? `Submitting buy for ${amount} key${amount === 1 ? '' : 's'}...`
-					: `Submitting sell for ${amount} key${amount === 1 ? '' : 's'}...`
+					? 'buy'
+					: tradeSide === 'sell'
+						? 'sell'
+						: tradeSide === 'stake'
+							? 'stake'
+							: 'transfer';
+			showToast.loading(
+				`Submitting ${actionVerb} for ${amount} key${amount === 1 ? '' : 's'}...`
 			);
 
 			await new Promise<void>(resolve => window.setTimeout(resolve, 900));
@@ -693,8 +714,9 @@ function LandingPage() {
 							<Button>Buy Access</Button>
 						</UnavailableAction>
 					</div>
-					<div className="mt-4 flex justify-center">
+					<div className="mt-4 flex flex-col items-center gap-3">
 						<StellarConnectionQualityBadge />
+						<AdminPauseControl className="w-full max-w-md mx-auto" />
 					</div>
 				</MarketplaceSection>
 
@@ -1192,8 +1214,9 @@ function LandingPage() {
 												className="rounded-xl"
 												onClick={() => openTradeDialog('buy')}
 												disabled={
-													isNetworkMismatch || tradeSubmitting
+													isNetworkMismatch || tradeSubmitting || isPaused
 												}
+												title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 											>
 												Buy
 											</Button>
@@ -1202,10 +1225,33 @@ function LandingPage() {
 												variant="outline"
 												onClick={() => openTradeDialog('sell')}
 												disabled={
-													isNetworkMismatch || tradeSubmitting
+													isNetworkMismatch || tradeSubmitting || isPaused
 												}
+												title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 											>
 												Sell
+											</Button>
+											<Button
+												className="rounded-xl"
+												variant="outline"
+												onClick={() => openTradeDialog('stake')}
+												disabled={
+													isNetworkMismatch || tradeSubmitting || isPaused
+												}
+												title={isPaused ? 'Trading suspended: contract is paused' : undefined}
+											>
+												Stake
+											</Button>
+											<Button
+												className="rounded-xl"
+												variant="outline"
+												onClick={() => openTradeDialog('transfer')}
+												disabled={
+													isNetworkMismatch || tradeSubmitting || isPaused
+												}
+												title={isPaused ? 'Trading suspended: contract is paused' : undefined}
+											>
+												Transfer
 											</Button>
 										</div>
 										{tradeSubmitting && (
@@ -1271,7 +1317,8 @@ function LandingPage() {
 											className="rounded-xl"
 											size="sm"
 											onClick={() => openTradeDialog('buy')}
-											disabled={isNetworkMismatch || tradeSubmitting}
+											disabled={isNetworkMismatch || tradeSubmitting || isPaused}
+											title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 										>
 											Buy
 										</Button>
@@ -1280,9 +1327,30 @@ function LandingPage() {
 											size="sm"
 											variant="outline"
 											onClick={() => openTradeDialog('sell')}
-											disabled={isNetworkMismatch || tradeSubmitting}
+											disabled={isNetworkMismatch || tradeSubmitting || isPaused}
+											title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 										>
 											Sell
+										</Button>
+										<Button
+											className="rounded-xl"
+											size="sm"
+											variant="outline"
+											onClick={() => openTradeDialog('stake')}
+											disabled={isNetworkMismatch || tradeSubmitting || isPaused}
+											title={isPaused ? 'Trading suspended: contract is paused' : undefined}
+										>
+											Stake
+										</Button>
+										<Button
+											className="rounded-xl"
+											size="sm"
+											variant="outline"
+											onClick={() => openTradeDialog('transfer')}
+											disabled={isNetworkMismatch || tradeSubmitting || isPaused}
+											title={isPaused ? 'Trading suspended: contract is paused' : undefined}
+										>
+											Transfer
 										</Button>
 									</div>
 									{tradeSubmitting && (
@@ -1313,6 +1381,7 @@ function LandingPage() {
 				open={tradeDialogOpen}
 				side={tradeSide}
 				creatorName="Alex Rivers"
+				creatorId={featuredCreator?.id ?? 'alex-rivers'}
 				availableHoldings={featuredHoldings}
 				keyPriceStroops={resolveCreatorKeyPriceStroops(featuredCreator)}
 				isSubmitting={tradeSubmitting}
