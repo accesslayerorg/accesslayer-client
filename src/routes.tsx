@@ -15,6 +15,8 @@ import GovernancePage from './pages/GovernancePage';
 import ProposalDetailPage from './pages/ProposalDetailPage';
 import ReferralDashboardPage from './pages/ReferralDashboardPage';
 import CreateCreatorKeyPage from './pages/CreateCreatorKeyPage';
+import AtomicSwapCreatePage from './pages/AtomicSwapCreatePage';
+import AtomicSwapProposalPage from './pages/AtomicSwapProposalPage';
 
 export const routes = [
 	{
@@ -92,6 +94,14 @@ export const routes = [
 			{
 				path: '/create-key',
 				element: <CreateCreatorKeyPage />,
+			},
+			{
+				path: '/swap/create',
+				element: <AtomicSwapCreatePage />,
+			},
+			{
+				path: '/swap/:proposalId',
+				element: <AtomicSwapProposalPage />,
 			},
 			{
 				path: '/admin/dashboard',

@@ -1,20 +1,23 @@
-import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { BarChart2, Clock, Coins, Activity } from 'lucide-react';
+import { useState } from 'react';
+import { BarChart2, Clock, Coins, Activity, ArrowLeftRight } from 'lucide-react';
 import ReferralLinkPanel from '@/components/common/ReferralLinkPanel';
 import TradeHistoryTable from '@/components/common/TradeHistoryTable';
+import AtomicSwapHistory from '@/components/common/AtomicSwapHistory';
 import ProtocolRevenueClaim from '@/components/common/ProtocolRevenueClaim';
 import ProtocolRevenueDistributionTable from '@/components/common/ProtocolRevenueDistributionTable';
 import WalletActivityFeed from '@/components/common/WalletActivityFeed';
 import { ProfileTabPillGroup } from '@/components/common/ProfileTabPill';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useAccount } from 'wagmi';
 import { cn } from '@/lib/utils';
 
 const TABS = [
 	{ label: 'Holdings', value: 'holdings', icon: <BarChart2 /> },
 	{ label: 'Staking', value: 'staking', icon: <Coins /> },
 	{ label: 'Trade History', value: 'trade-history', icon: <Clock /> },
+	{ label: 'Atomic Swaps', value: 'atomic-swaps', icon: <ArrowLeftRight /> },
 	{ label: 'Activity', value: 'activity', icon: <Activity /> },
 ];
 
@@ -39,6 +42,8 @@ const VALID_TABS = TABS.map(t => t.value);
 
 export default function ProfilePage() {
 	const profile = useProfileStore(state => state.profile);
+	const { address: connectedAddress } = useAccount();
+	const walletAddress = connectedAddress || DEMO_WALLET;
 	const [searchParams, setSearchParams] = useSearchParams();
 	const requestedTab = searchParams.get('tab');
 	const requestedSubTab = searchParams.get('subtab');
@@ -209,7 +214,30 @@ export default function ProfilePage() {
 								</p>
 							</div>
 
-							<TradeHistoryTable walletAddress={DEMO_WALLET} />
+							<TradeHistoryTable walletAddress={walletAddress} />
+						</div>
+					</section>
+				)}
+
+				{/* Atomic swap history panel */}
+				{activeTab === 'atomic-swaps' && (
+					<section
+						id="profile-panel-atomic-swaps"
+						role="tabpanel"
+						aria-labelledby="profile-tab-atomic-swaps"
+						data-testid="portfolio-atomic-swaps-panel"
+					>
+						<div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 md:p-8">
+							<div className="mb-6">
+								<h2 className="font-grotesque text-2xl font-bold text-white">
+									Atomic Swap History
+								</h2>
+								<p className="mt-1 text-sm text-white/65">
+									Completed direct key exchanges with counterparties
+								</p>
+							</div>
+
+							<AtomicSwapHistory walletAddress={walletAddress} />
 						</div>
 					</section>
 				)}

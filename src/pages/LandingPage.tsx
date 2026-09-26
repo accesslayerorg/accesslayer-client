@@ -104,7 +104,7 @@ import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { CREATOR_LIST_SORT_LAYOUT_TRANSITION } from '@/utils/creatorListSortTransition';
 import { creatorListKey } from '@/utils/creatorListKey.utils';
-import { Check, ChevronDown, Copy, RefreshCw, Share2 } from 'lucide-react';
+import { Check, ChevronDown, Copy, RefreshCw, ArrowLeftRight, Share2 } from 'lucide-react';
 import ClearedFiltersEmptyState from '@/components/common/ClearedFiltersEmptyState';
 import CreatorListPagination from '@/components/common/CreatorListPagination';
 import CreatorListGroupSeparator from '@/components/common/CreatorListGroupSeparator';
@@ -1602,6 +1602,17 @@ function LandingPage() {
 									{displayedPortfolioValue.heldPositionCount}
 								</span>
 							</div>
+</div>
+						<div className="md:col-span-2 mt-4 flex justify-end">
+							<Button
+								variant="outline"
+								onClick={() => window.location.href = '/swap/create'}
+								disabled={heldKeyPositions.filter(p => p.quantity && p.quantity > 0).length === 0}
+								className="rounded-xl border-white/15 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
+							>
+								<ArrowLeftRight className="size-4 mr-2" aria-hidden="true" />
+								Create Atomic Swap
+							</Button>
 						</div>
 						{pnlSummary.status === 'ready' &&
 							pnlSummary.totalInvested > 0 && (
@@ -1642,7 +1653,7 @@ function LandingPage() {
 												)}`}
 												data-testid="pnl-summary-unrealised"
 											>
-												{formatPnLDisplay(pnlSummary.unrealisedPnL)}{' '}
+												{formatPnLDisplay(pnlSummary.unrealisedPnL)}&nbsp;
 												(
 												{formatPnLPercentage(
 													pnlSummary.pnlPercentage
@@ -1665,11 +1676,11 @@ function LandingPage() {
 											className="text-[0.65rem] leading-relaxed text-white/40 sm:text-right"
 											data-testid="pnl-summary-caption"
 										>
-											Valued at the current bonding curve sell price across{' '}
-											{pnlSummary.costBasisPositionCount}{' '}
+											Valued at the current bonding curve sell price across&nbsp;
+											{pnlSummary.costBasisPositionCount}&nbsp;
 											{pnlSummary.costBasisPositionCount === 1
 												? 'position'
-												: 'positions'}{' '}
+												: 'positions'}&nbsp;
 											with a tracked average purchase price.
 										</p>
 									</div>
