@@ -43,4 +43,11 @@ export const queryKeys = {
 	admin: {
 		oracleCallers: () => ['admin', 'oracle', 'callers'] as const,
 	},
+	atomicSwap: {
+		all: () => ['atomic-swap'] as const,
+		proposal: (proposalId: string) => ['atomic-swap', 'proposal', proposalId] as const,
+		proposals: (address: string, status?: string) =>
+			['atomic-swap', 'proposals', address, status ?? 'all'] as const,
+		history: (address: string) => ['atomic-swap', 'history', address] as const,
+	},
 } as const;

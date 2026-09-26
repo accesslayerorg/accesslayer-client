@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { BarChart2, Clock } from 'lucide-react';
+import { BarChart2, Clock, ArrowLeftRight } from 'lucide-react';
 import ReferralLinkPanel from '@/components/common/ReferralLinkPanel';
 import TradeHistoryTable from '@/components/common/TradeHistoryTable';
+import AtomicSwapHistory from '@/components/common/AtomicSwapHistory';
 import { ProfileTabPillGroup } from '@/components/common/ProfileTabPill';
 import { useProfileStore } from '@/hooks/useProfileStore';
+import { useAccount } from 'wagmi';
 
 const TABS = [
 	{ label: 'Holdings', value: 'holdings', icon: <BarChart2 /> },
 	{ label: 'Trade History', value: 'trade-history', icon: <Clock /> },
+	{ label: 'Atomic Swaps', value: 'atomic-swaps', icon: <ArrowLeftRight /> },
 ];
 
 // Mock wallet address – in a real app this would come from the wallet provider.
@@ -23,6 +26,8 @@ const keys = [
 
 export default function ProfilePage() {
 	const profile = useProfileStore(state => state.profile);
+	const { address: connectedAddress } = useAccount();
+	const walletAddress = connectedAddress || DEMO_WALLET;
 	const [activeTab, setActiveTab] = useState('holdings');
 
 	return (
@@ -73,7 +78,30 @@ export default function ProfilePage() {
 								</p>
 							</div>
 
-							<TradeHistoryTable walletAddress={DEMO_WALLET} />
+							<TradeHistoryTable walletAddress={walletAddress} />
+						</div>
+					</section>
+				)}
+
+				{/* Atomic swap history panel */}
+				{activeTab === 'atomic-swaps' && (
+					<section
+						id="profile-panel-atomic-swaps"
+						role="tabpanel"
+						aria-labelledby="profile-tab-atomic-swaps"
+						data-testid="portfolio-atomic-swaps-panel"
+					>
+						<div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 md:p-8">
+							<div className="mb-6">
+								<h2 className="font-grotesque text-2xl font-bold text-white">
+									Atomic Swap History
+								</h2>
+								<p className="mt-1 text-sm text-white/65">
+									Completed direct key exchanges with counterparties
+								</p>
+							</div>
+
+							<AtomicSwapHistory walletAddress={walletAddress} />
 						</div>
 					</section>
 				)}

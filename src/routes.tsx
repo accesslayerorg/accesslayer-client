@@ -7,6 +7,8 @@ import NotificationsPage from './pages/NotificationsPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import ProfilePage from './pages/ProfilePage';
 import FollowingPage from './pages/FollowingPage';
+import AtomicSwapCreatePage from './pages/AtomicSwapCreatePage';
+import AtomicSwapProposalPage from './pages/AtomicSwapProposalPage';
 
 export const routes = [
 	{
@@ -52,6 +54,14 @@ export const routes = [
 	{
 		path: '/admin/dashboard',
 		element: <AdminDashboardPage />,
+	},
+	{
+		path: '/swap/create',
+		element: <AtomicSwapCreatePage />,
+	},
+	{
+		path: '/swap/:proposalId',
+		element: <AtomicSwapProposalPage />,
 	},
 	{
 		path: '*',
