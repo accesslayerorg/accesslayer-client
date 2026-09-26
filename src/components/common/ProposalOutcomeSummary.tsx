@@ -12,6 +12,7 @@ import { formatNumber, formatPercent } from '@/utils/numberFormat.utils';
 import {
 	getEligibleVotingWeight,
 	getParticipationPercentage,
+	getProposalOptions,
 	getProposalOutcome,
 	getQuorumPercentage,
 	isProposalOutcome,
@@ -194,24 +195,25 @@ export default function ProposalOutcomeSummary({
 			</section>
 
 			<div className="grid gap-3 sm:grid-cols-3">
-				<VoteTally
-					direction="for"
-					label="For"
-					value={proposal.forVotes}
-					icon={<ThumbsUp className="size-3.5" aria-hidden="true" />}
-				/>
-				<VoteTally
-					direction="against"
-					label="Against"
-					value={proposal.againstVotes}
-					icon={<ThumbsDown className="size-3.5" aria-hidden="true" />}
-				/>
-				<VoteTally
-					direction="abstain"
-					label="Abstain"
-					value={proposal.abstainVotes}
-					icon={<Minus className="size-3.5" aria-hidden="true" />}
-				/>
+				{getProposalOptions(proposal).map((option, index) => (
+					<VoteTally
+						key={option.label}
+						direction={
+							index === 0 ? 'for' : index === 1 ? 'against' : 'abstain'
+						}
+						label={option.label}
+						value={option.weight}
+						icon={
+							index === 0 ? (
+								<ThumbsUp className="size-3.5" aria-hidden="true" />
+							) : index === 1 ? (
+								<ThumbsDown className="size-3.5" aria-hidden="true" />
+							) : (
+								<Minus className="size-3.5" aria-hidden="true" />
+							)
+						}
+					/>
+				))}
 			</div>
 		</div>
 	);

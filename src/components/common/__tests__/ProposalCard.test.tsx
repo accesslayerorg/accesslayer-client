@@ -28,7 +28,7 @@ describe('ProposalCard', () => {
 
 		expect(
 			screen.getByRole('link', { name: 'View Choose a treasury policy' })
-		).toHaveAttribute('href', '/governance/proposals/proposal-42');
+		).toHaveAttribute('href', '/governance/proposal-42');
 		expect(screen.getByText('Approve')).toBeInTheDocument();
 		expect(screen.getByText('Reject')).toBeInTheDocument();
 	});

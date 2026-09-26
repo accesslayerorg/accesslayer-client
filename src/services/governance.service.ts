@@ -1,9 +1,9 @@
 import { BaseApiService, type APIResponse } from './api.service';
 import { cacheManager } from '@/utils/cache.utils';
 import { normalizeProposal } from '@/utils/governance.utils';
-import type { Proposal } from '@/types/governance';
 import type { Proposal, ProposalVotesPage } from '@/types/governance';
 
+/** How long fetched proposal data stays fresh (15 seconds — proposals change faster than profiles). */
 const PROPOSAL_CACHE_TTL = 15_000;
 export const PROPOSAL_VOTES_PAGE_SIZE = 20;
 
@@ -16,6 +16,10 @@ function asRecord(value: unknown): Record<string, unknown> {
 class GovernanceService extends BaseApiService {
 	private cacheKeys = new Set<string>();
 
+	/**
+	 * Fetch all proposals, optionally filtered by creator.
+	 * GET /governance/proposals?creatorId=:id
+	 */
 	async getProposals(creatorId?: string): Promise<Proposal[]> {
 		const cacheKey = `proposals_${creatorId ?? 'all'}`;
 		const cached = cacheManager.get<Proposal[]>(cacheKey);
@@ -48,6 +52,10 @@ class GovernanceService extends BaseApiService {
 		}
 	}
 
+	/**
+	 * Fetch a single proposal by ID.
+	 * GET /governance/proposals/:id
+	 */
 	async getProposal(proposalId: string): Promise<Proposal> {
 		const cacheKey = `proposal_${proposalId}`;
 		const cached = cacheManager.get<Proposal>(cacheKey);
@@ -72,11 +80,6 @@ class GovernanceService extends BaseApiService {
 		}
 	}
 
-	clearCache(): void {
-		for (const cacheKey of this.cacheKeys) {
-			cacheManager.invalidate(cacheKey);
-		}
-		this.cacheKeys.clear();
 	async getProposalVotes(
 		proposalId: string,
 		cursor?: string | null,
@@ -88,7 +91,7 @@ class GovernanceService extends BaseApiService {
 
 		try {
 			const response = await this.api.get<APIResponse<ProposalVotesPage>>(
-				`/governance/proposals/${proposalId}/votes`,
+				`/governance/proposals/${encodeURIComponent(proposalId)}/votes`,
 				{
 					params: {
 						...(cursor ? { cursor } : {}),
@@ -103,6 +106,13 @@ class GovernanceService extends BaseApiService {
 		} catch (error) {
 			throw this.handleError(error);
 		}
+	}
+
+	clearCache(): void {
+		for (const cacheKey of this.cacheKeys) {
+			cacheManager.invalidate(cacheKey);
+		}
+		this.cacheKeys.clear();
 	}
 }
 

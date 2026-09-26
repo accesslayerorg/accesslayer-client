@@ -82,10 +82,6 @@ export const routes = [
 				element: <GovernancePage />,
 			},
 			{
-				path: '/governance/proposals/:proposalId',
-				element: <ProposalDetailPage />,
-			},
-			{
 				path: '/governance/:proposalId',
 				element: <ProposalDetailPage />,
 			},

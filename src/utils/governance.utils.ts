@@ -13,6 +13,8 @@ const LEGACY_OPTIONS = [
 	{ label: 'Abstain', voteKey: 'abstainVotes' },
 ] as const;
 
+export type ProposalDisplayOutcome = 'active' | ProposalOutcome;
+
 function asRecord(value: unknown): UnknownRecord {
 	return value !== null && typeof value === 'object' && !Array.isArray(value)
 		? (value as UnknownRecord)
@@ -160,42 +162,25 @@ function normalizeOptions(raw: UnknownRecord): ProposalOption[] {
 	}));
 }
 
-function normalizeOutcome(
-	value: unknown,
+function resolveOutcome(
 	status: ProposalStatus,
 	options: ProposalOption[],
-	totalVotingWeight: number,
-	totalCirculatingSupply: number,
+	voteTotal: number,
+	eligibleVotingWeight: number,
 	quorumBps: number
 ): ProposalOutcome | undefined {
-	const outcome = toStringValue(value)?.toLowerCase();
-	if (
-		outcome === 'passed' ||
-		outcome === 'failed' ||
-		outcome === 'quorum_not_met'
-	) {
-		return outcome;
-	}
 	if (status === 'active') return undefined;
 	if (status === 'passed' || status === 'executed') return 'passed';
-	if (status === 'rejected' || status === 'cancelled') return 'failed';
+	if (status === 'cancelled') return 'failed';
 
-	const participationRate =
-		totalCirculatingSupply > 0
-			? (totalVotingWeight / totalCirculatingSupply) * 100
-			: 0;
-	if (
-		totalVotingWeight <= 0 ||
-		(quorumBps > 0 && participationRate < quorumBps / 100)
-	) {
-		return 'quorum_not_met';
-	}
+	const missedQuorum =
+		voteTotal <= 0 ||
+		(quorumBps > 0 &&
+			!isQuorumMet(voteTotal, eligibleVotingWeight, quorumBps));
+	if (missedQuorum) return 'quorum_not_met';
+	if (status === 'rejected') return 'failed';
 
-	const leadingOption = options.reduce<ProposalOption | undefined>(
-		(leading, option) =>
-			!leading || option.weight > leading.weight ? option : leading,
-		undefined
-	);
+	const leadingOption = getLeadingOptionFromOptions(options);
 	if (!leadingOption) return 'quorum_not_met';
 
 	const remainingWeight = options
@@ -203,6 +188,16 @@ function normalizeOutcome(
 		.reduce((total, option) => total + option.weight, 0);
 
 	return leadingOption.weight > remainingWeight ? 'passed' : 'failed';
+}
+
+function getLeadingOptionFromOptions(
+	options: ProposalOption[]
+): ProposalOption | undefined {
+	return options.reduce<ProposalOption | undefined>(
+		(leading, option) =>
+			!leading || option.weight > leading.weight ? option : leading,
+		undefined
+	);
 }
 
 function getPollId(raw: UnknownRecord): number | undefined {
@@ -268,12 +263,15 @@ export function normalizeProposal(value: unknown): Proposal {
 		toNonNegativeNumber(raw.snapshotLedger ?? raw.snapshot_ledger) ??
 		undefined;
 	const closedAt = toDateValue(raw.closedAt ?? raw.closed_at);
-	const outcome = normalizeOutcome(
-		raw.outcome,
+	const eligibleVotingWeight =
+		toNonNegativeNumber(
+			raw.eligibleVotingWeight ?? raw.eligible_voting_weight
+		) ?? undefined;
+	const outcome = resolveOutcome(
 		status,
 		options,
 		totalVotingWeight,
-		totalCirculatingSupply,
+		eligibleVotingWeight ?? totalCirculatingSupply,
 		quorumBps
 	);
 
@@ -299,10 +297,7 @@ export function normalizeProposal(value: unknown): Proposal {
 		options,
 		totalVotingWeight: Math.max(0, totalVotingWeight),
 		totalCirculatingSupply: Math.max(0, totalCirculatingSupply),
-		eligibleVotingWeight:
-			toNonNegativeNumber(
-				raw.eligibleVotingWeight ?? raw.eligible_voting_weight
-			) ?? undefined,
+		eligibleVotingWeight,
 		quorumBps,
 		startDate,
 		endDate,
@@ -339,34 +334,11 @@ export function getProposalVoteTotal(proposal: Proposal): number {
 	);
 }
 
-export function getParticipationRate(
-	proposal: Proposal,
-	voteTotal = getProposalVoteTotal(proposal)
-): number {
-	const eligibleWeight = Math.max(
-		0,
-		proposal.eligibleVotingWeight ?? proposal.totalCirculatingSupply
-	);
-	if (eligibleWeight <= 0) return 0;
-	return Math.max(0, (voteTotal / eligibleWeight) * 100);
-}
-
 export function getLeadingOption(
 	proposal: Proposal
 ): ProposalOption | undefined {
-	return getProposalOptions(proposal).reduce<ProposalOption | undefined>(
-		(leading, option) =>
-			!leading || option.weight > leading.weight ? option : leading,
-		undefined
-	);
+	return getLeadingOptionFromOptions(getProposalOptions(proposal));
 }
-
-export function getProposalOutcome(
-	proposal: Proposal
-): ProposalOutcome | undefined {
-	if (proposal.status === 'active') return undefined;
-export type ProposalDisplayOutcome =
-	'active' | 'passed' | 'failed' | 'quorum_not_met';
 
 export function getEligibleVotingWeight(
 	proposal: Pick<Proposal, 'eligibleVotingWeight' | 'totalCirculatingSupply'>
@@ -423,33 +395,16 @@ export function isProposalOutcome(
 	return outcome !== 'active';
 }
 
+/**
+ * Final outcome of a proposal, or 'active' while voting is still open.
+ * Prefers the outcome resolved while normalising the API payload.
+ */
 export function getProposalOutcome(proposal: Proposal): ProposalDisplayOutcome {
 	if (!isProposalClosed(proposal.status)) return 'active';
 	if (proposal.outcome) return proposal.outcome;
 	if (proposal.status === 'passed' || proposal.status === 'executed') {
 		return 'passed';
 	}
-	if (proposal.status === 'rejected' || proposal.status === 'cancelled') {
-		return 'failed';
-	}
-
-	const voteTotal = getProposalVoteTotal(proposal);
-	if (
-		voteTotal === 0 ||
-		(proposal.quorumBps > 0 &&
-			getParticipationRate(proposal, voteTotal) < proposal.quorumBps / 100)
-	) {
-		return 'quorum_not_met';
-	}
-
-	const leadingOption = getLeadingOption(proposal);
-	if (!leadingOption) return 'quorum_not_met';
-
-	const remainingWeight = getProposalOptions(proposal)
-		.filter(option => option.label !== leadingOption.label)
-		.reduce((total, option) => total + option.weight, 0);
-
-	return leadingOption.weight > remainingWeight ? 'passed' : 'failed';
 	if (proposal.status === 'cancelled') return 'failed';
 
 	return isQuorumMet(
@@ -459,4 +414,21 @@ export function getProposalOutcome(proposal: Proposal): ProposalDisplayOutcome {
 	)
 		? 'failed'
 		: 'quorum_not_met';
+}
+
+/**
+ * Final outcome of a closed proposal, or undefined while it is still open.
+ * Unlike {@link getProposalOutcome} it weighs the leading option against the
+ * remaining weight instead of defaulting every quorum-reached vote to 'failed'.
+ */
+export function getFinalProposalOutcome(
+	proposal: Proposal
+): ProposalOutcome | undefined {
+	return resolveOutcome(
+		proposal.status,
+		getProposalOptions(proposal),
+		getProposalVoteTotal(proposal),
+		getEligibleVotingWeight(proposal),
+		proposal.quorumBps
+	);
 }
