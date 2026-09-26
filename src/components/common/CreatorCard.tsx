@@ -299,12 +299,14 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 							<Share2 className="size-3.5" aria-hidden="true" />
 							Share creator
 						</DropdownMenuItem>
-						<DropdownMenuItem
-							onSelect={() => {}}
-							className="cursor-pointer gap-2 text-white/70 focus:bg-white/10 focus:text-white"
-						>
-							<ExternalLink className="size-3.5" aria-hidden="true" />
-							View profile
+						<DropdownMenuItem asChild>
+							<Link
+								to={`/creator/${creator.id}`}
+								className="cursor-pointer gap-2 text-white/70 focus:bg-white/10 focus:text-white flex items-center w-full"
+							>
+								<ExternalLink className="size-3.5" aria-hidden="true" />
+								View profile
+							</Link>
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
