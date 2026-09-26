@@ -27,13 +27,18 @@ const QuorumIndicator: React.FC<QuorumIndicatorProps> = ({
 			return { participationPct: 0, quorumPct: 0, quorumReached: false };
 		}
 
-		const participation = (totalVotingWeight / totalCirculatingSupply) * 100;
-		const quorum = quorumBps / 100; // basis points → percentage
+		const participation = Math.max(0, totalVotingWeight);
+		const quorum = Math.max(0, quorumBps) / 100;
 
 		return {
-			participationPct: Math.min(participation, 100),
+			participationPct: Math.min(
+				(participation / totalCirculatingSupply) * 100,
+				100
+			),
 			quorumPct: Math.min(quorum, 100),
-			quorumReached: participation >= quorum,
+			quorumReached:
+				quorum > 0 &&
+				(participation / totalCirculatingSupply) * 100 >= quorum,
 		};
 	}, [quorumBps, totalVotingWeight, totalCirculatingSupply]);
 
@@ -53,9 +58,7 @@ const QuorumIndicator: React.FC<QuorumIndicatorProps> = ({
 				<div
 					className={cn(
 						'absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out',
-						quorumReached
-							? 'bg-emerald-500'
-							: 'bg-amber-400'
+						quorumReached ? 'bg-emerald-500' : 'bg-amber-400'
 					)}
 					style={{ width: `${participationPct}%` }}
 					aria-hidden="true"
@@ -73,9 +76,15 @@ const QuorumIndicator: React.FC<QuorumIndicatorProps> = ({
 			<div className="flex items-center justify-between text-xs">
 				<div className="flex items-center gap-1">
 					{quorumReached ? (
-						<CheckCircle className="size-3.5 text-emerald-400" aria-hidden="true" />
+						<CheckCircle
+							className="size-3.5 text-emerald-400"
+							aria-hidden="true"
+						/>
 					) : (
-						<AlertCircle className="size-3.5 text-amber-400" aria-hidden="true" />
+						<AlertCircle
+							className="size-3.5 text-amber-400"
+							aria-hidden="true"
+						/>
 					)}
 					<span
 						className={cn(

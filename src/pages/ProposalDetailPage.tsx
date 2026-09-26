@@ -1,16 +1,32 @@
 import { useParams, Link } from 'react-router';
-import { ArrowLeft, CalendarDays, UserRound } from 'lucide-react';
+import {
+	ArrowLeft,
+	CalendarDays,
+	CheckCircle2,
+	Clock3,
+	Users,
+} from 'lucide-react';
 import ProposalOutcomeSummary from '@/components/common/ProposalOutcomeSummary';
 import ProposalVoteHistory from '@/components/common/ProposalVoteHistory';
+import { ProposalVotePanel } from '@/components/common/ProposalVotePanel';
+import QuorumIndicator from '@/components/common/QuorumIndicator';
 import { useGovernanceProposal } from '@/hooks/useGovernanceProposals';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { cn } from '@/lib/utils';
 import { shortenAddress } from '@/lib/web3/format';
 import { ApiError } from '@/services/api.service';
-import type { ProposalStatus } from '@/types/governance';
+import type { Proposal, ProposalStatus } from '@/types/governance';
+import {
+	getEligibleVotingWeight,
+	getProposalOptions,
+	getProposalVoteTotal,
+	isProposalClosed,
+} from '@/utils/governance.utils';
+import { formatCompactNumber } from '@/utils/numberFormat.utils';
 
 const STATUS_CLASSES: Record<ProposalStatus, string> = {
 	active: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+	closed: 'border-white/15 bg-white/10 text-white/60',
 	passed: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
 	rejected: 'border-red-500/30 bg-red-500/10 text-red-400',
 	executed: 'border-blue-500/30 bg-blue-500/10 text-blue-400',
@@ -34,6 +50,51 @@ function DetailPageShell({ children }: { children: React.ReactNode }) {
 		<main className="min-h-screen bg-[#06111f] px-4 py-8 text-white sm:px-6 lg:px-8">
 			<div className="mx-auto max-w-5xl">{children}</div>
 		</main>
+	);
+}
+
+function OptionResults({ proposal }: { proposal: Proposal }) {
+	const options = getProposalOptions(proposal);
+	const voteTotal = getProposalVoteTotal(proposal);
+
+	return (
+		<section aria-label="Option results" className="mt-8">
+			<h2 className="mb-4 font-jakarta text-xl font-bold text-white">
+				{isProposalClosed(proposal.status)
+					? 'Final results'
+					: 'Live results'}
+			</h2>
+			<div className="space-y-4">
+				{options.map((option, index) => {
+					const percentage =
+						voteTotal > 0 ? (option.weight / voteTotal) * 100 : 0;
+					return (
+						<div key={option.label}>
+							<div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
+								<span className="text-white/70">{option.label}</span>
+								<span className="tabular-nums text-white/50">
+									{formatCompactNumber(option.weight)} ·{' '}
+									{percentage.toFixed(1)}%
+								</span>
+							</div>
+							<div className="h-2 overflow-hidden rounded-full bg-white/10">
+								<div
+									className={cn(
+										'h-full rounded-full transition-all',
+										index === 0
+											? 'bg-emerald-400'
+											: index === 1
+												? 'bg-red-400'
+												: 'bg-amber-300'
+									)}
+									style={{ width: `${Math.min(100, percentage)}%` }}
+								/>
+							</div>
+						</div>
+					);
+				})}
+			</div>
+		</section>
 	);
 }
 
@@ -110,6 +171,11 @@ export default function ProposalDetailPage() {
 							<span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/30">
 								Proposal {proposal.id}
 							</span>
+							{proposal.pollId !== undefined && (
+								<span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/30">
+									Poll #{proposal.pollId}
+								</span>
+							)}
 						</div>
 						<h1 className="mt-4 font-jakarta text-3xl font-black tracking-tight text-white sm:text-4xl">
 							{proposal.title}
@@ -117,10 +183,13 @@ export default function ProposalDetailPage() {
 						<div className="mt-5 flex flex-wrap gap-x-6 gap-y-3 text-xs text-white/45">
 							<span
 								className="inline-flex items-center gap-1.5"
-								title={proposal.creatorId}
+								title={proposal.creatorAddress ?? proposal.creatorId}
 							>
-								<UserRound className="size-3.5" aria-hidden="true" />
-								Creator {shortenAddress(proposal.creatorId)}
+								<Users className="size-3.5" aria-hidden="true" />
+								Creator{' '}
+								{shortenAddress(
+									proposal.creatorAddress ?? proposal.creatorId
+								)}
 							</span>
 							<span className="inline-flex items-center gap-1.5">
 								<CalendarDays className="size-3.5" aria-hidden="true" />
@@ -147,6 +216,51 @@ export default function ProposalDetailPage() {
 							Result and participation
 						</h2>
 						<ProposalOutcomeSummary proposal={proposal} />
+					</section>
+
+					<OptionResults proposal={proposal} />
+
+					<section className="mt-8" aria-label="Quorum progress">
+						<h2 className="mb-4 font-jakarta text-xl font-bold text-white">
+							Quorum progress
+						</h2>
+						<QuorumIndicator
+							quorumBps={proposal.quorumBps}
+							totalVotingWeight={getProposalVoteTotal(proposal)}
+							totalCirculatingSupply={getEligibleVotingWeight(proposal)}
+						/>
+					</section>
+
+					<section className="mt-10" aria-label="Cast your vote">
+						{proposal.status === 'active' ? (
+							<ProposalVotePanel proposal={proposal} />
+						) : (
+							<div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 sm:p-7">
+								<div className="flex items-center gap-3">
+									<div className="rounded-lg bg-white/10 p-2 text-white/60">
+										<CheckCircle2
+											className="size-4"
+											aria-hidden="true"
+										/>
+									</div>
+									<div>
+										<p className="text-sm font-semibold text-white">
+											Voting is closed
+										</p>
+										<p className="mt-1 text-xs text-white/45">
+											This proposal is read-only and no longer
+											accepts votes.
+										</p>
+									</div>
+								</div>
+								{proposal.closedAt && (
+									<p className="mt-5 flex items-center gap-2 text-xs text-white/45">
+										<Clock3 className="size-3.5" aria-hidden="true" />
+										Closed {formatDateTime(proposal.closedAt)}
+									</p>
+								)}
+							</div>
+						)}
 					</section>
 
 					<section

@@ -6,16 +6,20 @@ import type { ProposalStatus } from '@/types/governance';
 import { cn } from '@/lib/utils';
 import { ArrowLeft, Filter } from 'lucide-react';
 
-const STATUS_FILTERS: Array<{ label: string; value: ProposalStatus | 'all' }> = [
-	{ label: 'All', value: 'all' },
-	{ label: 'Active', value: 'active' },
-	{ label: 'Passed', value: 'passed' },
-	{ label: 'Rejected', value: 'rejected' },
-];
+const STATUS_FILTERS: Array<{ label: string; value: ProposalStatus | 'all' }> =
+	[
+		{ label: 'All', value: 'all' },
+		{ label: 'Active', value: 'active' },
+		{ label: 'Closed', value: 'closed' },
+		{ label: 'Passed', value: 'passed' },
+		{ label: 'Rejected', value: 'rejected' },
+	];
 
 function GovernancePageContent() {
 	const { data: proposals, isLoading, error } = useGovernanceProposals();
-	const [statusFilter, setStatusFilter] = useState<ProposalStatus | 'all'>('all');
+	const [statusFilter, setStatusFilter] = useState<ProposalStatus | 'all'>(
+		'all'
+	);
 	const [searchParams] = useSearchParams();
 	const targetProposalId = searchParams.get('proposal');
 
@@ -32,7 +36,8 @@ function GovernancePageContent() {
 		p => statusFilter === 'all' || p.status === statusFilter
 	);
 
-	const activeCount = proposals?.filter(p => p.status === 'active').length ?? 0;
+	const activeCount =
+		proposals?.filter(p => p.status === 'active').length ?? 0;
 
 	return (
 		<main className="min-h-screen bg-[#06111f] px-4 py-8 text-white sm:px-6 lg:px-8">

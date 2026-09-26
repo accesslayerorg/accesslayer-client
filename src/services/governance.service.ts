@@ -1,13 +1,21 @@
-// src/services/governance.service.ts
 import { BaseApiService, type APIResponse } from './api.service';
 import { cacheManager } from '@/utils/cache.utils';
+import { normalizeProposal } from '@/utils/governance.utils';
 import type { Proposal, ProposalVotesPage } from '@/types/governance';
 
 /** How long fetched proposal data stays fresh (15 seconds — proposals change faster than profiles). */
 const PROPOSAL_CACHE_TTL = 15_000;
 export const PROPOSAL_VOTES_PAGE_SIZE = 20;
 
+function asRecord(value: unknown): Record<string, unknown> {
+	return value !== null && typeof value === 'object' && !Array.isArray(value)
+		? (value as Record<string, unknown>)
+		: {};
+}
+
 class GovernanceService extends BaseApiService {
+	private cacheKeys = new Set<string>();
+
 	/**
 	 * Fetch all proposals, optionally filtered by creator.
 	 * GET /governance/proposals?creatorId=:id
@@ -21,14 +29,24 @@ class GovernanceService extends BaseApiService {
 			const params: Record<string, string> = {};
 			if (creatorId) params.creatorId = creatorId;
 
-			const response = await this.api.get<APIResponse<Proposal[]>>(
+			const response = await this.api.get<APIResponse<unknown>>(
 				'/governance/proposals',
 				{ params }
 			);
-
-			const data = response.data.data;
-			cacheManager.set(cacheKey, data, PROPOSAL_CACHE_TTL);
-			return data;
+			const payload = asRecord(response.data.data);
+			const rawProposals = Array.isArray(response.data.data)
+				? response.data.data
+				: Array.isArray(payload.proposals)
+					? payload.proposals
+					: Array.isArray(payload.items)
+						? payload.items
+						: Array.isArray(payload.data)
+							? payload.data
+							: [];
+			const proposals = rawProposals.map(normalizeProposal);
+			this.cacheKeys.add(cacheKey);
+			cacheManager.set(cacheKey, proposals, PROPOSAL_CACHE_TTL);
+			return proposals;
 		} catch (error) {
 			throw this.handleError(error);
 		}
@@ -44,13 +62,19 @@ class GovernanceService extends BaseApiService {
 		if (cached) return cached;
 
 		try {
-			const response = await this.api.get<APIResponse<Proposal>>(
-				`/governance/proposals/${proposalId}`
+			const response = await this.api.get<APIResponse<unknown>>(
+				`/governance/proposals/${encodeURIComponent(proposalId)}`
 			);
-
-			const data = response.data.data;
-			cacheManager.set(cacheKey, data, PROPOSAL_CACHE_TTL);
-			return data;
+			const payload = asRecord(response.data.data);
+			const rawProposal =
+				payload.proposal ??
+				payload.data ??
+				(Array.isArray(payload.items) ? payload.items[0] : undefined) ??
+				response.data.data;
+			const proposal = normalizeProposal(rawProposal);
+			this.cacheKeys.add(cacheKey);
+			cacheManager.set(cacheKey, proposal, PROPOSAL_CACHE_TTL);
+			return proposal;
 		} catch (error) {
 			throw this.handleError(error);
 		}
@@ -67,7 +91,7 @@ class GovernanceService extends BaseApiService {
 
 		try {
 			const response = await this.api.get<APIResponse<ProposalVotesPage>>(
-				`/governance/proposals/${proposalId}/votes`,
+				`/governance/proposals/${encodeURIComponent(proposalId)}/votes`,
 				{
 					params: {
 						...(cursor ? { cursor } : {}),
@@ -82,6 +106,13 @@ class GovernanceService extends BaseApiService {
 		} catch (error) {
 			throw this.handleError(error);
 		}
+	}
+
+	clearCache(): void {
+		for (const cacheKey of this.cacheKeys) {
+			cacheManager.invalidate(cacheKey);
+		}
+		this.cacheKeys.clear();
 	}
 }
 

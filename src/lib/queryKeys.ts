@@ -28,8 +28,7 @@ export const queryKeys = {
 			['creators', creatorId, 'activity'] as const,
 		twap: (creatorId: string) =>
 			['creators', creatorId, 'twap', '24h'] as const,
-		stats: (creatorId: string) =>
-			['creators', creatorId, 'stats'] as const,
+		stats: (creatorId: string) => ['creators', creatorId, 'stats'] as const,
 		curveConfig: (creatorId: string) =>
 			['creators', creatorId, 'curve-config'] as const,
 		buyback: (creatorId: string) =>
@@ -79,6 +78,10 @@ export const queryKeys = {
 		proposals: (creatorId?: string) =>
 			['governance', 'proposals', creatorId ?? null] as const,
 		proposal: (id: string) => ['governance', 'proposal', id] as const,
+		snapshot: (proposalId: string, voter: string) =>
+			['governance', 'proposal', proposalId, 'snapshot', voter] as const,
+		vote: (proposalId: string) =>
+			['governance', 'proposal', proposalId, 'vote'] as const,
 		proposalVotes: (id: string) =>
 			['governance', 'proposal', id, 'votes'] as const,
 	},
