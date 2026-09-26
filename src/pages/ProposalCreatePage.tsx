@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ArrowLeft, Send, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { FormInput } from '@/components/common/FormInput';
 import { useStellarWallet } from '@/hooks/useStellarWallet';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import showToast from '@/utils/toast.util';
