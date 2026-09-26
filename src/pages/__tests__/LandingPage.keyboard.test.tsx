@@ -1,6 +1,7 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router';
 import LandingPage from '@/pages/LandingPage';
 import { courseService, type Course } from '@/services/course.service';
 
@@ -21,8 +22,7 @@ vi.mock('@/components/common/StellarConnectionQualityBadge', async () => {
 	const React = await import('react');
 
 	return {
-		default: () =>
-			React.createElement('div', { role: 'status' }, 'RPC good'),
+		default: () => React.createElement('div', { role: 'status' }, 'RPC good'),
 	};
 });
 
@@ -98,15 +98,13 @@ const mockMatchMedia = () => {
 	});
 };
 
-import { MemoryRouter } from 'react-router';
-
 const renderLandingPage = async () => {
 	render(
 		<MemoryRouter>
 			<LandingPage />
 		</MemoryRouter>
 	);
-	await waitFor(() => expect(mockGetCourses).toHaveBeenCalledTimes(1));
+	await waitFor(() => expect(mockGetCourses).toHaveBeenCalled());
 };
 
 describe('LandingPage creator refresh shortcut', () => {
@@ -120,6 +118,7 @@ describe('LandingPage creator refresh shortcut', () => {
 
 	it('refreshes creator list data with Ctrl/Cmd + Alt + R', async () => {
 		await renderLandingPage();
+		const initialCalls = mockGetCourses.mock.calls.length;
 
 		const shortcutEvent = new KeyboardEvent('keydown', {
 			key: 'r',
@@ -139,11 +138,14 @@ describe('LandingPage creator refresh shortcut', () => {
 		expect(
 			await screen.findByText('Creator list refresh requested')
 		).toBeInTheDocument();
-		await waitFor(() => expect(mockGetCourses).toHaveBeenCalledTimes(2));
+		await waitFor(() =>
+			expect(mockGetCourses).toHaveBeenCalledTimes(initialCalls + 1)
+		);
 	});
 
 	it('does not trigger while focus is inside text inputs or textareas', async () => {
 		await renderLandingPage();
+		const initialCalls = mockGetCourses.mock.calls.length;
 
 		const input = document.createElement('input');
 		const textarea = document.createElement('textarea');
@@ -166,7 +168,7 @@ describe('LandingPage creator refresh shortcut', () => {
 
 		await new Promise(resolve => window.setTimeout(resolve, 0));
 
-		expect(mockGetCourses).toHaveBeenCalledTimes(1);
+		expect(mockGetCourses).toHaveBeenCalledTimes(initialCalls);
 		expect(
 			screen.queryByText('Creator list refresh requested')
 		).not.toBeInTheDocument();

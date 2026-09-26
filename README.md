@@ -1,3 +1,5 @@
+![Access Layer Client](./accesslayer-client.png)
+
 # Access Layer Client
 
 This repository contains the frontend for Access Layer, a Stellar-native creator keys marketplace where fans buy access keys tied to creators and unlock perks defined by those creators.

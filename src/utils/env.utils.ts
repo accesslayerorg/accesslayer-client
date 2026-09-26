@@ -8,6 +8,13 @@ const envSchema = z.object({
 	VITE_SEPOLIA_RPC_URL: z.string().optional(),
 	VITE_MAINNET_RPC_URL: z.string().optional(),
 	VITE_STELLAR_NETWORK: z.enum(['mainnet', 'testnet']).default('testnet'),
+	// Comma-separated wallet addresses that may access the admin safety panel.
+	// Leaving this unset fails closed and hides the panel.
+	VITE_ADMIN_WALLETS: z.string().optional(),
+	// Comma-separated wallet addresses allowed to deploy new creator keys
+	// through the key factory (#959). Leaving this unset fails closed and hides
+	// the deployment wizard.
+	VITE_KEY_FACTORY_WHITELIST: z.string().optional(),
 	// UTM configuration for share links. Optional — when not provided, share URLs remain unchanged.
 	VITE_UTM_SOURCE: z.string().optional(),
 	VITE_UTM_MEDIUM: z.string().optional(),
@@ -24,6 +31,8 @@ export const env = envSchema.parse({
 	VITE_SEPOLIA_RPC_URL: import.meta.env.VITE_SEPOLIA_RPC_URL,
 	VITE_MAINNET_RPC_URL: import.meta.env.VITE_MAINNET_RPC_URL,
 	VITE_STELLAR_NETWORK: import.meta.env.VITE_STELLAR_NETWORK,
+	VITE_ADMIN_WALLETS: import.meta.env.VITE_ADMIN_WALLETS,
+	VITE_KEY_FACTORY_WHITELIST: import.meta.env.VITE_KEY_FACTORY_WHITELIST,
 	VITE_UTM_SOURCE: import.meta.env.VITE_UTM_SOURCE,
 	VITE_UTM_MEDIUM: import.meta.env.VITE_UTM_MEDIUM,
 	VITE_UTM_CAMPAIGN: import.meta.env.VITE_UTM_CAMPAIGN,

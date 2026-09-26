@@ -22,6 +22,12 @@ export interface Trade {
 	pricePerKey: number;
 	/** Unix timestamp (milliseconds) of when the trade settled. */
 	timestamp: number;
+	/**
+	 * On-chain transaction hash for this trade, or `null` when no hash is
+	 * available. Powers the copy-hash and block-explorer actions on each
+	 * trade history row.
+	 */
+	transactionHash: string | null;
 }
 
 /** Cursor-paginated response envelope for the trade history endpoint. */

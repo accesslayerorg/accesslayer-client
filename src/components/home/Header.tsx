@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, Monitor, Bookmark } from 'lucide-react';
 import WalletStatusChip from '@/components/common/WalletStatusChip';
 import NotificationBell from '@/components/common/NotificationBell';
-import MarketplaceHeaderSearch from '@/components/common/MarketplaceHeaderSearch';
+import GlobalSearch from '@/components/common/GlobalSearch';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import { useTheme } from '@/hooks/useTheme';
 import { Link } from 'react-router';
 import BatchBuyModal from '@/components/common/BatchBuyModal';
+import { useConnectedWallet, useWatchlist } from '@/hooks/useWatchlist';
 
 const navLinks = [
 	{ label: 'Marketplace', href: '/marketplace', external: false },
+	{ label: 'Discover', href: '/discovery', external: false },
 	{ label: 'About', href: '/about', external: false },
 	{ label: 'GitHub', href: 'https://github.com/accesslayerorg', external: true },
 ];
@@ -19,6 +21,8 @@ export default function Header() {
 	const [batchOpen, setBatchOpen] = useState(false);
 	const profile = useProfileStore(state => state.profile);
 	const { theme, toggleTheme } = useTheme();
+	const walletKey = useConnectedWallet(state => state.walletKey);
+	const watchlistCount = useWatchlist(state => state.getWatchlistCount(walletKey));
 
 	useEffect(() => {
 		const onScroll = () => {
@@ -50,7 +54,9 @@ export default function Header() {
 					</span>
 				</Link>
 
-				{/* Nav */}
+				{/* Nav — hidden on mobile (< 768px) because MobileBottomNav handles
+				    primary navigation on small viewports.  `md:flex` keeps it
+				    visible on tablet and desktop. */}
 				<nav className="hidden items-center gap-8 md:flex shrink-0">
 					{navLinks.map(link =>
 						link.external ? (
@@ -73,11 +79,27 @@ export default function Header() {
 							</Link>
 						)
 					)}
+					<Link
+						to="/watchlist"
+						className={`relative inline-flex items-center gap-1.5 font-jakarta text-sm transition-colors duration-300 ${scrolled ? 'text-gray-500 hover:text-gray-900' : 'text-white/45 hover:text-white/80'}`}
+						aria-label={`Watchlist, ${watchlistCount} saved ${watchlistCount === 1 ? 'key' : 'keys'}`}
+					>
+						<Bookmark className="size-4 text-amber-400/80" aria-hidden="true" />
+						Watchlist
+						{watchlistCount > 0 && (
+							<span
+								data-testid="header-watchlist-badge"
+								className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[0.65rem] font-bold text-slate-950"
+							>
+								{watchlistCount}
+							</span>
+						)}
+					</Link>
 				</nav>
 
-				{/* Marketplace Header Search */}
+				{/* Global Header Search (#933) */}
 				<div className="flex-1 max-w-xs mx-2">
-					<MarketplaceHeaderSearch />
+					<GlobalSearch />
 				</div>
 
 				{/* Right-side actions: dark mode toggle (#750) + notification bell (#720) + wallet status chip (#686).
@@ -91,22 +113,20 @@ export default function Header() {
 						Batch Buy
 					</button>
 					<BatchBuyModal open={batchOpen} onOpenChange={setBatchOpen} />
-					<button
-						type="button"
-						onClick={toggleTheme}
-						aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-						className={`rounded-md p-1.5 transition-colors duration-200 ${
-							scrolled
-								? 'text-gray-600 hover:bg-black/5 hover:text-gray-900'
-								: 'text-white/60 hover:text-white/90'
-						}`}
-					>
-						{theme === 'dark' ? (
-							<Sun className="size-4" aria-hidden="true" />
-						) : (
-							<Moon className="size-4" aria-hidden="true" />
-						)}
-					</button>
+				<button
+					type="button"
+					onClick={toggleTheme}
+					aria-label={`Current theme: ${theme}. Click to cycle themes.`}
+					className={`rounded-md p-1.5 transition-colors duration-200 ${
+						scrolled
+							? 'text-gray-600 hover:bg-black/5 hover:text-gray-900'
+							: 'text-white/60 hover:text-white/90'
+					}`}
+				>
+					{theme === 'dark' && <Sun className="size-4" aria-hidden="true" />}
+					{theme === 'light' && <Moon className="size-4" aria-hidden="true" />}
+					{theme === 'system' && <Monitor className="size-4" aria-hidden="true" />}
+				</button>
 					{profile && (
 						<NotificationBell
 							userId={profile.id}

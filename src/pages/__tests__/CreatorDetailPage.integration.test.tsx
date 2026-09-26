@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { act, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router';
@@ -11,6 +12,7 @@ import { queryKeys } from '@/lib/queryKeys';
 vi.mock('@/services/course.service', () => ({
 	courseService: {
 		getCourse: vi.fn(),
+		getHoldersPage: vi.fn(),
 	},
 }));
 
@@ -42,6 +44,7 @@ vi.mock('framer-motion', async () => {
 });
 
 const mockGetCourse = vi.mocked(courseService.getCourse);
+const mockGetHoldersPage = vi.mocked(courseService.getHoldersPage);
 
 function makeFreshQueryClient() {
 	return new QueryClient({
@@ -67,6 +70,11 @@ describe('CreatorDetailPage Integration', () => {
 	beforeEach(() => {
 		queryClient = makeFreshQueryClient();
 		mockGetCourse.mockReset();
+		mockGetHoldersPage.mockReset();
+		mockGetHoldersPage.mockResolvedValue({
+			holders: [],
+			nextCursor: null,
+		});
 		consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 	});
 
@@ -124,6 +132,114 @@ describe('CreatorDetailPage Integration', () => {
 		expect(screen.queryByText('250')).not.toBeInTheDocument();
 	});
 
+	it('sets the creator title and renders holder concentration after holders load', async () => {
+		mockGetCourse.mockResolvedValue({
+			id: 'creator-123',
+			title: 'Alex Rivers',
+			description: 'Digital Artist & Illustrator',
+			price: 0.05,
+			priceStroops: 500_000,
+			creatorShareSupply: 100,
+			instructorId: 'arivers',
+			category: 'Art',
+			level: 'BEGINNER',
+			creatorFeeBps: 500,
+			protocolFeeBps: 250,
+		});
+		mockGetHoldersPage.mockResolvedValue({
+			nextCursor: null,
+			holders: [
+				{
+					id: 'holder-1',
+					displayName: 'Holder 1',
+					walletAddress:
+						'GABCDE1234567890ABCDE1234567890ABCDE1234567890ABCDEF',
+					keyCount: 30,
+				},
+				{
+					id: 'holder-2',
+					displayName: 'Holder 2',
+					walletAddress:
+						'GBCDE1234567890ABCDE1234567890ABCDE1234567890ABCDEF1',
+					keyCount: 15,
+				},
+				{
+					id: 'holder-3',
+					displayName: 'Holder 3',
+					walletAddress:
+						'GCDEF1234567890ABCDE1234567890ABCDE1234567890ABCDEF2',
+					keyCount: 10,
+				},
+			],
+		});
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={['/creators/creator-123']}>
+					<Routes>
+						<Route path="/creators/:id" element={<CreatorDetailPage />} />
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		expect(
+			await screen.findByText('Alex Rivers Profile')
+		).toBeInTheDocument();
+		expect(document.title).toBe('Alex Rivers — AccessLayer');
+		expect(
+			await screen.findByTestId('holder-concentration-chart')
+		).toBeInTheDocument();
+		expect(
+			screen.getAllByTestId('holder-concentration-percent')[0]
+		).toHaveTextContent('30%');
+		expect(
+			screen.getByTestId('holder-concentration-others-percent')
+		).toHaveTextContent('45%');
+		expect(
+			screen.getByTestId('holder-concentration-warning')
+		).toHaveTextContent('Highly concentrated');
+	});
+
+	it('falls back to marketplace when the back button has no previous route entry', async () => {
+		const user = userEvent.setup();
+		mockGetCourse.mockResolvedValue({
+			id: 'creator-123',
+			title: 'Alex Rivers',
+			description: 'Digital Artist & Illustrator',
+			price: 0.05,
+			priceStroops: 500_000,
+			creatorShareSupply: 100,
+			instructorId: 'arivers',
+			category: 'Art',
+			level: 'BEGINNER',
+			creatorFeeBps: 500,
+			protocolFeeBps: 250,
+		});
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={['/creators/creator-123']}>
+					<Routes>
+						<Route path="/creators/:id" element={<CreatorDetailPage />} />
+						<Route
+							path="/creators"
+							element={<div>Marketplace fallback</div>}
+						/>
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		await user.click(
+			await screen.findByRole('button', { name: /back to previous page/i })
+		);
+
+		expect(
+			await screen.findByText('Marketplace fallback')
+		).toBeInTheDocument();
+	});
+
 	it('updates the displayed price after a background refetch without flashing a loading skeleton', async () => {
 		const initialCreator = {
 			id: 'creator-123',
@@ -162,8 +278,10 @@ describe('CreatorDetailPage Integration', () => {
 			</QueryClientProvider>
 		);
 
-		expect(await screen.findByText('100.00 XLM')).toBeInTheDocument();
-		expect(screen.queryByLabelText(/loading creator profile/i)).not.toBeInTheDocument();
+		expect(await screen.findAllByText('100.00 XLM')).not.toHaveLength(0);
+		expect(
+			screen.queryByLabelText(/loading creator profile/i)
+		).not.toBeInTheDocument();
 
 		await act(async () => {
 			void queryClient.invalidateQueries({
@@ -171,13 +289,15 @@ describe('CreatorDetailPage Integration', () => {
 			});
 		});
 
-		expect(screen.getByText('100.00 XLM')).toBeInTheDocument();
-		expect(screen.queryByLabelText(/loading creator profile/i)).not.toBeInTheDocument();
+		expect(screen.getAllByText('100.00 XLM')).not.toHaveLength(0);
+		expect(
+			screen.queryByLabelText(/loading creator profile/i)
+		).not.toBeInTheDocument();
 
 		refetchDeferred.resolve(updatedCreator);
 
-		expect(await screen.findByText('150.00 XLM')).toBeInTheDocument();
-		expect(screen.queryByText('100.00 XLM')).not.toBeInTheDocument();
+		expect(await screen.findAllByText('150.00 XLM')).not.toHaveLength(0);
+		expect(screen.queryAllByText('100.00 XLM')).toHaveLength(0);
 	});
 
 	it('renders a creator-not-found state for a 404 response on the canonical /creator route', async () => {

@@ -130,6 +130,13 @@ describe('TradeDialog – sell payout display (#692)', () => {
 		fireEvent.change(input, { target: { value: '5' } });
 		fireEvent.click(screen.getByTestId('trade-dialog-confirm'));
 
-		expect(onConfirm).toHaveBeenCalledWith(5, null);
+		// #872 added a third `slippage` argument (the computed min/max price
+		// bound); this test only asserts on the amount and price-preview
+		// arguments it was written to cover.
+		expect(onConfirm).toHaveBeenCalledWith(
+			5,
+			null,
+			expect.objectContaining({ minPriceStroops: expect.any(Number) })
+		);
 	});
 });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Share2, Pencil } from 'lucide-react';
+import { ArrowLeft, Share2, Pencil } from 'lucide-react';
 import appendUtmParams from '@/utils/utm.utils';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,8 @@ interface CreatorProfileHeaderProps {
 	priceStroops?: number | null;
 	className?: string;
 	connectedWalletAddress?: string | null;
+	showBackButton?: boolean;
+	onBack?: () => void;
 }
 
 const CREATOR_PROFILE_SUBTITLE_WRAP_CLASS_NAME =
@@ -40,6 +42,8 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 	priceStroops,
 	className,
 	connectedWalletAddress,
+	showBackButton = false,
+	onBack,
 }) => {
 	const [copied, setCopied] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
@@ -117,6 +121,24 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 		>
 			<div className="mx-auto max-w-7xl flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 				<div className="flex items-center gap-4 md:gap-6">
+					{showBackButton && (
+						<Button
+							type="button"
+							onClick={onBack}
+							aria-label="Back to previous page"
+							variant="outline"
+							size="icon"
+							className={cn(
+								'shrink-0 rounded-xl border-white/10 bg-white/5 text-white transition-all hover:border-amber-500/30 hover:bg-amber-500/10 active:scale-95',
+								isScrolled ? 'size-9' : 'size-11'
+							)}
+						>
+							<ArrowLeft
+								className="size-4 text-amber-500"
+								aria-hidden="true"
+							/>
+						</Button>
+					)}
 					<motion.div
 						animate={{
 							scale: isScrolled ? 0.6 : 1,

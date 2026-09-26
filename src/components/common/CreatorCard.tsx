@@ -1,6 +1,7 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router';
 import { useAccount } from 'wagmi';
+import { useConnectedWallet } from '@/hooks/useWatchlist';
 import type { Course } from '@/services/course.service';
 import { cn } from '@/lib/utils';
 import {
@@ -37,6 +38,7 @@ import { formatJoinDate } from '@/utils/formatJoinDate';
 import { useSystemTheme } from '@/utils/useSystemTheme';
 import { Tooltip } from '@/components/ui/tooltip';
 import { AsyncButton } from '@/components/ui/async-button';
+import { isKeyDeprecated } from '@/utils/keyDeprecation.utils';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
 import { useTransactionTelemetry } from '@/hooks/useTransactionTelemetry';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
@@ -55,12 +57,14 @@ import { env } from '@/utils/env.utils';
 import MiniStatChip from '@/components/common/MiniStatChip';
 import Change24hBadge from '@/components/common/Change24hBadge';
 import KeySupplyBadge from '@/components/common/KeySupplyBadge';
+import NewKeyBadge from '@/components/common/NewKeyBadge';
 import CreatorListRowDivider from '@/components/common/CreatorListRowDivider';
 import BuyActionHelperText from '@/components/common/BuyActionHelperText';
 import NetworkFeeHint from '@/components/common/NetworkFeeHint';
 import CreatorBio from '@/components/common/CreatorBio';
 import CreatorDropCountdown from '@/components/common/CreatorDropCountdown';
 import CreatorHandleHoverCard from '@/components/common/CreatorHandleHoverCard';
+import WatchlistButton from '@/components/common/WatchlistButton';
 import { CREATOR_CARD_MEDIA_RADIUS_CLASS } from '@/utils/creatorCardTokens';
 
 interface CreatorCardProps {
@@ -98,7 +102,13 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 		change24h: creator.change24h,
 	});
 	const priceChartDescriptionId = `creator-price-chart-description-${creator.id}`;
-	const { isConnected } = useAccount();
+	const { isConnected, address } = useAccount();
+	const setConnectedWalletKey = useConnectedWallet(
+		state => state.setWalletKey
+	);
+	useEffect(() => {
+		setConnectedWalletKey(address);
+	}, [address, setConnectedWalletKey]);
 	const { isMismatch: isNetworkMismatch, expectedChainName } =
 		useNetworkMismatch();
 	const [transactionState, setTransactionState] = useState<
@@ -114,7 +124,6 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 	const cardRef = useRef<HTMLDivElement>(null);
 
 	// Keyboard shortcut for quick buy (press 'b' when card is focused)
-
 
 	const runPurchaseAttempt = useCallback(() => {
 		setTransactionState('submitting');
@@ -173,7 +182,12 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 				setTransactionState('idle');
 			}, 1800);
 		}, 1500);
-	}, [creator.id, displayCreatorName, trackTransactionEvent, setTransactionState]);
+	}, [
+		creator.id,
+		displayCreatorName,
+		trackTransactionEvent,
+		setTransactionState,
+	]);
 
 	const isRecentlyActive = (creator.volume24h ?? 0) > 0;
 	const keyPriceDisplay = formatCreatorKeyPriceDisplay(creator);
@@ -184,7 +198,9 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 			await copyTextToClipboard(url);
 			toast.success('Profile link copied');
 		} catch {
-			toast.error('Could not copy the profile link. Please copy it manually.');
+			toast.error(
+				'Could not copy the profile link. Please copy it manually.'
+			);
 		}
 	};
 
@@ -224,10 +240,19 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 		});
 		// Implementation for contract interaction would go here
 		runPurchaseAttempt();
-	}, [isConnected, isNetworkMismatch, expectedChainName, displayCreatorName, runPurchaseAttempt]);
+	}, [
+		isConnected,
+		isNetworkMismatch,
+		expectedChainName,
+		displayCreatorName,
+		runPurchaseAttempt,
+	]);
 
 	const resolvedHolderCount =
-		creator.holderCount ?? creator.holdersCount ?? creator.holders ?? creator.creatorShareSupply;
+		creator.holderCount ??
+		creator.holdersCount ??
+		creator.holders ??
+		creator.creatorShareSupply;
 
 	return (
 		<div
@@ -238,7 +263,13 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 				className
 			)}
 		>
-			<div className="absolute right-3 top-3 z-20">
+			<div className="absolute right-3 top-3 z-20 flex items-center gap-2">
+				<WatchlistButton
+					creator={creator}
+					size="sm"
+					labelName={displayCreatorName}
+					className="shadow-lg shadow-black/20"
+				/>
 				<DropdownMenu>
 					<DropdownMenuTrigger
 						aria-label={`More actions for ${displayCreatorName}`}
@@ -286,6 +317,10 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 				role="img"
 				aria-labelledby={`creator-name-${creator.id}`}
 			>
+				<NewKeyBadge
+					createdAt={creator.createdAt}
+					className="creator-card-overlay-text absolute left-3 top-3 z-10"
+				/>
 				<CreatorInitialsAvatar
 					name={displayCreatorName}
 					creatorId={creator.id}
@@ -333,6 +368,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 					<Change24hBadge change={creator.change24h} />
 					<KeySupplyBadge supply={creator.creatorShareSupply} />
 					{isRecentlyActive && <RecentActivityBadge />}
+					<NewKeyBadge createdAt={creator.createdAt} />
 				</div>
 				<p className="marketplace-label-muted font-jakarta text-sm">
 					<CreatorHandleHoverCard
@@ -381,47 +417,55 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 					</div>
 				)}
 
-			{/* Price history sparkline */}
-			{creator.priceHistory && creator.priceHistory.length >= 2 && (() => {
-				const latest = creator.priceHistory[creator.priceHistory.length - 1];
-				const earliest = creator.priceHistory[0];
-				let lineColor = '#fbbf24';
-				if (latest > earliest) lineColor = '#22c55e';
-				else if (latest < earliest) lineColor = '#ef4444';
+				{/* Price history sparkline */}
+				{creator.priceHistory &&
+					creator.priceHistory.length >= 2 &&
+					(() => {
+						const latest =
+							creator.priceHistory[creator.priceHistory.length - 1];
+						const earliest = creator.priceHistory[0];
+						let lineColor = '#fbbf24';
+						if (latest > earliest) lineColor = '#22c55e';
+						else if (latest < earliest) lineColor = '#ef4444';
 
-				return (
-					<SectionErrorBoundary
-						sectionName="bonding curve chart"
-						title="Chart unavailable — try refreshing"
-						description=""
-						minHeight={40}
-					>
-						<div className="mt-3">
-							<Sparkline
-								data={creator.priceHistory}
-								color={lineColor}
-							/>
-							<table id={priceChartDescriptionId} className="sr-only">
-								<caption>{priceChartAccessibility.summary}</caption>
-								<thead>
-									<tr>
-										<th scope="col">Point</th>
-										<th scope="col">Key price</th>
-									</tr>
-								</thead>
-								<tbody>
-									{priceChartAccessibility.points.map(point => (
-										<tr key={point.label}>
-											<th scope="row">{point.label}</th>
-											<td>{point.value}</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-					</SectionErrorBoundary>
-				);
-			})()}
+						return (
+							<SectionErrorBoundary
+								sectionName="bonding curve chart"
+								title="Chart unavailable — try refreshing"
+								description=""
+								minHeight={40}
+							>
+								<div className="mt-3">
+									<Sparkline
+										data={creator.priceHistory}
+										color={lineColor}
+									/>
+									<table
+										id={priceChartDescriptionId}
+										className="sr-only"
+									>
+										<caption>
+											{priceChartAccessibility.summary}
+										</caption>
+										<thead>
+											<tr>
+												<th scope="col">Point</th>
+												<th scope="col">Key price</th>
+											</tr>
+										</thead>
+										<tbody>
+											{priceChartAccessibility.points.map(point => (
+												<tr key={point.label}>
+													<th scope="row">{point.label}</th>
+													<td>{point.value}</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+							</SectionErrorBoundary>
+						);
+					})()}
 
 				<div className="mt-3 flex flex-wrap gap-2">
 					<MiniStatChip label="Price" value={keyPriceDisplay} />
@@ -547,7 +591,11 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 				<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 					<NetworkFeeHint className="shrink-0" />
 					<span className="hidden sm:inline text-xs text-white/40">
-						Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/60 font-mono">B</kbd> to quick buy
+						Press{' '}
+						<kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/60 font-mono">
+							B
+						</kbd>{' '}
+						to quick buy
 					</span>
 				</div>
 				<AsyncButton
@@ -556,7 +604,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 					size="sm"
 					isPending={transactionState === 'submitting'}
 					pendingText="Processing..."
-					disabled={isNetworkMismatch}
+					disabled={isNetworkMismatch || isKeyDeprecated(creator)}
 					className={cn(
 						'rounded-xl font-bold',
 						!isConnected && 'border-white/10  hover:bg-white/5'
@@ -572,13 +620,15 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 						<TransactionStatusIcon status="failed" />
 					)}
 					<ShoppingCart className="creator-action-icon" />
-					{transactionState === 'submitting'
-						? 'Processing...'
-						: transactionState === 'success'
-							? 'Completed'
-							: transactionState === 'failed'
-								? 'Retry Purchase'
-								: 'Buy Key'}
+					{isKeyDeprecated(creator)
+						? 'Key Deprecated'
+						: transactionState === 'submitting'
+							? 'Processing...'
+							: transactionState === 'success'
+								? 'Completed'
+								: transactionState === 'failed'
+									? 'Retry Purchase'
+									: 'Buy Key'}
 				</AsyncButton>
 			</div>
 
@@ -586,9 +636,11 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 				state={transactionState}
 				className="mt-4"
 				disabledReason={
-					isNetworkMismatch
-						? `Switch to ${expectedChainName} to enable purchases.`
-						: undefined
+					isKeyDeprecated(creator)
+						? 'This key has been deprecated and can no longer be bought.'
+						: isNetworkMismatch
+							? `Switch to ${expectedChainName} to enable purchases.`
+							: undefined
 				}
 			/>
 

@@ -1,12 +1,17 @@
 // src/components/common/TradeHistoryTable.tsx
-import React, { useMemo } from 'react';
-import { ArrowUpRight, ArrowDownRight, ClockIcon } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { ArrowUpRight, ArrowDownRight, ClockIcon, Copy, Check, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import EmptyState from '@/components/common/EmptyState';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/utils/time.utils';
 import type { Trade } from '@/services/tradeHistory.service';
 import { useTradeHistory } from '@/hooks/useWallet';
+import { buildStellarExpertTxUrl } from '@/constants/stellar';
+import { copyTextToClipboard } from '@/utils/clipboard.utils';
+import { env } from '@/utils/env.utils';
+
+const COPY_TOOLTIP_RESET_MS = 2_000;
 
 interface TradeHistoryTableProps {
 	/** Connected wallet address used as the query key. */
@@ -37,6 +42,95 @@ function TradeTypePill({ type }: { type: Trade['tradeType'] }) {
 			)}
 			{type}
 		</span>
+	);
+}
+
+// ─── transaction hash actions ──────────────────────────────────────────────────
+
+function TradeHashActions({
+	transactionHash,
+}: {
+	transactionHash: string | null;
+}) {
+	const [copied, setCopied] = useState(false);
+
+	if (!transactionHash) {
+		return (
+			<div className="flex items-center gap-1">
+				<span className="text-[10px] font-bold uppercase tracking-widest text-white/20">
+					N/A
+				</span>
+				<button
+					type="button"
+					disabled
+					aria-label="Copy transaction hash unavailable"
+					className="inline-flex size-7 cursor-not-allowed items-center justify-center rounded-md text-white/15"
+				>
+					<Copy className="size-3.5" aria-hidden="true" />
+				</button>
+				<button
+					type="button"
+					disabled
+					aria-label="View on block explorer unavailable"
+					className="inline-flex size-7 cursor-not-allowed items-center justify-center rounded-md text-white/15"
+				>
+					<ExternalLink className="size-3.5" aria-hidden="true" />
+				</button>
+			</div>
+		);
+	}
+
+	const explorerUrl = buildStellarExpertTxUrl(
+		transactionHash,
+		env.VITE_STELLAR_NETWORK
+	);
+
+	const handleCopy = async () => {
+		try {
+			await copyTextToClipboard(transactionHash);
+			setCopied(true);
+			window.setTimeout(() => setCopied(false), COPY_TOOLTIP_RESET_MS);
+		} catch {
+			setCopied(false);
+		}
+	};
+
+	return (
+		<div className="relative flex items-center gap-1">
+			<button
+				type="button"
+				onClick={handleCopy}
+				aria-label={copied ? 'Transaction hash copied' : 'Copy transaction hash'}
+				data-testid="trade-row-copy-hash"
+				className="relative inline-flex size-7 items-center justify-center rounded-md bg-white/5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+			>
+				{copied ? (
+					<Check className="size-3.5 text-emerald-400" aria-hidden="true" />
+				) : (
+					<Copy className="size-3.5" aria-hidden="true" />
+				)}
+				{copied && (
+					<span
+						role="status"
+						aria-live="polite"
+						data-testid="trade-row-copy-tooltip"
+						className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-emerald-300 shadow-lg"
+					>
+						Copied!
+					</span>
+				)}
+			</button>
+			<a
+				href={explorerUrl}
+				target="_blank"
+				rel="noopener noreferrer"
+				aria-label="View transaction on Stellar Expert"
+				data-testid="trade-row-explorer-link"
+				className="inline-flex size-7 items-center justify-center rounded-md bg-white/5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+			>
+				<ExternalLink className="size-3.5" aria-hidden="true" />
+			</a>
+		</div>
 	);
 }
 
@@ -124,6 +218,13 @@ function TradeRow({ trade }: { trade: Trade }) {
 					>
 						{formatRelativeTime(trade.timestamp)}
 					</span>
+				</div>
+
+				<div className="flex flex-col items-end">
+					<span className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+						Tx
+					</span>
+					<TradeHashActions transactionHash={trade.transactionHash} />
 				</div>
 			</div>
 		</div>
@@ -219,6 +320,7 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
 						<ClockIcon className="size-3" aria-hidden="true" />
 						When
 					</span>
+					<span className="w-16 text-right">Tx</span>
 				</div>
 			</div>
 

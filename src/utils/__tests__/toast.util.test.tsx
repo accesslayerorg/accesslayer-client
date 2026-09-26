@@ -93,3 +93,68 @@ describe('toast util auto-dismiss and manual close', () => {
 		expect(screen.queryByText('Success message')).not.toBeInTheDocument();
 	});
 });
+
+/**
+ * aria-live coverage for toasts (#876).
+ *
+ * App.tsx configures `<Toaster toastOptions={{ ariaProps: { role:
+ * 'status', 'aria-live': 'polite' } }} />`, which react-hot-toast
+ * applies to every toast type — including `toast.custom`, since all
+ * toast variants render through the same `ToastBar` wrapper that reads
+ * `toast.ariaProps`. These tests render `<Toaster>` with that same
+ * config (rather than the library's bare default) so a change to
+ * App.tsx's `toastOptions` that drops `ariaProps` would be caught here.
+ */
+describe('toast util aria-live (#876)', () => {
+	const ariaToastOptions = {
+		ariaProps: {
+			role: 'status' as const,
+			'aria-live': 'polite' as const,
+		},
+	};
+
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+
+	afterEach(() => {
+		toast.remove();
+		vi.useRealTimers();
+	});
+
+	it('announces a standard success toast via a polite live region', () => {
+		render(<Toaster toastOptions={ariaToastOptions} />);
+
+		act(() => {
+			showToast.success('Trade confirmed');
+		});
+
+		const status = screen.getByRole('status');
+		expect(status).toHaveAttribute('aria-live', 'polite');
+		expect(status).toHaveTextContent('Trade confirmed');
+	});
+
+	it('announces an error toast via a polite live region', () => {
+		render(<Toaster toastOptions={ariaToastOptions} />);
+
+		act(() => {
+			showToast.error('Trade failed');
+		});
+
+		const status = screen.getByRole('status');
+		expect(status).toHaveAttribute('aria-live', 'polite');
+		expect(status).toHaveTextContent('Trade failed');
+	});
+
+	it('announces the custom transactionSuccess toast via a polite live region', () => {
+		render(<Toaster toastOptions={ariaToastOptions} />);
+
+		act(() => {
+			showToast.transactionSuccess('Purchase complete', 'Bought 10 keys');
+		});
+
+		const status = screen.getByRole('status');
+		expect(status).toHaveAttribute('aria-live', 'polite');
+		expect(status).toHaveTextContent('Purchase complete');
+	});
+});

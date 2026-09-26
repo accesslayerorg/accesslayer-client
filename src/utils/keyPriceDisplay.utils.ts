@@ -61,7 +61,7 @@ export function formatDisplayKeyPrice(
 	const xlm = stroops / STROOPS_PER_XLM;
 	const xlmFormatted = formatNumber(xlm, {
 		maximumFractionDigits: 4,
-		minimumFractionDigits: 2,
+		minimumFractionDigits: 0,
 	});
 
 	const parsedXlm = Number.parseFloat(xlmFormatted.replace(/,/g, ''));

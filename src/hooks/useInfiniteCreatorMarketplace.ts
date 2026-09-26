@@ -9,6 +9,20 @@ const FIRST_PAGE = 1;
 // long; a background refetch only kicks in once data is older than this.
 const MARKETPLACE_STALE_TIME_MS = 60_000;
 
+// #918 — live bonding-curve prices on the marketplace listing. Every listing
+// polls silently at this interval so the displayed key price (and supply,
+// volume) tracks the on-chain curve without a manual refresh.
+const MARKETPLACE_POLL_INTERVAL_MS = 30_000;
+
+export interface UseInfiniteCreatorMarketplaceOptions {
+	/**
+	 * How often (ms) to silently refetch the loaded pages so bonding-curve
+	 * prices stay current (#918). Defaults to 30s. Pass `false` to disable
+	 * polling entirely (e.g. in tests or non-reactive contexts).
+	 */
+	pollIntervalMs?: number | false;
+}
+
 /**
  * Cursor-based (page-number) infinite pagination over the creator key
  * marketplace listing, backed by React Query's useInfiniteQuery (#685).
@@ -22,14 +36,25 @@ const MARKETPLACE_STALE_TIME_MS = 60_000;
  * immediately (no spinner) on remount within 60s, while React Query silently
  * refetches in the background once it's stale. `isRefreshing` distinguishes
  * that silent background refetch from the initial (spinner-worthy) load.
+ *
+ * #918 — `refetchInterval` polls the listing on a fixed cadence so the
+ * bonding-curve price, supply, and volume stay live on the marketplace page.
  */
-export function useInfiniteCreatorMarketplace(params?: Omit<GetCoursesParams, 'page'>) {
+export function useInfiniteCreatorMarketplace(
+	params?: Omit<GetCoursesParams, 'page'>,
+	options?: UseInfiniteCreatorMarketplaceOptions
+) {
+	const pollIntervalMs = options?.pollIntervalMs ?? MARKETPLACE_POLL_INTERVAL_MS;
+
 	const query = useInfiniteQuery({
 		queryKey: queryKeys.creators.infiniteList(params),
 		queryFn: ({ pageParam }) => courseService.getCoursesPage(pageParam, params),
 		initialPageParam: FIRST_PAGE,
 		getNextPageParam: lastPage => (lastPage.hasMore ? lastPage.page + 1 : undefined),
 		staleTime: MARKETPLACE_STALE_TIME_MS,
+		// #918 — silently refetch the loaded pages on a fixed cadence so the
+		// bonding-curve price stays current on the marketplace listing.
+		refetchInterval: pollIntervalMs === false ? false : pollIntervalMs,
 	});
 
 	// Track whether we've already logged a background refetch for the
@@ -107,6 +132,8 @@ export function useInfiniteCreatorMarketplace(params?: Omit<GetCoursesParams, 'p
 		// spinner-worthy load (that's isLoadingFirstPage).
 		isRefreshing: query.isFetching && !query.isLoading && !query.isFetchingNextPage,
 		fetchNextPage: query.fetchNextPage,
+		// Manual re-fetch of every loaded page (used by the error retry action).
+		refetch: () => query.refetch(),
 		error: query.error,
 	};
 }

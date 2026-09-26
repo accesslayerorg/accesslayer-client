@@ -21,10 +21,14 @@ export interface Course {
 	volume24h?: number;
 	change24h?: number;
 	joinedAt?: string;
+	/** ISO timestamp for when the creator key was created. */
+	createdAt?: string;
 	/** Whether this creator is pinned in the marketplace list. */
 	isPinned?: boolean;
 	creatorFeeBps?: number;
 	protocolFeeBps?: number;
+	/** Max keys that can be bought in a single transaction; null means no limit. */
+	maxBuyQuantity?: number | null;
 	/** Last up to 7 price history points in stroops, oldest to newest. */
 	priceHistory?: number[];
 	holderCount?: number;
@@ -51,6 +55,21 @@ export interface Course {
 	 * Applied to sells within the first 7 days after key creation.
 	 */
 	launchPenaltyBps?: number;
+	/**
+	 * Per-wallet delay between consecutive buys, expressed in Stellar ledgers
+	 * (~5 seconds per ledger) as returned by the contract's `set_buy_cooldown`.
+	 * The dashboard displays this converted to minutes.
+	 */
+	buyCooldownLedgers?: number;
+	/**
+	 * Proposal quorum threshold in basis points (100–5000 = 1%–50%).
+	 * Minimum holder participation required for a governance proposal to pass.
+	 */
+	quorumBps?: number;
+	/** Ledger sequence at which this key was created; anchors the 7-day launch window. */
+	createdAtLedger?: number;
+	/** Network ledger sequence as of this response, used to evaluate the launch window. */
+	currentLedger?: number;
 	/** Optional co-creator wallet configured for this creator key. */
 	coCreatorAddress?: string;
 	/** Co-creator revenue share in basis points. */
@@ -59,13 +78,118 @@ export interface Course {
 	totalPaidToCoCreator?: number;
 	/** Lifetime payout to the primary creator, expressed in stroops. */
 	totalPaidToCreator?: number;
+	/**
+	 * Fallback, creator-wide buy-cooldown expiry (#873) used when no
+	 * per-user `nextBuyAllowedAt` is present on the caller's held position.
+	 * Timestamp after which buys are allowed again.
+	 */
+	nextBuyAllowedAt?: number | string | null;
+	/**
+	 * Whether this key has been marked deprecated (#871) — e.g. the creator
+	 * left the platform or the key was superseded. Deprecated keys can no
+	 * longer be bought/sold; holders can redeem their position instead.
+	 */
+	deprecated?: boolean;
+	/** Optional human-readable reason surfaced in the deprecation notice. */
+	deprecationReason?: string | null;
+}
+
+export interface CurveMilestone {
+	supplyThreshold: number;
+	exponent: number;
+	simulatedPrice: number;
+	exponentChange?: string;
+}
+
+export interface GraduatedCurveConfig {
+	keyId?: string;
+	hasGraduatedCurve?: boolean;
+	defaultExponent?: number;
+	milestones?: CurveMilestone[];
+}
+
+/**
+ * Live trading configuration for a single creator key (#951).
+ *
+ * Returned by `GET /keys/:keyId/config` and used to surface the bid-ask
+ * spread between the current buy (ask) and sell (bid) price. All prices are
+ * in stroops (1 XLM = 10,000,000 stroops).
+ */
+export interface KeyConfig {
+	/** Key this config belongs to, when the backend echoes it back. */
+	keyId?: string;
+	/** Current price to buy one key, in stroops. */
+	buyPriceStroops?: number | null;
+	/** Current price to sell one key, in stroops. */
+	sellPriceStroops?: number | null;
+	/** Absolute spread (buy - sell) in stroops, when reported explicitly. */
+	spreadStroops?: number | null;
+	/** Spread expressed in basis points of the buy price, when reported. */
+	spreadBps?: number | null;
+}
+
+/**
+ * Vesting schedule for a creator key's reserved creator allocation (#960).
+ *
+ * All amounts are expressed in XLM; dates are ISO timestamps. The contract
+ * remains the source of truth for `vestedAmountXlm` / `claimableXlm` — the
+ * client only derives progress percentages for the timeline.
+ */
+export interface KeyVestingSchedule {
+	keyId?: string;
+	/** Wallet the allocation is registered to (the key's creator). */
+	beneficiary?: string | null;
+	/** Total allocation subject to vesting, in XLM. */
+	totalAllocationXlm?: number | null;
+	/** Amount unlocked so far, in XLM. */
+	vestedAmountXlm?: number | null;
+	/** Amount already claimed, in XLM. */
+	claimedAmountXlm?: number | null;
+	/** Vested but unclaimed amount, in XLM. */
+	claimableXlm?: number | null;
+	/** ISO timestamp at which vesting starts. */
+	startAt?: string | null;
+	/** ISO timestamp after which tokens unlock. */
+	cliffAt?: string | null;
+	/** ISO timestamp at which the allocation is fully vested. */
+	endAt?: string | null;
+}
+
+/** A single completed claim of vested creator tokens (#960). */
+export interface KeyVestingClaim {
+	/** Stable identifier for the claim record. */
+	id: string;
+	/** Amount claimed, in XLM. */
+	amountXlm: number;
+	/** ISO timestamp of the claim. */
+	claimedAt: string;
+	/** Transaction hash of the claim transaction. */
+	transactionHash: string;
+}
+
+/**
+ * External oracle price for a creator key (#967).
+ *
+ * `priceStroops` is the oracle's view of the key's value, surfaced next to the
+ * bonding-curve spot price so a large divergence is visible before trading.
+ */
+export interface KeyOraclePrice {
+	keyId?: string;
+	/** Oracle price in stroops (1 XLM = 10,000,000 stroops). */
+	priceStroops?: number | null;
+	/** ISO timestamp the oracle last published this price. */
+	updatedAt?: string | null;
+	/** Feed identifier, shown in the tooltip explaining the source. */
+	source?: string | null;
+	/**
+	 * Maximum age, in seconds, after which the feed is considered stale.
+	 * Falls back to the default staleness window when not reported.
+	 */
+	maxAgeSeconds?: number | null;
 }
 
 export type CourseSortOption =
-	| 'volume_desc'
-	| 'price_asc'
-	| 'price_desc'
-	| 'newest';
+	'volume_desc' | 'price_asc' | 'price_desc' | 'newest';
 
 export interface GetCoursesParams {
 	page?: number;
@@ -112,6 +236,40 @@ export interface KeyHolderEntry {
 export interface KeyHoldersPage {
 	holders: KeyHolderEntry[];
 	nextCursor: string | null;
+}
+
+export interface KeyTwap {
+	/** 24-hour time-weighted average price in stroops. */
+	priceStroops: number | null;
+	window?: string;
+}
+
+export interface KeyBuybackInfo {
+	keyId: string;
+	deprecated: boolean;
+	buybackPriceStroops: number;
+	expiryDate: string;
+	terms?: string;
+	isActive?: boolean;
+}
+
+/**
+ * Aggregated on-chain stats for a creator key (#952).
+ * Price and volume values are expressed in stroops.
+ */
+export interface KeyStats {
+	/** Current circulating key supply. */
+	supply: number | null;
+	/** Number of unique wallets holding at least one key. */
+	holderCount: number | null;
+	/** Trading volume over the last 24 hours, in stroops. */
+	volume24h: number | null;
+	/** Cumulative all-time trading volume, in stroops. */
+	totalVolume: number | null;
+	/** 1-hour time-weighted average price, in stroops. */
+	twap1h: number | null;
+	/** 24-hour time-weighted average price, in stroops. */
+	twap24h: number | null;
 }
 
 class CourseService extends BaseApiService {
@@ -217,6 +375,31 @@ class CourseService extends BaseApiService {
 		}
 	}
 
+	// Get the time-weighted average price - GET /keys/:keyId/twap
+	async getKeyTwap(keyId: string, window = '24h'): Promise<KeyTwap> {
+		try {
+			const response = await this.api.get<APIResponse<KeyTwap>>(
+				`/keys/${keyId}/twap`,
+				{ params: { window } }
+			);
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Get aggregated key stats - GET /keys/:keyId/stats
+	async getKeyStats(keyId: string): Promise<KeyStats> {
+		try {
+			const response = await this.api.get<APIResponse<KeyStats>>(
+				`/keys/${keyId}/stats`
+			);
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
 	// Get enrolled courses - GET /courses/enrolled
 	async getEnrolledCourses(): Promise<Course[]> {
 		try {
@@ -309,6 +492,103 @@ class CourseService extends BaseApiService {
 				{ address, splitBps }
 			);
 
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Simulate buy - GET /keys/:keyId/simulate?quantity=N (#886, #887)
+	async simulateBuy(
+		keyId: string,
+		quantity: number
+	): Promise<Record<string, number>> {
+		try {
+			const response = await this.api.get<APIResponse<Record<string, number>>>(
+				`/keys/${keyId}/simulate`,
+				{ params: { quantity } }
+			);
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Get graduated curve config - GET /keys/:keyId/curve-config
+	async getCurveConfig(keyId: string): Promise<GraduatedCurveConfig> {
+		try {
+			const response = await this.api.get<APIResponse<GraduatedCurveConfig>>(
+				`/keys/${keyId}/curve-config`
+			);
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Get key buyback info - GET /keys/:keyId/buyback
+	async getKeyBuyback(keyId: string): Promise<KeyBuybackInfo> {
+		try {
+			const response = await this.api.get<APIResponse<KeyBuybackInfo>>(
+				`/keys/${keyId}/buyback`
+			);
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Get live key trading config - GET /keys/:keyId/config (#951)
+	async getKeyConfig(keyId: string): Promise<KeyConfig> {
+		try {
+			const response = await this.api.get<APIResponse<KeyConfig>>(
+				`/keys/${keyId}/config`
+			);
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Get the creator vesting schedule - GET /keys/:keyId/vesting (#960)
+	async getKeyVesting(
+		keyId: string,
+		wallet?: string
+	): Promise<KeyVestingSchedule> {
+		try {
+			const response = await this.api.get<APIResponse<KeyVestingSchedule>>(
+				`/keys/${keyId}/vesting`,
+				{ params: wallet ? { wallet } : undefined }
+			);
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Get the creator's vesting claim history - GET /keys/:keyId/vesting/claims (#960)
+	async getKeyVestingClaims(
+		keyId: string,
+		wallet: string
+	): Promise<KeyVestingClaim[]> {
+		try {
+			const response = await this.api.get<APIResponse<KeyVestingClaim[]>>(
+				`/keys/${keyId}/vesting/claims`,
+				{ params: { wallet } }
+			);
+			const data = response.data.data;
+			return Array.isArray(data) ? data : [];
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Get the external oracle price - GET /keys/:keyId/oracle (#967)
+	async getKeyOraclePrice(keyId: string): Promise<KeyOraclePrice> {
+		try {
+			const response = await this.api.get<APIResponse<KeyOraclePrice>>(
+				`/keys/${keyId}/oracle`
+			);
 			return response.data.data;
 		} catch (error) {
 			throw this.handleError(error);

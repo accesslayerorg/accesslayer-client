@@ -68,6 +68,14 @@ function renderNotificationIcon(type: NotificationType) {
 					aria-hidden="true"
 				/>
 			);
+		case 'price_alert':
+			return (
+				<Bell
+					className="size-4 shrink-0 text-emerald-400"
+					data-testid="icon-price_alert"
+					aria-hidden="true"
+				/>
+			);
 		case 'price_milestone':
 		default:
 			return (

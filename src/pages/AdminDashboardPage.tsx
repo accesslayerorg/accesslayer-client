@@ -1,8 +1,13 @@
+import MultiSigAdminPanel from '@/components/admin/MultiSigAdminPanel';
 import OracleAccessPanel from '@/components/admin/OracleAccessPanel';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
+import { useStellarWallet } from '@/hooks/useStellarWallet';
+import { isAdminWallet } from '@/utils/adminAccess';
 
 export default function AdminDashboardPage() {
 	useNavigationTiming('admin-dashboard');
+	const { address, isConnected } = useStellarWallet();
+	const isAdmin = isConnected && isAdminWallet(address);
 
 	return (
 		<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
@@ -17,6 +22,7 @@ export default function AdminDashboardPage() {
 				</header>
 
 				<OracleAccessPanel />
+				{isAdmin && <MultiSigAdminPanel isAdmin={isAdmin} />}
 			</div>
 		</main>
 	);
