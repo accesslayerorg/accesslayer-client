@@ -51,6 +51,25 @@ export interface Course {
 	/** Keys sold through the auction so far. */
 	auctionSold?: number;
 	/**
+	 * ISO timestamp for when the pre-launch bidding window closes and the
+	 * key goes live on the bonding curve (#924). When absent, the auction
+	 * ends once `auctionSold` reaches `auctionSupply`.
+	 */
+	auctionEndsAt?: string;
+	/**
+	 * Minimum amount (XLM) a new bid must exceed the current highest bid by
+	 * (#924). When absent, a 5% increment over the highest bid is assumed.
+	 */
+	auctionMinIncrement?: number;
+	/**
+	 * Current highest bid in XLM (#924). When `auctionBids` is present this
+	 * is usually derived from the history instead; the explicit field is the
+	 * source of truth for auctions whose history hasn't been loaded yet.
+	 */
+	auctionHighestBid?: number;
+	/** Pre-launch auction bid history, newest first (#924). */
+	auctionBids?: AuctionBidEntry[];
+	/**
 	 * Early-sell penalty in basis points (0–2000 = 0%–20%).
 	 * Applied to sells within the first 7 days after key creation.
 	 */
@@ -244,6 +263,20 @@ export interface KeyTwap {
 	window?: string;
 }
 
+/** Single bid placed during a key's pre-launch auction window (#924). */
+export interface AuctionBidEntry {
+	/** Unique bid id from the contract. */
+	id: string;
+	/** Wallet that placed the bid. */
+	bidderAddress: string;
+	/** Optional display name for the bidder. */
+	bidderName?: string;
+	/** Bid amount in XLM. */
+	amount: number;
+	/** ISO timestamp when the bid was placed. */
+	placedAt: string;
+}
+
 export interface KeyBuybackInfo {
 	keyId: string;
 	deprecated: boolean;
@@ -383,6 +416,22 @@ class CourseService extends BaseApiService {
 				{ params: { window } }
 			);
 			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/**
+	 * Get the live pre-launch auction bid history for a key (#924) —
+	 * GET /keys/:keyId/auction/bids. Returns the bids newest first so the
+	 * client can render the current leader without extra sorting.
+	 */
+	async getAuctionBids(keyId: string): Promise<AuctionBidEntry[]> {
+		try {
+			const response = await this.api.get<
+				APIResponse<AuctionBidEntry[]>
+			>(`/keys/${keyId}/auction/bids`);
+			return response.data.data ?? [];
 		} catch (error) {
 			throw this.handleError(error);
 		}
