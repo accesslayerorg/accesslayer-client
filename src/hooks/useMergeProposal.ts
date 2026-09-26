@@ -61,7 +61,7 @@ export function useCastMergeVote(sourceKeyId: string) {
 				queryClient.getQueryData<MergeProposal | null>(queryKey);
 
 			if (previous) {
-				queryClient.setQueryData<MergeProposal | null>(queryKey, {
+				queryClient.setQueryData<MergeProposal | null>(queryKey, () => ({
 					...previous,
 					userVote: direction,
 					approveWeight:
@@ -69,7 +69,7 @@ export function useCastMergeVote(sourceKeyId: string) {
 						(direction === 'approve' ? 1 : 0),
 					rejectWeight:
 						previous.rejectWeight + (direction === 'reject' ? 1 : 0),
-				});
+				}));
 			}
 
 			return { previous };
@@ -83,7 +83,7 @@ export function useCastMergeVote(sourceKeyId: string) {
 		onSuccess: result => {
 			queryClient.setQueryData<MergeProposal | null>(
 				queryKey,
-				result.proposal
+				() => result.proposal
 			);
 			showToast.success(
 				result.direction === 'approve'
