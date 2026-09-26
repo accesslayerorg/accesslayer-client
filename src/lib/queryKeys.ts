@@ -49,7 +49,6 @@ export const queryKeys = {
 			trending: () => ['creators', 'discovery', 'trending'] as const,
 			newListings: () => ['creators', 'discovery', 'newListings'] as const,
 		},
-=======
 		royalties: (creatorId: string) =>
 			['creators', creatorId, 'royalties'] as const,
 	},
