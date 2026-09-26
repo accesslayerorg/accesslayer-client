@@ -68,6 +68,7 @@ export const queryKeys = {
 		all: () => ['leaderboard'] as const,
 		volume: (window: VolumeWindow = '24h') =>
 			['leaderboard', 'volume', window] as const,
+                ratings: () => ['leaderboard', 'ratings'] as const,
 	},
 	admin: {
 		oracleCallers: () => ['admin', 'oracle', 'callers'] as const,
