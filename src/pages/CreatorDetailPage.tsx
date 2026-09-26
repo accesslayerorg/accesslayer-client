@@ -48,6 +48,7 @@ import KeyStatsPanel from '@/components/common/KeyStatsPanel';
 import Skeleton from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
 import KeyDeprecationBanner from '@/components/common/KeyDeprecationBanner';
+import MergeProposalBanner from '@/components/common/MergeProposalBanner';
 import KeyBuybackModal from '@/components/common/KeyBuybackModal';
 import type { KeyBuybackReceipt } from '@/hooks/useKeyBuyback';
 
@@ -290,6 +291,12 @@ function CreatorDetailPageContent() {
 						recentSettlement={recentSettlement}
 					/>
 				)}
+				{/* Merge proposal voting for source key holders (#983) */}
+				<MergeProposalBanner
+					sourceKeyId={id || ''}
+					holdingsCount={holdingsCount}
+					isConnected={Boolean(userAddress)}
+				/>
 				<div className="flex items-start gap-3">
 					<div className="min-w-0 flex-1">
 						<CreatorProfileHeader
