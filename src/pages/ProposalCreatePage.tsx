@@ -16,7 +16,7 @@ const PARAMETER_OPTIONS = [
 
 export default function ProposalCreatePage() {
   const navigate = useNavigate();
-  const { address, isConnected } = useStellarWallet();
+  const { isConnected } = useStellarWallet();
   const profile = useProfileStore(state => state.profile);
 
   const [title, setTitle] = useState('');
@@ -102,7 +102,7 @@ export default function ProposalCreatePage() {
       setProposalId(mockProposalId);
       setIsSubmitted(true);
       showToast.success('Proposal submitted successfully');
-    } catch (error) {
+    } catch {
       showToast.error('Failed to submit proposal');
     } finally {
       setIsSubmitting(false);

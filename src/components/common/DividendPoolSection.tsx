@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Coins, Clock, CheckCircle, Loader2, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatNumber } from '@/utils/numberFormat.utils';
-import { cn } from '@/lib/utils';
 
 interface DividendDistribution {
   id: string;
@@ -35,7 +34,7 @@ export default function DividendPoolSection({
   const [claimingKeyId, setClaimingKeyId] = useState<string | null>(null);
 
   // Auto-refresh every 60 seconds
-  const [refreshCounter, setRefreshCounter] = useState(0);
+  const [, setRefreshCounter] = useState(0);
   useEffect(() => {
     const interval = setInterval(() => {
       setRefreshCounter(prev => prev + 1);
