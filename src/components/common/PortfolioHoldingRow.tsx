@@ -7,10 +7,17 @@ import RedeemKeyDialog from '@/components/common/RedeemKeyDialog';
 import { computeRemainingLockupSeconds } from '@/utils/lockupCountdown.utils';
 import { formatNumber } from '@/utils/numberFormat.utils';
 import { formatDisplayKeyPrice, resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
+import {
+	calculatePositionPnL,
+	formatPnLDisplay,
+	formatPnLPercentage,
+	getPnLTone,
+	getPnLToneChipClassName,
+	type HeldKeyPosition,
+} from '@/utils/portfolioValue.utils';
 import { hasUnclaimedDividend, xlmToStroops } from '@/utils/reinvestDividend.utils';
 import { isKeyDeprecated } from '@/utils/keyDeprecation.utils';
-import { TrendingUp } from 'lucide-react';
-import type { HeldKeyPosition } from '@/utils/portfolioValue.utils';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { Course } from '@/services/course.service';
 import { cn } from '@/lib/utils';
 
@@ -59,6 +66,23 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	const keyPriceStroops = resolveCreatorKeyPriceStroops(position);
 	const deprecated = isKeyDeprecated(creator);
 
+	// #935 — unrealised P&L for this position: what the keys would fetch if sold
+	// at the current bonding-curve sell price, less what was paid for them.
+	const positionPnL = calculatePositionPnL(position);
+	const pnlTone = getPnLTone(positionPnL.unrealisedPnLStroops);
+	const PnlIcon =
+		pnlTone === 'positive' ? TrendingUp : pnlTone === 'negative' ? TrendingDown : Minus;
+	const pnlLabel =
+		positionPnL.status === 'loading'
+			? 'Refreshing price'
+			: positionPnL.status === 'unavailable'
+				? 'Unavailable'
+				: positionPnL.unrealisedPnLStroops == null
+					? 'No cost basis'
+					: `${formatPnLDisplay(positionPnL.unrealisedPnLStroops)} (${formatPnLPercentage(
+							positionPnL.pnlPercentage ?? 0
+						)})`;
+
 	const handleConfirmReinvest = async () => {
 		if (!onReinvest) return;
 		await onReinvest(position.creatorId);
@@ -100,6 +124,40 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 						: position.isPriceStale
 							? 'Price stale'
 							: formatDisplayKeyPrice(resolveCreatorKeyPriceStroops(position))}
+				</div>
+				<div
+					className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"
+					data-testid="holding-pnl"
+				>
+					<span className="text-white/45">
+						Avg buy{' '}
+						<span className="font-semibold text-white/80">
+							{positionPnL.averagePurchasePriceStroops == null
+								? '—'
+								: formatDisplayKeyPrice(positionPnL.averagePurchasePriceStroops)}
+						</span>
+					</span>
+					<span className="text-white/45">
+						Current{' '}
+						<span className="font-semibold text-white/80">
+							{positionPnL.currentValueStroops == null
+								? '—'
+								: formatDisplayKeyPrice(positionPnL.currentValueStroops)}
+						</span>
+					</span>
+					<span
+						className={cn(
+							'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.65rem] font-semibold',
+							getPnLToneChipClassName(positionPnL.unrealisedPnLStroops)
+						)}
+						data-testid="holding-pnl-value"
+						data-pnl-tone={pnlTone}
+						title="Unrealised P&L: current bonding curve sell price less average purchase price"
+					>
+						<PnlIcon className="size-3" aria-hidden="true" />
+						<span>{pnlLabel}</span>
+					</span>
+					<span className="sr-only">unrealised P&amp;L</span>
 				</div>
 				{hasDividends && (
 					<span

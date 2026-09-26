@@ -7,10 +7,14 @@ import CreatorDetailPage from './pages/CreatorDetailPage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
 import NotificationsPage from './pages/NotificationsPage';
 import LeaderboardPage from './pages/LeaderboardPage';
+import DiscoveryPage from './pages/DiscoveryPage';
 import ProfilePage from './pages/ProfilePage';
 import FollowingPage from './pages/FollowingPage';
 import ComparePage from './pages/ComparePage';
 import GovernancePage from './pages/GovernancePage';
+import ProposalDetailPage from './pages/ProposalDetailPage';
+import ReferralDashboardPage from './pages/ReferralDashboardPage';
+import CreateCreatorKeyPage from './pages/CreateCreatorKeyPage';
 
 export const routes = [
 	{
@@ -28,6 +32,14 @@ export const routes = [
 			{
 				path: '/marketplace',
 				element: <MarketplacePage />,
+			},
+			{
+				path: '/discovery',
+				element: <DiscoveryPage />,
+			},
+			{
+				path: '/discover',
+				element: <DiscoveryPage />,
 			},
 			{
 				path: '/leaderboard',
@@ -68,6 +80,18 @@ export const routes = [
 			{
 				path: '/governance',
 				element: <GovernancePage />,
+			},
+			{
+				path: '/governance/:proposalId',
+				element: <ProposalDetailPage />,
+			},
+			{
+				path: '/referrals',
+				element: <ReferralDashboardPage />,
+			},
+			{
+				path: '/create-key',
+				element: <CreateCreatorKeyPage />,
 			},
 			{
 				path: '/admin/dashboard',

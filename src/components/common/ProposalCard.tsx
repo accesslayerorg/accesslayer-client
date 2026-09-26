@@ -1,8 +1,10 @@
+import { Link } from 'react-router';
 import { cn } from '@/lib/utils';
-import { Clock, ThumbsUp, ThumbsDown, Minus } from 'lucide-react';
+import { ArrowRight, Clock, ThumbsUp, ThumbsDown, Minus } from 'lucide-react';
 import QuorumIndicator from '@/components/common/QuorumIndicator';
 import type { Proposal } from '@/types/governance';
 import { formatCompactNumber } from '@/utils/numberFormat.utils';
+import { getEligibleVotingWeight } from '@/utils/governance.utils';
 
 interface ProposalCardProps {
 	proposal: Proposal;
@@ -34,8 +36,9 @@ function formatDate(iso: string): string {
  */
 const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, className }) => {
 	const isActive = proposal.status === 'active';
-	const totalVotes =
+	const totalVotingWeight =
 		proposal.forVotes + proposal.againstVotes + proposal.abstainVotes;
+	const eligibleVotingWeight = getEligibleVotingWeight(proposal);
 
 	return (
 		<div
@@ -48,7 +51,12 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, className }) => {
 			{/* Header row: status + title */}
 			<div className="mb-3 flex items-start justify-between gap-3">
 				<h3 className="font-jakarta text-base font-bold text-white leading-snug">
-					{proposal.title}
+					<Link
+						to={`/governance/${proposal.id}`}
+						className="rounded-sm transition-colors hover:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+					>
+						{proposal.title}
+					</Link>
 				</h3>
 				<span
 					className={cn(
@@ -68,7 +76,10 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, className }) => {
 			{/* Vote tallies */}
 			<div className="mb-4 flex items-center gap-4 text-xs text-white/50">
 				<span className="inline-flex items-center gap-1">
-					<ThumbsUp className="size-3 text-emerald-400" aria-hidden="true" />
+					<ThumbsUp
+						className="size-3 text-emerald-400"
+						aria-hidden="true"
+					/>
 					{formatCompactNumber(proposal.forVotes)}
 				</span>
 				<span className="inline-flex items-center gap-1">
@@ -80,7 +91,7 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, className }) => {
 					{formatCompactNumber(proposal.abstainVotes)}
 				</span>
 				<span className="ml-auto tabular-nums text-white/40">
-					{formatCompactNumber(totalVotes)} votes
+					{formatCompactNumber(totalVotingWeight)} weight
 				</span>
 			</div>
 
@@ -89,17 +100,24 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, className }) => {
 				<QuorumIndicator
 					quorumBps={proposal.quorumBps}
 					totalVotingWeight={proposal.totalVotingWeight}
-					totalCirculatingSupply={proposal.totalCirculatingSupply}
+					totalCirculatingSupply={eligibleVotingWeight}
 					className="mb-4"
 				/>
 			)}
 
 			{/* Footer: dates */}
-			<div className="flex items-center gap-1.5 text-xs text-white/35">
-				<Clock className="size-3" aria-hidden="true" />
-				<span>
+			<div className="flex flex-wrap items-center justify-between gap-3 text-xs text-white/35">
+				<span className="inline-flex items-center gap-1.5">
+					<Clock className="size-3" aria-hidden="true" />
 					{formatDate(proposal.startDate)} — {formatDate(proposal.endDate)}
 				</span>
+				<Link
+					to={`/governance/${proposal.id}`}
+					className="inline-flex items-center gap-1 font-semibold text-white/50 transition-colors hover:text-amber-300"
+				>
+					View proposal
+					<ArrowRight className="size-3" aria-hidden="true" />
+				</Link>
 			</div>
 		</div>
 	);

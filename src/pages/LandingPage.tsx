@@ -67,8 +67,16 @@ import {
 	calculatePnLSummary,
 	formatPnLDisplay,
 	formatPnLPercentage,
+	getPnLToneClassName,
+	resolveAveragePurchasePriceStroops,
 	type HeldKeyPosition,
 } from '@/utils/portfolioValue.utils';
+import {
+	averagePurchasePriceFromCostBasis,
+	resolveCostBasisWalletKey,
+	useKeyCostBasis,
+	type KeyCostBasisEntry,
+} from '@/hooks/useKeyCostBasis';
 import PrecisionModeToggle, {
 	type PrecisionMode,
 } from '@/components/common/PrecisionModeToggle';
@@ -76,6 +84,7 @@ import ScrollToTop from '@/components/common/ScrollToTop';
 import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 import StaleDataWarning from '@/components/common/StaleDataWarning';
 import { useScrollPreservation } from '@/hooks/useScrollPreservation';
+import { useKeyConfig } from '@/hooks/useKeyConfig';
 import { useStaleData } from '@/hooks/useStaleData';
 import { useIdleRefreshPrompt } from '@/hooks/useIdleRefreshPrompt';
 import IdleRefreshPrompt from '@/components/common/IdleRefreshPrompt';
@@ -216,6 +225,13 @@ const PAGE_SIZE = 6;
 const FETCH_RETRY_ACTION_LABEL = 'Try again';
 const DEMO_HELD_KEY_QUANTITIES = [0, 2, 1] as const;
 const DEMO_WALLET_ADDRESS = 'demo-wallet-address';
+
+/**
+ * Stable empty cost-basis map returned by the `useKeyCostBasis` selector for
+ * wallets with no recorded positions. A shared reference keeps the selector
+ * referentially stable so it does not re-render the holdings list.
+ */
+const EMPTY_COST_BASIS_ENTRIES: Record<string, KeyCostBasisEntry> = {};
 const FINAL_FETCH_ERROR_COPY =
 	'Unable to load live creators right now. Showing fallback creators.';
 const CREATOR_REFRESH_SHORTCUT_LABEL = 'Ctrl/Cmd + Alt + R';
@@ -697,6 +713,10 @@ function LandingPage() {
 	// fall back to the demo featured creator. This keeps the profile panel
 	// reactive to backend updates (supply, price, etc.).
 	const featuredCreator = creators.length > 0 ? creators[0] : DEMO_CREATORS[0];
+	// Live key config powers the bid-ask spread in the quick-trade modal
+	// (#951) and refetches as the key configuration changes.
+	const { data: featuredKeyConfig, isLoading: isFeaturedKeyConfigLoading } =
+		useKeyConfig(featuredCreator?.id);
 
 	useEffect(() => {
 		if (pendingScrollRestoreRef.current == null) return;
@@ -774,6 +794,18 @@ function LandingPage() {
 	const redeemMutation = useRedeemDeprecatedKeyMutation(activeWalletAddress);
 	const { data: cachedHoldings = [] } = useWalletHoldings(activeWalletAddress);
 
+	// #935 — the wallet's persisted per-key cost basis, used as the average
+	// purchase price each position's unrealised P&L is measured against. The
+	// selector returns a stable reference (either the stored map or a shared
+	// empty object) so it never re-renders on unrelated store writes.
+	// Keyed on `activeWalletAddress` so demo trades — which the mutation records
+	// under the demo address — resolve to the same bucket the trades were
+	// written to.
+	const costBasisWalletKey = resolveCostBasisWalletKey(activeWalletAddress);
+	const costBasisByCreatorId = useKeyCostBasis(
+		state => state.entriesByWallet[costBasisWalletKey] ?? EMPTY_COST_BASIS_ENTRIES
+	);
+
 	// Merged: keep total-value sorting (feature/holdings-sorting-tests) while
 	// also zeroing out the demo baseline quantities once a real wallet is
 	// connected (dev), so a connected wallet only shows genuine cached
@@ -790,18 +822,39 @@ function LandingPage() {
 							? featuredHoldings
 							: (DEMO_HELD_KEY_QUANTITIES[index] ?? 0);
 					const baseQuantity = connectedAddress ? 0 : defaultBaseQuantity;
-					return {
+					const basePosition = {
 						creatorId: creator.id,
 						quantity: cached?.quantity ?? baseQuantity,
 						priceStroops: creator.priceStroops,
 						price: creator.price,
-										frozenQuantity: cached?.frozenQuantity ?? 0,
-										liquidQuantity:
-											cached?.liquidQuantity ?? cached?.quantity ?? baseQuantity,
+						// #935 — live supply so the current value can be valued on
+						// the bonding curve rather than a cached snapshot.
+						currentSupply: creator.creatorShareSupply,
+						frozenQuantity: cached?.frozenQuantity ?? 0,
+						liquidQuantity:
+							cached?.liquidQuantity ?? cached?.quantity ?? baseQuantity,
 						isPriceLoading: isPriceRefreshing,
 						isPriceStale: creatorsAreStale,
 						pending: cached?.pending ?? false,
 						unclaimedDividend: cached?.unclaimedDividend ?? 0,
+						// #935 — cost basis reported by the backend, which wins over
+						// the locally tracked basis when both are available.
+						averagePurchasePriceStroops:
+							cached?.averagePurchasePriceStroops ?? null,
+					};
+
+					return {
+						...basePosition,
+						// #935 — average purchase price: server-provided cost basis
+						// first, then the locally tracked basis, then seeded from the
+						// current curve price so a position synced without cost
+						// history starts at break-even instead of hiding its P&L.
+						averagePurchasePriceStroops: resolveAveragePurchasePriceStroops(
+							basePosition,
+							averagePurchasePriceFromCostBasis(
+								costBasisByCreatorId[creator.id]
+							)
+						),
 					};
 				})
 			),
@@ -812,6 +865,7 @@ function LandingPage() {
 			isPriceRefreshing,
 			cachedHoldings,
 			connectedAddress,
+			costBasisByCreatorId,
 		]
 	);
 	const portfolioValue = useMemo(
@@ -950,6 +1004,9 @@ function LandingPage() {
 					price: featuredCreator?.price,
 					ref: urlRef,
 					maxPriceStroops: slippage?.maxPriceStroops ?? null,
+					// #935 — live supply so the buy's cost basis is recorded at the
+					// price the curve actually charges across the buy range.
+					currentSupply: featuredCreator?.creatorShareSupply ?? null,
 				});
 				setFeaturedHoldings(current => current + amount);
 				showToast.transactionSuccess(
@@ -966,6 +1023,10 @@ function LandingPage() {
 					priceStroops: resolveCreatorKeyPriceStroops(featuredCreator),
 					price: featuredCreator?.price,
 					minPriceStroops: slippage?.minPriceStroops ?? null,
+					// #935 — the sell releases the sold keys' share of the position's
+					// cost basis; the average purchase price of the remaining keys is
+					// preserved.
+					currentSupply: featuredCreator?.creatorShareSupply ?? null,
 				});
 				setFeaturedHoldings(current => Math.max(0, current - amount));
 				showToast.transactionSuccess(
@@ -1553,7 +1614,10 @@ function LandingPage() {
 											<span className="text-white/45">
 												Total Invested
 											</span>
-											<span className="ml-2 font-grotesque font-bold text-white">
+											<span
+												className="ml-2 font-grotesque font-bold text-white"
+												data-testid="pnl-summary-invested"
+											>
 												{formatPnLDisplay(pnlSummary.totalInvested)}
 											</span>
 										</div>
@@ -1561,7 +1625,10 @@ function LandingPage() {
 											<span className="text-white/45">
 												Current Value
 											</span>
-											<span className="ml-2 font-grotesque font-bold text-white">
+											<span
+												className="ml-2 font-grotesque font-bold text-white"
+												data-testid="pnl-summary-current-value"
+											>
 												{formatPnLDisplay(pnlSummary.currentValue)}
 											</span>
 										</div>
@@ -1570,13 +1637,10 @@ function LandingPage() {
 												Unrealised PnL
 											</span>
 											<span
-												className={`ml-2 font-grotesque font-bold ${
-													pnlSummary.unrealisedPnL > 0
-														? 'text-emerald-400'
-														: pnlSummary.unrealisedPnL < 0
-															? 'text-red-400'
-															: 'text-white'
-												}`}
+												className={`ml-2 font-grotesque font-bold ${getPnLToneClassName(
+													pnlSummary.unrealisedPnL
+												)}`}
+												data-testid="pnl-summary-unrealised"
 											>
 												{formatPnLDisplay(pnlSummary.unrealisedPnL)}{' '}
 												(
@@ -1587,15 +1651,28 @@ function LandingPage() {
 											</span>
 										</div>
 									</div>
-									<button
-										type="button"
-										data-testid="share-performance-btn"
-										onClick={() => setSharePortfolioOpen(true)}
-										className="inline-flex items-center gap-2 self-start rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-white/30 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/50 sm:self-auto cursor-pointer"
-									>
-										<Share2 className="size-3.5 text-amber-300" aria-hidden="true" />
-										<span>Share Performance</span>
-									</button>
+									<div className="flex flex-col gap-1 sm:items-end">
+										<button
+											type="button"
+											data-testid="share-performance-btn"
+											onClick={() => setSharePortfolioOpen(true)}
+											className="inline-flex items-center gap-2 self-start rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-white/30 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/50 sm:self-auto cursor-pointer"
+										>
+											<Share2 className="size-3.5 text-amber-300" aria-hidden="true" />
+											<span>Share Performance</span>
+										</button>
+										<p
+											className="text-[0.65rem] leading-relaxed text-white/40 sm:text-right"
+											data-testid="pnl-summary-caption"
+										>
+											Valued at the current bonding curve sell price across{' '}
+											{pnlSummary.costBasisPositionCount}{' '}
+											{pnlSummary.costBasisPositionCount === 1
+												? 'position'
+												: 'positions'}{' '}
+											with a tracked average purchase price.
+										</p>
+									</div>
 								</div>
 							)}
 						{isLoading ? (
@@ -2021,6 +2098,8 @@ function LandingPage() {
 					currentLedger={featuredCreator?.currentLedger}
 					launchPenaltyBps={featuredCreator?.launchPenaltyBps}
 					maxBuyQuantity={featuredCreator?.maxBuyQuantity ?? null}
+					keyConfig={featuredKeyConfig}
+					isKeyConfigLoading={isFeaturedKeyConfigLoading}
 					isSubmitting={tradeSubmitting}
 					onOpenChange={setTradeDialogOpen}
 					onConfirm={handleConfirmTrade}

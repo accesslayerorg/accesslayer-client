@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { ChevronDown, RefreshCw } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -30,6 +31,13 @@ const PAGE_LIMIT = 12;
 const SEARCH_DEBOUNCE_MS = 300;
 const PRICE_POLL_INTERVAL_MS = 30_000;
 
+const VALID_SORT_OPTIONS: CourseSortOption[] = [
+	'volume_desc',
+	'price_asc',
+	'price_desc',
+	'newest',
+];
+
 function creatorMatchesSearch(creator: Course, query: string): boolean {
 	return [creator.title, creator.name, creator.instructorId, creator.socialHandle]
 		.filter(Boolean)
@@ -50,6 +58,14 @@ export default function MarketplacePage() {
 	useNavigationTiming('marketplace');
 	useDocumentTitle('Marketplace — AccessLayer');
 
+	const [searchParams, setSearchParams] = useSearchParams();
+
+	const initialSortParam = searchParams.get('sort');
+	const initialSort: CourseSortOption =
+		initialSortParam && VALID_SORT_OPTIONS.includes(initialSortParam as CourseSortOption)
+			? (initialSortParam as CourseSortOption)
+			: 'volume_desc';
+
 	const {
 		creators,
 		hasMore,
@@ -68,10 +84,30 @@ export default function MarketplacePage() {
 	const debouncedSearchQuery = useDebounce(searchQuery, SEARCH_DEBOUNCE_MS);
 	const trimmedSearch = debouncedSearchQuery.trim().toLowerCase();
 
-	const [sortOption, setSortOption] = useState<CourseSortOption>('volume_desc');
+	const [sortOption, setSortOption] = useState<CourseSortOption>(initialSort);
 	const [supplyTier, setSupplyTier] = useState<SupplyTierFilter>('all');
 
-	const hasActiveFilters = Boolean(trimmedSearch) || supplyTier !== 'all';
+	// Synchronize sortOption if URL query param changes
+	useEffect(() => {
+		const param = searchParams.get('sort');
+		if (param && VALID_SORT_OPTIONS.includes(param as CourseSortOption)) {
+			setSortOption(param as CourseSortOption);
+		}
+	}, [searchParams]);
+
+	const handleSortChange = (newSort: CourseSortOption) => {
+		setSortOption(newSort);
+		const newParams = new URLSearchParams(searchParams);
+		if (newSort === 'volume_desc') {
+			newParams.delete('sort');
+		} else {
+			newParams.set('sort', newSort);
+		}
+		setSearchParams(newParams, { replace: true });
+	};
+
+	const hasActiveFilters =
+		Boolean(trimmedSearch) || supplyTier !== 'all' || sortOption !== 'volume_desc';
 
 	// #918 — sort and supply-tier filter are applied client-side over the
 	// pages already fetched from the server, so they work instantly and never
@@ -97,6 +133,10 @@ export default function MarketplacePage() {
 	const handleResetFilters = () => {
 		setSearchQuery('');
 		setSupplyTier('all');
+		setSortOption('volume_desc');
+		const newParams = new URLSearchParams(searchParams);
+		newParams.delete('sort');
+		setSearchParams(newParams, { replace: true });
 	};
 
 	const handleRetry = () => {
@@ -183,7 +223,7 @@ export default function MarketplacePage() {
 										data-testid="marketplace-sort-select"
 										value={sortOption}
 										onChange={e =>
-											setSortOption(e.target.value as CourseSortOption)
+											handleSortChange(e.target.value as CourseSortOption)
 										}
 										className="h-9 w-full rounded-lg border border-white/15 bg-slate-950/80 px-3 text-sm text-white outline-none focus:border-amber-400/60"
 									>

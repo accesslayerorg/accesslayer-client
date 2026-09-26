@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+	useInfiniteQuery,
+	useMutation,
+	useQueryClient,
+} from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 import type { HeldKeyPosition } from '@/utils/portfolioValue.utils';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 import { useWalletHoldings } from '@/hooks/useWallet';
+import { fetchProtocolRevenuePage } from '@/services/stakerRevenue.service';
 import {
 	buildMockTransactionHash,
 	computeTotalClaimable,
@@ -14,6 +19,24 @@ import {
 } from '@/utils/protocolRevenue.utils';
 
 export type { RevenueClaimRecord };
+
+/**
+ * Fetches GET /staker/:wallet/protocol-revenue with cursor pagination.
+ * Appends distribution records per page and provides `fetchNextPage`.
+ */
+export function useStakerProtocolRevenue(wallet: string) {
+	return useInfiniteQuery({
+		queryKey: queryKeys.staker.protocolRevenue(wallet),
+		queryFn: ({ pageParam }) =>
+			fetchProtocolRevenuePage(
+				wallet,
+				pageParam as string | null | undefined
+			),
+		initialPageParam: null as string | null,
+		getNextPageParam: lastPage => lastPage.nextCursor ?? undefined,
+		enabled: !!wallet,
+	});
+}
 
 /**
  * Claimable revenue positions for a staker (#920).
@@ -88,9 +111,7 @@ function toClaimRecords(
 	transactionHash: string,
 	claimedAt: number
 ): RevenueClaimRecord[] {
-	const claims = Array.isArray(variables)
-		? variables
-		: variables.claims;
+	const claims = Array.isArray(variables) ? variables : variables.claims;
 	return claims
 		.filter(claim => claim.amount > 0)
 		.map(claim => ({
@@ -155,8 +176,7 @@ export function useClaimRevenueMutation(
 		},
 		onError: (error, _variables, context) => {
 			const typedContext = context as
-				| { previousHoldings?: HeldKeyPosition[] }
-				| undefined;
+				{ previousHoldings?: HeldKeyPosition[] } | undefined;
 			if (typedContext?.previousHoldings) {
 				queryClient.setQueryData(
 					queryKeys.wallet.holdings(address),
@@ -234,8 +254,7 @@ export function useClaimAllRevenueMutation(
 		},
 		onError: (error, _variables, context) => {
 			const typedContext = context as
-				| { previousHoldings?: HeldKeyPosition[] }
-				| undefined;
+				{ previousHoldings?: HeldKeyPosition[] } | undefined;
 			if (typedContext?.previousHoldings) {
 				queryClient.setQueryData(
 					queryKeys.wallet.holdings(address),

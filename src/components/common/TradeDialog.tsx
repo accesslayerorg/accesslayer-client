@@ -29,7 +29,11 @@ import BuyFeeBreakdown from '@/components/common/BuyFeeBreakdown';
 import SellFeeBreakdown from '@/components/common/SellFeeBreakdown';
 import LaunchPenaltyWarning from '@/components/common/LaunchPenaltyWarning';
 import SlippageToleranceSelector from '@/components/common/SlippageToleranceSelector';
-import { TRADE_FEE_ESTIMATE, FEE_BOUNDS } from '@/constants/fees';
+import {
+	TRADE_FEE_ESTIMATE,
+	FEE_BOUNDS,
+	BUY_QUANTITY_BOUNDS,
+} from '@/constants/fees';
 import { formatTransactionFeeDisplay } from '@/utils/transactionFee.utils';
 import { clampBuyQuantity } from '@/utils/buyQuantity';
 import { calculateLaunchPenalty } from '@/utils/launchPenalty.utils';
@@ -37,11 +41,19 @@ import {
 	fetchPricePreview,
 	type FeeBreakdown,
 } from '@/utils/pricePreview.utils';
+import PriceImpactWarning from '@/components/common/PriceImpactWarning';
+import TradeConfirmationModal from '@/components/common/TradeConfirmationModal';
+import {
+	calculateTradePriceImpact,
+	PRICE_IMPACT_THRESHOLD_PERCENT,
+} from '@/utils/priceImpact.utils';
 import {
 	DEFAULT_SLIPPAGE_TOLERANCE_PERCENT,
 	computeSlippageBounds,
 	type SlippageBounds,
 } from '@/utils/slippageTolerance.utils';
+import type { KeyConfig } from '@/services/course.service';
+import SpreadIndicator from '@/components/common/SpreadIndicator';
 
 export type TradeSide = 'buy' | 'sell';
 
@@ -66,6 +78,12 @@ export interface TradeDialogProps {
 	launchPenaltyBps?: number | null;
 	/** Max buy quantity allowed per transaction; null means no limit. */
 	maxBuyQuantity?: number | null;
+	/** Live key trading config carrying the bid-ask spread (#951). */
+	keyConfig?: KeyConfig | null;
+	/** Whether the key config query is still loading. */
+	isKeyConfigLoading?: boolean;
+	/** Whether to display the confirmation modal step before submission (#919). Defaults to false. */
+	requireConfirmation?: boolean;
 	onOpenChange: (open: boolean) => void;
 	onConfirm: (
 		amount: number,
@@ -91,6 +109,9 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	currentLedger,
 	launchPenaltyBps,
 	maxBuyQuantity = null,
+	keyConfig,
+	isKeyConfigLoading = false,
+	requireConfirmation = false,
 	onOpenChange,
 	onConfirm,
 	isSubmitting = false,
@@ -103,6 +124,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	const [slippageTolerancePercent, setSlippageTolerancePercent] = useState(
 		DEFAULT_SLIPPAGE_TOLERANCE_PERCENT
 	);
+	const [confirmationOpen, setConfirmationOpen] = useState(false);
 	const amountInputRef = useRef<HTMLInputElement | null>(null);
 	const pricePreviewFailureLogged = useRef(false);
 	const previewAbortControllerRef = useRef<AbortController | null>(null);
@@ -268,7 +290,12 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 				currentLedger,
 				launchPenaltyBps
 			),
-		[estimatedProceedsStroops, createdAtLedger, currentLedger, launchPenaltyBps]
+		[
+			estimatedProceedsStroops,
+			createdAtLedger,
+			currentLedger,
+			launchPenaltyBps,
+		]
 	);
 
 	const estimatedTotalStroops = useMemo(() => {
@@ -303,6 +330,28 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 			slippageTolerancePercent
 		);
 	}, [side, slippageReferencePriceStroops, slippageTolerancePercent]);
+
+	const priceImpactPercent = useMemo(() => {
+		if (!amountValid || !Number.isFinite(parsedAmount)) return 0;
+		return calculateTradePriceImpact({
+			side,
+			quantity: parsedAmount,
+			currentSupply: currentSupply ?? 0,
+		});
+	}, [amountValid, parsedAmount, side, currentSupply]);
+
+	const handleMaxClick = () => {
+		setTouched(true);
+		if (side === 'sell') {
+			setAmountText(String(Math.max(0, availableHoldings)));
+		} else {
+			const maxVal =
+				maxBuyQuantity != null
+					? maxBuyQuantity
+					: BUY_QUANTITY_BOUNDS.MAX_QTY;
+			setAmountText(String(maxVal));
+		}
+	};
 
 	// Fetch price preview (fee breakdown) for buy transactions
 	useEffect(() => {
@@ -412,6 +461,15 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 				</p>
 			)}
 
+			{/* Configurable bid-ask spread between buy and sell price (#951) */}
+			<SpreadIndicator
+				buyPriceStroops={keyConfig?.buyPriceStroops}
+				sellPriceStroops={keyConfig?.sellPriceStroops}
+				spreadStroops={keyConfig?.spreadStroops}
+				spreadBps={keyConfig?.spreadBps}
+				isLoading={isKeyConfigLoading}
+			/>
+
 			{side === 'sell' && (
 				<LaunchPenaltyWarning
 					visible={launchPenalty.applies}
@@ -421,29 +479,42 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 
 			<div className="space-y-2">
 				<div className="text-sm text-white/70">Amount</div>
-				<input
-					ref={amountInputRef}
-					inputMode="decimal"
-					value={amountText}
-					onChange={event => {
-						setAmountText(event.target.value);
-						setTouched(true);
-					}}
-					onBlur={handleBlur}
-					disabled={isSubmitting}
-					className={cn(
-						'w-full rounded-xl border bg-white/[0.04] px-3 py-2 text-white outline-none transition-colors',
-						'border-white/10 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/15',
-						showError ? 'border-red-500/60' : ''
-					)}
-					aria-label="Trade amount"
-					aria-describedby={
-						showError ? 'trade-amount-error' : undefined
-					}
-					aria-invalid={showError || undefined}
-					data-focus-order="1"
-					data-testid="trade-dialog-amount"
-				/>
+				<div className="relative flex items-center">
+					<input
+						ref={amountInputRef}
+						inputMode="decimal"
+						value={amountText}
+						onChange={event => {
+							setAmountText(event.target.value);
+							setTouched(true);
+						}}
+						onBlur={handleBlur}
+						disabled={isSubmitting}
+						className={cn(
+							'w-full rounded-xl border bg-white/[0.04] px-3 py-2 pr-16 text-white outline-none transition-colors',
+							'border-white/10 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/15',
+							showError ? 'border-red-500/60' : ''
+						)}
+						aria-label="Trade amount"
+						aria-describedby={
+							showError ? 'trade-amount-error' : undefined
+						}
+						aria-invalid={showError || undefined}
+						data-focus-order="1"
+						data-testid="trade-dialog-amount"
+					/>
+					<button
+						type="button"
+						data-testid="trade-dialog-max-button"
+						onClick={handleMaxClick}
+						disabled={
+							isSubmitting || (side === 'sell' && availableHoldings <= 0)
+						}
+						className="absolute right-2 rounded-md border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-xs font-bold text-amber-300 transition-colors hover:bg-amber-400/20 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
+					>
+						MAX
+					</button>
+				</div>
 				{showError && (
 					<p
 						id="trade-amount-error"
@@ -542,6 +613,11 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 										)}
 							</p>
 						)}
+						<PriceImpactWarning
+							impactPercent={priceImpactPercent}
+							threshold={PRICE_IMPACT_THRESHOLD_PERCENT}
+							className="mt-2"
+						/>
 					</div>
 				)}
 			</div>
@@ -562,14 +638,17 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 			</Button>
 			<Button
 				type="button"
-				onClick={() =>
-					onConfirm(parsedAmount, pricePreview, slippageBounds)
-				}
+				onClick={() => {
+					if (requireConfirmation) {
+						setConfirmationOpen(true);
+					} else {
+						onConfirm(parsedAmount, pricePreview, slippageBounds);
+					}
+				}}
 				disabled={
 					!amountValid ||
 					isSubmitting ||
-					(side === 'buy' &&
-						(previewLoading || previewError != null))
+					(side === 'buy' && (previewLoading || previewError != null))
 				}
 				aria-busy={isSubmitting || undefined}
 				data-focus-order="3"
@@ -585,16 +664,88 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		</>
 	);
 
+	const confirmationModal = (
+		<TradeConfirmationModal
+			open={confirmationOpen}
+			onOpenChange={setConfirmationOpen}
+			side={side}
+			creatorName={creatorName}
+			amount={parsedAmount}
+			unitPriceStroops={keyPriceStroops}
+			totalStroops={slippageReferencePriceStroops}
+			slippageTolerancePercent={slippageTolerancePercent}
+			maxPriceStroops={slippageBounds?.maxPriceStroops ?? null}
+			minPriceStroops={slippageBounds?.minPriceStroops ?? null}
+			priceImpactPercent={priceImpactPercent}
+			onConfirm={async () => {
+				await onConfirm(parsedAmount, pricePreview, slippageBounds);
+				setConfirmationOpen(false);
+			}}
+			onCancel={() => setConfirmationOpen(false)}
+			isSubmitting={isSubmitting}
+		/>
+	);
+
 	if (isMobile) {
 		return (
-			<BottomSheet
+			<>
+				<BottomSheet
+					open={open}
+					onOpenChange={next => !isSubmitting && onOpenChange(next)}
+				>
+					<BottomSheetContent
+						className="max-h-[calc(100vh-80px)] overflow-y-auto"
+						enableDrag={!isSubmitting}
+						hideCloseButton={isSubmitting}
+						onOpenAutoFocus={event => {
+							event.preventDefault();
+							amountInputRef.current?.focus();
+						}}
+						onCloseAutoFocus={event => {
+							event.preventDefault();
+							triggerElementRef.current?.focus();
+						}}
+						onEscapeKeyDown={event => {
+							if (isSubmitting) event.preventDefault();
+						}}
+						onInteractOutside={event => {
+							if (isSubmitting) event.preventDefault();
+						}}
+					>
+						<BottomSheetHandle />
+						<div className="flex flex-col gap-2 text-center sm:text-left mb-4">
+							<BottomSheetTitle className="text-lg leading-none font-semibold">
+								{title}
+							</BottomSheetTitle>
+							<BottomSheetDescription className="text-muted-foreground text-sm">
+								{side === 'buy'
+									? `Purchase creator keys for ${creatorName}.`
+									: `Sell creator keys for ${creatorName}.`}
+							</BottomSheetDescription>
+						</div>
+
+						{bodyContent}
+
+						<div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+							{actionButtons}
+						</div>
+					</BottomSheetContent>
+				</BottomSheet>
+				{confirmationModal}
+			</>
+		);
+	}
+
+	return (
+		<>
+			<Dialog
 				open={open}
 				onOpenChange={next => !isSubmitting && onOpenChange(next)}
 			>
-				<BottomSheetContent
-					className="max-h-[calc(100vh-80px)] overflow-y-auto"
-					enableDrag={!isSubmitting}
-					hideCloseButton={isSubmitting}
+				<DialogContent
+					className="max-w-md"
+					showCloseButton={!isSubmitting}
+					showEscapeHint={!isSubmitting}
 					onOpenAutoFocus={event => {
 						event.preventDefault();
 						amountInputRef.current?.focus();
@@ -610,98 +761,62 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 						if (isSubmitting) event.preventDefault();
 					}}
 				>
-					<BottomSheetHandle />
-					<div className="flex flex-col gap-2 text-center sm:text-left mb-4">
-						<BottomSheetTitle className="text-lg leading-none font-semibold">
-							{title}
-						</BottomSheetTitle>
-						<BottomSheetDescription className="text-muted-foreground text-sm">
+					<DialogHeader>
+						<DialogTitle>{title}</DialogTitle>
+						<DialogDescription>
 							{side === 'buy'
 								? `Purchase creator keys for ${creatorName}.`
 								: `Sell creator keys for ${creatorName}.`}
-						</BottomSheetDescription>
-					</div>
+						</DialogDescription>
+					</DialogHeader>
 
 					{bodyContent}
 
-					<div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+					{/*
+					 * Focus order is intentional: amount input → Cancel → Confirm.
+					 * That matches the visual left-to-right reading order in the
+					 * footer (`sm:justify-between` puts Cancel on the left, Confirm
+					 * on the right) and keeps the destructive action one Tab away
+					 * from the primary action so users always pass through Cancel
+					 * before reaching Confirm. The covering test in
+					 * `__tests__/TradeDialog.focusOrder.test.tsx` guards this.
+					 */}
+					<DialogFooter className="sm:justify-between">
 						{actionButtons}
+					</DialogFooter>
+
+					{/* Subtle keyboard shortcut hint for power users */}
+					<div
+						className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-white/5 pt-3 text-[11px] text-white/30"
+						aria-hidden="true"
+						data-testid="trade-dialog-shortcut-hint"
+					>
+						<span className="flex items-center gap-1">
+							<kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-0.5 font-mono text-[10px]">
+								Enter
+							</kbd>
+							confirm
+						</span>
+						<span className="flex items-center gap-1">
+							<kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-0.5 font-mono text-[10px]">
+								Esc
+							</kbd>
+							close
+						</span>
+						<span className="flex items-center gap-1">
+							<kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-0.5 font-mono text-[10px]">
+								+
+							</kbd>
+							<kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-0.5 font-mono text-[10px]">
+								-
+							</kbd>
+							adjust
+						</span>
 					</div>
-				</BottomSheetContent>
-			</BottomSheet>
-		);
-	}
-
-	return (
-		<Dialog
-			open={open}
-			onOpenChange={next => !isSubmitting && onOpenChange(next)}
-		>
-			<DialogContent
-				className="max-w-md"
-				showCloseButton={!isSubmitting}
-				showEscapeHint={!isSubmitting}
-				onOpenAutoFocus={event => {
-					event.preventDefault();
-					amountInputRef.current?.focus();
-				}}
-				onCloseAutoFocus={event => {
-					event.preventDefault();
-					triggerElementRef.current?.focus();
-				}}
-				onEscapeKeyDown={event => {
-					if (isSubmitting) event.preventDefault();
-				}}
-				onInteractOutside={event => {
-					if (isSubmitting) event.preventDefault();
-				}}
-			>
-				<DialogHeader>
-					<DialogTitle>{title}</DialogTitle>
-					<DialogDescription>
-						{side === 'buy'
-							? `Purchase creator keys for ${creatorName}.`
-							: `Sell creator keys for ${creatorName}.`}
-					</DialogDescription>
-				</DialogHeader>
-
-				{bodyContent}
-
-				{/*
-				 * Focus order is intentional: amount input → Cancel → Confirm.
-				 * That matches the visual left-to-right reading order in the
-				 * footer (`sm:justify-between` puts Cancel on the left, Confirm
-				 * on the right) and keeps the destructive action one Tab away
-				 * from the primary action so users always pass through Cancel
-				 * before reaching Confirm. The covering test in
-				 * `__tests__/TradeDialog.focusOrder.test.tsx` guards this.
-				 */}
-				<DialogFooter className="sm:justify-between">
-					{actionButtons}
-				</DialogFooter>
-
-				{/* Subtle keyboard shortcut hint for power users */}
-				<div
-					className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-white/5 pt-3 text-[11px] text-white/30"
-					aria-hidden="true"
-					data-testid="trade-dialog-shortcut-hint"
-				>
-					<span className="flex items-center gap-1">
-						<kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-0.5 font-mono text-[10px]">Enter</kbd>
-						confirm
-					</span>
-					<span className="flex items-center gap-1">
-						<kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-0.5 font-mono text-[10px]">Esc</kbd>
-						close
-					</span>
-					<span className="flex items-center gap-1">
-						<kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-0.5 font-mono text-[10px]">+</kbd>
-						<kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-0.5 font-mono text-[10px]">-</kbd>
-						adjust
-					</span>
-				</div>
-			</DialogContent>
-		</Dialog>
+				</DialogContent>
+			</Dialog>
+			{confirmationModal}
+		</>
 	);
 };
 

@@ -19,16 +19,23 @@ describe('SlippageToleranceSelector', () => {
 		return { onChange, ...utils };
 	}
 
-	it('renders the 0.5% / 1% / 5% presets', () => {
+	it('renders the 0.5% / 1% / 2% presets', () => {
 		renderSelector();
 		expect(screen.getByTestId('slippage-preset-0.5')).toBeInTheDocument();
 		expect(screen.getByTestId('slippage-preset-1')).toBeInTheDocument();
+		expect(screen.getByTestId('slippage-preset-2')).toBeInTheDocument();
+	});
+
+	it('supports custom presets via prop', () => {
+		renderSelector({ presets: [1, 3, 5] });
+		expect(screen.getByTestId('slippage-preset-1')).toBeInTheDocument();
+		expect(screen.getByTestId('slippage-preset-3')).toBeInTheDocument();
 		expect(screen.getByTestId('slippage-preset-5')).toBeInTheDocument();
 	});
 
 	it('marks the currently selected preset as pressed', () => {
-		renderSelector({ value: 5 });
-		expect(screen.getByTestId('slippage-preset-5')).toHaveAttribute(
+		renderSelector({ value: 2 });
+		expect(screen.getByTestId('slippage-preset-2')).toHaveAttribute(
 			'aria-pressed',
 			'true'
 		);
@@ -40,8 +47,8 @@ describe('SlippageToleranceSelector', () => {
 
 	it('calls onChange with the preset value when clicked', () => {
 		const { onChange } = renderSelector({ value: 1 });
-		fireEvent.click(screen.getByTestId('slippage-preset-5'));
-		expect(onChange).toHaveBeenCalledWith(5);
+		fireEvent.click(screen.getByTestId('slippage-preset-2'));
+		expect(onChange).toHaveBeenCalledWith(2);
 	});
 
 	it('displays the currently selected value', () => {

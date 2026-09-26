@@ -12,11 +12,13 @@ export interface SlippageToleranceSelectorProps {
 	onChange: (percent: number) => void;
 	disabled?: boolean;
 	className?: string;
+	/** Preset options in percent (e.g. [0.5, 1, 2]). */
+	presets?: readonly number[];
 }
 
 /**
  * Preset + custom slippage tolerance picker used by the buy/sell trade
- * dialogs (#872). Presets are 0.5% / 1% / 5%; a custom input accepts any
+ * dialogs (#872, #919). Presets are 0.5% / 1% / 2%; a custom input accepts any
  * value in [0, 50]. Selecting a preset clears any custom-input error state.
  */
 const SlippageToleranceSelector: React.FC<SlippageToleranceSelectorProps> = ({
@@ -24,10 +26,9 @@ const SlippageToleranceSelector: React.FC<SlippageToleranceSelectorProps> = ({
 	onChange,
 	disabled = false,
 	className,
+	presets = SLIPPAGE_TOLERANCE_PRESETS,
 }) => {
-	const isPresetSelected = (
-		SLIPPAGE_TOLERANCE_PRESETS as readonly number[]
-	).includes(value);
+	const isPresetSelected = presets.includes(value);
 	const [customText, setCustomText] = useState(
 		isPresetSelected ? '' : String(value)
 	);
@@ -74,7 +75,7 @@ const SlippageToleranceSelector: React.FC<SlippageToleranceSelectorProps> = ({
 				</span>
 			</div>
 			<div className="flex flex-wrap items-center gap-2">
-				{SLIPPAGE_TOLERANCE_PRESETS.map(preset => {
+				{presets.map(preset => {
 					const selected = !customActive && value === preset;
 					return (
 						<button
@@ -129,8 +130,8 @@ const SlippageToleranceSelector: React.FC<SlippageToleranceSelectorProps> = ({
 			)}
 			<p className="text-[0.65rem] text-white/40">
 				Between {SLIPPAGE_TOLERANCE_BOUNDS.MIN_PERCENT}% and{' '}
-				{SLIPPAGE_TOLERANCE_BOUNDS.MAX_PERCENT}%. The trade will revert if the
-				price moves beyond your tolerance before it executes.
+				{SLIPPAGE_TOLERANCE_BOUNDS.MAX_PERCENT}%. The trade will revert if
+				the price moves beyond your tolerance before it executes.
 			</p>
 		</div>
 	);

@@ -46,19 +46,23 @@ describe('TradeDialog slippage tolerance (#872)', () => {
 
 	it('renders the slippage selector on the buy dialog', () => {
 		renderBuyDialog();
-		expect(screen.getByTestId('slippage-tolerance-selector')).toBeInTheDocument();
+		expect(
+			screen.getByTestId('slippage-tolerance-selector')
+		).toBeInTheDocument();
 	});
 
 	it('renders the slippage selector on the sell dialog', () => {
 		renderSellDialog();
-		expect(screen.getByTestId('slippage-tolerance-selector')).toBeInTheDocument();
+		expect(
+			screen.getByTestId('slippage-tolerance-selector')
+		).toBeInTheDocument();
 	});
 
 	it('defaults to 1% tolerance', () => {
 		renderBuyDialog();
-		expect(screen.getByTestId('slippage-tolerance-current-value')).toHaveTextContent(
-			'1%'
-		);
+		expect(
+			screen.getByTestId('slippage-tolerance-current-value')
+		).toHaveTextContent('1%');
 	});
 
 	it('passes maxPriceStroops computed from the default 1% tolerance on buy confirm', () => {
@@ -77,12 +81,12 @@ describe('TradeDialog slippage tolerance (#872)', () => {
 	it('recomputes maxPriceStroops when a different preset is selected', () => {
 		const { onConfirm } = renderBuyDialog();
 
-		fireEvent.click(screen.getByTestId('slippage-preset-5'));
+		fireEvent.click(screen.getByTestId('slippage-preset-2'));
 		fireEvent.click(screen.getByTestId('trade-dialog-confirm'));
 
 		const [, , slippage] = onConfirm.mock.calls[0];
-		expect(slippage.maxPriceStroops).toBe(1_050_000);
-		expect(slippage.toleranceZPercent).toBe(5);
+		expect(slippage.maxPriceStroops).toBe(1_020_000);
+		expect(slippage.toleranceZPercent).toBe(2);
 	});
 
 	it('passes minPriceStroops computed from tolerance on sell confirm', () => {

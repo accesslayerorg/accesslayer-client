@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router';
 import { useGovernanceProposals } from '@/hooks/useGovernanceProposals';
 import ProposalCard from '@/components/common/ProposalCard';
 import type { ProposalStatus } from '@/types/governance';
@@ -16,6 +16,17 @@ const STATUS_FILTERS: Array<{ label: string; value: ProposalStatus | 'all' }> = 
 function GovernancePageContent() {
 	const { data: proposals, isLoading, error } = useGovernanceProposals();
 	const [statusFilter, setStatusFilter] = useState<ProposalStatus | 'all'>('all');
+	const [searchParams] = useSearchParams();
+	const targetProposalId = searchParams.get('proposal');
+
+	useEffect(() => {
+		if (targetProposalId && !isLoading) {
+			const el = document.getElementById(`proposal-${targetProposalId}`);
+			if (el) {
+				el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			}
+		}
+	}, [targetProposalId, isLoading]);
 
 	const filtered = proposals?.filter(
 		p => statusFilter === 'all' || p.status === statusFilter
@@ -106,7 +117,17 @@ function GovernancePageContent() {
 				{!isLoading && !error && filtered && filtered.length > 0 && (
 					<div className="space-y-4">
 						{filtered.map(proposal => (
-							<ProposalCard key={proposal.id} proposal={proposal} />
+							<div
+								key={proposal.id}
+								id={`proposal-${proposal.id}`}
+								className={cn(
+									'rounded-2xl transition-all duration-300',
+									targetProposalId === proposal.id &&
+										'ring-2 ring-amber-400/80 shadow-[0_0_20px_rgba(251,191,36,0.15)]'
+								)}
+							>
+								<ProposalCard proposal={proposal} />
+							</div>
 						))}
 					</div>
 				)}

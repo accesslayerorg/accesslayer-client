@@ -15,8 +15,8 @@ import {
 
 describe('slippageTolerance.utils', () => {
 	describe('presets and defaults', () => {
-		it('exposes the 0.5% / 1% / 5% presets', () => {
-			expect(SLIPPAGE_TOLERANCE_PRESETS).toEqual([0.5, 1, 5]);
+		it('exposes the 0.5% / 1% / 2% presets', () => {
+			expect(SLIPPAGE_TOLERANCE_PRESETS).toEqual([0.5, 1, 2]);
 		});
 
 		it('defaults to 1%', () => {
@@ -133,4 +133,3 @@ describe('slippageTolerance.utils', () => {
 		});
 	});
 });
-

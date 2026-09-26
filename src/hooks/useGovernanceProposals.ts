@@ -1,5 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
-import { governanceService } from '@/services/governance.service';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import {
+	fetchProposalVotesPage,
+	governanceService,
+} from '@/services/governance.service';
 import { queryKeys } from '@/lib/queryKeys';
 
 /**
@@ -15,5 +18,29 @@ export function useGovernanceProposals(creatorId?: string) {
 		staleTime: 10_000,
 		/** 15 s refetch interval so the bar updates after a vote. */
 		refetchInterval: 15_000,
+	});
+}
+
+export function useGovernanceProposal(proposalId: string) {
+	return useQuery({
+		queryKey: queryKeys.governance.proposal(proposalId),
+		queryFn: () => governanceService.getProposal(proposalId),
+		enabled: Boolean(proposalId),
+		staleTime: 10_000,
+		refetchInterval: 15_000,
+	});
+}
+
+export function useGovernanceProposalVotes(proposalId: string) {
+	return useInfiniteQuery({
+		queryKey: queryKeys.governance.proposalVotes(proposalId),
+		queryFn: ({ pageParam }) =>
+			fetchProposalVotesPage(
+				proposalId,
+				pageParam as string | null | undefined
+			),
+		initialPageParam: null as string | null,
+		getNextPageParam: lastPage => lastPage.nextCursor ?? undefined,
+		enabled: Boolean(proposalId),
 	});
 }
