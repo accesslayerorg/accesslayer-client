@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ArrowLeft, Send, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { FormInput } from '@/components/common/FormInput';
 import { useStellarWallet } from '@/hooks/useStellarWallet';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import showToast from '@/utils/toast.util';
@@ -28,8 +28,8 @@ export default function ProposalCreatePage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [proposalId, setProposalId] = useState<string | null>(null);
 
-  // Eligibility check - minimum governance token holding
-  const isEligible = profile && profile.governanceTokenBalance && profile.governanceTokenBalance >= 100;
+  // Eligibility check - simplified for now (profile exists and is verified)
+  const isEligible = profile && profile.emailVerified;
 
   if (!isConnected) {
     return (
@@ -91,7 +91,7 @@ export default function ProposalCreatePage() {
     );
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
 
@@ -144,12 +144,13 @@ export default function ProposalCreatePage() {
               <label htmlFor="title" className="text-sm font-semibold text-white/70">
                 Title *
               </label>
-              <Input
+              <input
                 id="title"
+                type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
                 placeholder="e.g., Increase quorum threshold to 60%"
-                className="rounded-xl border-white/10 bg-white/[0.03]"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                 required
               />
             </div>
@@ -162,7 +163,7 @@ export default function ProposalCreatePage() {
               <textarea
                 id="description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
                 placeholder="Explain the rationale for this change..."
                 rows={4}
                 className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
@@ -178,7 +179,7 @@ export default function ProposalCreatePage() {
               <select
                 id="parameter"
                 value={parameterTarget}
-                onChange={(e) => setParameterTarget(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setParameterTarget(e.target.value)}
                 className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                 required
               >
@@ -196,12 +197,13 @@ export default function ProposalCreatePage() {
               <label htmlFor="value" className="text-sm font-semibold text-white/70">
                 Proposed Value *
               </label>
-              <Input
+              <input
                 id="value"
+                type="text"
                 value={proposedValue}
-                onChange={(e) => setProposedValue(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setProposedValue(e.target.value)}
                 placeholder="e.g., 60"
-                className="rounded-xl border-white/10 bg-white/[0.03]"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                 required
               />
             </div>
@@ -211,12 +213,13 @@ export default function ProposalCreatePage() {
               <label htmlFor="discussion" className="text-sm font-semibold text-white/70">
                 Discussion Link
               </label>
-              <Input
+              <input
                 id="discussion"
+                type="text"
                 value={discussionLink}
-                onChange={(e) => setDiscussionLink(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDiscussionLink(e.target.value)}
                 placeholder="https://forum.example.com/proposal-123"
-                className="rounded-xl border-white/10 bg-white/[0.03]"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
               />
             </div>
           </div>
