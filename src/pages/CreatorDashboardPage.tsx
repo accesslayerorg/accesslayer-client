@@ -13,6 +13,7 @@ import BuyCooldownPanel from '@/components/common/BuyCooldownPanel';
 import DeprecateKeyPanel from '@/components/common/DeprecateKeyPanel';
 import VestingSchedulePanel from '@/components/common/VestingSchedulePanel';
 import { AlertTriangle } from 'lucide-react';
+import RoyaltyEarningsSection from '@/components/creator/RoyaltyEarningsSection';
 import {
 	useCancelAuctionMutation,
 	useConfigureAuctionMutation,
@@ -204,6 +205,8 @@ export default function CreatorDashboardPage() {
 								</div>
 							</dl>
 						</section>
+
+						<RoyaltyEarningsSection creatorId={id} />
 
 						<GraduatedCurveMilestoneChart
 							keyId={id}
