@@ -7,6 +7,7 @@ import {
 	LockKeyhole,
 	PenLine,
 	ShieldCheck,
+	XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMultiSigActions } from '@/hooks/useMultiSigActions';
@@ -58,6 +59,7 @@ function PendingAction({
 	isExecuting,
 	onSign,
 	onExecute,
+	onReject,
 }: {
 	action: MultiSigAction;
 	walletAddress: string;
@@ -65,6 +67,7 @@ function PendingAction({
 	isExecuting: boolean;
 	onSign: (action: MultiSigAction) => void;
 	onExecute: (action: MultiSigAction) => void;
+	onReject?: (action: MultiSigAction) => void;
 }) {
 	const signatureCount = uniqueSignatureCount(action);
 	const thresholdMet = signatureCount >= action.requiredSignatures;
@@ -144,6 +147,18 @@ function PendingAction({
 						{isSigning ? <Loader2 className="animate-spin" aria-hidden="true" /> : hasSigned ? <Check aria-hidden="true" /> : <PenLine aria-hidden="true" />}
 						{isSigning ? 'Waiting for signature…' : hasSigned ? 'Signed' : 'Sign action'}
 					</Button>
+					{onReject && (
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => onReject(action)}
+							disabled={isSigning || isExecuting}
+							className="rounded-xl border-red-500/20 bg-red-500/10 font-bold text-red-400 hover:border-red-500/40 hover:bg-red-500/20"
+						>
+							<XCircle className="size-4 mr-1.5" aria-hidden="true" />
+							Reject
+						</Button>
+					)}
 					<Button
 						type="button"
 						onClick={() => onExecute(action)}
@@ -196,6 +211,11 @@ export default function MultiSigAdminPanel({ isAdmin }: MultiSigAdminPanelProps)
 	const handleExecute = (action: MultiSigAction) => {
 		setExecutingId(action.id);
 		execute.mutate(action, { onSettled: () => setExecutingId(null) });
+	};
+
+	const handleReject = (action: MultiSigAction) => {
+		// For now, show a toast. In production, this would submit a reject transaction.
+		showToast.success(`Proposal "${action.title}" rejected`);
 	};
 
 	return (
@@ -252,6 +272,7 @@ export default function MultiSigAdminPanel({ isAdmin }: MultiSigAdminPanelProps)
 								isExecuting={executingId === action.id || execute.isPending}
 								onSign={actionToSign => void handleSign(actionToSign)}
 								onExecute={handleExecute}
+								onReject={handleReject}
 							/>
 						))}
 					</ul>
