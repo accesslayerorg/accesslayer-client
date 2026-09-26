@@ -16,6 +16,7 @@ import KeyHolderList from '@/components/common/KeyHolderList';
 import HolderConcentrationChart from '@/components/common/HolderConcentrationChart';
 import StakingRewardsSection from '@/components/common/StakingRewardsSection';
 import DeprecationNotice from '@/components/common/DeprecationNotice';
+import SubscriptionAccessGate from '@/components/common/SubscriptionAccessGate';
 import { isKeyDeprecated } from '@/utils/keyDeprecation.utils';
 import { Button } from '@/components/ui/button';
 import { CreatorDashboardSkeleton } from '@/components/common/CreatorSkeleton';
@@ -523,6 +524,25 @@ function CreatorDetailPageContent() {
 						}}
 					/>
 				</div>
+
+				{/* Gated Content */}
+				<div className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8">
+					<h2 className="font-grotesque text-xl font-black tracking-tight text-white mb-6">
+						Exclusive Content
+					</h2>
+					<SubscriptionAccessGate 
+						creatorId={creator.id} 
+						minimumHolding={1}
+						onBuyClick={() => setBuyDialogOpen(true)}
+					>
+						<div className="rounded-xl bg-white/[0.03] p-6 border border-white/10">
+							<p className="text-white/80">
+								🎉 Welcome to the exclusive content section! Here you can access premium videos, articles, and perks from {creator.title || creator.name || 'this creator'}.
+							</p>
+						</div>
+					</SubscriptionAccessGate>
+				</div>
+
 				<div className="mt-8 rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8">
 					<h2 className="font-grotesque text-xl font-black tracking-tight text-white mb-6">
 						Activity
