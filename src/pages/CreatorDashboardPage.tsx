@@ -1,4 +1,5 @@
 import { useParams, useSearchParams } from 'react-router';
+import { useAccount } from 'wagmi';
 import { useCreatorDetail } from '@/hooks/useCreators';
 import { CreatorDashboardSkeleton } from '@/components/common/CreatorSkeleton';
 import { ProfileTabPillGroup } from '@/components/common/ProfileTabPill';
@@ -10,6 +11,7 @@ import QuorumSettingsPanel from '@/components/common/QuorumSettingsPanel';
 import GraduatedCurvePanel from '@/components/common/GraduatedCurvePanel';
 import BuyCooldownPanel from '@/components/common/BuyCooldownPanel';
 import DeprecateKeyPanel from '@/components/common/DeprecateKeyPanel';
+import VestingSchedulePanel from '@/components/common/VestingSchedulePanel';
 import { AlertTriangle } from 'lucide-react';
 import {
 	useCancelAuctionMutation,
@@ -21,7 +23,10 @@ import {
 	useConfigureGraduatedCurveMutation,
 	useSetBuyCooldownMutation,
 	useDeprecateKeyMutation,
+	useClaimVestedTokensMutation,
 } from '@/hooks/useCreatorContractActions';
+import { useKeyVesting, useKeyVestingClaims } from '@/hooks/useKeyVesting';
+import { isOwnWallet } from '@/utils/isOwnWallet';
 import {
 	formatDisplayKeyPrice,
 	resolveCreatorKeyPriceStroops,
@@ -42,6 +47,7 @@ const CARD_CLASS =
 export default function CreatorDashboardPage() {
 	const { id = '' } = useParams<{ id: string }>();
 	const [searchParams, setSearchParams] = useSearchParams();
+	const { address } = useAccount();
 
 	const { data: creator, isLoading, isError } = useCreatorDetail(id);
 
@@ -59,6 +65,24 @@ export default function CreatorDashboardPage() {
 	const configureGraduatedCurve = useConfigureGraduatedCurveMutation(id);
 	const setBuyCooldown = useSetBuyCooldownMutation(id);
 	const deprecateKey = useDeprecateKeyMutation(id);
+
+	// The vesting schedule is only meaningful to the wallet the allocation is
+	// registered to (#960), so both queries stay disabled for everyone else.
+	const isKeyCreator = isOwnWallet(address, creator?.instructorId);
+	const {
+		data: vestingData,
+		vesting,
+		isLoading: isVestingLoading,
+		isError: isVestingError,
+	} = useKeyVesting(isKeyCreator ? id : undefined, address);
+	const { data: vestingClaims = [] } = useKeyVestingClaims(
+		isKeyCreator ? id : undefined,
+		address
+	);
+	const claimVestedTokens = useClaimVestedTokensMutation(
+		id,
+		address ?? ''
+	);
 
 	const setTab = (value: string) => {
 		setSearchParams(
@@ -318,27 +342,55 @@ export default function CreatorDashboardPage() {
 							/>
 						</section>
 
+					<section
+						className={CARD_CLASS}
+						data-testid="deprecate-key-section"
+					>
+						<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+							Deprecate Key
+						</h2>
+						<p className="mb-6 text-sm text-white/50">
+							Initiate a key wind-down by setting a buyback price and
+							escrowing the required XLM.
+						</p>
+						<DeprecateKeyPanel
+							creatorId={id}
+							circulatingSupply={creator.creatorShareSupply ?? 100}
+							isDeprecated={creator.deprecated}
+							isSubmitting={deprecateKey.isPending}
+							onSubmit={params => deprecateKey.mutate(params)}
+						/>
+					</section>
+
+					{/* Creator allocation vesting (#960) — creator wallets only */}
+					{isKeyCreator && (
 						<section
 							className={CARD_CLASS}
-							data-testid="deprecate-key-section"
+							data-testid="vesting-section"
 						>
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
-								Deprecate Key
+								Vesting Schedule
 							</h2>
 							<p className="mb-6 text-sm text-white/50">
-								Initiate a key wind-down by setting a buyback price and
-								escrowing the required XLM.
+								Track the creator allocation reserved for your wallet, and
+								claim the tokens that have vested.
 							</p>
-							<DeprecateKeyPanel
-								creatorId={id}
-								circulatingSupply={creator.creatorShareSupply ?? 100}
-								isDeprecated={creator.deprecated}
-								isSubmitting={deprecateKey.isPending}
-								onSubmit={params => deprecateKey.mutate(params)}
+							<VestingSchedulePanel
+								schedule={vesting}
+								cliffAt={vestingData?.cliffAt}
+								endAt={vestingData?.endAt}
+								claims={vestingClaims}
+								isLoading={isVestingLoading}
+								isError={isVestingError}
+								isClaiming={claimVestedTokens.isPending}
+								onClaim={() =>
+									claimVestedTokens.mutate(vesting.claimableAmount)
+								}
 							/>
 						</section>
-					</div>
-				)}
+					)}
+				</div>
+			)}
 
 				{activeTab === 'governance' && (
 					<div

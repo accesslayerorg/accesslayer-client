@@ -34,15 +34,22 @@ import { useWalletHoldings, useTradeMutation } from '@/hooks/useWallet';
 import CoCreatorSection from '@/components/creator/CoCreatorSection';
 import ShareTwitterButton from '@/components/common/ShareTwitterButton';
 import TradeDialog from '@/components/common/TradeDialog';
+import SpreadIndicator from '@/components/common/SpreadIndicator';
+import OraclePriceIndicator from '@/components/common/OraclePriceIndicator';
+import { useKeyOraclePrice } from '@/hooks/useKeyOraclePrice';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 import { usePurchaseConfetti } from '@/hooks/usePurchaseConfetti';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useKeyTwap } from '@/hooks/useKeyTwap';
 import { useKeyStats } from '@/hooks/useKeyStats';
+import { useKeyConfig } from '@/hooks/useKeyConfig';
 import KeyStatsPanel from '@/components/common/KeyStatsPanel';
 import Skeleton from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
+import KeyDeprecationBanner from '@/components/common/KeyDeprecationBanner';
+import KeyBuybackModal from '@/components/common/KeyBuybackModal';
+import type { KeyBuybackReceipt } from '@/hooks/useKeyBuyback';
 
 function CreatorDetailPageContent() {
 	usePurchaseConfetti();
@@ -51,6 +58,9 @@ function CreatorDetailPageContent() {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const [hasMounted, setHasMounted] = useState(false);
+	const [buybackModalOpen, setBuybackModalOpen] = useState(false);
+	const [recentSettlement, setRecentSettlement] =
+		useState<KeyBuybackReceipt | null>(null);
 	const {
 		data: creator,
 		isLoading,
@@ -102,6 +112,22 @@ function CreatorDetailPageContent() {
 		isLoading: isKeyStatsLoading,
 		isError: isKeyStatsError,
 	} = useKeyStats(id || '');
+	// Live key config powers the bid-ask spread shown next to the buy
+	// action and inside the trade dialog (#951).
+	const { data: keyConfig, isLoading: isKeyConfigLoading } = useKeyConfig(
+		id || ''
+	);
+	const spotPriceStroops = creator
+		? resolveCreatorKeyPriceStroops(creator)
+		: null;
+	// External oracle price shown alongside the bonding-curve spot price so a
+	// significant divergence is visible before trading (#967).
+	const {
+		comparison: oracleComparison,
+		freshness: oracleFreshness,
+		source: oracleSource,
+		isLoading: isOracleLoading,
+	} = useKeyOraclePrice(id || '', { spotPriceStroops });
 
 	// Track stale data indicator
 	const { shouldShowBadge, handleRefetch } = useCreatorProfileStaleIndicator(
@@ -254,6 +280,16 @@ function CreatorDetailPageContent() {
 					parentHref="/"
 					currentLabel={`${creator.title} Profile`}
 				/>
+				{/* Key deprecation notice & guaranteed buyback flow (#923) */}
+				{isKeyDeprecated(creator) && (
+					<KeyDeprecationBanner
+						creator={creator}
+						userAddress={userAddress}
+						holdingsCount={holdingsCount}
+						onInitiateBuyback={() => setBuybackModalOpen(true)}
+						recentSettlement={recentSettlement}
+					/>
+				)}
 				<div className="flex items-start gap-3">
 					<div className="min-w-0 flex-1">
 						<CreatorProfileHeader
@@ -309,6 +345,23 @@ function CreatorDetailPageContent() {
 								? 'Key is deprecated. New buys are disabled.'
 								: 'Purchase keys for this creator.'}
 						</p>
+						{/* Configurable bid-ask spread between buy and sell price (#951) */}
+						<SpreadIndicator
+							className="mt-2"
+							buyPriceStroops={keyConfig?.buyPriceStroops}
+							sellPriceStroops={keyConfig?.sellPriceStroops}
+							spreadStroops={keyConfig?.spreadStroops}
+							spreadBps={keyConfig?.spreadBps}
+							isLoading={isKeyConfigLoading}
+						/>
+						{/* Oracle reference price next to the curve spot price (#967) */}
+						<OraclePriceIndicator
+							className="mt-2"
+							comparison={oracleComparison}
+							freshness={oracleFreshness}
+							source={oracleSource}
+							isLoading={isOracleLoading}
+						/>
 					</div>
 					<Button
 						disabled={isKeyDeprecated(creator)}
@@ -476,6 +529,22 @@ function CreatorDetailPageContent() {
 					</h2>
 					<CreatorActivityFeed creatorId={creator.id} />
 				</div>
+				{/* Key Buyback Modal (#923) */}
+				{isKeyDeprecated(creator) && (
+					<KeyBuybackModal
+						open={buybackModalOpen}
+						onOpenChange={setBuybackModalOpen}
+						creatorId={creator.id}
+						creatorTitle={creator.title || creator.name || 'Creator Key'}
+						holdingsCount={holdingsCount}
+						buybackPriceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
+						userAddress={userAddress}
+						onSettled={receipt => {
+							setRecentSettlement(receipt);
+						}}
+					/>
+				)}
+
 				{creator && (
 					<TradeDialog
 						open={buyDialogOpen}
@@ -486,6 +555,8 @@ function CreatorDetailPageContent() {
 						currentSupply={creator.creatorShareSupply}
 						maxBuyQuantity={creator.maxBuyQuantity}
 						launchPenaltyBps={creator.launchPenaltyBps}
+						keyConfig={keyConfig}
+						isKeyConfigLoading={isKeyConfigLoading}
 						onOpenChange={setBuyDialogOpen}
 						onConfirm={handleConfirmBuy}
 						isSubmitting={tradeSubmitting}

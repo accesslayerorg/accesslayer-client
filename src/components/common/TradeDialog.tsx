@@ -52,6 +52,8 @@ import {
 	computeSlippageBounds,
 	type SlippageBounds,
 } from '@/utils/slippageTolerance.utils';
+import type { KeyConfig } from '@/services/course.service';
+import SpreadIndicator from '@/components/common/SpreadIndicator';
 
 export type TradeSide = 'buy' | 'sell';
 
@@ -76,6 +78,10 @@ export interface TradeDialogProps {
 	launchPenaltyBps?: number | null;
 	/** Max buy quantity allowed per transaction; null means no limit. */
 	maxBuyQuantity?: number | null;
+	/** Live key trading config carrying the bid-ask spread (#951). */
+	keyConfig?: KeyConfig | null;
+	/** Whether the key config query is still loading. */
+	isKeyConfigLoading?: boolean;
 	/** Whether to display the confirmation modal step before submission (#919). Defaults to false. */
 	requireConfirmation?: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -103,6 +109,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	currentLedger,
 	launchPenaltyBps,
 	maxBuyQuantity = null,
+	keyConfig,
+	isKeyConfigLoading = false,
 	requireConfirmation = false,
 	onOpenChange,
 	onConfirm,
@@ -452,6 +460,15 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 					</span>
 				</p>
 			)}
+
+			{/* Configurable bid-ask spread between buy and sell price (#951) */}
+			<SpreadIndicator
+				buyPriceStroops={keyConfig?.buyPriceStroops}
+				sellPriceStroops={keyConfig?.sellPriceStroops}
+				spreadStroops={keyConfig?.spreadStroops}
+				spreadBps={keyConfig?.spreadBps}
+				isLoading={isKeyConfigLoading}
+			/>
 
 			{side === 'sell' && (
 				<LaunchPenaltyWarning

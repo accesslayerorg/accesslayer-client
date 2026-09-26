@@ -19,6 +19,20 @@ export function buildStellarExpertTxUrl(
 }
 
 /**
+ * Builds a Stellar Expert account explorer URL.
+ *
+ * @param address - The account (wallet) public key.
+ * @param network - The Stellar network to link to ('mainnet' or 'testnet').
+ * @returns The full Stellar Expert URL for the account.
+ */
+export function buildStellarExpertAccountUrl(
+	address: string,
+	network: StellarNetwork
+): string {
+	return `https://stellar.expert/explorer/${network}/account/${address}`;
+}
+
+/**
  * Truncates a transaction hash for display purposes.
  *
  * @param txHash    - The full transaction hash.

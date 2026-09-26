@@ -2,8 +2,10 @@ import { BaseApiService, type APIResponse } from './api.service';
 import { cacheManager } from '@/utils/cache.utils';
 import { normalizeProposal } from '@/utils/governance.utils';
 import type { Proposal } from '@/types/governance';
+import type { Proposal, ProposalVotesPage } from '@/types/governance';
 
 const PROPOSAL_CACHE_TTL = 15_000;
+export const PROPOSAL_VOTES_PAGE_SIZE = 20;
 
 function asRecord(value: unknown): Record<string, unknown> {
 	return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -75,7 +77,40 @@ class GovernanceService extends BaseApiService {
 			cacheManager.invalidate(cacheKey);
 		}
 		this.cacheKeys.clear();
+	async getProposalVotes(
+		proposalId: string,
+		cursor?: string | null,
+		limit = PROPOSAL_VOTES_PAGE_SIZE
+	): Promise<ProposalVotesPage> {
+		const cacheKey = `proposal_votes_${proposalId}_${cursor ?? 'first'}_${limit}`;
+		const cached = cacheManager.get<ProposalVotesPage>(cacheKey);
+		if (cached) return cached;
+
+		try {
+			const response = await this.api.get<APIResponse<ProposalVotesPage>>(
+				`/governance/proposals/${proposalId}/votes`,
+				{
+					params: {
+						...(cursor ? { cursor } : {}),
+						limit,
+					},
+				}
+			);
+
+			const data = response.data.data;
+			cacheManager.set(cacheKey, data, PROPOSAL_CACHE_TTL);
+			return data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
 	}
 }
 
 export const governanceService = new GovernanceService();
+
+export function fetchProposalVotesPage(
+	proposalId: string,
+	cursor: string | null | undefined
+): Promise<ProposalVotesPage> {
+	return governanceService.getProposalVotes(proposalId, cursor);
+}

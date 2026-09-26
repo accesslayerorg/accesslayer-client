@@ -26,6 +26,8 @@ import {
 import { BUY_QUANTITY_BOUNDS, FEE_BOUNDS } from '@/constants/fees';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
+import type { KeyConfig } from '@/services/course.service';
+import SpreadIndicator from '@/components/common/SpreadIndicator';
 import { cn } from '@/lib/utils';
 import { ArrowRight } from 'lucide-react';
 
@@ -53,6 +55,10 @@ export interface BuySellKeyFlowProps {
 	launchPenaltyBps?: number | null;
 	createdAtLedger?: number | null;
 	currentLedger?: number | null;
+	/** Live key trading config carrying the bid-ask spread (#951). */
+	keyConfig?: KeyConfig | null;
+	/** Whether the key config query is still loading. */
+	isKeyConfigLoading?: boolean;
 	onSubmitTrade?: (params: BuySellTradeParams) => Promise<void> | void;
 	onSuccess?: (params: BuySellTradeParams) => void;
 	onError?: (error: unknown) => void;
@@ -82,6 +88,8 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 	launchPenaltyBps,
 	createdAtLedger,
 	currentLedger,
+	keyConfig,
+	isKeyConfigLoading = false,
 	onSubmitTrade,
 	onSuccess,
 	onError,
@@ -328,6 +336,15 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 						: `${formatNumber(availableHoldings)} keys`}
 				</span>
 			</div>
+
+			{/* Configurable bid-ask spread between buy and sell price (#951) */}
+			<SpreadIndicator
+				buyPriceStroops={keyConfig?.buyPriceStroops}
+				sellPriceStroops={keyConfig?.sellPriceStroops}
+				spreadStroops={keyConfig?.spreadStroops}
+				spreadBps={keyConfig?.spreadBps}
+				isLoading={isKeyConfigLoading}
+			/>
 
 			{/* Early sell penalty warning if applicable */}
 			{side === 'sell' && (

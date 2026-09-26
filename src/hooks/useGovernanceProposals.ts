@@ -6,6 +6,11 @@ import {
 	type SnapshotVotingWeight,
 	type VoteTransactionResult,
 } from '@/services/governanceContract.service';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import {
+	fetchProposalVotesPage,
+	governanceService,
+} from '@/services/governance.service';
 import { queryKeys } from '@/lib/queryKeys';
 import type { Signer } from '@/lib/signing/types';
 import type { Proposal } from '@/types/governance';
@@ -30,6 +35,10 @@ export function useGovernanceProposal(proposalId: string | undefined) {
 	return useQuery({
 		queryKey: queryKeys.governance.proposal(proposalId ?? 'missing'),
 		queryFn: () => governanceService.getProposal(proposalId!),
+export function useGovernanceProposal(proposalId: string) {
+	return useQuery({
+		queryKey: queryKeys.governance.proposal(proposalId),
+		queryFn: () => governanceService.getProposal(proposalId),
 		enabled: Boolean(proposalId),
 		staleTime: 10_000,
 		refetchInterval: 15_000,
@@ -103,5 +112,16 @@ export function useCastProposalVote({
 					: getSignatureErrorMessage(error)
 			);
 		},
+export function useGovernanceProposalVotes(proposalId: string) {
+	return useInfiniteQuery({
+		queryKey: queryKeys.governance.proposalVotes(proposalId),
+		queryFn: ({ pageParam }) =>
+			fetchProposalVotesPage(
+				proposalId,
+				pageParam as string | null | undefined
+			),
+		initialPageParam: null as string | null,
+		getNextPageParam: lastPage => lastPage.nextCursor ?? undefined,
+		enabled: Boolean(proposalId),
 	});
 }

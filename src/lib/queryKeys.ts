@@ -31,6 +31,18 @@ export const queryKeys = {
 		stats: (creatorId: string) => ['creators', creatorId, 'stats'] as const,
 		curveConfig: (creatorId: string) =>
 			['creators', creatorId, 'curve-config'] as const,
+		buyback: (creatorId: string) =>
+			['creators', creatorId, 'buyback'] as const,
+		keyConfig: (creatorId: string) =>
+			['creators', creatorId, 'key-config'] as const,
+		vesting: (creatorId: string) =>
+			['creators', creatorId, 'vesting'] as const,
+		vestingClaims: (creatorId: string, wallet: string) =>
+			['creators', creatorId, 'vesting', 'claims', wallet] as const,
+		oraclePrice: (creatorId: string) =>
+			['creators', creatorId, 'oracle-price'] as const,
+		keyDeployment: (keyId: string) =>
+			['creators', 'deployment', keyId] as const,
 		discovery: {
 			all: () => ['creators', 'discovery'] as const,
 			trending: () => ['creators', 'discovery', 'trending'] as const,
@@ -70,6 +82,8 @@ export const queryKeys = {
 			['governance', 'proposal', proposalId, 'snapshot', voter] as const,
 		vote: (proposalId: string) =>
 			['governance', 'proposal', proposalId, 'vote'] as const,
+		proposalVotes: (id: string) =>
+			['governance', 'proposal', id, 'votes'] as const,
 	},
 	staker: {
 		protocolRevenue: (wallet: string) =>
@@ -78,5 +92,10 @@ export const queryKeys = {
 	search: {
 		all: () => ['search'] as const,
 		query: (q: string) => ['search', q] as const,
+	},
+	referrals: {
+		all: () => ['referrals'] as const,
+		summary: (wallet: string) => ['referrals', wallet, 'summary'] as const,
+		wallets: (wallet: string) => ['referrals', wallet, 'wallets'] as const,
 	},
 } as const;

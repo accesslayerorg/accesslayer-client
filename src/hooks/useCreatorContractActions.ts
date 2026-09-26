@@ -229,3 +229,36 @@ export function useDeprecateKeyMutation(creatorId: string) {
 		},
 	});
 }
+
+/**
+ * Claims the creator's vested allocation for a key (#960).
+ *
+ * On success the whole `vesting` query family is invalidated so the panel's
+ * claimable amount, progress bar, and claim history all reflect the new state
+ * without a manual refresh.
+ */
+export function useClaimVestedTokensMutation(
+	creatorId: string,
+	wallet: string
+) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'claim_vested_tokens', creatorId, wallet],
+		mutationFn: (amountXlm: number) =>
+			submitContractCall('claim_vested_tokens', {
+				creatorId,
+				wallet,
+				amountXlm,
+			}),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.vesting(creatorId),
+			});
+			showToast.success('Vested tokens claimed');
+		},
+	});
+}

@@ -13,6 +13,8 @@ import FollowingPage from './pages/FollowingPage';
 import ComparePage from './pages/ComparePage';
 import GovernancePage from './pages/GovernancePage';
 import ProposalDetailPage from './pages/ProposalDetailPage';
+import ReferralDashboardPage from './pages/ReferralDashboardPage';
+import CreateCreatorKeyPage from './pages/CreateCreatorKeyPage';
 
 export const routes = [
 	{
@@ -82,6 +84,18 @@ export const routes = [
 			{
 				path: '/governance/proposals/:proposalId',
 				element: <ProposalDetailPage />,
+			},
+			{
+				path: '/governance/:proposalId',
+				element: <ProposalDetailPage />,
+			},
+			{
+				path: '/referrals',
+				element: <ReferralDashboardPage />,
+			},
+			{
+				path: '/create-key',
+				element: <CreateCreatorKeyPage />,
 			},
 			{
 				path: '/admin/dashboard',
