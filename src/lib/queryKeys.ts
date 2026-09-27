@@ -38,6 +38,8 @@ export const queryKeys = {
 			['creators', creatorId, 'curve-migrations'] as const,
 		buyback: (creatorId: string) =>
 			['creators', creatorId, 'buyback'] as const,
+		buyCooldown: (creatorId: string, wallet: string) =>
+			['creators', creatorId, 'buy-cooldown', wallet] as const,
 		keyConfig: (creatorId: string) =>
 			['creators', creatorId, 'key-config'] as const,
 		vesting: (creatorId: string) =>
