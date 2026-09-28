@@ -24,6 +24,7 @@ import { isActiveCooldown } from '@/utils/tradeCooldown.utils';
 import KeyHolderList from '@/components/common/KeyHolderList';
 import HolderConcentrationChart from '@/components/common/HolderConcentrationChart';
 import StakingRewardsSection from '@/components/common/StakingRewardsSection';
+import StakingVaultPanel from '@/components/common/StakingVaultPanel';
 import DeprecationNotice from '@/components/common/DeprecationNotice';
 import { isKeyDeprecated } from '@/utils/keyDeprecation.utils';
 import { Button } from '@/components/ui/button';
@@ -551,6 +552,15 @@ function CreatorDetailPageContent() {
 				) : null}
 				{/* Staking Rewards */}
 				<StakingRewardsSection {...stakingStats} isLoading={isLoading} />
+
+				{/* Staking Vault — stake keys, track locks, claim rewards (#1017) */}
+				<StakingVaultPanel
+					keyId={id ?? ''}
+					userAddress={userAddress}
+					availableBalance={holdingsCount}
+					rewardPoolBalance={stakingStats.stakingPoolBalance ?? 0}
+					isLoading={isLoading}
+				/>
 
 				{/* Price Curve Chart */}
 				<div
