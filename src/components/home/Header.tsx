@@ -6,7 +6,7 @@ import GlobalSearch from '@/components/common/GlobalSearch';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import { useTheme } from '@/hooks/useTheme';
 import { Link } from 'react-router';
-import BatchBuyModal from '@/components/common/BatchBuyModal';
+import BatchTradePanel from '@/components/common/BatchTradePanel';
 import { useConnectedWallet, useWatchlist } from '@/hooks/useWatchlist';
 
 const navLinks = [
@@ -110,9 +110,9 @@ export default function Header() {
 						onClick={() => setBatchOpen(true)}
 						className={`rounded-xl border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 ${scrolled ? '' : ''}`}
 					>
-						Batch Buy
+						Batch Trade
 					</button>
-					<BatchBuyModal open={batchOpen} onOpenChange={setBatchOpen} />
+					<BatchTradePanel open={batchOpen} onOpenChange={setBatchOpen} />
 				<button
 					type="button"
 					onClick={toggleTheme}

@@ -15,9 +15,10 @@ import GovernancePage from './pages/GovernancePage';
 import ProposalDetailPage from './pages/ProposalDetailPage';
 import ReferralDashboardPage from './pages/ReferralDashboardPage';
 import CreateCreatorKeyPage from './pages/CreateCreatorKeyPage';
+import RevenueDistributionHistoryPage from './pages/RevenueDistributionHistoryPage';
+import BundleManagementPage from './pages/BundleManagementPage';
 import AtomicSwapCreatePage from './pages/AtomicSwapCreatePage';
 import AtomicSwapProposalPage from './pages/AtomicSwapProposalPage';
-import BundleManagementPage from './pages/BundleManagementPage';
 
 export const routes = [
 	{
@@ -119,6 +120,10 @@ export const routes = [
 			{
 				path: '/admin/dashboard',
 				element: <AdminDashboardPage />,
+			},
+			{
+				path: '/revenue-distribution',
+				element: <RevenueDistributionHistoryPage />,
 			},
 			{
 				path: '*',

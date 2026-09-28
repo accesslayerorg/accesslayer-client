@@ -480,6 +480,14 @@ export interface BatchOrder {
 	ref?: string | null;
 }
 
+export interface BatchTradeOrder {
+	creatorId: string;
+	side: 'buy' | 'sell';
+	quantity: number;
+	slippageBps: number;
+	priceStroops: number;
+}
+
 export interface ReinvestDividendVariables {
 	/** The creator key whose dividends are being reinvested. */
 	keyId: string;
@@ -700,8 +708,7 @@ export function useBatchBuyMutation(address?: string) {
 	const mutation = useMutation({
 		mutationKey: ['batch-buy', address],
 		mutationFn: async ({ orders }: { orders: BatchOrder[] }) => {
-			// In a real app this would call the on-chain `batch_buy` contract
-			// function. Here we simulate latency and accept the orders payload.
+			// Existing recipient batch buy flow (separate from key trading).
 			void orders;
 			await new Promise<void>(resolve => window.setTimeout(resolve, 1200));
 			return { success: true as const };
@@ -724,4 +731,31 @@ export function useBatchBuyMutation(address?: string) {
 	});
 
 	return mutation;
+}
+
+export function useBatchTradeMutation(address?: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationKey: ['batch-trade', address],
+		mutationFn: async ({ orders }: { orders: BatchTradeOrder[] }) => {
+			await new Promise<void>(resolve => window.setTimeout(resolve, 1200));
+			const transactionHash = `batch-${Date.now().toString(16)}`;
+			return {
+				success: true as const,
+				transactionHash,
+				results: orders.map(order => ({
+					creatorId: order.creatorId,
+					side: order.side,
+					quantity: order.quantity,
+					success: true as const,
+					transactionHash,
+					error: undefined as string | undefined,
+				})),
+			};
+		},
+		onSuccess: () => {
+			void queryClient.invalidateQueries({ queryKey: ['creators'] });
+			void queryClient.invalidateQueries({ queryKey: ['wallet', 'holdings'] });
+		},
+	});
 }

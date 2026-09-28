@@ -10,6 +10,21 @@ export interface OracleCaller {
 	addedAt?: string;
 }
 
+export interface AclContract {
+	address: string;
+	functions: string[];
+	addedAt: string;
+}
+
+export interface AclHistoryEvent {
+	id: string;
+	type: 'add' | 'remove' | 'update';
+	address: string;
+	functions?: string[];
+	timestamp: string;
+	admin: string;
+}
+
 export type MultiSigActionType = 'deprecate-key' | string;
 
 export interface MultiSigSignature {
@@ -270,6 +285,48 @@ class AdminService extends BaseApiService {
 			throw this.handleError(error);
 		}
 	}
+
+	async getAclWhitelist(): Promise<AclContract[]> {
+		try {
+			const response = await this.api.get<APIResponse<AclContract[]>>(
+				'/admin/acl/whitelist'
+			);
+			return response.data.data ?? [];
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	async addAclContract(address: string, functions: string[]): Promise<AclContract> {
+		try {
+			const response = await this.api.post<APIResponse<AclContract>>(
+				'/admin/acl/whitelist',
+				{ address, functions }
+			);
+			return response.data.data ?? { address, functions, addedAt: new Date().toISOString() };
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	async removeAclContract(address: string): Promise<void> {
+		try {
+			await this.api.delete(`/admin/acl/whitelist/${encodeURIComponent(address)}`);
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	async getAclHistory(): Promise<AclHistoryEvent[]> {
+		try {
+			const response = await this.api.get<APIResponse<AclHistoryEvent[]>>(
+				'/admin/acl/history'
+			);
+			return response.data.data ?? [];
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
 }
 
 export const adminService = new AdminService();
@@ -291,4 +348,23 @@ export async function createOracleCaller(
 
 export async function deleteOracleCaller(address: string): Promise<void> {
 	return adminService.removeOracleCaller(address);
+}
+
+export async function fetchAclWhitelist(): Promise<AclContract[]> {
+	return adminService.getAclWhitelist();
+}
+
+export async function createAclContract(
+	address: string,
+	functions: string[]
+): Promise<AclContract> {
+	return adminService.addAclContract(address, functions);
+}
+
+export async function deleteAclContract(address: string): Promise<void> {
+	return adminService.removeAclContract(address);
+}
+
+export async function fetchAclHistory(): Promise<AclHistoryEvent[]> {
+	return adminService.getAclHistory();
 }

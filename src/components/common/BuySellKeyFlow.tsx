@@ -28,6 +28,7 @@ import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 import type { KeyConfig } from '@/services/course.service';
 import SpreadIndicator from '@/components/common/SpreadIndicator';
+import HoldingCapIndicator from '@/components/common/HoldingCapIndicator';
 import { cn } from '@/lib/utils';
 import { ArrowRight } from 'lucide-react';
 import { useSlippageTolerancePreference } from '@/hooks/useSlippageTolerancePreference';
@@ -51,6 +52,9 @@ export interface BuySellKeyFlowProps {
 	keyPriceStroops?: number | null;
 	currentSupply?: number | null;
 	maxBuyQuantity?: number | null;
+	/** Maximum holding cap per wallet configured by creator (#1015); null means no limit. */
+	holdingCap?: number | null;
+	maxHoldingCap?: number | null;
 	protocolFeeBps?: number;
 	creatorFeeBps?: number;
 	launchPenaltyBps?: number | null;
@@ -84,6 +88,8 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 	keyPriceStroops,
 	currentSupply = 0,
 	maxBuyQuantity = null,
+	holdingCap = null,
+	maxHoldingCap = null,
 	protocolFeeBps = FEE_BOUNDS.DEFAULT_FEE_BPS,
 	creatorFeeBps = FEE_BOUNDS.DEFAULT_FEE_BPS,
 	launchPenaltyBps,
@@ -97,6 +103,15 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 	isSubmitting: externalIsSubmitting = false,
 	className,
 }) => {
+	const effectiveHoldingCap = useMemo(
+		() =>
+			holdingCap ??
+			maxHoldingCap ??
+			keyConfig?.holdingCap ??
+			keyConfig?.maxHoldingCap ??
+			null,
+		[holdingCap, maxHoldingCap, keyConfig?.holdingCap, keyConfig?.maxHoldingCap]
+	);
 	const [side, setSide] = useState<'buy' | 'sell'>(initialSide);
 	const [amountText, setAmountText] = useState('1');
 	const [touched, setTouched] = useState(false);
@@ -132,13 +147,61 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 		) {
 			return `Maximum ${formatNumber(maxBuyQuantity)} keys per transaction for this key`;
 		}
+		if (
+			side === 'buy' &&
+			effectiveHoldingCap != null &&
+			Number.isFinite(effectiveHoldingCap) &&
+			effectiveHoldingCap > 0
+		) {
+			if (availableHoldings >= effectiveHoldingCap) {
+				return `Holding cap reached (${formatNumber(effectiveHoldingCap)} keys max per wallet).`;
+			}
+			if (
+				Number.isFinite(parsedAmount) &&
+				parsedAmount > 0 &&
+				availableHoldings + parsedAmount > effectiveHoldingCap
+			) {
+				return `Purchase would exceed the holding cap of ${formatNumber(effectiveHoldingCap)} keys (you hold ${formatNumber(availableHoldings)}).`;
+			}
+		}
 		if (side === 'sell' && parsedAmount > availableHoldings) {
 			return `You can't sell more than your holdings (${formatNumber(
 				availableHoldings
 			)} keys).`;
 		}
 		return null;
-	}, [amountText, parsedAmount, side, maxBuyQuantity, availableHoldings]);
+	}, [
+		amountText,
+		parsedAmount,
+		side,
+		maxBuyQuantity,
+		availableHoldings,
+		effectiveHoldingCap,
+	]);
+
+	const isCapLimitReached = useMemo(
+		() =>
+			side === 'buy' &&
+			effectiveHoldingCap != null &&
+			Number.isFinite(effectiveHoldingCap) &&
+			effectiveHoldingCap > 0 &&
+			availableHoldings >= effectiveHoldingCap,
+		[side, effectiveHoldingCap, availableHoldings]
+	);
+
+	const isCapBreached = useMemo(
+		() =>
+			side === 'buy' &&
+			effectiveHoldingCap != null &&
+			Number.isFinite(effectiveHoldingCap) &&
+			effectiveHoldingCap > 0 &&
+			Number.isFinite(parsedAmount) &&
+			parsedAmount > 0 &&
+			availableHoldings + parsedAmount > effectiveHoldingCap,
+		[side, effectiveHoldingCap, availableHoldings, parsedAmount]
+	);
+
+	const isCapExceeded = isCapLimitReached || isCapBreached;
 
 	const isValid = validationError === null;
 	const showError = touched && validationError !== null;
@@ -149,10 +212,18 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 		if (side === 'sell') {
 			setAmountText(String(Math.max(0, availableHoldings)));
 		} else {
-			const maxVal =
+			let maxVal =
 				maxBuyQuantity != null
 					? maxBuyQuantity
 					: BUY_QUANTITY_BOUNDS.MAX_QTY;
+			if (
+				effectiveHoldingCap != null &&
+				Number.isFinite(effectiveHoldingCap) &&
+				effectiveHoldingCap > 0
+			) {
+				const remainingCap = Math.max(0, effectiveHoldingCap - availableHoldings);
+				maxVal = Math.min(maxVal, remainingCap);
+			}
 			setAmountText(String(maxVal));
 		}
 	};
@@ -426,6 +497,20 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 						{validationError}
 					</p>
 				)}
+				{/* Holding cap indicator on buy form (#1015) */}
+				{side === 'buy' && effectiveHoldingCap != null && effectiveHoldingCap > 0 && (
+					<HoldingCapIndicator
+						currentHoldings={availableHoldings}
+						holdingCap={effectiveHoldingCap}
+						purchaseAmount={
+							Number.isFinite(parsedAmount) && parsedAmount > 0
+								? parsedAmount
+								: 0
+						}
+						creatorName={creatorName}
+						className="my-2.5"
+					/>
+				)}
 			</div>
 
 			{/* Price & Cost Estimate */}
@@ -495,6 +580,7 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 				disabled={
 					!isValid ||
 					isSubmitting ||
+					isCapExceeded ||
 					(impactWarningActive && !impactAcknowledged)
 				}
 				data-testid="trade-review-button"
@@ -506,7 +592,13 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 				)}
 			>
 				<span className="flex items-center justify-center gap-1.5">
-					{side === 'buy' ? 'Review Buy Order' : 'Review Sell Order'}
+					{side === 'buy'
+						? isCapLimitReached
+							? 'Holding Cap Reached'
+							: isCapBreached
+							? 'Holding Cap Exceeded'
+							: 'Review Buy Order'
+						: 'Review Sell Order'}
 					<ArrowRight className="h-4 w-4" />
 				</span>
 			</Button>

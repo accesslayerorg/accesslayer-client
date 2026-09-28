@@ -29,6 +29,9 @@ export interface Course {
 	protocolFeeBps?: number;
 	/** Max keys that can be bought in a single transaction; null means no limit. */
 	maxBuyQuantity?: number | null;
+	/** Maximum holding cap per wallet configured by creator (#1015); null or undefined means unlimited. */
+	holdingCap?: number | null;
+	maxHoldingCap?: number | null;
 	/** Last up to 7 price history points in stroops, oldest to newest. */
 	priceHistory?: number[];
 	holderCount?: number;
@@ -85,6 +88,18 @@ export interface Course {
 	 */
 	nextBuyAllowedAt?: number | string | null;
 	/**
+	 * Cooldown policy for this key in seconds (#998): how long after a
+	 * trade the next trade of the same key is blocked. Drives the tooltip
+	 * copy on the disabled trade buttons. Absent when unknown.
+	 */
+	tradeCooldownSeconds?: number | null;
+	/**
+	 * Cooldown policy for this key expressed in Stellar ledgers (~5 seconds
+	 * per ledger), as configured via the contract's `set_buy_cooldown`.
+	 * Preferred over `tradeCooldownSeconds` when both are present.
+	 */
+	tradeCooldownLedgers?: number | null;
+	/**
 	 * Whether this key has been marked deprecated (#871) — e.g. the creator
 	 * left the platform or the key was superseded. Deprecated keys can no
 	 * longer be bought/sold; holders can redeem their position instead.
@@ -94,6 +109,16 @@ export interface Course {
 	deprecationReason?: string | null;
 	/** Performance bond status for creator key protection (#975). */
 	performanceBond?: PerformanceBond | null;
+	/** Whether the early access whitelist gate is enabled for this creator key (#1031). */
+	isWhitelistEnabled?: boolean;
+	whitelistEnabled?: boolean;
+	/** Approved wallet addresses on the early access whitelist (#1031). */
+	whitelist?: WhitelistEntry[];
+}
+
+export interface WhitelistEntry {
+	walletAddress: string;
+	addedAt: string;
 }
 
 export interface CurveMilestone {
@@ -117,6 +142,28 @@ export interface GraduatedCurveConfig {
  * spread between the current buy (ask) and sell (bid) price. All prices are
  * in stroops (1 XLM = 10,000,000 stroops).
  */
+/**
+ * Trade cooldown status for a creator key (#998).
+ *
+ * Returned by `GET /keys/:keyId/trade-cooldown` and consumed by the disabled
+ * buy/sell buttons' countdown. `nextBuyAllowedAt` is the absolute timestamp
+ * after which the authenticated wallet may trade the key again; it is `null`
+ * when no cooldown is in effect for the caller.
+ */
+export interface TradeCooldownInfo {
+	/** Key this cooldown status belongs to, when the backend echoes it back. */
+	keyId?: string;
+	/**
+	 * Absolute timestamp (seconds epoch, ms epoch, or ISO string) after which
+	 * trading is allowed again. `null` means no cooldown is in effect.
+	 */
+	nextBuyAllowedAt?: number | string | null;
+	/** Cooldown policy length in seconds, when reported explicitly. */
+	cooldownDurationSeconds?: number | null;
+	/** Cooldown policy length in Stellar ledgers (~5s each), when reported. */
+	cooldownDurationLedgers?: number | null;
+}
+
 export interface KeyConfig {
 	/** Key this config belongs to, when the backend echoes it back. */
 	keyId?: string;
@@ -128,6 +175,9 @@ export interface KeyConfig {
 	spreadStroops?: number | null;
 	/** Spread expressed in basis points of the buy price, when reported. */
 	spreadBps?: number | null;
+	/** Maximum holding cap configured for this key (#1015); null means unlimited. */
+	holdingCap?: number | null;
+	maxHoldingCap?: number | null;
 }
 
 /**
@@ -257,6 +307,13 @@ export interface GetCoursesParams {
 	min_price?: number;
 	max_price?: number;
 	sort?: CourseSortOption;
+}
+
+export type PriceHistoryInterval = '1h' | '24h' | '7d';
+
+export interface PriceHistoryPoint {
+	timestamp: string;
+	price: number;
 }
 
 /** Raw envelope shape for a paginated /courses response. */
@@ -419,6 +476,23 @@ class CourseService extends BaseApiService {
 			const data = response.data.data;
 			cacheManager.set(cacheKey, data, this.PROFILE_CACHE_TTL);
 			return data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Get bonding curve price history - GET /keys/:keyId/price-history
+	async getPriceHistory(
+		keyId: string,
+		interval: PriceHistoryInterval
+	): Promise<PriceHistoryPoint[]> {
+		try {
+			const response = await this.api.get<APIResponse<PriceHistoryPoint[]>>(
+				`/keys/${keyId}/price-history`,
+				{ params: { interval } }
+			);
+
+			return response.data.data;
 		} catch (error) {
 			throw this.handleError(error);
 		}
@@ -692,6 +766,17 @@ class CourseService extends BaseApiService {
 			// report. Both resolve to "no cooldown" instead of an error so the
 			// buy panel keeps working.
 			if (error instanceof ApiError && error.status === 404) {
+	// Get trade cooldown status - GET /keys/:keyId/trade-cooldown (#998)
+	async getTradeCooldownStatus(keyId: string): Promise<TradeCooldownInfo | null> {
+		try {
+			const response = await this.api.get<APIResponse<TradeCooldownInfo>>(
+				`/keys/${keyId}/trade-cooldown`
+			);
+			return response.data.data;
+		} catch (error: unknown) {
+			if (error instanceof ApiError && error.status === 404) {
+				// No cooldown concept deployed for this key yet — treat as
+				// "no cooldown data" so buttons stay enabled.
 				return null;
 			}
 			throw this.handleError(error);

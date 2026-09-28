@@ -1,13 +1,19 @@
 import MultiSigAdminPanel from '@/components/admin/MultiSigAdminPanel';
 import OracleAccessPanel from '@/components/admin/OracleAccessPanel';
+import AclWhitelistPanel from '@/components/admin/AclWhitelistPanel';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useStellarWallet } from '@/hooks/useStellarWallet';
 import { isAdminWallet } from '@/utils/adminAccess';
+import { Navigate } from 'react-router';
 
 export default function AdminDashboardPage() {
 	useNavigationTiming('admin-dashboard');
 	const { address, isConnected } = useStellarWallet();
 	const isAdmin = isConnected && isAdminWallet(address);
+
+	if (isConnected && !isAdmin) {
+		return <Navigate to="/" replace />;
+	}
 
 	return (
 		<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
@@ -21,8 +27,18 @@ export default function AdminDashboardPage() {
 					</p>
 				</header>
 
-				<OracleAccessPanel />
-				{isAdmin && <MultiSigAdminPanel isAdmin={isAdmin} />}
+				{isAdmin && (
+					<>
+						<AclWhitelistPanel />
+						<OracleAccessPanel />
+						<MultiSigAdminPanel isAdmin={isAdmin} />
+					</>
+				)}
+				{!isConnected && (
+					<div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-white/50">
+						Please connect your admin wallet to view this page.
+					</div>
+				)}
 			</div>
 		</main>
 	);

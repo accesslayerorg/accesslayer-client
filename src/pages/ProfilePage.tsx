@@ -10,11 +10,13 @@ import {
 	Coins,
 	Activity,
 	ArrowLeftRight,
+	Droplets,
 } from 'lucide-react';
 import ReferralLinkPanel from '@/components/common/ReferralLinkPanel';
 import PortfolioSummaryHeader from '@/components/common/PortfolioSummaryHeader';
 import HeldKeysGrid from '@/components/common/HeldKeysGrid';
 import StakingPositionsList from '@/components/common/StakingPositionsList';
+import LiquidityPositionsSection from '@/components/common/LiquidityPositionsSection';
 import TradeHistoryTable from '@/components/common/TradeHistoryTable';
 import AtomicSwapHistory from '@/components/common/AtomicSwapHistory';
 import ProtocolRevenueClaim from '@/components/common/ProtocolRevenueClaim';
@@ -41,6 +43,7 @@ import { cn } from '@/lib/utils';
 const TABS = [
 	{ label: 'Holdings', value: 'holdings', icon: <BarChart2 /> },
 	{ label: 'Staking', value: 'staking', icon: <Coins /> },
+	{ label: 'Liquidity', value: 'liquidity', icon: <Droplets /> },
 	{ label: 'Trade History', value: 'trade-history', icon: <Clock /> },
 	{ label: 'Atomic Swaps', value: 'atomic-swaps', icon: <ArrowLeftRight /> },
 	{ label: 'Activity', value: 'activity', icon: <Activity /> },
@@ -427,6 +430,20 @@ export default function ProfilePage() {
 							</>
 						)}
 					</section>
+				)}
+
+				{/* Liquidity provider panel (#1030) */}
+				{activeTab === 'liquidity' && (
+					<div
+						id="profile-panel-liquidity"
+						role="tabpanel"
+						aria-labelledby="profile-tab-liquidity"
+						data-testid="portfolio-liquidity-panel"
+					>
+						<LiquidityPositionsSection
+							publicWallet={publicWallet?.trim() || undefined}
+						/>
+					</div>
 				)}
 
 				{/* Trade history panel */}

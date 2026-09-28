@@ -301,4 +301,29 @@ describe('BuySellKeyFlow (#919)', () => {
 			screen.getByTestId('trade-confirmation-modal')
 		).toBeInTheDocument();
 	});
+
+	it('renders holding cap indicator on buy side and enforces cap', () => {
+		render(
+			<BuySellKeyFlow
+				creatorName="Alex Rivers"
+				availableHoldings={8}
+				holdingCap={10}
+				keyPriceStroops={1_000_000}
+				currentSupply={100}
+			/>
+		);
+
+		expect(screen.getByTestId('holding-cap-indicator')).toBeInTheDocument();
+		expect(screen.getByTestId('holding-cap-ratio')).toHaveTextContent('8 / 10 keys');
+
+		const input = screen.getByTestId('trade-amount-input');
+		const reviewBtn = screen.getByTestId('trade-review-button');
+
+		// Typing 3 -> 8 + 3 = 11 > 10 (exceeds cap)
+		fireEvent.change(input, { target: { value: '3' } });
+
+		expect(screen.getByTestId('holding-cap-warning')).toBeInTheDocument();
+		expect(reviewBtn).toBeDisabled();
+		expect(reviewBtn).toHaveTextContent('Holding Cap Exceeded');
+	});
 });

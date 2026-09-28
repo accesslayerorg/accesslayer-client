@@ -165,4 +165,44 @@ describe('CreatorDetailPage Buy Key Flow with slippage protection (#919)', () =>
 			);
 		});
 	});
+
+	it('displays holding cap indicator and enforces cap on CreatorDetailPage buy flow (#1015)', async () => {
+		vi.mocked(useCreatorDetail).mockReturnValue({
+			data: {
+				...mockCreator,
+				holdingCap: 10,
+			},
+			isLoading: false,
+			error: null,
+			isFetching: false,
+			refetch: vi.fn(),
+		} as unknown as ReturnType<typeof useCreatorDetail>);
+
+		render(
+			<QueryClientProvider client={createTestQueryClient()}>
+				<MemoryRouter initialEntries={['/creators/creator-1']}>
+					<Routes>
+						<Route path="/creators/:id" element={<CreatorDetailPage />} />
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		const buyButton = await screen.findByTestId('key-detail-buy-button');
+		fireEvent.click(buyButton);
+
+		// Holding cap indicator should be displayed
+		const indicator = await screen.findByTestId('holding-cap-indicator');
+		expect(indicator).toBeInTheDocument();
+		expect(screen.getByTestId('holding-cap-ratio')).toHaveTextContent('0 / 10 keys');
+
+		// Typing quantity exceeding cap
+		const amountInput = screen.getByTestId('trade-dialog-amount');
+		fireEvent.change(amountInput, { target: { value: '15' } });
+
+		expect(screen.getByTestId('holding-cap-warning')).toBeInTheDocument();
+		const confirmButton = screen.getByTestId('trade-dialog-confirm');
+		expect(confirmButton).toBeDisabled();
+		expect(confirmButton).toHaveTextContent('Holding Cap Exceeded');
+	});
 });

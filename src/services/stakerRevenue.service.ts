@@ -10,6 +10,10 @@ export interface ProtocolRevenueDistribution {
 	totalDistributed: number;
 	stakerCount: number;
 	amountReceived: number;
+	/** Whether this distribution has been claimed by the wallet */
+	claimed?: boolean;
+	/** Transaction hash if this distribution has been claimed */
+	transactionHash?: string;
 }
 
 /** Cursor-paginated response envelope for the protocol revenue distribution endpoint. */

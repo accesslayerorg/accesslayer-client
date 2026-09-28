@@ -54,6 +54,7 @@ import {
 } from '@/utils/slippageTolerance.utils';
 import type { KeyConfig } from '@/services/course.service';
 import SpreadIndicator from '@/components/common/SpreadIndicator';
+import HoldingCapIndicator from '@/components/common/HoldingCapIndicator';
 import { useSlippageTolerancePreference } from '@/hooks/useSlippageTolerancePreference';
 
 export type TradeSide = 'buy' | 'sell';
@@ -79,6 +80,9 @@ export interface TradeDialogProps {
 	launchPenaltyBps?: number | null;
 	/** Max buy quantity allowed per transaction; null means no limit. */
 	maxBuyQuantity?: number | null;
+	/** Maximum holding cap per wallet configured by creator (#1015); null means no limit. */
+	holdingCap?: number | null;
+	maxHoldingCap?: number | null;
 	/** Live key trading config carrying the bid-ask spread (#951). */
 	keyConfig?: KeyConfig | null;
 	/** Whether the key config query is still loading. */
@@ -110,6 +114,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	currentLedger,
 	launchPenaltyBps,
 	maxBuyQuantity = null,
+	holdingCap = null,
+	maxHoldingCap = null,
 	keyConfig,
 	isKeyConfigLoading = false,
 	requireConfirmation = false,
@@ -117,6 +123,15 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	onConfirm,
 	isSubmitting = false,
 }) => {
+	const effectiveHoldingCap = useMemo(
+		() =>
+			holdingCap ??
+			maxHoldingCap ??
+			keyConfig?.holdingCap ??
+			keyConfig?.maxHoldingCap ??
+			null,
+		[holdingCap, maxHoldingCap, keyConfig?.holdingCap, keyConfig?.maxHoldingCap]
+	);
 	const [amountText, setAmountText] = useState('1');
 	const [touched, setTouched] = useState(false);
 	const [pricePreview, setPricePreview] = useState<FeeBreakdown | null>(null);
@@ -246,6 +261,30 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		return Number(normalized);
 	}, [amountText]);
 
+	const isCapLimitReached = useMemo(
+		() =>
+			side === 'buy' &&
+			effectiveHoldingCap != null &&
+			Number.isFinite(effectiveHoldingCap) &&
+			effectiveHoldingCap > 0 &&
+			availableHoldings >= effectiveHoldingCap,
+		[side, effectiveHoldingCap, availableHoldings]
+	);
+
+	const isCapBreached = useMemo(
+		() =>
+			side === 'buy' &&
+			effectiveHoldingCap != null &&
+			Number.isFinite(effectiveHoldingCap) &&
+			effectiveHoldingCap > 0 &&
+			Number.isFinite(parsedAmount) &&
+			parsedAmount > 0 &&
+			availableHoldings + parsedAmount > effectiveHoldingCap,
+		[side, effectiveHoldingCap, availableHoldings, parsedAmount]
+	);
+
+	const isCapExceeded = isCapLimitReached || isCapBreached;
+
 	const validationError = useMemo((): string | null => {
 		const normalized = amountText.trim();
 		if (!normalized) return 'Please enter an amount.';
@@ -259,16 +298,45 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		) {
 			return `Maximum ${formatNumber(maxBuyQuantity)} keys per transaction for this key`;
 		}
+		if (
+			side === 'buy' &&
+			effectiveHoldingCap != null &&
+			Number.isFinite(effectiveHoldingCap) &&
+			effectiveHoldingCap > 0
+		) {
+			if (availableHoldings >= effectiveHoldingCap) {
+				return `Holding cap reached (${formatNumber(effectiveHoldingCap)} keys max per wallet).`;
+			}
+			if (
+				Number.isFinite(parsedAmount) &&
+				parsedAmount > 0 &&
+				availableHoldings + parsedAmount > effectiveHoldingCap
+			) {
+				return `Purchase would exceed the holding cap of ${formatNumber(effectiveHoldingCap)} keys (you hold ${formatNumber(availableHoldings)}).`;
+			}
+		}
 		if (side === 'sell' && parsedAmount > availableHoldings)
 			return `You can't sell more than your holdings (${formatNumber(availableHoldings)} keys).`;
 		return null;
-	}, [amountText, parsedAmount, side, maxBuyQuantity, availableHoldings]);
+	}, [
+		amountText,
+		parsedAmount,
+		side,
+		maxBuyQuantity,
+		availableHoldings,
+		effectiveHoldingCap,
+	]);
 
 	const amountValid = validationError === null;
 	const showError = touched && validationError !== null;
 
 	const title = side === 'buy' ? 'Buy keys' : 'Sell keys';
-	const confirmLabel = side === 'buy' ? 'Confirm buy' : 'Confirm sell';
+	const confirmLabel = useMemo(() => {
+		if (side === 'sell') return 'Confirm sell';
+		if (isCapLimitReached) return 'Holding Cap Reached';
+		if (isCapBreached) return 'Holding Cap Exceeded';
+		return 'Confirm buy';
+	}, [side, isCapLimitReached, isCapBreached]);
 	const estimatedNetworkFee = formatTransactionFeeDisplay(
 		TRADE_FEE_ESTIMATE.DEFAULT_NETWORK_FEE,
 		{ unit: TRADE_FEE_ESTIMATE.UNIT }
@@ -336,10 +404,11 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 
 	const priceImpactPercent = useMemo(() => {
 		if (!amountValid || !Number.isFinite(parsedAmount)) return 0;
+		if (currentSupply == null || currentSupply <= 0) return 0;
 		return calculateTradePriceImpact({
 			side,
 			quantity: parsedAmount,
-			currentSupply: currentSupply ?? 0,
+			currentSupply,
 		});
 	}, [amountValid, parsedAmount, side, currentSupply]);
 	const impactWarningActive =
@@ -354,10 +423,18 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		if (side === 'sell') {
 			setAmountText(String(Math.max(0, availableHoldings)));
 		} else {
-			const maxVal =
+			let maxVal =
 				maxBuyQuantity != null
 					? maxBuyQuantity
 					: BUY_QUANTITY_BOUNDS.MAX_QTY;
+			if (
+				effectiveHoldingCap != null &&
+				Number.isFinite(effectiveHoldingCap) &&
+				effectiveHoldingCap > 0
+			) {
+				const remainingCap = Math.max(0, effectiveHoldingCap - availableHoldings);
+				maxVal = Math.min(maxVal, remainingCap);
+			}
 			setAmountText(String(maxVal));
 		}
 	};
@@ -517,7 +594,9 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 						data-testid="trade-dialog-max-button"
 						onClick={handleMaxClick}
 						disabled={
-							isSubmitting || (side === 'sell' && availableHoldings <= 0)
+							isSubmitting ||
+							(side === 'sell' && availableHoldings <= 0) ||
+							(side === 'buy' && isCapLimitReached)
 						}
 						className="absolute right-2 rounded-md border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-xs font-bold text-amber-300 transition-colors hover:bg-amber-400/20 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
 					>
@@ -533,6 +612,20 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 					>
 						{validationError}
 					</p>
+				)}
+				{/* Holding cap indicator on buy form (#1015) */}
+				{side === 'buy' && effectiveHoldingCap != null && effectiveHoldingCap > 0 && (
+					<HoldingCapIndicator
+						currentHoldings={availableHoldings}
+						holdingCap={effectiveHoldingCap}
+						purchaseAmount={
+							Number.isFinite(parsedAmount) && parsedAmount > 0
+								? parsedAmount
+								: 0
+						}
+						creatorName={creatorName}
+						className="my-2.5"
+					/>
 				)}
 				<div className="flex flex-wrap items-center gap-2 text-xs text-white/45">
 					<span
@@ -658,6 +751,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 			<Button
 				type="button"
 				onClick={() => {
+					if (isCapExceeded) return;
 					if (impactWarningActive && !impactAcknowledged) return;
 					if (requireConfirmation) {
 						setConfirmationOpen(true);
@@ -668,6 +762,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 				disabled={
 					!amountValid ||
 					isSubmitting ||
+					isCapExceeded ||
 					(impactWarningActive && !impactAcknowledged) ||
 					(side === 'buy' && (previewLoading || previewError != null))
 				}

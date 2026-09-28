@@ -2,8 +2,9 @@ import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import EmptyState from '@/components/common/EmptyState';
 import Skeleton from '@/components/ui/skeleton';
-import { useStakerProtocolRevenue } from '@/hooks/useProtocolRevenue';
+import { useStakerProtocolRevenue, useClaimRevenueMutation } from '@/hooks/useProtocolRevenue';
 import type { ProtocolRevenueDistribution } from '@/services/stakerRevenue.service';
+import { formatXlmPrice } from '@/utils/numberFormat.utils';
 
 export interface ProtocolRevenueDistributionTableProps {
 	walletAddress: string;
@@ -49,6 +50,13 @@ const ProtocolRevenueDistributionTable: React.FC<
 		isError,
 	} = useStakerProtocolRevenue(walletAddress);
 
+	const claimMutation = useClaimRevenueMutation(walletAddress, {
+		onAppended: () => {
+			// Invalidate to refresh the distribution history
+			// In production, this would refresh from the API
+		},
+	});
+
 	// Flatten pages and deduplicate by id/key, then sort by distributionDate descending
 	const distributions = useMemo(() => {
 		const seen = new Set<string>();
@@ -69,6 +77,26 @@ const ProtocolRevenueDistributionTable: React.FC<
 			return timeB - timeA;
 		});
 	}, [data]);
+
+	// Calculate summary totals
+	const summaryTotals = useMemo(() => {
+		const totalClaimed = distributions
+			.filter(d => d.claimed)
+			.reduce((sum, d) => sum + d.amountReceived, 0);
+		const totalPending = distributions
+			.filter(d => !d.claimed)
+			.reduce((sum, d) => sum + d.amountReceived, 0);
+		return { totalClaimed, totalPending };
+	}, [distributions]);
+
+	const handleClaim = (distribution: ProtocolRevenueDistribution) => {
+		claimMutation.mutate({
+			creatorId: distribution.id,
+			amount: distribution.amountReceived,
+		});
+	};
+
+	const STELLAR_EXPLORER_URL = 'https://stellar.expert/explorer/testnet/tx';
 
 	if (isLoading) {
 		return (
@@ -134,6 +162,32 @@ const ProtocolRevenueDistributionTable: React.FC<
 				</p>
 			</div>
 
+			{/* Summary totals */}
+			<div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+				<div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+					<p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400/60">
+						Total Claimed
+					</p>
+					<p
+						className="mt-1 font-mono text-lg font-semibold text-emerald-400"
+						data-testid="total-claimed"
+					>
+						{formatXlmPrice(summaryTotals.totalClaimed)}
+					</p>
+				</div>
+				<div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+					<p className="text-[10px] font-bold uppercase tracking-widest text-amber-400/60">
+						Total Pending
+					</p>
+					<p
+						className="mt-1 font-mono text-lg font-semibold text-amber-400"
+						data-testid="total-pending"
+					>
+						{formatXlmPrice(summaryTotals.totalPending)}
+					</p>
+				</div>
+			</div>
+
 			{/* Table column headers for desktop */}
 			<div className="mb-2 hidden items-center justify-between px-5 text-[10px] font-bold uppercase tracking-widest text-white/30 sm:flex">
 				<span className="w-1/4">Distribution Date</span>
@@ -141,6 +195,7 @@ const ProtocolRevenueDistributionTable: React.FC<
 					<span className="w-28 text-right">Total Distributed</span>
 					<span className="w-20 text-right">Stakers</span>
 					<span className="w-32 text-right">Amount Received</span>
+					<span className="w-24 text-right">Status</span>
 				</div>
 			</div>
 
@@ -201,6 +256,35 @@ const ProtocolRevenueDistributionTable: React.FC<
 								>
 									+{dist.amountReceived.toFixed(4)} XLM
 								</span>
+							</div>
+
+							{/* Status and Action */}
+							<div className="flex flex-col items-end">
+								<span className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+									Status
+								</span>
+								{dist.claimed ? (
+									<a
+										href={`${STELLAR_EXPLORER_URL}/${dist.transactionHash}`}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="font-mono text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
+										data-testid="transaction-link"
+									>
+										Claimed →
+									</a>
+								) : (
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => handleClaim(dist)}
+										disabled={claimMutation.isPending}
+										data-testid="claim-button"
+										className="h-7 rounded-lg border-amber-500/30 bg-amber-500/10 px-3 text-xs text-amber-400 hover:bg-amber-500/20 hover:text-amber-300"
+									>
+										{claimMutation.isPending ? 'Claiming…' : 'Claim'}
+									</Button>
+								)}
 							</div>
 						</div>
 					</div>

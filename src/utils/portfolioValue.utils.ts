@@ -59,6 +59,13 @@ export interface HeldKeyPosition extends BondingCurvePriceFields {
 	 * value is present here.
 	 */
 	nextBuyAllowedAt?: number | string | null;
+	/**
+	 * Trade cooldown policy in seconds (#998): how long after a trade the
+	 * next trade of this key is blocked, as configured by the creator.
+	 * Drives the explanatory tooltip on the disabled trade buttons.
+	 * `null`/absent when unknown.
+	 */
+	tradeCooldownSeconds?: number | null;
 	costBasisStroops?: number | null;
 }
 

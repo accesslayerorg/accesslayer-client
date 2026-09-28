@@ -13,6 +13,7 @@ import BuyCooldownPanel from '@/components/common/BuyCooldownPanel';
 import DeprecateKeyPanel from '@/components/common/DeprecateKeyPanel';
 import VestingSchedulePanel from '@/components/common/VestingSchedulePanel';
 import CurveMigrationPanel from '@/components/common/CurveMigrationPanel';
+import WhitelistManagementPanel from '@/components/common/WhitelistManagementPanel';
 import { AlertTriangle } from 'lucide-react';
 import {
 	useCancelAuctionMutation,
@@ -29,6 +30,7 @@ import {
 } from '@/hooks/useCreatorContractActions';
 import { useKeyVesting, useKeyVestingClaims } from '@/hooks/useKeyVesting';
 import { useCurveMigrations } from '@/hooks/useCurveMigrations';
+import { useCreatorWhitelist } from '@/hooks/useCreatorWhitelist';
 import { isOwnWallet } from '@/utils/isOwnWallet';
 import {
 	formatDisplayKeyPrice,
@@ -55,7 +57,9 @@ export default function CreatorDashboardPage() {
 	const { data: creator, isLoading, isError } = useCreatorDetail(id);
 
 	const requestedTab = searchParams.get('tab');
-	const activeTab = TABS.some(t => t.value === requestedTab)
+	const activeTab = requestedTab === 'whitelist'
+		? 'settings'
+		: TABS.some(t => t.value === requestedTab)
 		? (requestedTab as string)
 		: 'overview';
 
@@ -68,6 +72,17 @@ export default function CreatorDashboardPage() {
 	const configureGraduatedCurve = useConfigureGraduatedCurveMutation(id);
 	const setBuyCooldown = useSetBuyCooldownMutation(id);
 	const deprecateKey = useDeprecateKeyMutation(id);
+
+	const {
+		entries: whitelistEntries,
+		isWhitelistEnabled,
+		addAddresses: addWhitelistAddresses,
+		removeAddress: removeWhitelistAddress,
+		disableWhitelist,
+		isAdding: isAddingWhitelist,
+		isRemoving: isRemovingWhitelist,
+		isDisabling: isDisablingWhitelist,
+	} = useCreatorWhitelist(id, creator);
 
 	// The vesting schedule is only meaningful to the wallet the allocation is
 	// registered to (#960), so both queries stay disabled for everyone else.
@@ -282,6 +297,25 @@ export default function CreatorDashboardPage() {
 								}
 								onConfigure={input => configureAuction.mutate(input)}
 								onCancel={() => cancelAuction.mutate()}
+							/>
+						</section>
+
+						<section
+							className={CARD_CLASS}
+							data-testid="whitelist-section"
+						>
+							<WhitelistManagementPanel
+								creatorId={id}
+								isWhitelistEnabled={isWhitelistEnabled}
+								whitelist={whitelistEntries}
+								onAddAddresses={addWhitelistAddresses}
+								onRemoveAddress={removeWhitelistAddress}
+								onDisableWhitelist={disableWhitelist}
+								isSubmitting={
+									isAddingWhitelist ||
+									isRemovingWhitelist ||
+									isDisablingWhitelist
+								}
 							/>
 						</section>
 

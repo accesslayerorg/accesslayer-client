@@ -23,6 +23,8 @@ export const queryKeys = {
 		infiniteList: (params?: Omit<GetCoursesParams, 'page'>) =>
 			['creators', 'infiniteList', params ?? null] as const,
 		detail: (id: string) => ['creators', 'detail', id] as const,
+		priceHistory: (creatorId: string, interval: string) =>
+			['creators', creatorId, 'priceHistory', interval] as const,
 		holders: (creatorId: string) =>
 			['creators', creatorId, 'holders'] as const,
 		activity: (creatorId: string) =>
@@ -50,6 +52,10 @@ export const queryKeys = {
 			['creators', creatorId, 'oracle-price'] as const,
 		performanceBond: (creatorId: string) =>
 			['creators', creatorId, 'performance-bond'] as const,
+		tradeCooldown: (creatorId: string) =>
+			['creators', creatorId, 'trade-cooldown'] as const,
+		whitelist: (creatorId: string) =>
+			['creators', creatorId, 'whitelist'] as const,
 		keyDeployment: (keyId: string) =>
 			['creators', 'deployment', keyId] as const,
 		discovery: {
@@ -65,6 +71,13 @@ export const queryKeys = {
 			['wallet', address, 'tradeHistory'] as const,
 		stakingPositions: (address: string) =>
 			['wallet', address, 'stakingPositions'] as const,
+		xlmBalance: (address: string) =>
+			['wallet', address, 'xlmBalance'] as const,
+	},
+	lp: {
+		all: () => ['lp'] as const,
+		positions: (wallet: string) => ['lp', 'positions', wallet] as const,
+		pool: (keyId: string) => ['lp', 'pool', keyId] as const,
 	},
 	notifications: {
 		all: () => ['notifications'] as const,
@@ -84,6 +97,8 @@ export const queryKeys = {
 		oracleCallers: () => ['admin', 'oracle', 'callers'] as const,
 		multiSigPending: () => ['admin', 'multisig', 'pending'] as const,
 		multiSigHistory: () => ['admin', 'multisig', 'history'] as const,
+		aclWhitelist: () => ['admin', 'acl', 'whitelist'] as const,
+		aclHistory: () => ['admin', 'acl', 'history'] as const,
 	},
 	governance: {
 		all: () => ['governance'] as const,
