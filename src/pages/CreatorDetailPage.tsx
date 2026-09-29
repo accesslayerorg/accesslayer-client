@@ -14,6 +14,7 @@ import BondingCurveChart from '@/components/common/BondingCurveChart';
 import KeySimulationTool from '@/components/common/KeySimulationTool';
 import BuyCooldownCountdown from '@/components/common/BuyCooldownCountdown';
 import StakingRewardsSection from '@/components/common/StakingRewardsSection';
+import StakingVaultPanel from '@/components/common/StakingVaultPanel';
 import DeprecationNotice from '@/components/common/DeprecationNotice';
 import SubscriptionAccessGate from '@/components/common/SubscriptionAccessGate';
 import { isKeyDeprecated } from '@/utils/keyDeprecation.utils';
@@ -606,6 +607,15 @@ function CreatorDetailPageContent() {
 				) : null}
 				{/* Staking Rewards */}
 				<StakingRewardsSection {...stakingStats} isLoading={isLoading} />
+
+				{/* Staking Vault — stake keys, track locks, claim rewards (#1017) */}
+				<StakingVaultPanel
+					keyId={id ?? ''}
+					userAddress={userAddress}
+					availableBalance={holdingsCount}
+					rewardPoolBalance={stakingStats.stakingPoolBalance ?? 0}
+					isLoading={isLoading}
+				/>
 
 				{/* Price Curve Chart */}
 				<div

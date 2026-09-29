@@ -175,4 +175,9 @@ export const queryKeys = {
 		withdrawals: (creatorId: string) =>
 			['creatorRevenue', creatorId, 'withdrawals'] as const,
 	},
+	stakingVault: {
+		/** Active vault stakes for a (wallet, key) pair. */
+		stakes: (wallet: string, keyId: string) =>
+			['staking-vault', 'stakes', wallet, keyId] as const,
+	},
 } as const;
