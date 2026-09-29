@@ -53,6 +53,8 @@ import { useKeyTwap } from '@/hooks/useKeyTwap';
 import { useKeyStats } from '@/hooks/useKeyStats';
 import { useKeyUniqueTraders } from '@/hooks/useKeyUniqueTraders';
 import { useKeyConfig } from '@/hooks/useKeyConfig';
+import { useKeyBuyCooldown } from '@/hooks/useKeyBuyCooldown';
+import { useBuyCooldownCountdown } from '@/hooks/useBuyCooldownCountdown';
 import KeyStatsPanel from '@/components/common/KeyStatsPanel';
 import Skeleton from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -124,11 +126,28 @@ function CreatorDetailPageContent() {
 	const { data: holdings = [] } = useWalletHoldings(userAddress ?? '');
 	const userPosition = holdings.find(h => h.creatorId === (id || ''));
 	const holdingsCount = userPosition?.quantity ?? 0;
-	// Per-user buy cooldown (#873): prefer the user's own position-level
-	// value; fall back to a creator-wide cooldown if the backend doesn't yet
-	// return a per-user one. Only shown for authenticated users.
+	// Per-wallet buy cooldown (#915). The dedicated read is the source of truth
+	// for the connected wallet; the held-position value (#873) and the
+	// creator-wide fallback are kept so the countdown still works for backends
+	// that do not return a per-wallet expiry. The query is disabled until a
+	// wallet is connected, so it fires on key page load and on wallet connect.
+	const { data: buyCooldown, refetch: refetchBuyCooldown } = useKeyBuyCooldown(
+		id || '',
+		userAddress
+	);
 	const nextBuyAllowedAt =
-		userPosition?.nextBuyAllowedAt ?? creator?.nextBuyAllowedAt ?? null;
+		buyCooldown?.nextBuyAllowedAt ??
+		userPosition?.nextBuyAllowedAt ??
+		creator?.nextBuyAllowedAt ??
+		null;
+	// Single ticking clock shared by the countdown chip and the Buy button, so
+	// the button re-enables on the exact tick the timer hits zero. On expiry we
+	// re-read the cooldown because a configured cooldown means the next buy
+	// starts a fresh window.
+	const { isActive: isBuyCooldownActive, formattedRemaining: buyCooldownLabel } =
+		useBuyCooldownCountdown(nextBuyAllowedAt, () => {
+			void refetchBuyCooldown();
+		});
 	const { data: twap, isLoading: isTwapLoading } = useKeyTwap(id || '');
 	const {
 		data: keyStats,
@@ -467,6 +486,9 @@ function CreatorDetailPageContent() {
 						<p className="mt-0.5 text-sm text-white/80">
 							{isKeyDeprecated(creator)
 								? 'Key is deprecated. New buys are disabled.'
+								: isBuyCooldownActive
+									? 'Buy cooldown active for your wallet.'
+									: 'Purchase keys for this creator.'}
 								: isLockedOut
 								? 'Early access is restricted to approved whitelisted wallets.'
 								: 'Purchase keys for this creator.'}
@@ -488,7 +510,48 @@ function CreatorDetailPageContent() {
 							source={oracleSource}
 							isLoading={isOracleLoading}
 						/>
+						{/* Per-wallet buy cooldown countdown (#915). Renders nothing when the wallet is not in a cooldown period. */}
+						{userAddress && (
+							<BuyCooldownCountdown
+								className="mt-2"
+								nextBuyAllowedAt={nextBuyAllowedAt}
+							/>
+						)}
 					</div>
+					<div className="flex shrink-0 flex-col items-end gap-2">
+						<Button
+							disabled={isKeyDeprecated(creator) || isBuyCooldownActive}
+							data-testid="key-detail-buy-button"
+							onClick={() => setBuyDialogOpen(true)}
+							variant={
+								isKeyDeprecated(creator) || isBuyCooldownActive
+									? 'outline'
+									: 'default'
+							}
+							aria-describedby={
+								isBuyCooldownActive
+									? 'key-detail-buy-cooldown-reason'
+									: undefined
+							}
+							className="rounded-xl font-bold"
+						>
+							{isKeyDeprecated(creator)
+								? 'Buy Disabled (Deprecated)'
+								: isBuyCooldownActive
+									? `Buy in ${buyCooldownLabel}`
+									: 'Buy Key'}
+						</Button>
+						{isBuyCooldownActive && (
+							<p
+								className="text-right text-xs font-medium text-sky-300/80"
+								data-testid="key-detail-buy-cooldown-reason"
+								id="key-detail-buy-cooldown-reason"
+							>
+								Unlocks in {buyCooldownLabel}
+							</p>
+						)}
+					</div>
+				</div>
 					{isKeyDeprecated(creator) ? (
 						<Button
 							disabled
