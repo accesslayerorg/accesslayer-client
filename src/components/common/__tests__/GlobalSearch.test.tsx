@@ -20,7 +20,7 @@ vi.mock('@/services/search.service', () => ({
 	},
 }));
 
-describe('GlobalSearch (#933)', () => {
+describe('GlobalSearch (#1053)', () => {
 	const mockResults: GlobalSearchResults = {
 		keys: [
 			{
@@ -40,12 +40,11 @@ describe('GlobalSearch (#933)', () => {
 				isVerified: true,
 			},
 		],
-		proposals: [
+		transactions: [
 			{
-				id: 'proposal-1',
-				title: 'Proposal: Increase Quorum',
-				description: 'A proposal to improve governance participation.',
-				status: 'active',
+				id: 'tx-1',
+				hash: 'abc123def456',
+				type: 'Buy',
 			},
 		],
 	};
@@ -144,7 +143,7 @@ describe('GlobalSearch (#933)', () => {
 		expect(screen.getByTestId('global-search-group-keys')).toBeInTheDocument();
 	});
 
-	it('results grouped correctly by type in dropdown (Keys, Creators, Proposals)', async () => {
+	it('results grouped correctly by type in dropdown (Keys, Creators, Transactions)', async () => {
 		vi.mocked(searchService.search).mockResolvedValue(mockResults);
 
 		render(
@@ -173,10 +172,9 @@ describe('GlobalSearch (#933)', () => {
 		expect(screen.getByText('Alice Creator')).toBeInTheDocument();
 		expect(screen.getByText('@alice_creator')).toBeInTheDocument();
 
-		// Verify Proposals group
-		expect(screen.getByTestId('global-search-group-proposals')).toBeInTheDocument();
-		expect(screen.getByText('Proposal: Increase Quorum')).toBeInTheDocument();
-		expect(screen.getByText('active')).toBeInTheDocument();
+		// Verify Transactions group
+		expect(screen.getByTestId('global-search-group-transactions')).toBeInTheDocument();
+		expect(screen.getByText('abc123def456')).toBeInTheDocument();
 	});
 
 	it('clicking a key result navigates to the correct detail page', async () => {
@@ -233,7 +231,7 @@ describe('GlobalSearch (#933)', () => {
 		expect(input).toHaveValue('');
 	});
 
-	it('clicking a proposal result navigates to the governance proposal', async () => {
+	it('clicking a transaction result navigates to search results page', async () => {
 		vi.mocked(searchService.search).mockResolvedValue(mockResults);
 
 		render(
@@ -243,19 +241,19 @@ describe('GlobalSearch (#933)', () => {
 		);
 
 		const input = screen.getByTestId('global-search-input');
-		fireEvent.change(input, { target: { value: 'Proposal' } });
+		fireEvent.change(input, { target: { value: 'abc' } });
 
 		await act(async () => {
 			vi.advanceTimersByTime(300);
 		});
 
 		await waitFor(() => {
-			expect(screen.getByTestId('global-search-item-proposal')).toBeInTheDocument();
+			expect(screen.getByTestId('global-search-item-transaction')).toBeInTheDocument();
 		});
 
-		fireEvent.click(screen.getByTestId('global-search-item-proposal'));
+		fireEvent.click(screen.getByTestId('global-search-item-transaction'));
 
-		expect(mockNavigate).toHaveBeenCalledWith('/governance?proposal=proposal-1');
+		expect(mockNavigate).toHaveBeenCalledWith('/search?q=abc&type=transactions');
 		expect(screen.queryByTestId('global-search-dropdown')).not.toBeInTheDocument();
 		expect(input).toHaveValue('');
 	});
@@ -264,7 +262,7 @@ describe('GlobalSearch (#933)', () => {
 		vi.mocked(searchService.search).mockResolvedValue({
 			keys: [],
 			creators: [],
-			proposals: [],
+			transactions: [],
 		});
 
 		render(
@@ -286,7 +284,7 @@ describe('GlobalSearch (#933)', () => {
 
 		expect(screen.getByText('No results found')).toBeInTheDocument();
 		expect(
-			screen.getByText(/No keys, creators, or proposals matching/i)
+			screen.getByText(/No keys, creators, or transactions matching/i)
 		).toBeInTheDocument();
 	});
 
@@ -342,5 +340,95 @@ describe('GlobalSearch (#933)', () => {
 		fireEvent.mouseDown(screen.getByTestId('outside-area'));
 
 		expect(screen.queryByTestId('global-search-dropdown')).not.toBeInTheDocument();
+	});
+
+	it('shows only top 3 results per group and "View all" link when more than 3 results', async () => {
+		const manyResults: GlobalSearchResults = {
+			keys: [
+				{ id: 'key-1', title: 'Key 1', priceStroops: 10000000, creatorId: 'creator-1' },
+				{ id: 'key-2', title: 'Key 2', priceStroops: 20000000, creatorId: 'creator-2' },
+				{ id: 'key-3', title: 'Key 3', priceStroops: 30000000, creatorId: 'creator-3' },
+				{ id: 'key-4', title: 'Key 4', priceStroops: 40000000, creatorId: 'creator-4' },
+			],
+			creators: [
+				{ id: 'creator-1', name: 'Creator 1' },
+				{ id: 'creator-2', name: 'Creator 2' },
+				{ id: 'creator-3', name: 'Creator 3' },
+				{ id: 'creator-4', name: 'Creator 4' },
+			],
+			transactions: [
+				{ id: 'tx-1', hash: 'hash1' },
+				{ id: 'tx-2', hash: 'hash2' },
+				{ id: 'tx-3', hash: 'hash3' },
+				{ id: 'tx-4', hash: 'hash4' },
+			],
+		};
+
+		vi.mocked(searchService.search).mockResolvedValue(manyResults);
+
+		render(
+			<BrowserRouter>
+				<GlobalSearch />
+			</BrowserRouter>
+		);
+
+		const input = screen.getByTestId('global-search-input');
+		fireEvent.change(input, { target: { value: 'test' } });
+
+		await act(async () => {
+			vi.advanceTimersByTime(300);
+		});
+
+		await waitFor(() => {
+			expect(screen.getByTestId('global-search-dropdown')).toBeInTheDocument();
+		});
+
+		// Should show "View all" link for keys
+		expect(screen.getByTestId('global-search-view-all-keys')).toBeInTheDocument();
+		expect(screen.getByText('View all 4 keys')).toBeInTheDocument();
+
+		// Should show "View all" link for creators
+		expect(screen.getByTestId('global-search-view-all-creators')).toBeInTheDocument();
+		expect(screen.getByText('View all 4 creators')).toBeInTheDocument();
+
+		// Should show "View all" link for transactions
+		expect(screen.getByTestId('global-search-view-all-transactions')).toBeInTheDocument();
+		expect(screen.getByText('View all 4 transactions')).toBeInTheDocument();
+	});
+
+	it('"View all" link navigates to search results page with correct filter', async () => {
+		const manyResults: GlobalSearchResults = {
+			keys: [
+				{ id: 'key-1', title: 'Key 1', priceStroops: 10000000, creatorId: 'creator-1' },
+				{ id: 'key-2', title: 'Key 2', priceStroops: 20000000, creatorId: 'creator-2' },
+				{ id: 'key-3', title: 'Key 3', priceStroops: 30000000, creatorId: 'creator-3' },
+				{ id: 'key-4', title: 'Key 4', priceStroops: 40000000, creatorId: 'creator-4' },
+			],
+			creators: [],
+			transactions: [],
+		};
+
+		vi.mocked(searchService.search).mockResolvedValue(manyResults);
+
+		render(
+			<BrowserRouter>
+				<GlobalSearch />
+			</BrowserRouter>
+		);
+
+		const input = screen.getByTestId('global-search-input');
+		fireEvent.change(input, { target: { value: 'test' } });
+
+		await act(async () => {
+			vi.advanceTimersByTime(300);
+		});
+
+		await waitFor(() => {
+			expect(screen.getByTestId('global-search-view-all-keys')).toBeInTheDocument();
+		});
+
+		fireEvent.click(screen.getByTestId('global-search-view-all-keys'));
+
+		expect(mockNavigate).toHaveBeenCalledWith('/search?q=test&type=keys');
 	});
 });

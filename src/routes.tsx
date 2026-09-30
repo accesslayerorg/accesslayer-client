@@ -26,6 +26,7 @@ import StatusPage from './pages/StatusPage';
 import HolderLeaderboardPage from './pages/HolderLeaderboardPage';
 import BundlesPage from './pages/BundlesPage';
 import BundleDetailPage from './pages/BundleDetailPage';
+import SearchResultsPage from './pages/SearchResultsPage';
 
 export const routes = [
 	{
@@ -176,6 +177,11 @@ export const routes = [
 				// Public platform status page (#1051).
 				path: '/status',
 				element: <StatusPage />,
+			},
+			{
+				// Global search results page (#1053).
+				path: '/search',
+				element: <SearchResultsPage />,
 			},
 			{
 				path: '*',

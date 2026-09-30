@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, Loader2, Key, User, FileText, X } from 'lucide-react';
+import { Search, Loader2, Key, User, Hash, X, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
@@ -7,7 +7,7 @@ import {
 	type GlobalSearchResults,
 	type SearchKeyItem,
 	type SearchCreatorItem,
-	type SearchProposalItem,
+	type SearchTransactionItem,
 } from '@/services/search.service';
 import { highlightMatchingSubstring } from '@/utils/substringHighlight.utils';
 import { cn } from '@/lib/utils';
@@ -19,23 +19,15 @@ interface GlobalSearchProps {
 	placeholder?: string;
 }
 
-const proposalStatusClasses: Record<string, string> = {
-	active: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
-	passed: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
-	rejected: 'border-red-500/30 bg-red-500/10 text-red-400',
-	executed: 'border-blue-500/30 bg-blue-500/10 text-blue-400',
-	cancelled: 'border-white/10 bg-white/[0.04] text-white/40',
-};
-
 const GlobalSearch: React.FC<GlobalSearchProps> = ({
 	className,
-	placeholder = 'Search keys, creators, proposals...',
+	placeholder = 'Search keys, creators, transactions...',
 }) => {
 	const [query, setQuery] = useState('');
 	const [results, setResults] = useState<GlobalSearchResults>({
 		keys: [],
 		creators: [],
-		proposals: [],
+		transactions: [],
 	});
 	const [isLoading, setIsLoading] = useState(false);
 	const [isOpen, setIsOpen] = useState(false);
@@ -66,7 +58,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
 	useEffect(() => {
 		const trimmed = debouncedQuery.trim();
 		if (!trimmed) {
-			setResults({ keys: [], creators: [], proposals: [] });
+			setResults({ keys: [], creators: [], transactions: [] });
 			setIsLoading(false);
 			setIsOpen(false);
 			return;
@@ -83,14 +75,14 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
 					setResults({
 						keys: Array.isArray(data?.keys) ? data.keys : [],
 						creators: Array.isArray(data?.creators) ? data.creators : [],
-						proposals: Array.isArray(data?.proposals) ? data.proposals : [],
+						transactions: Array.isArray(data?.transactions) ? data.transactions : [],
 					});
 					setIsLoading(false);
 				}
 			})
 			.catch(() => {
 				if (!cancelled) {
-					setResults({ keys: [], creators: [], proposals: [] });
+					setResults({ keys: [], creators: [], transactions: [] });
 					setIsLoading(false);
 				}
 			});
@@ -117,7 +109,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 		if (e.key === 'Escape') {
 			setQuery('');
-			setResults({ keys: [], creators: [], proposals: [] });
+			setResults({ keys: [], creators: [], transactions: [] });
 			setIsOpen(false);
 			inputRef.current?.blur();
 		}
@@ -125,7 +117,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
 
 	const handleNavigate = (path: string) => {
 		setQuery('');
-		setResults({ keys: [], creators: [], proposals: [] });
+		setResults({ keys: [], creators: [], transactions: [] });
 		setIsOpen(false);
 		navigate(path);
 	};
@@ -139,19 +131,19 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
 		handleNavigate(`/creator/${creator.id}`);
 	};
 
-	const handleSelectProposal = (proposal: SearchProposalItem) => {
-		handleNavigate(`/governance?proposal=${proposal.id}`);
+	const handleSelectTransaction = (transaction: SearchTransactionItem) => {
+		handleNavigate(`/search?q=${query}&type=transactions`);
 	};
 
 	const handleClear = () => {
 		setQuery('');
-		setResults({ keys: [], creators: [], proposals: [] });
+		setResults({ keys: [], creators: [], transactions: [] });
 		setIsOpen(false);
 		inputRef.current?.focus();
 	};
 
 	const totalResultsCount =
-		results.keys.length + results.creators.length + results.proposals.length;
+		results.keys.length + results.creators.length + results.transactions.length;
 	const hasQuery = query.trim() !== '';
 
 	return (
@@ -174,7 +166,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
 					placeholder={placeholder}
 					className="w-full rounded-xl border border-white/10 bg-white/5 py-1.5 pl-9 pr-14 text-xs text-white placeholder:text-white/40 focus:border-amber-500/50 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-amber-500/20"
 					data-testid="global-search-input"
-					aria-label="Global search keys, creators, and governance proposals"
+					aria-label="Global search keys, creators, and transactions"
 					role="combobox"
 					aria-expanded={isOpen}
 					aria-haspopup="listbox"
@@ -264,7 +256,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
 										</span>
 									</div>
 									<ul className="mt-1 space-y-0.5">
-										{results.keys.map(key => {
+										{results.keys.slice(0, 3).map(key => {
 											const priceDisplay = formatDisplayKeyPrice(
 												resolveCreatorKeyPriceStroops(key)
 											);
@@ -320,6 +312,17 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
 											);
 										})}
 									</ul>
+									{results.keys.length > 3 && (
+										<button
+											type="button"
+											onClick={() => handleNavigate(`/search?q=${encodeURIComponent(query)}&type=keys`)}
+											className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] text-amber-400/80 hover:text-amber-400 transition-colors"
+											data-testid="global-search-view-all-keys"
+										>
+											View all {results.keys.length} keys
+											<ArrowRight className="size-3" />
+										</button>
+									)}
 								</div>
 							)}
 
@@ -334,7 +337,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
 										</span>
 									</div>
 									<ul className="mt-1 space-y-0.5">
-										{results.creators.map(creator => {
+										{results.creators.slice(0, 3).map(creator => {
 											const displayName = creator.name || creator.title || 'Creator';
 											const imageUri = creator.avatarUri || creator.thumbnail;
 											return (
@@ -379,60 +382,67 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
 											);
 										})}
 									</ul>
+									{results.creators.length > 3 && (
+										<button
+											type="button"
+											onClick={() => handleNavigate(`/search?q=${encodeURIComponent(query)}&type=creators`)}
+											className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] text-amber-400/80 hover:text-amber-400 transition-colors"
+											data-testid="global-search-view-all-creators"
+										>
+											View all {results.creators.length} creators
+											<ArrowRight className="size-3" />
+										</button>
+									)}
 								</div>
 							)}
 
-							{/* Proposals group */}
-							{results.proposals.length > 0 && (
-								<div data-testid="global-search-group-proposals" className="pt-2">
+							{/* Transactions group */}
+							{results.transactions.length > 0 && (
+								<div data-testid="global-search-group-transactions" className="pt-2">
 									<div className="flex items-center gap-1.5 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-amber-400/80">
-										<FileText className="size-3" aria-hidden="true" />
-										<span>Proposals</span>
+										<Hash className="size-3" aria-hidden="true" />
+										<span>Transactions</span>
 										<span className="ml-auto text-[9px] text-white/40">
-											{results.proposals.length}
+											{results.transactions.length}
 										</span>
 									</div>
 									<ul className="mt-1 space-y-0.5">
-										{results.proposals.map(proposal => {
-											const statusStyle =
-												proposalStatusClasses[proposal.status] ||
-												'border-white/10 bg-white/5 text-white/50';
-											return (
-												<li key={proposal.id}>
-													<button
-														type="button"
-														onClick={() => handleSelectProposal(proposal)}
-														className="flex w-full items-start gap-2.5 rounded-lg px-3 py-2 text-left text-xs text-white hover:bg-white/10 transition-colors"
-														data-testid="global-search-item-proposal"
-													>
-														<div className="size-6 rounded bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 text-purple-400 mt-0.5">
-															<FileText className="size-3" />
+										{results.transactions.slice(0, 3).map(transaction => (
+											<li key={transaction.id}>
+												<button
+													type="button"
+													onClick={() => handleSelectTransaction(transaction)}
+													className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs text-white hover:bg-white/10 transition-colors"
+													data-testid="global-search-item-transaction"
+												>
+													<div className="size-6 rounded bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-400">
+														<Hash className="size-3" />
+													</div>
+													<div className="flex-1 min-w-0">
+														<div className="truncate font-medium text-white">
+															{highlightMatchingSubstring(transaction.hash, query)}
 														</div>
-														<div className="flex-1 min-w-0">
-															<div className="flex items-center justify-between gap-2">
-																<div className="truncate font-medium text-white">
-																	{highlightMatchingSubstring(proposal.title, query)}
-																</div>
-																<span
-																	className={cn(
-																		'shrink-0 rounded-full border px-1.5 py-0.2 text-[9px] font-semibold capitalize',
-																		statusStyle
-																	)}
-																>
-																	{proposal.status}
-																</span>
+														{transaction.type && (
+															<div className="text-[10px] text-white/40 truncate">
+																{transaction.type}
 															</div>
-															{proposal.description && (
-																<div className="text-[10px] text-white/40 line-clamp-1 mt-0.5">
-																	{proposal.description}
-																</div>
-															)}
-														</div>
-													</button>
-												</li>
-											);
-										})}
+														)}
+													</div>
+												</button>
+											</li>
+										))}
 									</ul>
+									{results.transactions.length > 3 && (
+										<button
+											type="button"
+											onClick={() => handleNavigate(`/search?q=${encodeURIComponent(query)}&type=transactions`)}
+											className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] text-amber-400/80 hover:text-amber-400 transition-colors"
+											data-testid="global-search-view-all-transactions"
+										>
+											View all {results.transactions.length} transactions
+											<ArrowRight className="size-3" />
+										</button>
+									)}
 								</div>
 							)}
 						</div>
@@ -443,7 +453,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
 						>
 							<p className="font-medium text-white/70">No results found</p>
 							<p className="mt-1 text-white/40">
-								No keys, creators, or proposals matching &ldquo;{debouncedQuery}&rdquo;
+								No keys, creators, or transactions matching &ldquo;{debouncedQuery}&rdquo;
 							</p>
 						</div>
 					)}
