@@ -22,6 +22,8 @@ export interface Trade {
 	pricePerKey: number;
 	/** Unix timestamp (milliseconds) of when the trade settled. */
 	timestamp: number;
+	/** Platform fee in XLM charged for this trade. */
+	fee: number;
 	/**
 	 * On-chain transaction hash for this trade, or `null` when no hash is
 	 * available. Powers the copy-hash and block-explorer actions on each
@@ -96,4 +98,25 @@ export async function fetchTradeHistoryPage(
 	cursor: string | null | undefined
 ): Promise<TradeHistoryPage> {
 	return tradeHistoryService.getTradeHistory({ wallet, cursor });
+}
+
+/**
+ * Fetches all trade history pages for a wallet by paginating through
+ * cursor-based results until there are no more pages.
+ */
+export async function fetchAllTrades(wallet: string): Promise<Trade[]> {
+	const allTrades: Trade[] = [];
+	let cursor: string | null | undefined = undefined;
+
+	do {
+		const page = await tradeHistoryService.getTradeHistory({
+			wallet,
+			cursor,
+			limit: 100,
+		});
+		allTrades.push(...page.trades);
+		cursor = page.nextCursor;
+	} while (cursor);
+
+	return allTrades;
 }

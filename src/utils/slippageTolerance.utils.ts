@@ -1,5 +1,5 @@
 /**
- * Slippage tolerance utilities for buy/sell trades (#872).
+ * Slippage tolerance utilities for buy/sell trades (#872, #877).
  *
  * Computes the on-chain `max_price` (buy) / `min_price` (sell) bounds from a
  * preview price and a selected tolerance percentage, so the contract call
@@ -32,6 +32,18 @@ export const SLIPPAGE_TOLERANCE_BOUNDS = {
 	MIN_PERCENT: 0,
 	MAX_PERCENT: 50,
 } as const;
+
+/** Tolerances above this percentage are rejected as invalid. */
+export const MAX_SLIPPAGE_TOLERANCE_PERCENT = 50;
+
+/** Tolerances below this percentage are rejected as invalid. */
+export const MIN_SLIPPAGE_TOLERANCE_PERCENT = 0;
+
+export type TradeSide = 'buy' | 'sell';
+
+// ---------------------------------------------------------------------------
+// Legacy stroops-based helpers (#872) — used by TradeDialog
+// ---------------------------------------------------------------------------
 
 /**
  * Validates a custom slippage tolerance input (percentage, e.g. 1.5 = 1.5%).
@@ -129,5 +141,70 @@ export function computeSlippageBounds(
 				? computeMinPriceStroops(previewPriceStroops, toleranceZPercent)
 				: null,
 	};
+}
+
+// ---------------------------------------------------------------------------
+// XLM-based helpers (#877) — used by the standalone selector & tests
+// ---------------------------------------------------------------------------
+
+export interface SlippagePriceBounds {
+	/**
+	 * Highest price the trade will accept paying, for a buy. `null` for
+	 * sell-side computations.
+	 */
+	maxPrice: number | null;
+	/**
+	 * Lowest price the trade will accept receiving, for a sell. `null` for
+	 * buy-side computations.
+	 */
+	minPrice: number | null;
+}
+
+/**
+ * Decimal places prices are rounded to. Guards against binary
+ * floating-point drift (e.g. `100 * 1.005` landing on 100.49999999999999
+ * instead of 100.5) — XLM prices in this app are never displayed or
+ * compared at finer than micro-XLM precision.
+ */
+const PRICE_DECIMAL_PLACES = 7;
+
+function roundPrice(value: number): number {
+	const factor = 10 ** PRICE_DECIMAL_PLACES;
+	return Math.round(value * factor) / factor;
+}
+
+/**
+ * Computes the max_price (buy) or min_price (sell) bound for a trade given
+ * the preview price and a slippage tolerance percentage.
+ *
+ * @param previewPrice   The quoted/preview price before slippage is applied.
+ * @param tolerancePercent  Slippage tolerance as a percent (e.g. 0.5 for 0.5%).
+ * @param side  Whether this is a 'buy' (computes max_price) or 'sell'
+ *              (computes min_price).
+ */
+export function computeSlippagePriceBounds(
+	previewPrice: number,
+	tolerancePercent: number,
+	side: TradeSide
+): SlippagePriceBounds {
+	const multiplier = tolerancePercent / 100;
+
+	if (side === 'buy') {
+		return {
+			maxPrice: roundPrice(previewPrice * (1 + multiplier)),
+			minPrice: null,
+		};
+	}
+
+	return {
+		maxPrice: null,
+		minPrice: roundPrice(previewPrice * (1 - multiplier)),
+	};
+}
+
+export interface SlippageToleranceValidation {
+	valid: boolean;
+	/** Human-readable validation error, or `null` when the tolerance is valid. */
+	error: string | null;
 }
 
