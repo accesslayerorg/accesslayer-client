@@ -102,6 +102,9 @@ export const queryKeys = {
 		ratings: () => ['leaderboard', 'ratings'] as const,
 	},
 	admin: {
+		treasury: () => ['admin', 'treasury', 'balance'] as const,
+		treasuryDistributions: () => ['admin', 'treasury', 'distributions'] as const,
+		treasuryFees: () => ['admin', 'treasury', 'fees'] as const,
 		oracleCallers: () => ['admin', 'oracle', 'callers'] as const,
 		multiSigPending: () => ['admin', 'multisig', 'pending'] as const,
 		multiSigHistory: () => ['admin', 'multisig', 'history'] as const,

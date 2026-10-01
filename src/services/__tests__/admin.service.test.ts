@@ -267,3 +267,59 @@ describe('adminService timelock actions (#1014)', () => {
 		);
 	});
 });
+
+describe('adminService treasury', () => {
+	beforeEach(() => {
+		mockGet.mockReset();
+		mockPost.mockReset();
+	});
+
+	it('loads the exact treasury balance and fee/distribution records', async () => {
+		const treasury = { accumulatedFeesStroops: '123456789', updatedAt: '2026-09-30T10:00:00Z' };
+		const distributions = [{
+			id: 'dist-1', epoch: 4, totalDistributedStroops: '10000000',
+			recipients: [{ address: CALLER_A, amountStroops: '10000000' }],
+			distributedAt: '2026-09-30T10:00:00Z', transactionHash: 'tx-confirmed',
+		}];
+		const feeEvents = [{
+			id: 'fee-1', creatorAddress: CALLER_A, traderAddress: CALLER_B,
+			amountStroops: '250000', collectedAt: '2026-09-30T09:00:00Z', transactionHash: 'tx-fee',
+		}];
+		mockGet
+			.mockResolvedValueOnce(fakeApiResponse(treasury))
+			.mockResolvedValueOnce(fakeApiResponse(distributions))
+			.mockResolvedValueOnce(fakeApiResponse(feeEvents));
+
+		expect(await adminService.getTreasuryBalance()).toEqual(treasury);
+		expect(await adminService.getTreasuryDistributions()).toEqual(distributions);
+		expect(await adminService.getTreasuryFeeEvents()).toEqual(feeEvents);
+		expect(mockGet.mock.calls.map(([url]) => url)).toEqual([
+			'/admin/treasury',
+			'/admin/treasury/distributions',
+			'/admin/treasury/fees',
+		]);
+	});
+
+	it('submits recipient allocations and requires a confirmed on-chain hash', async () => {
+		const input = {
+			admin: CALLER_A,
+			totalAmountStroops: '10000000',
+			recipients: [{ address: CALLER_B, amountStroops: '10000000' }],
+		};
+		const result = { epoch: 5, transactionHash: 'confirmed-hash' };
+		mockPost.mockResolvedValueOnce(fakeApiResponse(result));
+
+		expect(await adminService.distributeTreasuryFees(input)).toEqual(result);
+		expect(mockPost).toHaveBeenCalledWith('/admin/treasury/distributions', input);
+	});
+
+	it('rejects a distribution response without a transaction confirmation', async () => {
+		mockPost.mockResolvedValueOnce(fakeApiResponse({ epoch: 5 }));
+
+		await expect(adminService.distributeTreasuryFees({
+			admin: CALLER_A,
+			totalAmountStroops: '10000000',
+			recipients: [{ address: CALLER_B, amountStroops: '10000000' }],
+		})).rejects.toMatchObject({ status: 502 });
+	});
+});

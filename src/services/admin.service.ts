@@ -10,6 +10,46 @@ export interface OracleCaller {
 	addedAt?: string;
 }
 
+/** Current protocol treasury state. Monetary values are exact Stellar stroops. */
+export interface TreasuryBalance {
+	accumulatedFeesStroops: string;
+	updatedAt?: string;
+}
+
+export interface TreasuryDistributionRecipient {
+	address: string;
+	amountStroops: string;
+}
+
+export interface TreasuryDistribution {
+	id: string;
+	epoch: number;
+	totalDistributedStroops: string;
+	recipients: TreasuryDistributionRecipient[];
+	distributedAt: string;
+	transactionHash: string;
+}
+
+export interface TreasuryFeeCollectedEvent {
+	id: string;
+	creatorAddress: string;
+	traderAddress: string;
+	amountStroops: string;
+	collectedAt: string;
+	transactionHash: string;
+}
+
+export interface TreasuryDistributionInput {
+	admin: string;
+	totalAmountStroops: string;
+	recipients: TreasuryDistributionRecipient[];
+}
+
+export interface TreasuryDistributionSubmission {
+	epoch: number;
+	transactionHash: string;
+}
+
 export interface AclContract {
 	address: string;
 	functions: string[];
@@ -532,6 +572,73 @@ class AdminService extends BaseApiService {
 		// When the endpoint exists, call `this.api.get<APIResponse<UpgradeHistoryEvent[]>>('/admin/proxy/history')`
 		// and return the parsed history. Until then, return an empty array.
 		return [];
+	}
+
+	/** Read the on-chain protocol fee pool via the admin API. */
+	async getTreasuryBalance(): Promise<TreasuryBalance> {
+		try {
+			const response = await this.api.get<APIResponse<TreasuryBalance>>(
+				'/admin/treasury'
+			);
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/** Read completed treasury distributions with recipient breakdowns. */
+	async getTreasuryDistributions(): Promise<TreasuryDistribution[]> {
+		try {
+			const response = await this.api.get<
+				APIResponse<TreasuryDistribution[]>
+			>('/admin/treasury/distributions');
+			return response.data.data ?? [];
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/** Read recent on-chain FeeCollected event records. */
+	async getTreasuryFeeEvents(): Promise<TreasuryFeeCollectedEvent[]> {
+		try {
+			const response = await this.api.get<
+				APIResponse<TreasuryFeeCollectedEvent[]>
+			>('/admin/treasury/fees');
+			return response.data.data ?? [];
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/**
+	 * Request a treasury distribution. The admin API must authorize the wallet,
+	 * submit the contract transaction, and return its confirmed transaction hash.
+	 */
+	async distributeTreasuryFees(
+		input: TreasuryDistributionInput
+	): Promise<TreasuryDistributionSubmission> {
+		try {
+			const response = await this.api.post<
+				APIResponse<TreasuryDistributionSubmission>
+			>('/admin/treasury/distributions', input);
+			const result = response.data.data;
+			if (
+				!result ||
+				!Number.isSafeInteger(result.epoch) ||
+				result.epoch < 0 ||
+				typeof result.transactionHash !== 'string' ||
+				result.transactionHash.trim() === ''
+			) {
+				throw new ApiError(
+					'Treasury distribution was not confirmed by the server.',
+					502
+				);
+			}
+			return result;
+		} catch (error) {
+			if (error instanceof ApiError) throw error;
+			throw this.handleError(error);
+		}
 	}
 }
 

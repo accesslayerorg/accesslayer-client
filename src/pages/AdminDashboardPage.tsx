@@ -3,10 +3,12 @@ import TimelockQueuePanel from '@/components/admin/TimelockQueuePanel';
 import OracleAccessPanel from '@/components/admin/OracleAccessPanel';
 import AclWhitelistPanel from '@/components/admin/AclWhitelistPanel';
 import UpgradeProxyPanel from '@/components/admin/UpgradeProxyPanel';
+import TreasuryPanel from '@/components/admin/TreasuryPanel';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useStellarWallet } from '@/hooks/useStellarWallet';
 import { isAdminWallet } from '@/utils/adminAccess';
 import { Navigate } from 'react-router';
+import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 
 export default function AdminDashboardPage() {
 	useNavigationTiming('admin-dashboard');
@@ -31,11 +33,24 @@ export default function AdminDashboardPage() {
 
 				{isAdmin && (
 					<>
-						<AclWhitelistPanel />
-						<OracleAccessPanel />
-						<TimelockQueuePanel isAdmin={isAdmin} />
-						<MultiSigAdminPanel isAdmin={isAdmin} />
-						<UpgradeProxyPanel isAdmin={isAdmin} />
+						<SectionErrorBoundary sectionName="treasury">
+							<TreasuryPanel adminAddress={address ?? ''} />
+						</SectionErrorBoundary>
+						<SectionErrorBoundary sectionName="integration ACL">
+							<AclWhitelistPanel />
+						</SectionErrorBoundary>
+						<SectionErrorBoundary sectionName="oracle access">
+							<OracleAccessPanel />
+						</SectionErrorBoundary>
+						<SectionErrorBoundary sectionName="timelock queue">
+							<TimelockQueuePanel isAdmin={isAdmin} />
+						</SectionErrorBoundary>
+						<SectionErrorBoundary sectionName="multi-signature administration">
+							<MultiSigAdminPanel isAdmin={isAdmin} />
+						</SectionErrorBoundary>
+						<SectionErrorBoundary sectionName="proxy upgrades">
+							<UpgradeProxyPanel isAdmin={isAdmin} />
+						</SectionErrorBoundary>
 					</>
 				)}
 				{!isConnected && (

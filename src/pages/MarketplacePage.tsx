@@ -16,6 +16,7 @@ import SearchBar from '@/components/common/SearchBar';
 import SectionDivider from '@/components/common/SectionDivider';
 import StickyFilterBar from '@/components/common/StickyFilterBar';
 import { Button } from '@/components/ui/button';
+import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 import {
 	MARKETPLACE_SORT_OPTIONS,
 	sortCreatorsByOption,
@@ -39,7 +40,12 @@ const VALID_SORT_OPTIONS: CourseSortOption[] = [
 ];
 
 function creatorMatchesSearch(creator: Course, query: string): boolean {
-	return [creator.title, creator.name, creator.instructorId, creator.socialHandle]
+	return [
+		creator.title,
+		creator.name,
+		creator.instructorId,
+		creator.socialHandle,
+	]
 		.filter(Boolean)
 		.some(field => field!.toLowerCase().includes(query));
 }
@@ -62,7 +68,8 @@ export default function MarketplacePage() {
 
 	const initialSortParam = searchParams.get('sort');
 	const initialSort: CourseSortOption =
-		initialSortParam && VALID_SORT_OPTIONS.includes(initialSortParam as CourseSortOption)
+		initialSortParam &&
+		VALID_SORT_OPTIONS.includes(initialSortParam as CourseSortOption)
 			? (initialSortParam as CourseSortOption)
 			: 'volume_desc';
 
@@ -107,14 +114,18 @@ export default function MarketplacePage() {
 	};
 
 	const hasActiveFilters =
-		Boolean(trimmedSearch) || supplyTier !== 'all' || sortOption !== 'volume_desc';
+		Boolean(trimmedSearch) ||
+		supplyTier !== 'all' ||
+		sortOption !== 'volume_desc';
 
 	// #918 — sort and supply-tier filter are applied client-side over the
 	// pages already fetched from the server, so they work instantly and never
 	// require a fresh network fetch.
 	const visibleCreators = useMemo(() => {
 		const searched = trimmedSearch
-			? creators.filter(creator => creatorMatchesSearch(creator, trimmedSearch))
+			? creators.filter(creator =>
+					creatorMatchesSearch(creator, trimmedSearch)
+				)
 			: creators;
 		const tierFiltered = searched.filter(creator =>
 			matchesSupplyTier(creator.creatorShareSupply, supplyTier)
@@ -150,7 +161,11 @@ export default function MarketplacePage() {
 			<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,186,73,0.1),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(74,222,128,0.08),transparent_35%)]" />
 
 			<div className="relative z-10 mx-auto max-w-7xl">
-				<MarketplaceSection as="header" spacing="major" className="text-center">
+				<MarketplaceSection
+					as="header"
+					spacing="major"
+					className="text-center"
+				>
 					<img
 						className="mx-auto mb-8 size-10"
 						src="/icons/logo.svg"
@@ -187,19 +202,26 @@ export default function MarketplacePage() {
 									aria-hidden="true"
 								/>
 							)}
-							{isRefreshing ? 'Refreshing live prices…' : 'Prices refresh every 30s'}
+							{isRefreshing
+								? 'Refreshing live prices…'
+								: 'Prices refresh every 30s'}
 						</span>
 					</div>
 				</MarketplaceSection>
 
-				<main id="marketplace-listing-main" aria-label="Creator key marketplace listing">
+				<main
+					id="marketplace-listing-main"
+					aria-label="Creator key marketplace listing"
+				>
 					<SectionDivider title="Discover creators" spacing="relaxed" />
 
 					<StickyFilterBar
 						eyebrow="Marketplace filters"
 						title="Sort and filter creator keys"
 						description="Sort by 24h volume, bonding-curve price, or newest. Filter by supply milestone tier. Both apply instantly to the keys already loaded — they never trigger a page refetch."
-						resultCount={isLoadingFirstPage ? undefined : visibleCreators.length}
+						resultCount={
+							isLoadingFirstPage ? undefined : visibleCreators.length
+						}
 						onReset={handleResetFilters}
 						showReset={hasActiveFilters}
 					>
@@ -223,12 +245,17 @@ export default function MarketplacePage() {
 										data-testid="marketplace-sort-select"
 										value={sortOption}
 										onChange={e =>
-											handleSortChange(e.target.value as CourseSortOption)
+											handleSortChange(
+												e.target.value as CourseSortOption
+											)
 										}
 										className="h-9 w-full rounded-lg border border-white/15 bg-slate-950/80 px-3 text-sm text-white outline-none focus:border-amber-400/60"
 									>
 										{MARKETPLACE_SORT_OPTIONS.map(option => (
-											<option key={option.value} value={option.value}>
+											<option
+												key={option.value}
+												value={option.value}
+											>
 												{option.label}
 											</option>
 										))}
@@ -246,7 +273,9 @@ export default function MarketplacePage() {
 										data-testid="marketplace-supply-tier-select"
 										value={supplyTier}
 										onChange={e =>
-											setSupplyTier(e.target.value as SupplyTierFilter)
+											setSupplyTier(
+												e.target.value as SupplyTierFilter
+											)
 										}
 										className="h-9 w-full rounded-lg border border-white/15 bg-slate-950/80 px-3 text-sm text-white outline-none focus:border-amber-400/60"
 									>
@@ -264,94 +293,105 @@ export default function MarketplacePage() {
 
 					<SectionDivider title="Marketplace results" spacing="default" />
 
-					<MarketplaceSection
-						id="marketplace-listing"
-						tabIndex={-1}
-						spacing="none"
-						aria-busy={isRefreshing || undefined}
+					<SectionErrorBoundary
+						sectionName="marketplace results"
+						minHeight={320}
 					>
-						{isLoadingFirstPage ? (
-							<div data-testid="marketplace-loading-skeleton">
-								<CreatorCardGridSkeleton count={PAGE_LIMIT} />
-							</div>
-						) : error && creators.length === 0 ? (
-							<EmptyState
-								title="Couldn't load the marketplace"
-								description="We couldn't load creator keys right now. Check your connection and try again."
-								cta={{ label: 'Try again', onClick: handleRetry }}
-								className="mx-auto w-full max-w-xl"
-							/>
-						) : visibleCreators.length === 0 ? (
-							<div className="flex flex-col items-center gap-6 py-12">
-								{creators.length === 0 ? (
-									<ClearedFiltersEmptyState
-										onBrowseAll={handleResetFilters}
-										className="w-full max-w-xl"
-									/>
-								) : (
-									<EmptyState
-										image="/images/no-results.png"
-										title="No creators found"
-										description={`No creator keys match your current filters. Try a different name, handle, or supply tier.`}
-										onReset={handleResetFilters}
-										className="w-full max-w-xl"
-									/>
-								)}
-							</div>
-						) : (
-							<div className="space-y-4">
-								<div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-									{visibleCreators.map(creator => (
-										<CreatorCard
-											key={creator.id}
-											creator={creator}
-											isPriceRefreshing={isRefreshing}
-										/>
-									))}
+						<MarketplaceSection
+							id="marketplace-listing"
+							tabIndex={-1}
+							spacing="none"
+							aria-busy={isRefreshing || undefined}
+						>
+							{isLoadingFirstPage ? (
+								<div data-testid="marketplace-loading-skeleton">
+									<CreatorCardGridSkeleton count={PAGE_LIMIT} />
 								</div>
-
-								{isFetchingNextPage && (
-									<div data-testid="marketplace-next-page-skeleton" className="mt-6">
-										<CreatorCardGridSkeleton count={3} />
-									</div>
-								)}
-
-								{hasMore && (
-									<div
-										ref={sentinelRef}
-										data-testid="marketplace-sentinel"
-										aria-hidden="true"
-										className="h-px w-full"
-									/>
-								)}
-
-								<div
-									role="status"
-									aria-live="polite"
-									className="mt-8 flex flex-col items-center gap-3"
-								>
-									{hasMore && !isFetchingNextPage ? (
-										<Button
-											type="button"
-											variant="outline"
-											onClick={() => void fetchNextPage()}
-											className="rounded-full border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-white"
-										>
-											<ChevronDown className="size-4" aria-hidden="true" />
-											Load more creators
-										</Button>
+							) : error && creators.length === 0 ? (
+								<EmptyState
+									title="Couldn't load the marketplace"
+									description="We couldn't load creator keys right now. Check your connection and try again."
+									cta={{ label: 'Try again', onClick: handleRetry }}
+									className="mx-auto w-full max-w-xl"
+								/>
+							) : visibleCreators.length === 0 ? (
+								<div className="flex flex-col items-center gap-6 py-12">
+									{creators.length === 0 ? (
+										<ClearedFiltersEmptyState
+											onBrowseAll={handleResetFilters}
+											className="w-full max-w-xl"
+										/>
 									) : (
-										!isFetchingNextPage &&
-										visibleCreators.length > 0 && (
-											<p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-												{`You've reached the end — ${formatNumber(visibleCreators.length)} creator key${visibleCreators.length === 1 ? '' : 's'} on the marketplace.`}
-											</p>
-										)
+										<EmptyState
+											image="/images/no-results.png"
+											title="No creators found"
+											description={`No creator keys match your current filters. Try a different name, handle, or supply tier.`}
+											onReset={handleResetFilters}
+											className="w-full max-w-xl"
+										/>
 									)}
 								</div>
-							</div>
-						)}
-					</MarketplaceSection>
+							) : (
+								<div className="space-y-4">
+									<div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+										{visibleCreators.map(creator => (
+											<CreatorCard
+												key={creator.id}
+												creator={creator}
+												isPriceRefreshing={isRefreshing}
+											/>
+										))}
+									</div>
+
+									{isFetchingNextPage && (
+										<div
+											data-testid="marketplace-next-page-skeleton"
+											className="mt-6"
+										>
+											<CreatorCardGridSkeleton count={3} />
+										</div>
+									)}
+
+									{hasMore && (
+										<div
+											ref={sentinelRef}
+											data-testid="marketplace-sentinel"
+											aria-hidden="true"
+											className="h-px w-full"
+										/>
+									)}
+
+									<div
+										role="status"
+										aria-live="polite"
+										className="mt-8 flex flex-col items-center gap-3"
+									>
+										{hasMore && !isFetchingNextPage ? (
+											<Button
+												type="button"
+												variant="outline"
+												onClick={() => void fetchNextPage()}
+												className="rounded-full border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-white"
+											>
+												<ChevronDown
+													className="size-4"
+													aria-hidden="true"
+												/>
+												Load more creators
+											</Button>
+										) : (
+											!isFetchingNextPage &&
+											visibleCreators.length > 0 && (
+												<p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+													{`You've reached the end — ${formatNumber(visibleCreators.length)} creator key${visibleCreators.length === 1 ? '' : 's'} on the marketplace.`}
+												</p>
+											)
+										)}
+									</div>
+								</div>
+							)}
+						</MarketplaceSection>
+					</SectionErrorBoundary>
 				</main>
 			</div>
 		</div>

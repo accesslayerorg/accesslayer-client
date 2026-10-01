@@ -1,7 +1,4 @@
-import {
-	useMemo,
-	useState,
-} from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { useAccount } from 'wagmi';
 import {
@@ -23,8 +20,10 @@ import AtomicSwapHistory from '@/components/common/AtomicSwapHistory';
 import ProtocolRevenueClaim from '@/components/common/ProtocolRevenueClaim';
 import ProtocolRevenueDistributionTable from '@/components/common/ProtocolRevenueDistributionTable';
 import WalletActivityFeed from '@/components/common/WalletActivityFeed';
+import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 import TruncatedAddress from '@/components/common/TruncatedAddress';
 import { ProfileTabPillGroup } from '@/components/common/ProfileTabPill';
+import ActivePriceAlertsList from '@/components/common/ActivePriceAlertsList';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useWalletHoldings } from '@/hooks/useWallet';
@@ -116,7 +115,8 @@ export default function ProfilePage() {
 	);
 	const [isShareCopied, setIsShareCopied] = useState(false);
 
-	const profileWallet = publicWallet?.trim() || connectedAddress || DEMO_WALLET;
+	const profileWallet =
+		publicWallet?.trim() || connectedAddress || DEMO_WALLET;
 	const isOwnProfile = !publicWallet
 		? true
 		: isOwnWallet(connectedAddress ?? null, publicWallet);
@@ -169,8 +169,9 @@ export default function ProfilePage() {
 	const heldKeyNames = useMemo(() => {
 		const map: Record<string, string | undefined> = {};
 		for (const holding of holdingsQuery.data ?? []) {
-			map[holding.creatorId] =
-				creators.find(c => c.id === holding.creatorId)?.title;
+			map[holding.creatorId] = creators.find(
+				c => c.id === holding.creatorId
+			)?.title;
 		}
 		return map;
 	}, [holdingsQuery.data, creators]);
@@ -314,15 +315,17 @@ export default function ProfilePage() {
 							</p>
 						</div>
 
-						<HeldKeysGrid
-							positions={heldPositions}
-							creators={creators}
-							isOwnProfile={isOwnProfile}
-							isLoading={
-								holdingsQuery.isLoading || areCreatorsLoading
-							}
-							emptyBrowseHref="/creators"
-						/>
+						<SectionErrorBoundary sectionName="held keys">
+							<HeldKeysGrid
+								positions={heldPositions}
+								creators={creators}
+								isOwnProfile={isOwnProfile}
+								isLoading={
+									holdingsQuery.isLoading || areCreatorsLoading
+								}
+								emptyBrowseHref="/creators"
+							/>
+						</SectionErrorBoundary>
 
 						{isOwnProfile && (
 							<div className="max-w-md">
@@ -357,15 +360,18 @@ export default function ProfilePage() {
 								Vesting Schedules
 							</h2>
 							<p className="mt-1 text-sm text-white/60">
-								Reserved key allocations unlocking on a cliff-then-linear
-								schedule. Claim vested amounts once the cliff passes.
+								Reserved key allocations unlocking on a
+								cliff-then-linear schedule. Claim vested amounts once
+								the cliff passes.
 							</p>
 						</div>
-						<VestingPositionsSection
-							wallet={profileWallet}
-							keyIds={heldKeyIds}
-							keyNames={heldKeyNames}
-						/>
+						<SectionErrorBoundary sectionName="vesting positions">
+							<VestingPositionsSection
+								wallet={profileWallet}
+								keyIds={heldKeyIds}
+								keyNames={heldKeyNames}
+							/>
+						</SectionErrorBoundary>
 					</div>
 				)}
 
@@ -383,20 +389,22 @@ export default function ProfilePage() {
 								Staking
 							</h2>
 							<p className="mt-1 text-sm text-white/60">
-								Keys currently locked in the staking contract with
-								their unlock timers and accrued rewards.
+								Keys currently locked in the staking contract with their
+								unlock timers and accrued rewards.
 							</p>
 						</div>
 
-					{!isOwnProfile ? (
-						<StakingPositionsList
-							walletAddress={profileWallet}
-							isOwnProfile={false}
-							positions={stakingPositions}
-							isLoading={stakingQuery.isLoading}
-							isError={stakingQuery.isError}
-						/>
-					) : (
+						{!isOwnProfile ? (
+							<SectionErrorBoundary sectionName="staking positions">
+								<StakingPositionsList
+									walletAddress={profileWallet}
+									isOwnProfile={false}
+									positions={stakingPositions}
+									isLoading={stakingQuery.isLoading}
+									isError={stakingQuery.isError}
+								/>
+							</SectionErrorBoundary>
+						) : (
 							<>
 								{/* Sub-tab navigation within Staking section */}
 								<div
@@ -438,12 +446,14 @@ export default function ProfilePage() {
 										aria-labelledby="staking-subtab-positions"
 										data-testid="staking-subpanel-positions"
 									>
-									<StakingPositionsList
-										walletAddress={profileWallet}
-										positions={stakingPositions}
-										isLoading={stakingQuery.isLoading}
-										isError={stakingQuery.isError}
-									/>
+										<SectionErrorBoundary sectionName="staking positions">
+											<StakingPositionsList
+												walletAddress={profileWallet}
+												positions={stakingPositions}
+												isLoading={stakingQuery.isLoading}
+												isError={stakingQuery.isError}
+											/>
+										</SectionErrorBoundary>
 									</div>
 								) : activeStakingSubTab === 'claim' ? (
 									<div
@@ -452,9 +462,11 @@ export default function ProfilePage() {
 										aria-labelledby="staking-subtab-claim"
 										data-testid="staking-subpanel-claim"
 									>
-										<ProtocolRevenueClaim
-											walletAddress={profileWallet}
-										/>
+										<SectionErrorBoundary sectionName="revenue claims">
+											<ProtocolRevenueClaim
+												walletAddress={profileWallet}
+											/>
+										</SectionErrorBoundary>
 									</div>
 								) : (
 									<div
@@ -463,9 +475,11 @@ export default function ProfilePage() {
 										aria-labelledby="staking-subtab-protocol-revenue"
 										data-testid="staking-subpanel-protocol-revenue"
 									>
-										<ProtocolRevenueDistributionTable
-											walletAddress={profileWallet}
-										/>
+										<SectionErrorBoundary sectionName="protocol revenue history">
+											<ProtocolRevenueDistributionTable
+												walletAddress={profileWallet}
+											/>
+										</SectionErrorBoundary>
 									</div>
 								)}
 							</>
@@ -481,9 +495,11 @@ export default function ProfilePage() {
 						aria-labelledby="profile-tab-liquidity"
 						data-testid="portfolio-liquidity-panel"
 					>
-						<LiquidityPositionsSection
-							publicWallet={publicWallet?.trim() || undefined}
-						/>
+						<SectionErrorBoundary sectionName="liquidity positions">
+							<LiquidityPositionsSection
+								publicWallet={publicWallet?.trim() || undefined}
+							/>
+						</SectionErrorBoundary>
 					</div>
 				)}
 
@@ -503,13 +519,16 @@ export default function ProfilePage() {
 								<p className="mt-1 text-sm text-white/65">
 									A full audit trail of past buys and sells
 								</p>
-							</div>						<TradeHistoryTable
-							walletAddress={profileWallet}
-							infiniteScroll
-						/>
-					</div>
-				</section>
-			)}
+							</div>{' '}
+							<SectionErrorBoundary sectionName="trade history">
+								<TradeHistoryTable
+									walletAddress={profileWallet}
+									infiniteScroll
+								/>
+							</SectionErrorBoundary>
+						</div>
+					</section>
+				)}
 
 				{/* Atomic swap history panel (#979) */}
 				{activeTab === 'atomic-swaps' && (
@@ -529,9 +548,26 @@ export default function ProfilePage() {
 								</p>
 							</div>
 
-							<AtomicSwapHistory walletAddress={profileWallet} />
+							<SectionErrorBoundary sectionName="atomic swap history">
+								<AtomicSwapHistory walletAddress={profileWallet} />
+							</SectionErrorBoundary>
 						</div>
 					</section>
+				)}
+
+				{/* Price alerts panel (#1057) */}
+				{activeTab === 'price-alerts' && (
+				        <section
+				                id="profile-panel-price-alerts"
+				                role="tabpanel"
+				                aria-labelledby="profile-tab-price-alerts"
+				                data-testid="portfolio-price-alerts-panel"
+				        >
+				                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 md:p-8">
+				                        <h2 className="font-grotesque text-2xl font-bold text-white mb-6">Price Alerts</h2>
+				                        <ActivePriceAlertsList userId={profileWallet} />
+				                </div>
+				        </section>
 				)}
 
 				{/* Activity feed panel */}
@@ -548,11 +584,14 @@ export default function ProfilePage() {
 									Wallet Activity
 								</h2>
 								<p className="mt-1 text-sm text-white/65">
-									All trading, staking, and governance events for your wallet
+									All trading, staking, and governance events for your
+									wallet
 								</p>
 							</div>
 
-							<WalletActivityFeed address={profileWallet} />
+							<SectionErrorBoundary sectionName="wallet activity">
+								<WalletActivityFeed address={profileWallet} />
+							</SectionErrorBoundary>
 						</div>
 					</section>
 				)}

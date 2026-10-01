@@ -25,7 +25,6 @@ export default function TrendingCreatorCard({ creator }: Props) {
 					className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
 					style={{ imageRendering: 'pixelated' }}
 				/>
-
 			</div>
 
 			{/* Body */}
@@ -35,7 +34,7 @@ export default function TrendingCreatorCard({ creator }: Props) {
 					{/* Deprecation badge (issue #996): a deprecated key must be
 					    marked in marketplace listings so buyers see its status
 					    before they click through. */}
-					{creator.deprecation && (
+					{creator.deprecated && (
 						<span
 							data-testid="deprecation-badge"
 							className="ml-2 inline-flex items-center rounded-full border border-amber-500/40 bg-amber-100 px-2 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-amber-700"
@@ -59,7 +58,11 @@ export default function TrendingCreatorCard({ creator }: Props) {
 				{/* Stats row */}
 				<div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
 					<div className="flex items-center gap-1.5">
-						<img src="/icons/key.svg" alt="" className="size-3.5 opacity-40 invert" />
+						<img
+							src="/icons/key.svg"
+							alt=""
+							className="size-3.5 opacity-40 invert"
+						/>
 						<span className="font-jakarta text-sm font-semibold text-gray-900">
 							{priceXlm} XLM
 						</span>
@@ -83,6 +86,6 @@ export default function TrendingCreatorCard({ creator }: Props) {
 					<ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
 				</Link>
 			</div>
-		</article> 
+		</article>
 	);
 }

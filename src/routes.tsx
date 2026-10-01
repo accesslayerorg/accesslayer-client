@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import RootLayout from './components/common/RootLayout';
 import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -27,6 +28,13 @@ import HolderLeaderboardPage from './pages/HolderLeaderboardPage';
 import BundlesPage from './pages/BundlesPage';
 import BundleDetailPage from './pages/BundleDetailPage';
 import SearchResultsPage from './pages/SearchResultsPage';
+import RouteErrorBoundary from './components/common/RouteErrorBoundary';
+
+function withRouteErrorBoundary(element: ReactNode, routeName: string) {
+	return (
+		<RouteErrorBoundary routeName={routeName}>{element}</RouteErrorBoundary>
+	);
+}
 
 export const routes = [
 	{
@@ -35,15 +43,15 @@ export const routes = [
 		children: [
 			{
 				path: '/',
-				element: <HomePage />,
+				element: withRouteErrorBoundary(<HomePage />, 'Marketplace'),
 			},
 			{
 				path: '/creators',
-				element: <HomePage />,
+				element: withRouteErrorBoundary(<HomePage />, 'Marketplace'),
 			},
 			{
 				path: '/marketplace',
-				element: <MarketplacePage />,
+				element: withRouteErrorBoundary(<MarketplacePage />, 'Marketplace'),
 			},
 			{
 				path: '/bundles',
@@ -67,11 +75,24 @@ export const routes = [
 			},
 			{
 				path: '/creator/:id',
-				element: <CreatorDetailPage />,
+				element: withRouteErrorBoundary(
+					<CreatorDetailPage />,
+					'Key detail'
+				),
 			},
 			{
 				path: '/creators/:id',
-				element: <CreatorDetailPage />,
+				element: withRouteErrorBoundary(
+					<CreatorDetailPage />,
+					'Key detail'
+				),
+			},
+			{
+				path: '/keys/:id',
+				element: withRouteErrorBoundary(
+					<CreatorDetailPage />,
+					'Key detail'
+				),
 			},
 			{
 				path: '/creator/:id/leaderboard',
@@ -123,11 +144,11 @@ export const routes = [
 			},
 			{
 				path: '/profile',
-				element: <ProfilePage />,
+				element: withRouteErrorBoundary(<ProfilePage />, 'Portfolio'),
 			},
 			{
 				path: '/profile/:wallet',
-				element: <ProfilePage />,
+				element: withRouteErrorBoundary(<ProfilePage />, 'Portfolio'),
 			},
 			{
 				path: '/following',
@@ -167,7 +188,10 @@ export const routes = [
 			},
 			{
 				path: '/admin/dashboard',
-				element: <AdminDashboardPage />,
+				element: withRouteErrorBoundary(
+					<AdminDashboardPage />,
+					'Admin dashboard'
+				),
 			},
 			{
 				path: '/revenue-distribution',
