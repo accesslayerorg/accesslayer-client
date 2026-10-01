@@ -40,6 +40,7 @@ import CreatorProfileErrorState from '@/components/common/CreatorProfileErrorSta
 import TransactionRetryNotice from '@/components/common/TransactionRetryNotice';
 import EmptyTransactionTimelineState from '@/components/common/EmptyTransactionTimelineState';
 import TradeDialog, { type TradeSide } from '@/components/common/TradeDialog';
+import BatchTransferModal from '@/components/common/BatchTransferModal';
 import type { FeeBreakdown } from '@/utils/pricePreview.utils';
 import type { SlippageBounds } from '@/utils/slippageTolerance.utils';
 import TradePanelErrorBoundary from '@/components/common/TradePanelErrorBoundary';
@@ -293,6 +294,8 @@ function LandingPage() {
 	const [tradeSide, setTradeSide] = useState<TradeSide>('buy');
 	const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
 	const [tradeSubmitting, setTradeSubmitting] = useState(false);
+	const [batchTransferDialogOpen, setBatchTransferDialogOpen] = useState(false);
+	const [selectedTransferCreatorId, setSelectedTransferCreatorId] = useState<string | null>(null);
 	const [sharePortfolioOpen, setSharePortfolioOpen] = useState(false);
 	const [selfFreezeDialog, setSelfFreezeDialog] = useState<{
 		action: SelfFreezeAction;
@@ -909,6 +912,12 @@ function LandingPage() {
 		setTradeDialogOpen(true);
 	}, []);
 
+	const openTransferDialog = useCallback((creatorId: string) => {
+		setSelectedTransferCreatorId(creatorId);
+		setBatchTransferDialogOpen(true);
+	}, []);
+
+	// Callback to confirm trade via keyboard shortcut (reads current state)
 	const handleConfirmTradeViaShortcut = useCallback(() => {
 		const confirmButton = document.querySelector(
 			'[data-testid="trade-dialog-confirm"]'
@@ -1703,6 +1712,38 @@ function LandingPage() {
 												creator={creator}
 												onBuy={() => openTradeDialog('buy')}
 												onSell={() => openTradeDialog('sell')}
+												onTransfer={() => openTransferDialog(position.creatorId)}
+												onReinvest={async creatorId => {
+													const pos = heldKeyPositions.find(
+														p => p.creatorId === creatorId
+													);
+													const keyPriceStroops =
+														resolveCreatorKeyPriceStroops(
+															pos ?? {}
+														);
+													const estimate = estimateReinvest(
+														pos?.unclaimedDividend ?? 0,
+														keyPriceStroops
+													);
+													if (!estimate) {
+														showToast.error(
+															'Reinvest estimate unavailable. Please refresh prices and try again.'
+														);
+														return;
+													}
+													await reinvestMutation.mutateAsync({
+														keyId: creatorId,
+														amount: pos?.unclaimedDividend ?? 0,
+														keys: estimate.wholeKeys,
+													});
+													showToast.success(
+														`Reinvested ${formatDisplayKeyPrice(estimate.unclaimedStroops)} — received ${formatNumber(estimate.wholeKeys)} keys`
+													);
+												}}
+												onRedeem={async creatorId => {
+													const pos = heldKeyPositions.find(
+														p => p.creatorId === creatorId
+													);
 														onReinvest={async creatorId => {
 															const heldPosition = heldKeyPositions.find(
 																item => item.creatorId === creatorId
@@ -2168,6 +2209,24 @@ function LandingPage() {
 					onConfirm={handleConfirmTrade}
 				/>
 			</TradePanelErrorBoundary>
+			{selectedTransferCreatorId && (
+				<BatchTransferModal
+					open={batchTransferDialogOpen}
+					onOpenChange={setBatchTransferDialogOpen}
+					creatorId={selectedTransferCreatorId}
+					creatorName={
+						creators.find(c => c.id === selectedTransferCreatorId)?.title ??
+						'Creator'
+					}
+					availableBalance={
+						cachedHoldings.find(
+							(h) => h.creatorId === selectedTransferCreatorId
+						)?.quantity ?? 0
+					}
+					walletAddress={activeWalletAddress ?? ''}
+				/>
+			)}
+			<TradeShortcutHints open={tradeDialogOpen} side={tradeSide} />
 			{(tradeSide === 'buy' || tradeSide === 'sell') && (
 				<TradeShortcutHints open={tradeDialogOpen} side={tradeSide} />
 			)}
