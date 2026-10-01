@@ -62,6 +62,7 @@ const MarketplaceSidebar: React.FC<MarketplaceSidebarProps> = ({ className }) =>
           <nav className="flex-1 space-y-2">
             <Link to="/" className={navLinkClass(false)}>Home</Link>
             <Link to="/creators" className={navLinkClass(false)}>Creators</Link>
+            <Link to="/discovery" className={navLinkClass(false)}>Discover</Link>
             <Link to="/activity" className={navLinkClass(false)}>Activity</Link>
             <Link
               to="/watchlist"

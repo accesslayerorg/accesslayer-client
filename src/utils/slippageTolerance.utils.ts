@@ -16,8 +16,8 @@
  * accept receiving up to `tolerance%` less.
  */
 
-/** Preset tolerance options shown in the slippage selector, in percent. */
-export const SLIPPAGE_TOLERANCE_PRESETS = [0.5, 1, 5] as const;
+/** Preset tolerance options shown in the slippage selector, in percent (#919). */
+export const SLIPPAGE_TOLERANCE_PRESETS = [0.5, 1, 2] as const;
 
 /** Tolerances above this percentage are rejected as invalid. */
 export const MAX_SLIPPAGE_TOLERANCE_PERCENT = 50;

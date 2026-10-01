@@ -128,6 +128,9 @@ describe('TradeDialog – sell payout display (#692)', () => {
 		) as HTMLInputElement;
 
 		fireEvent.change(input, { target: { value: '5' } });
+		if (screen.queryByTestId('price-impact-override-checkbox')) {
+			fireEvent.click(screen.getByTestId('price-impact-override-checkbox'));
+		}
 		fireEvent.click(screen.getByTestId('trade-dialog-confirm'));
 
 		// #872 added a third `slippage` argument (the computed min/max price
