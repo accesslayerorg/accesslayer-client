@@ -1,12 +1,11 @@
 import { AlertTriangle } from 'lucide-react';
+import { useGlobalPause } from '@/hooks/useGlobalPause';
 
-interface GlobalPauseBannerProps {
-	pauseActivatedAt?: string;
-}
+const GlobalPauseBanner: React.FC = () => {
+	const { paused, pauseActivatedAt } = useGlobalPause();
 
-const GlobalPauseBanner: React.FC<GlobalPauseBannerProps> = ({
-	pauseActivatedAt,
-}) => {
+	if (!paused) return null;
+
 	const formatted = pauseActivatedAt
 		? new Date(pauseActivatedAt).toLocaleString()
 		: null;
@@ -20,7 +19,7 @@ const GlobalPauseBanner: React.FC<GlobalPauseBannerProps> = ({
 			<AlertTriangle className="size-5 shrink-0" aria-hidden="true" />
 			<span>
 				Trading is temporarily suspended across all keys. We are working to
-				resolve this.
+				resolve this. Check our <a href="https://status.accesslayer.org" className="underline underline-offset-2">status page</a> for updates.
 				{formatted && (
 					<span className="ml-2 text-xs font-normal text-white/80">
 						Paused since {formatted}

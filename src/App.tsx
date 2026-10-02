@@ -6,6 +6,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router';
 import AppErrorBoundary from './components/common/AppErrorBoundary';
 import ContractPausedBanner from './components/common/ContractPausedBanner';
 import OfflineBanner from './components/common/OfflineBanner';
+import GlobalPauseBanner from './components/common/GlobalPauseBanner';
 import SessionExpiryWatcher from './components/common/SessionExpiryWatcher';
 import { useContractPausedStore } from './hooks/useContractPausedStore';
 import { routes } from './routes';
@@ -43,6 +44,7 @@ function App() {
 			{/* Full-width banner when contract emergency pause is active (#953) */}
 			<ContractPausedBanner />
 			<OfflineBanner />
+			<GlobalPauseBanner />
 			<Toaster
 				toastOptions={{
 					ariaProps: {
