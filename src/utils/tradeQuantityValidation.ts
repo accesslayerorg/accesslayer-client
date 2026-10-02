@@ -7,7 +7,8 @@ export type TradeValidationError =
 	| 'empty'
 	| 'invalid-number'
 	| 'zero-or-negative'
-	| 'insufficient-balance';
+	| 'insufficient-balance'
+	| 'exceeds-holding-cap';
 
 export interface ValidationResult {
 	valid: boolean;
@@ -21,12 +22,14 @@ export interface ValidationResult {
  * @param input - Raw user input (may contain whitespace, non-numeric chars, etc.)
  * @param side - Trade type: 'buy' or 'sell'
  * @param availableHoldings - Current holdings (used for sell validation)
+ * @param holdingCap - Optional maximum holding cap per wallet (#1015)
  * @returns ValidationResult with error code and message if invalid
  */
 export function validateTradeQuantity(
 	input: string,
 	side: 'buy' | 'sell',
-	availableHoldings: number
+	availableHoldings: number,
+	holdingCap?: number | null
 ): ValidationResult {
 	const normalized = input.trim();
 
@@ -69,6 +72,24 @@ export function validateTradeQuantity(
 		};
 	}
 
+	// Buy: check holding cap (#1015)
+	if (side === 'buy' && holdingCap != null && Number.isFinite(holdingCap) && holdingCap > 0) {
+		if (availableHoldings >= holdingCap) {
+			return {
+				valid: false,
+				error: 'exceeds-holding-cap',
+				message: `Holding cap reached for this key (${Math.floor(holdingCap)} keys max).`,
+			};
+		}
+		if (parsed + availableHoldings > holdingCap) {
+			return {
+				valid: false,
+				error: 'exceeds-holding-cap',
+				message: `Purchase would exceed the holding cap of ${Math.floor(holdingCap)} keys (you hold ${Math.floor(availableHoldings)}).`,
+			};
+		}
+	}
+
 	// Valid
 	return { valid: true };
 }
@@ -79,7 +100,8 @@ export function validateTradeQuantity(
  */
 export function formatValidationError(
 	error: TradeValidationError,
-	availableHoldings?: number
+	availableHoldings?: number,
+	holdingCap?: number
 ): string {
 	switch (error) {
 		case 'empty':
@@ -90,6 +112,10 @@ export function formatValidationError(
 			return 'Amount must be greater than zero.';
 		case 'insufficient-balance':
 			return `You can't sell more than your holdings (${availableHoldings ? Math.floor(availableHoldings) : 0} keys).`;
+		case 'exceeds-holding-cap':
+			return holdingCap != null
+				? `Purchase would exceed holding cap of ${Math.floor(holdingCap)} keys.`
+				: 'Purchase would exceed the holding cap for this key.';
 		default:
 			return 'Invalid amount.';
 	}

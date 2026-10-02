@@ -165,12 +165,8 @@ export const queryKeys = {
 import type { GetYourParams } from '@/services/your.service';
 
 export const queryKeys = {
-	creators: {
-		/* ... */
-	},
-	wallet: {
-		/* ... */
-	},
+	creators: {/* ... */},
+	wallet: {/* ... */},
 	yourEntity: {
 		all: ['yourEntity'] as const,
 		list: (params?: GetYourParams) =>

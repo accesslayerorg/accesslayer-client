@@ -4,6 +4,8 @@ export interface Signer {
 	type: SignerType;
 	sign(xdr: string): Promise<string>;
 	getPublicKey(): Promise<string>;
+	/** Optional payload signing for wallet-native off-chain approvals. */
+	signMessage?(message: string): Promise<string>;
 }
 
 export type SigningErrorType =

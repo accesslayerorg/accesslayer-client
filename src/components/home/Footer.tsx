@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 
 const links = [
 	{ label: 'Marketplace', href: '/marketplace', external: false },
+	{ label: 'Status', href: '/status', external: false },
 	{ label: 'About', href: '/about', external: false },
 	{ label: 'GitHub', href: 'https://github.com/accesslayerorg', external: true },
 	{ label: 'Telegram', href: 'https://t.me/c/accesslayerorg/', external: true },

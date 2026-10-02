@@ -1,4 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
@@ -8,6 +9,7 @@ import { courseService, type Course } from '@/services/course.service';
 vi.mock('@/services/course.service', () => ({
 	courseService: {
 		getCourses: vi.fn(),
+		getKeyConfig: vi.fn(),
 	},
 }));
 
@@ -16,6 +18,12 @@ vi.mock('@/hooks/useNetworkMismatch', () => ({
 		isMismatch: false,
 		expectedChainName: 'Stellar Testnet',
 	}),
+}));
+
+// LandingPage calls wagmi's useAccount directly; without a WagmiProvider in
+// tests the hook throws, so stub the minimal surface the page consumes.
+vi.mock('wagmi', () => ({
+	useAccount: () => ({ address: undefined, isConnected: false }),
 }));
 
 vi.mock('@/components/common/StellarConnectionQualityBadge', async () => {
@@ -99,10 +107,19 @@ const mockMatchMedia = () => {
 };
 
 const renderLandingPage = async () => {
+	// LandingPage consumes React Query hooks (e.g. useKeyConfig), so it must
+	// be mounted under a QueryClientProvider. Fresh client per render keeps
+	// cache state from leaking between tests.
+	const queryClient = new QueryClient({
+		defaultOptions: { queries: { retry: false } },
+	});
+
 	render(
-		<MemoryRouter>
-			<LandingPage />
-		</MemoryRouter>
+		<QueryClientProvider client={queryClient}>
+			<MemoryRouter>
+				<LandingPage />
+			</MemoryRouter>
+		</QueryClientProvider>
 	);
 	await waitFor(() => expect(mockGetCourses).toHaveBeenCalled());
 };

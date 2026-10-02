@@ -15,7 +15,13 @@
  */
 import type { ComponentProps, ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('wagmi', () => ({
@@ -28,6 +34,14 @@ import showToast from '@/utils/toast.util';
 
 vi.mock('@/services/course.service', () => ({
 	courseService: { getCourses: vi.fn() },
+}));
+
+// No backend serves wallet holdings in tests, so stub the service the real
+// `useWalletHoldings` query calls (#921). Server-side holdings resolve empty
+// and the demo quantities still come from LandingPage's local demo state, so
+// the post-trade assertions below keep exercising the optimistic cache path.
+vi.mock('@/services/wallet.service', () => ({
+	fetchWalletHoldings: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@/utils/toast.util', () => ({
@@ -173,7 +187,9 @@ const installStorageStub = (property: 'localStorage' | 'sessionStorage') => {
 const renderLandingPage = () =>
 	render(
 		<QueryClientProvider
-			client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+			client={
+				new QueryClient({ defaultOptions: { queries: { retry: false } } })
+			}
 		>
 			<MemoryRouter>
 				<LandingPage />
@@ -212,6 +228,12 @@ describe('LandingPage buy flow end-to-end (#642)', () => {
 		// Enter quantity 1
 		const amountInput = await screen.findByTestId('trade-dialog-amount');
 		fireEvent.change(amountInput, { target: { value: '1' } });
+		if (screen.queryByTestId('price-impact-override-checkbox')) {
+			fireEvent.click(screen.getByTestId('price-impact-override-checkbox'));
+		}
+		await waitFor(() =>
+			expect(screen.getByTestId('trade-dialog-confirm')).toBeEnabled()
+		);
 
 		// Submit and wait through the simulated on-chain confirmation
 		fireEvent.click(screen.getByTestId('trade-dialog-confirm'));
@@ -227,7 +249,8 @@ describe('LandingPage buy flow end-to-end (#642)', () => {
 
 		// Holdings cache reflects the additional key (3 -> 4)
 		await waitFor(
-			() => expect(screen.getByText('4 keys · 0.05 XLM')).toBeInTheDocument(),
+			() =>
+				expect(screen.getByText('4 keys · 0.05 XLM')).toBeInTheDocument(),
 			{ timeout: 5000 }
 		);
 		expect(screen.queryByText('3 keys · 0.05 XLM')).toBeNull();
@@ -248,6 +271,12 @@ describe('LandingPage buy flow end-to-end (#642)', () => {
 		fireEvent.change(await screen.findByTestId('trade-dialog-amount'), {
 			target: { value: '1' },
 		});
+		if (screen.queryByTestId('price-impact-override-checkbox')) {
+			fireEvent.click(screen.getByTestId('price-impact-override-checkbox'));
+		}
+		await waitFor(() =>
+			expect(screen.getByTestId('trade-dialog-confirm')).toBeEnabled()
+		);
 		fireEvent.click(screen.getByTestId('trade-dialog-confirm'));
 
 		expect(mockShowToast.loading).toHaveBeenCalledWith(
@@ -269,7 +298,10 @@ describe('LandingPage buy flow end-to-end (#642)', () => {
 		fireEvent.change(amountInput, { target: { value: '1' } });
 
 		const confirmButton = screen.getByTestId('trade-dialog-confirm');
-		expect(confirmButton).not.toBeDisabled();
+		if (screen.queryByTestId('price-impact-override-checkbox')) {
+			fireEvent.click(screen.getByTestId('price-impact-override-checkbox'));
+		}
+		await waitFor(() => expect(confirmButton).toBeEnabled());
 	});
 
 	it('displays a pending indicator during the buy and clears it after confirmation (#672)', async () => {
@@ -285,6 +317,10 @@ describe('LandingPage buy flow end-to-end (#642)', () => {
 		const amountInput = await screen.findByTestId('trade-dialog-amount');
 		fireEvent.change(amountInput, { target: { value: '1' } });
 		const confirmButton = screen.getByTestId('trade-dialog-confirm');
+		if (screen.queryByTestId('price-impact-override-checkbox')) {
+			fireEvent.click(screen.getByTestId('price-impact-override-checkbox'));
+		}
+		await waitFor(() => expect(confirmButton).toBeEnabled());
 
 		// Submit. AC #1: a pending indicator is visible on the dialog the
 		// instant the click handler sets `tradeSubmitting = true`. The
@@ -300,7 +336,10 @@ describe('LandingPage buy flow end-to-end (#642)', () => {
 		// `.toBeVisible()` honors `visibility: hidden` (and `aria-hidden`),
 		// so it correctly reflects what the user perceives.
 		expect(screen.getByText('Submitting…')).toBeVisible();
-		expect(screen.getByText('Confirm buy')).toHaveAttribute('aria-hidden', 'true');
+		expect(screen.getByText('Confirm buy')).toHaveAttribute(
+			'aria-hidden',
+			'true'
+		);
 		// The loading toast announces the in-flight submission right away.
 		expect(mockShowToast.loading).toHaveBeenCalledWith(
 			'Submitting buy for 1 key...'
@@ -353,7 +392,8 @@ describe('LandingPage buy flow end-to-end (#642)', () => {
 
 		// Holdings cache reflects the additional key.
 		await waitFor(
-			() => expect(screen.getByText('4 keys · 0.05 XLM')).toBeInTheDocument(),
+			() =>
+				expect(screen.getByText('4 keys · 0.05 XLM')).toBeInTheDocument(),
 			{ timeout: 5000 }
 		);
 		expect(screen.queryByText('3 keys · 0.05 XLM')).toBeNull();
@@ -372,6 +412,9 @@ describe('LandingPage buy flow end-to-end (#642)', () => {
 		expect(reopenedConfirm).not.toBeDisabled();
 		expect(reopenedConfirm).not.toHaveAttribute('aria-busy');
 		expect(screen.getByText('Confirm buy')).toBeVisible();
-		expect(screen.getByText('Submitting…')).toHaveAttribute('aria-hidden', 'true');
+		expect(screen.getByText('Submitting…')).toHaveAttribute(
+			'aria-hidden',
+			'true'
+		);
 	}, 15000);
 });

@@ -12,6 +12,7 @@ export interface TradePanelErrorBoundaryProps {
 export interface TradePanelErrorBoundaryState {
 	hasError: boolean;
 	error: Error | null;
+	resetKey: number;
 }
 
 export class TradePanelErrorBoundary extends Component<
@@ -21,21 +22,28 @@ export class TradePanelErrorBoundary extends Component<
 	public state: TradePanelErrorBoundaryState = {
 		hasError: false,
 		error: null,
+		resetKey: 0,
 	};
 
-	public static getDerivedStateFromError(error: Error): TradePanelErrorBoundaryState {
+	public static getDerivedStateFromError(
+		error: Error
+	): Partial<TradePanelErrorBoundaryState> {
 		return { hasError: true, error };
 	}
 
 	public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
 		markErrorAsCaught(error);
-		if (process.env.NODE_ENV !== 'test') {
+		if (import.meta.env.DEV) {
 			console.error('Uncaught error inside TradePanel:', error, errorInfo);
 		}
 	}
 
 	public handleRetry = () => {
-		this.setState({ hasError: false, error: null });
+		this.setState(state => ({
+			hasError: false,
+			error: null,
+			resetKey: state.resetKey + 1,
+		}));
 		if (this.props.onReset) {
 			this.props.onReset();
 		}
@@ -51,12 +59,17 @@ export class TradePanelErrorBoundary extends Component<
 					className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-red-500/30 bg-slate-950/90 p-6 text-center text-white backdrop-blur-md"
 				>
 					<div className="flex flex-col items-center gap-2">
-						<AlertCircle className="size-8 text-red-400" aria-hidden="true" />
+						<AlertCircle
+							className="size-8 text-red-400"
+							aria-hidden="true"
+						/>
 						<p className="font-grotesque text-base font-bold text-white">
-							{this.props.fallbackMessage ?? 'Something went wrong inside the trade panel'}
+							{this.props.fallbackMessage ??
+								'Something went wrong inside the trade panel'}
 						</p>
 						<p className="max-w-xs font-jakarta text-xs text-white/60">
-							The rest of the marketplace is still running. Click retry below to attempt remounting the trade panel.
+							The rest of the marketplace is still running. Click retry
+							below to attempt remounting the trade panel.
 						</p>
 					</div>
 					<Button
@@ -70,11 +83,23 @@ export class TradePanelErrorBoundary extends Component<
 						<RefreshCw className="size-3.5" aria-hidden="true" />
 						Retry
 					</Button>
+					<a
+						href="https://github.com/accesslayerorg/accesslayer-client/issues"
+						target="_blank"
+						rel="noreferrer"
+						className="text-xs font-semibold text-white/70 underline underline-offset-4 hover:text-white"
+					>
+						Contact support
+					</a>
 				</div>
 			);
 		}
 
-		return this.props.children;
+		return (
+			<div key={this.state.resetKey} className="contents">
+				{this.props.children}
+			</div>
+		);
 	}
 }
 

@@ -10,6 +10,7 @@ describe('queryKeys – key shapes', () => {
 		expect(Array.isArray(queryKeys.creators.list())).toBe(true);
 		expect(Array.isArray(queryKeys.creators.detail('abc'))).toBe(true);
 		expect(Array.isArray(queryKeys.creators.holders('abc'))).toBe(true);
+		expect(Array.isArray(queryKeys.creators.keyConfig('abc'))).toBe(true);
 		expect(Array.isArray(queryKeys.wallet.holdings('0xabc'))).toBe(true);
 		expect(Array.isArray(queryKeys.wallet.activity('0xabc'))).toBe(true);
 	});
@@ -26,6 +27,12 @@ describe('queryKeys – shared prefixes for cache invalidation', () => {
 
 	it('creators.holders shares the creators prefix with creators.all', () => {
 		expect(queryKeys.creators.holders('x')[0]).toBe(
+			queryKeys.creators.all[0]
+		);
+	});
+
+	it('creators.keyConfig shares the creators prefix with creators.all', () => {
+		expect(queryKeys.creators.keyConfig('x')[0]).toBe(
 			queryKeys.creators.all[0]
 		);
 	});
@@ -58,6 +65,12 @@ describe('queryKeys – parameter embedding', () => {
 
 	it('creators.holders embeds creatorId at index 1', () => {
 		expect(queryKeys.creators.holders('creator-456')[1]).toBe('creator-456');
+	});
+
+	it('creators.keyConfig embeds creatorId at index 1', () => {
+		expect(queryKeys.creators.keyConfig('creator-789')[1]).toBe(
+			'creator-789'
+		);
 	});
 
 	it('wallet.holdings embeds address at index 1', () => {
