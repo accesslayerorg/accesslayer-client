@@ -1,88 +1,56 @@
-﻿import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/queryKeys';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-        alertService,
-        type AlertDirection,
-        type PriceAlert,
-} from '@/services/alert.service';
+	priceAlertService,
+	type CreatePriceAlertInput,
+	type PriceAlert,
+} from '@/services/priceAlert.service';
 
-export interface CreatePriceAlertInput {
-        keyId: string;
-        keyName?: string;
-        targetPrice: number;
-        direction: AlertDirection;
+export const PRICE_ALERTS_QUERY_KEY = ['price-alerts'] as const;
+
+export function usePriceAlerts(enabled = true) {
+	return useQuery({
+		queryKey: PRICE_ALERTS_QUERY_KEY,
+		queryFn: () => priceAlertService.getPriceAlerts(),
+		enabled,
+		refetchInterval: 60_000,
+	});
 }
 
-export interface UpdatePriceAlertInput {
-        alertId: string;
-        targetPrice: number;
-        direction: AlertDirection;
+export function useCreatePriceAlert() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (input: CreatePriceAlertInput) => priceAlertService.createPriceAlert(input),
+		onSuccess: alert => {
+			queryClient.setQueryData<PriceAlert[]>(PRICE_ALERTS_QUERY_KEY, previous => {
+				const existing = previous ?? [];
+				return [alert, ...existing.filter(item => item.id !== alert.id)];
+			});
+		},
+		onSettled: () => {
+			void queryClient.invalidateQueries({ queryKey: PRICE_ALERTS_QUERY_KEY });
+		},
+	});
 }
 
-/**
- * Fetch the current user's active price alerts. Polls every 60s so a
- * backend-triggered alert disappears from the list promptly.
- */
-export function useActivePriceAlerts(userId: string | undefined) {
-        return useQuery({
-                queryKey: queryKeys.alerts.active(userId ?? ''),
-                queryFn: () => alertService.getActiveAlerts(userId as string),
-                enabled: Boolean(userId),
-                refetchInterval: 60000,
-        });
-}
-
-/** Create a price alert and refresh the active list. */
-export function useCreatePriceAlert(userId: string | undefined) {
-        const queryClient = useQueryClient();
-        return useMutation({
-                mutationFn: (input: CreatePriceAlertInput) => alertService.createAlert(input),
-                onSuccess: () => {
-                        void queryClient.invalidateQueries({
-                                queryKey: queryKeys.alerts.active(userId ?? ''),
-                        });
-                },
-        });
-}
-
-/** Update an existing alert's target price and/or direction. */
-export function useUpdatePriceAlert(userId: string | undefined) {
-        const queryClient = useQueryClient();
-        return useMutation({
-                mutationFn: ({ alertId, targetPrice, direction }: UpdatePriceAlertInput) =>
-                        alertService.updateAlert(alertId, { targetPrice, direction }),
-                onSuccess: () => {
-                        void queryClient.invalidateQueries({
-                                queryKey: queryKeys.alerts.active(userId ?? ''),
-                        });
-                },
-        });
-}
-
-/** Delete an alert. Optimistically removes it from the active list. */
-export function useDeletePriceAlert(userId: string | undefined) {
-        const queryClient = useQueryClient();
-        const queryKey = queryKeys.alerts.active(userId ?? '');
-        return useMutation({
-                mutationFn: (alertId: string) => alertService.deleteAlert(alertId),
-                onMutate: async (alertId: string) => {
-                        await queryClient.cancelQueries({ queryKey });
-                        const previous = queryClient.getQueryData<PriceAlert[]>(queryKey);
-                        if (previous) {
-                                queryClient.setQueryData<PriceAlert[]>(
-                                        queryKey,
-                                        previous.filter(alert => alert.id !== alertId)
-                                );
-                        }
-                        return { previous };
-                },
-                onError: (_err, _id, context) => {
-                        if (context?.previous) {
-                                queryClient.setQueryData(queryKey, context.previous);
-                        }
-                },
-                onSettled: () => {
-                        void queryClient.invalidateQueries({ queryKey });
-                },
-        });
+export function useDeletePriceAlert() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (alertId: string) => priceAlertService.deletePriceAlert(alertId),
+		onMutate: async alertId => {
+			await queryClient.cancelQueries({ queryKey: PRICE_ALERTS_QUERY_KEY });
+			const previous = queryClient.getQueryData<PriceAlert[]>(PRICE_ALERTS_QUERY_KEY);
+			queryClient.setQueryData<PriceAlert[]>(PRICE_ALERTS_QUERY_KEY, (alerts = []) =>
+				alerts.filter(alert => alert.id !== alertId)
+			);
+			return { previous };
+		},
+		onError: (_error, _alertId, context) => {
+			if (context?.previous) {
+				queryClient.setQueryData(PRICE_ALERTS_QUERY_KEY, context.previous);
+			}
+		},
+		onSettled: () => {
+			void queryClient.invalidateQueries({ queryKey: PRICE_ALERTS_QUERY_KEY });
+		},
+	});
 }
