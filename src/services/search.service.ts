@@ -1,7 +1,6 @@
 // src/services/search.service.ts
 import { BaseApiService, type APIResponse } from './api.service';
 import { cacheManager } from '@/utils/cache.utils';
-import type { ProposalStatus } from '@/types/governance';
 
 export interface SearchKeyItem {
 	id: string;
@@ -28,34 +27,33 @@ export interface SearchCreatorItem {
 	category?: string;
 }
 
-export interface SearchProposalItem {
+export interface SearchTransactionItem {
 	id: string;
-	title: string;
-	description?: string;
-	status: ProposalStatus;
-	creatorId?: string;
-	quorumBps?: number;
-	startDate?: string;
-	endDate?: string;
+	hash: string;
+	type?: string;
+	timestamp?: string;
+	from?: string;
+	to?: string;
+	amount?: string;
 }
 
 export interface GlobalSearchResults {
 	keys: SearchKeyItem[];
 	creators: SearchCreatorItem[];
-	proposals: SearchProposalItem[];
+	transactions: SearchTransactionItem[];
 }
 
 const SEARCH_CACHE_TTL = 15_000; // 15 seconds
 
 class SearchService extends BaseApiService {
 	/**
-	 * Search across keys, creators, and governance proposals.
+	 * Search across keys, creators, and transactions.
 	 * GET /search?q=:query
 	 */
 	async search(query: string): Promise<GlobalSearchResults> {
 		const trimmed = query.trim();
 		if (!trimmed) {
-			return { keys: [], creators: [], proposals: [] };
+			return { keys: [], creators: [], transactions: [] };
 		}
 
 		const cacheKey = `global_search_${trimmed.toLowerCase()}`;
@@ -70,20 +68,20 @@ class SearchService extends BaseApiService {
 			});
 
 			const raw = response.data.data;
-			let result: GlobalSearchResults = { keys: [], creators: [], proposals: [] };
+			let result: GlobalSearchResults = { keys: [], creators: [], transactions: [] };
 
 			if (raw && typeof raw === 'object') {
 				if ('results' in raw && raw.results && typeof raw.results === 'object') {
 					result = {
 						keys: Array.isArray(raw.results.keys) ? raw.results.keys : [],
 						creators: Array.isArray(raw.results.creators) ? raw.results.creators : [],
-						proposals: Array.isArray(raw.results.proposals) ? raw.results.proposals : [],
+						transactions: Array.isArray(raw.results.transactions) ? raw.results.transactions : [],
 					};
-				} else if ('keys' in raw || 'creators' in raw || 'proposals' in raw) {
+				} else if ('keys' in raw || 'creators' in raw || 'transactions' in raw) {
 					result = {
 						keys: Array.isArray((raw as GlobalSearchResults).keys) ? (raw as GlobalSearchResults).keys : [],
 						creators: Array.isArray((raw as GlobalSearchResults).creators) ? (raw as GlobalSearchResults).creators : [],
-						proposals: Array.isArray((raw as GlobalSearchResults).proposals) ? (raw as GlobalSearchResults).proposals : [],
+						transactions: Array.isArray((raw as GlobalSearchResults).transactions) ? (raw as GlobalSearchResults).transactions : [],
 					};
 				}
 			}
