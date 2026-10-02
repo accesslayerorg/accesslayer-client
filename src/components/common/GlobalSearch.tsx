@@ -7,7 +7,6 @@ import {
 	type GlobalSearchResults,
 	type SearchKeyItem,
 	type SearchCreatorItem,
-	type SearchTransactionItem,
 } from '@/services/search.service';
 import { highlightMatchingSubstring } from '@/utils/substringHighlight.utils';
 import { cn } from '@/lib/utils';
@@ -131,7 +130,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
 		handleNavigate(`/creator/${creator.id}`);
 	};
 
-	const handleSelectTransaction = (transaction: SearchTransactionItem) => {
+	const handleSelectTransaction = () => {
 		handleNavigate(`/search?q=${query}&type=transactions`);
 	};
 
@@ -411,7 +410,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
 											<li key={transaction.id}>
 												<button
 													type="button"
-													onClick={() => handleSelectTransaction(transaction)}
+													onClick={() => handleSelectTransaction()}
 													className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs text-white hover:bg-white/10 transition-colors"
 													data-testid="global-search-item-transaction"
 												>

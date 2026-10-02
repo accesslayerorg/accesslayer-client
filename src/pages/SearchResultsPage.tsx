@@ -5,9 +5,6 @@ import { useDebounce } from '@/hooks/useDebounce';
 import {
 	searchService,
 	type GlobalSearchResults,
-	type SearchKeyItem,
-	type SearchCreatorItem,
-	type SearchTransactionItem,
 } from '@/services/search.service';
 import { highlightMatchingSubstring } from '@/utils/substringHighlight.utils';
 import { cn } from '@/lib/utils';
