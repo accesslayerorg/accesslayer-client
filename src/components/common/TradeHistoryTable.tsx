@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/utils/time.utils';
 import type { Trade } from '@/services/tradeHistory.service';
 import { useTradeHistory } from '@/hooks/useWallet';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { buildStellarExpertTxUrl } from '@/constants/stellar';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
 import { env } from '@/utils/env.utils';
@@ -16,6 +17,13 @@ const COPY_TOOLTIP_RESET_MS = 2_000;
 interface TradeHistoryTableProps {
 	/** Connected wallet address used as the query key. */
 	walletAddress: string;
+	/**
+	 * When true, the next page loads automatically from an intersection
+	 * sentinel at the bottom of the list (cursor-based infinite scroll #921).
+	 * The Load More button remains as a manual fallback for environments
+	 * without IntersectionObserver.
+	 */
+	infiniteScroll?: boolean;
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -244,6 +252,7 @@ function TradeRow({ trade }: { trade: Trade }) {
  */
 const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
 	walletAddress,
+	infiniteScroll = false,
 }) => {
 	const {
 		data,
@@ -253,6 +262,14 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
 		isLoading,
 		isError,
 	} = useTradeHistory(walletAddress);
+
+	const sentinelRef = useInfiniteScroll<HTMLDivElement>({
+		enabled: infiniteScroll && !isFetchingNextPage && !isLoading,
+		hasMore: Boolean(hasNextPage),
+		onLoadMore: () => {
+			void fetchNextPage();
+		},
+	});
 
 	// Flatten pages and deduplicate by id (defensive against overlapping cursors)
 	const trades = useMemo(() => {
@@ -329,6 +346,16 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
 					<TradeRow key={trade.id} trade={trade} />
 				))}
 			</div>
+
+			{/* Infinite-scroll sentinel ───── auto-loads the next page (#921) */}
+			{infiniteScroll && hasNextPage && (
+				<div
+					ref={sentinelRef}
+					data-testid="trade-history-load-more-sentinel"
+					aria-hidden="true"
+					className="h-px"
+				/>
+			)}
 
 			{/* Load More ─────────────────────────────────────────────────────── */}
 			{hasNextPage && (

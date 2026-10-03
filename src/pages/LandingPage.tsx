@@ -45,6 +45,15 @@ import type { SlippageBounds } from '@/utils/slippageTolerance.utils';
 import TradePanelErrorBoundary from '@/components/common/TradePanelErrorBoundary';
 import NetworkMismatchBanner from '@/components/common/NetworkMismatchBanner';
 import StellarConnectionQualityBadge from '@/components/common/StellarConnectionQualityBadge';
+import AdminPauseControl from '@/components/common/AdminPauseControl';
+import {
+	useContractPausedStore,
+	selectIsPaused,
+} from '@/hooks/useContractPausedStore';
+import KeyAnalyticsPanel from '@/components/common/KeyAnalyticsPanel';
+import TimelockAdminPanel from '@/components/common/TimelockAdminPanel';
+import MultiKeyStakingVault from '@/components/common/MultiKeyStakingVault';
+import { CreatorKeyDashboard } from '@/components/common/CreatorKeyDashboard';
 import { useAccount } from 'wagmi';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
 import {
@@ -55,6 +64,7 @@ import {
 	useRedeemDeprecatedKeyMutation,
 	type SelfFreezeAction,
 } from '@/hooks/useWallet';
+import toast from 'react-hot-toast';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 import { formatCompactNumber, formatNumber } from '@/utils/numberFormat.utils';
@@ -100,6 +110,13 @@ import ClearedFiltersEmptyState from '@/components/common/ClearedFiltersEmptySta
 import CreatorListPagination from '@/components/common/CreatorListPagination';
 import CreatorListGroupSeparator from '@/components/common/CreatorListGroupSeparator';
 import MarketplaceSidebar from '@/components/common/MarketplaceSidebar';
+import BatchBuyBasket from '@/components/common/BatchBuyBasket';
+import BatchBuyConfirmDialog from '@/components/common/BatchBuyConfirmDialog';
+import BatchBuyBasketTrigger from '@/components/common/BatchBuyBasketTrigger';
+import {
+	useBatchBuyStore,
+	selectItemCount,
+} from '@/hooks/useBatchBuyStore';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
 import SelfFreezeDialog from '@/components/common/SelfFreezeDialog';
 import SharePortfolioModal from '@/components/common/SharePortfolioModal';
@@ -283,6 +300,55 @@ function LandingPage() {
 	} | null>(null);
 	const [stellarAddressCopied, setStellarAddressCopied] = useState(false);
 	const prefersReducedMotion = usePrefersReducedMotion();
+
+	// ── Batch buy basket (#954) ───────────────────────────────────────────
+	const [batchBasketOpen, setBatchBasketOpen] = useState(false);
+	const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
+	const [batchSubmitting, setBatchSubmitting] = useState(false);
+	const batchItemCount = useBatchBuyStore(selectItemCount);
+	const clearBasket = useBatchBuyStore(s => s.clearBasket);
+	const batchItems = useBatchBuyStore(s => s.items);
+
+	const handleBatchCheckout = () => {
+		setBatchBasketOpen(false);
+		setBatchConfirmOpen(true);
+	};
+
+	const handleBatchConfirm = async () => {
+		setBatchSubmitting(true);
+		try {
+			showToast.loading(
+				`Submitting batch purchase of ${batchItemCount} creator key${batchItemCount !== 1 ? 's' : ''}...`
+			);
+			// Simulated batch transaction — mirrors the existing stub pattern.
+			await new Promise<void>(resolve =>
+				window.setTimeout(resolve, 1800)
+			);
+			toast.remove();
+			const fakeTxHash =
+				'0xbatch' +
+				Math.random().toString(16).slice(2, 14).padEnd(12, '0') +
+				'deadbeef';
+			const creatorNames = batchItems
+				.map(i => i.creatorName)
+				.slice(0, 3)
+				.join(', ');
+			const extraCount = batchItems.length > 3 ? ` +${batchItems.length - 3} more` : '';
+			showToast.transactionSuccess(
+				'Batch purchase confirmed!',
+				`Purchased keys for ${creatorNames}${extraCount}.`,
+				fakeTxHash,
+				`https://stellar.expert/explorer/testnet/tx/${fakeTxHash}`
+			);
+			clearBasket();
+			setBatchConfirmOpen(false);
+		} catch {
+			toast.remove();
+			showToast.error('Batch purchase failed. Please try again.');
+		} finally {
+			setBatchSubmitting(false);
+		}
+	};
 	const [sortOption, setSortOption] = useState<CourseSortOption>(() => {
 		const sort = searchParams.get('sort') as CourseSortOption | null;
 		if (
@@ -836,6 +902,8 @@ function LandingPage() {
 		displayedPortfolioValue
 	);
 
+	const isPaused = useContractPausedStore(selectIsPaused);
+
 	const openTradeDialog = useCallback((side: TradeSide) => {
 		setTradeSide(side);
 		setTradeDialogOpen(true);
@@ -859,6 +927,17 @@ function LandingPage() {
 		if (!selfFreezeDialog) return;
 		const { action, position } = selfFreezeDialog;
 		try {
+			const actionVerb =
+				tradeSide === 'buy'
+					? 'buy'
+					: tradeSide === 'sell'
+						? 'sell'
+						: tradeSide === 'stake'
+							? 'stake'
+							: 'transfer';
+			showToast.loading(
+				`Submitting ${actionVerb} for ${amount} key${amount === 1 ? '' : 's'}...`
+			);
 			await selfFreezeMutation.mutateAsync({
 				creatorId: position.creatorId,
 				amount,
@@ -1047,8 +1126,9 @@ function LandingPage() {
 							<Button>Buy Access</Button>
 						</UnavailableAction>
 					</div>
-					<div className="mt-4 flex justify-center">
+					<div className="mt-4 flex flex-col items-center gap-3">
 						<StellarConnectionQualityBadge />
+						<AdminPauseControl className="w-full max-w-md mx-auto" />
 					</div>
 				</MarketplaceSection>
 
@@ -1841,6 +1921,10 @@ function LandingPage() {
 													)} shares available`
 										}
 									/>
+									<KeyAnalyticsPanel
+										creatorId={featuredCreator?.id ?? 'alex-rivers'}
+										className="mt-2"
+									/>
 									{/* Issue 557: Stellar address with copy button */}
 									<div className="flex items-center justify-between gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
 										<div className="min-w-0 flex-1">
@@ -1891,8 +1975,9 @@ function LandingPage() {
 												className="rounded-xl"
 												onClick={() => openTradeDialog('buy')}
 												disabled={
-													isNetworkMismatch || tradeSubmitting
+													isNetworkMismatch || tradeSubmitting || isPaused
 												}
+												title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 											>
 												Buy
 											</Button>
@@ -1901,10 +1986,33 @@ function LandingPage() {
 												variant="outline"
 												onClick={() => openTradeDialog('sell')}
 												disabled={
-													isNetworkMismatch || tradeSubmitting
+													isNetworkMismatch || tradeSubmitting || isPaused
 												}
+												title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 											>
 												Sell
+											</Button>
+											<Button
+												className="rounded-xl"
+												variant="outline"
+												onClick={() => openTradeDialog('stake')}
+												disabled={
+													isNetworkMismatch || tradeSubmitting || isPaused
+												}
+												title={isPaused ? 'Trading suspended: contract is paused' : undefined}
+											>
+												Stake
+											</Button>
+											<Button
+												className="rounded-xl"
+												variant="outline"
+												onClick={() => openTradeDialog('transfer')}
+												disabled={
+													isNetworkMismatch || tradeSubmitting || isPaused
+												}
+												title={isPaused ? 'Trading suspended: contract is paused' : undefined}
+											>
+												Transfer
 											</Button>
 										</div>
 										{tradeSubmitting && (
@@ -1920,6 +2028,18 @@ function LandingPage() {
 							</MarketplaceSection>
 						)}
 					</SectionErrorBoundary>
+
+					<SectionDivider title="Staking Vault & Governance" spacing="relaxed" />
+
+					<MultiKeyStakingVault className="mt-6" />
+
+					<TimelockAdminPanel className="mt-6" />
+
+					<SectionDivider title="Creator Key Management" spacing="relaxed" />
+
+					<div className="mt-6">
+						<CreatorKeyDashboard />
+					</div>
 
 					<div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/85 backdrop-blur-md md:hidden">
 						<div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-6 py-3">
@@ -1970,7 +2090,8 @@ function LandingPage() {
 											className="rounded-xl"
 											size="sm"
 											onClick={() => openTradeDialog('buy')}
-											disabled={isNetworkMismatch || tradeSubmitting}
+											disabled={isNetworkMismatch || tradeSubmitting || isPaused}
+											title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 										>
 											Buy
 										</Button>
@@ -1979,9 +2100,30 @@ function LandingPage() {
 											size="sm"
 											variant="outline"
 											onClick={() => openTradeDialog('sell')}
-											disabled={isNetworkMismatch || tradeSubmitting}
+											disabled={isNetworkMismatch || tradeSubmitting || isPaused}
+											title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 										>
 											Sell
+										</Button>
+										<Button
+											className="rounded-xl"
+											size="sm"
+											variant="outline"
+											onClick={() => openTradeDialog('stake')}
+											disabled={isNetworkMismatch || tradeSubmitting || isPaused}
+											title={isPaused ? 'Trading suspended: contract is paused' : undefined}
+										>
+											Stake
+										</Button>
+										<Button
+											className="rounded-xl"
+											size="sm"
+											variant="outline"
+											onClick={() => openTradeDialog('transfer')}
+											disabled={isNetworkMismatch || tradeSubmitting || isPaused}
+											title={isPaused ? 'Trading suspended: contract is paused' : undefined}
+										>
+											Transfer
 										</Button>
 									</div>
 									{tradeSubmitting && (
@@ -2026,7 +2168,9 @@ function LandingPage() {
 					onConfirm={handleConfirmTrade}
 				/>
 			</TradePanelErrorBoundary>
-			<TradeShortcutHints open={tradeDialogOpen} side={tradeSide} />
+			{(tradeSide === 'buy' || tradeSide === 'sell') && (
+				<TradeShortcutHints open={tradeDialogOpen} side={tradeSide} />
+			)}
 			<KeyboardShortcutsHelp
 				open={shortcutsHelpOpen}
 				onOpenChange={setShortcutsHelpOpen}
@@ -2039,6 +2183,25 @@ function LandingPage() {
 				heldPositions={heldKeyPositions}
 				creators={holdingsCreators.length > 0 ? holdingsCreators : creators}
 			/>
+
+			{/* Batch buy basket (#954) */}
+			<BatchBuyBasketTrigger
+				onClick={() => setBatchBasketOpen(true)}
+			/>
+			<BatchBuyBasket
+				open={batchBasketOpen}
+				onClose={() => setBatchBasketOpen(false)}
+				onCheckout={handleBatchCheckout}
+			/>
+			<BatchBuyConfirmDialog
+				open={batchConfirmOpen}
+				onOpenChange={open => {
+					if (!batchSubmitting) setBatchConfirmOpen(open);
+				}}
+				onConfirm={handleBatchConfirm}
+				isSubmitting={batchSubmitting}
+			/>
+
 			<ScrollToTop />
 			<IdleRefreshPrompt
 				visible={isIdlePromptVisible}

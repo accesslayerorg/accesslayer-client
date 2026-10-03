@@ -7,6 +7,7 @@
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router';
 import MarketplacePage from '@/pages/MarketplacePage';
 import { useInfiniteCreatorMarketplace } from '@/hooks/useInfiniteCreatorMarketplace';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
@@ -96,8 +97,12 @@ const baseHookReturn = {
 	error: null as Error | null,
 };
 
-function renderPage() {
-	return render(<MarketplacePage />);
+function renderPage(initialEntries = ['/marketplace']) {
+	return render(
+		<MemoryRouter initialEntries={initialEntries}>
+			<MarketplacePage />
+		</MemoryRouter>
+	);
 }
 
 function articleLabels(): string[] {
@@ -307,5 +312,28 @@ describe('MarketplacePage (#918)', () => {
 		expect(scrollOptions.hasMore).toBe(true);
 		scrollOptions.onLoadMore();
 		expect(fetchNextPage).toHaveBeenCalledTimes(2);
+	});
+
+	it('pre-applies sort filter from URL search params (e.g. ?sort=newest)', () => {
+		const newestCreator = makeCreator('newest', {
+			createdAt: '2026-06-01T00:00:00Z',
+		});
+		const olderCreator = makeCreator('older', {
+			createdAt: '2026-01-01T00:00:00Z',
+		});
+
+		mockUseInfiniteCreatorMarketplace.mockReturnValue({
+			...baseHookReturn,
+			creators: [olderCreator, newestCreator],
+		});
+
+		renderPage(['/marketplace?sort=newest']);
+
+		const select = screen.getByTestId('marketplace-sort-select') as HTMLSelectElement;
+		expect(select.value).toBe('newest');
+		expect(articleLabels()).toEqual([
+			'Creator Creator newest',
+			'Creator Creator older',
+		]);
 	});
 });

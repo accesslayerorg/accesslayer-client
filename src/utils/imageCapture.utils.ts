@@ -22,7 +22,7 @@ export async function captureElementToPng(
 	const dataUrl = canvas.toDataURL('image/png');
 
 	const blob = await new Promise<Blob>((resolve, reject) => {
-		canvas.toBlob(b => {
+		canvas.toBlob((b: Blob | null) => {
 			if (b) {
 				resolve(b);
 			} else {

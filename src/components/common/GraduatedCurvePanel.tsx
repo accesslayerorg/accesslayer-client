@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { BondingCurveChart, type BondingCurveDataPoint } from '@/components/common/BondingCurveChart';
+import BondingCurveChart, { type BondingCurveDataPoint } from '@/components/common/BondingCurveChart';
 import { Button } from '@/components/ui/button';
 
 const MAX_MILESTONES = 5;

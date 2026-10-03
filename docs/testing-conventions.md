@@ -94,7 +94,15 @@ tests mock at that seam:
 vi.mock('@/hooks/useWallet', () => ({
 	// "connected wallet holding 2 keys of creator-a"
 	useWalletHoldings: () => ({
-		data: [{ creatorId: 'creator-a', quantity: 2, priceStroops: 500_000, price: 0.05, pending: false }],
+		data: [
+			{
+				creatorId: 'creator-a',
+				quantity: 2,
+				priceStroops: 500_000,
+				price: 0.05,
+				pending: false,
+			},
+		],
 	}),
 	useTradeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
@@ -139,14 +147,14 @@ The standard shell for a page-level integration test:
 There is deliberately no shared custom `render` yet; each suite composes its
 own providers. The reusable pieces to copy today:
 
-| Utility | Where | What it does |
-|---|---|---|
-| `src/test/setup.ts` | global setup | registers `@testing-library/jest-dom` matchers |
-| `mockMatchMedia()` | page test files | stubs `window.matchMedia` for jsdom |
-| `installStorageStub()` | `LandingPage.sellFlow.integration.test.tsx` | Node-version-proof localStorage/sessionStorage stub |
-| `makeQueryClient()` | `LandingPage.sort.integration.test.tsx` | fresh `QueryClient` with retries disabled |
-| `confirmTrade(side, amount)` | `LandingPage.holdingsSellBalanceUpdate.integration.test.tsx` | drives the trade dialog: open → amount → confirm |
-| `dispatchRejection(reason)` | `unhandledRejectionLogger.test.ts` | synthesizes an unhandled-rejection event |
+| Utility                      | Where                                                        | What it does                                        |
+| ---------------------------- | ------------------------------------------------------------ | --------------------------------------------------- |
+| `src/test/setup.ts`          | global setup                                                 | registers `@testing-library/jest-dom` matchers      |
+| `mockMatchMedia()`           | page test files                                              | stubs `window.matchMedia` for jsdom                 |
+| `installStorageStub()`       | `LandingPage.sellFlow.integration.test.tsx`                  | Node-version-proof localStorage/sessionStorage stub |
+| `makeQueryClient()`          | `LandingPage.sort.integration.test.tsx`                      | fresh `QueryClient` with retries disabled           |
+| `confirmTrade(side, amount)` | `LandingPage.holdingsSellBalanceUpdate.integration.test.tsx` | drives the trade dialog: open → amount → confirm    |
+| `dispatchRejection(reason)`  | `unhandledRejectionLogger.test.ts`                           | synthesizes an unhandled-rejection event            |
 
 If you find yourself copying more than two of these into a new file, that is
 the signal to promote them into `src/test/` as shared utilities — do it in

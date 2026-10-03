@@ -3,6 +3,8 @@ import { queryKeys } from '@/lib/queryKeys';
 import { cacheManager } from '@/utils/cache.utils';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
+import { curveMigrationCacheKey } from '@/services/curveMigration.service';
+import { buildCurveMigrationExecuteCall } from '@/utils/curveMigration.utils';
 import type { CreatorMetadataChange } from '@/utils/creatorMetadata.utils';
 import type { GraduatedCurveMilestone } from '@/components/common/GraduatedCurvePanel';
 
@@ -10,17 +12,23 @@ import type { GraduatedCurveMilestone } from '@/components/common/GraduatedCurve
  * Creator-facing contract calls issued from the dashboard tabs
  * (`update_metadata` — #818, `configure_auction` / `cancel_auction` — #816,
  * `set_launch_penalty`, `set_max_buy_quantity`, `set_quorum_bps` — #828,
- * `set_buy_cooldown` — #889).
+ * `set_buy_cooldown` — #889, `execute_curve_migration`).
  *
- * The on-chain wiring is not in the client yet, so each mutation simulates
- * signing latency and resolves. On success the creator detail query is
- * invalidated so the dashboard reflects the new state, and a toast confirms
- * the call.
+ * Each mutation simulates signing latency and resolves. On success the creator
+ * detail query is invalidated so the dashboard reflects the new state, and a
+ * toast confirms the call.
  */
 
 const SIGN_LATENCY_MS = 1200;
 
-async function submitContractCall(fn: string, args: unknown) {
+/**
+ * Signs and submits a creator contract call.
+ *
+ * The on-chain wiring is not in the client yet, so this simulates the signing
+ * latency and resolves. Exported so creator-facing mutations that live in their
+ * own hooks (e.g. key bundles) submit calls the same way.
+ */
+export async function submitCreatorContractCall(fn: string, args: unknown) {
 	// In production this signs and submits `fn` with `args` via the wallet.
 	void fn;
 	void args;
@@ -29,6 +37,8 @@ async function submitContractCall(fn: string, args: unknown) {
 	);
 	return { success: true as const };
 }
+
+const submitContractCall = submitCreatorContractCall;
 
 export interface AuctionConfigInput {
 	price: number;
@@ -50,6 +60,9 @@ export function useUpdateMetadataMutation(creatorId: string) {
 		onSuccess: () => {
 			queryClient.invalidateQueries({
 				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.onChainMetadata(creatorId),
 			});
 			showToast.success('Profile metadata updated');
 		},
@@ -89,6 +102,34 @@ export function useCancelAuctionMutation(creatorId: string) {
 				queryKey: queryKeys.creators.detail(creatorId),
 			});
 			showToast.success('Auction cancelled');
+		},
+	});
+}
+
+/**
+ * Places a bid during the pre-launch auction window (#924) via the contract's
+ * `place_bid` function (`{ creatorId, amount }`). On success the creator
+ * detail (auction price/sold) and the live bid history caches are invalidated
+ * so the panel and leaderboard reflect the new bid.
+ */
+export function usePlaceAuctionBidMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'place_bid', creatorId],
+		mutationFn: (amount: number) =>
+			submitContractCall('place_bid', { creatorId, amount }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.auctionBids(creatorId),
+			});
+			showToast.success('Bid placed');
 		},
 	});
 }
@@ -226,6 +267,72 @@ export function useDeprecateKeyMutation(creatorId: string) {
 				queryKey: queryKeys.creators.detail(creatorId),
 			});
 			showToast.success('Key deprecated successfully');
+		},
+	});
+}
+
+/**
+ * Executes an approved curve migration on a creator key.
+ *
+ * The button that triggers this is only enabled once the governance vote
+ * carried the migration *and* its timelock has elapsed; the contract re-checks
+ * both before applying {@link proposedParams}. On success the migration cache
+ * and query are invalidated together so the migration moves from the pending
+ * list into the executed history with its new params and execution date.
+ */
+export function useExecuteCurveMigrationMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'execute_curve_migration', creatorId],
+		mutationFn: (migrationId: string) => {
+			const call = buildCurveMigrationExecuteCall({ creatorId, migrationId });
+			return submitContractCall(call.functionName, call.args);
+		},
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			// Drop both cache layers so the refetch returns the migration in
+			// its executed state with the params it actually applied.
+			cacheManager.invalidate(curveMigrationCacheKey(creatorId));
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.curveMigrations(creatorId),
+			});
+			showToast.success('Curve migration executed');
+		},
+	});
+}
+
+/**
+ * Claims the creator's vested allocation for a key (#960).
+ *
+ * On success the whole `vesting` query family is invalidated so the panel's
+ * claimable amount, progress bar, and claim history all reflect the new state
+ * without a manual refresh.
+ */
+export function useClaimVestedTokensMutation(
+	creatorId: string,
+	wallet: string
+) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'claim_vested_tokens', creatorId, wallet],
+		mutationFn: (amountXlm: number) =>
+			submitContractCall('claim_vested_tokens', {
+				creatorId,
+				wallet,
+				amountXlm,
+			}),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.vesting(creatorId),
+			});
+			showToast.success('Vested tokens claimed');
 		},
 	});
 }

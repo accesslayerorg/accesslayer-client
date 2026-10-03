@@ -1,5 +1,5 @@
 /**
- * Governance proposal types for Access Layer (#826).
+ * Governance proposal types for Access Layer (#826, #922).
  *
  * A proposal is an on-chain governance action tied to a creator key.
  * Each proposal carries its own quorum configuration and participation
@@ -8,20 +8,31 @@
 
 /** Current status of a governance proposal. */
 export type ProposalStatus =
-	| 'active'
-	| 'passed'
-	| 'rejected'
-	| 'executed'
-	| 'cancelled';
+	'active' | 'closed' | 'passed' | 'rejected' | 'executed' | 'cancelled';
+
+export type ProposalOutcome = 'passed' | 'failed' | 'quorum_not_met';
+
+/** A single selectable option on an on-chain proposal. */
+export interface ProposalOption {
+	label: string;
+	weight: number;
+}
 
 /** A single vote cast on a proposal. */
 export interface Vote {
+	id?: string;
 	voter: string;
 	/** Weight of the vote (number of keys held * multiplier). */
 	weight: number;
 	/** 'for' | 'against' | 'abstain' */
 	direction: 'for' | 'against' | 'abstain';
 	timestamp: string;
+}
+
+/** One page of the proposal vote history feed. */
+export interface ProposalVotesPage {
+	votes: Vote[];
+	nextCursor: string | null;
 }
 
 /**
@@ -36,12 +47,24 @@ export interface Proposal {
 	title: string;
 	description: string;
 	status: ProposalStatus;
+	/** On-chain option set. Falls back to For / Against / Abstain when absent. */
+	options?: ProposalOption[];
+	outcome?: ProposalOutcome | null;
 	/** Quorum threshold in basis points (e.g. 4000 = 40%). */
 	quorumBps: number;
+	eligibleVotingWeight?: number;
 	/** Total circulating supply of the creator key. */
 	totalCirculatingSupply: number;
 	/** Current total voting weight across all votes. */
 	totalVotingWeight: number;
+	/** Stellar address of the creator key owner (required for on-chain reads). */
+	creatorAddress?: string;
+	/** On-chain poll ID (required to read snapshots and cast votes). */
+	pollId?: number;
+	/** Ledger the snapshot was captured at, when known. */
+	snapshotLedger?: number;
+	/** Timestamp the proposal closed, when known. */
+	closedAt?: string;
 	/** Timestamp when voting began. */
 	startDate: string;
 	/** Timestamp when voting ends. */
