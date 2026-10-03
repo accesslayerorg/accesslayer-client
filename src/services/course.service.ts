@@ -307,7 +307,10 @@ export interface PerformanceBond {
 }
 
 export type CourseSortOption =
-	'volume_desc' | 'price_asc' | 'price_desc' | 'newest';
+	| 'volume_desc'
+	| 'price_asc'
+	| 'price_desc'
+	| 'newest';
 
 export interface GetCoursesParams {
 	page?: number;
@@ -362,10 +365,12 @@ export interface KeyHoldersPage {
 	nextCursor: string | null;
 }
 
+export type KeyTwapWindow = '1h' | '24h';
+
 export interface KeyTwap {
-	/** 24-hour time-weighted average price in stroops. */
+	/** Time-weighted average price in stroops for the requested window. */
 	priceStroops: number | null;
-	window?: string;
+	window?: KeyTwapWindow;
 }
 
 export interface KeyBuybackInfo {
@@ -546,7 +551,10 @@ class CourseService extends BaseApiService {
 	}
 
 	// Get the time-weighted average price - GET /keys/:keyId/twap
-	async getKeyTwap(keyId: string, window = '24h'): Promise<KeyTwap> {
+	async getKeyTwap(
+		keyId: string,
+		window: KeyTwapWindow = '24h'
+	): Promise<KeyTwap> {
 		try {
 			const response = await this.api.get<APIResponse<KeyTwap>>(
 				`/keys/${keyId}/twap`,
