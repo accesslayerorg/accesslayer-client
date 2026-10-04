@@ -11,6 +11,7 @@ import RecentlyViewedSection from '../components/home/RecentlyViewedSection';
 import { useNavigationTiming } from '../hooks/useNavigationTiming';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useLocation } from 'react-router';
+import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 
 export default function HomePage() {
 	const location = useLocation();
@@ -25,14 +26,30 @@ export default function HomePage() {
 		<>
 			<Header />
 			<main>
-				<Hero />
-				<ConnectWalletCtaBanner />
-				<MarketOverview />
-				<CreatorSpotlight />
-				<TrendingLeaderboard />
-				<TrendingCreators />
-				<RecentlyViewedSection />
-				<FAQ />
+				<SectionErrorBoundary sectionName="hero">
+					<Hero />
+				</SectionErrorBoundary>
+				<SectionErrorBoundary sectionName="wallet connection">
+					<ConnectWalletCtaBanner />
+				</SectionErrorBoundary>
+				<SectionErrorBoundary sectionName="market overview">
+					<MarketOverview />
+				</SectionErrorBoundary>
+				<SectionErrorBoundary sectionName="creator spotlight">
+					<CreatorSpotlight />
+				</SectionErrorBoundary>
+				<SectionErrorBoundary sectionName="trending leaderboard">
+					<TrendingLeaderboard />
+				</SectionErrorBoundary>
+				<SectionErrorBoundary sectionName="trending creators">
+					<TrendingCreators />
+				</SectionErrorBoundary>
+				<SectionErrorBoundary sectionName="recently viewed creators">
+					<RecentlyViewedSection />
+				</SectionErrorBoundary>
+				<SectionErrorBoundary sectionName="frequently asked questions">
+					<FAQ />
+				</SectionErrorBoundary>
 			</main>
 			<Footer />
 		</>

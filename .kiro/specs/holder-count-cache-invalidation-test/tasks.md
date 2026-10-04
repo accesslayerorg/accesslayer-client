@@ -42,9 +42,9 @@ The production diff is intentionally small: one utility file, one hook, one comp
    - Verify `LandingPage.tsx` still compiles and the keyboard test (`LandingPage.keyboard.test.tsx`) still passes
    - _Requirements: 1.1, 3.4_
 
-- [ ] 5. Write the integration test
+- [x] 5. Write the integration test
    - Create `src/pages/__tests__/holderCountCacheInvalidation.test.tsx`
-   - [ ] 5.1 Set up test scaffolding
+   - [x] 5.1 Set up test scaffolding
       - Import `QueryClient`, `QueryClientProvider` from `@tanstack/react-query`; `MemoryRouter` from `react-router`; `render`, `screen`, `waitFor`, `act` from `@testing-library/react`; `fc` from `fast-check`; `beforeEach`, `afterEach`, `describe`, `expect`, `it`, `vi` from `vitest`
       - Import `FeaturedCreatorAudienceChip` from `@/components/common/FeaturedCreatorAudienceChip`
       - Import `getFeaturedCreatorKeyHolderCopy` from `@/utils/holderCount.utils`
@@ -56,42 +56,42 @@ The production diff is intentionally small: one utility file, one hook, one comp
       - Implement `createWrapper(queryClient)` returning a component that wraps children in `<QueryClientProvider>` + `<MemoryRouter>`
       - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-   - [ ] 5.2 Write property test for Property 1 — initial render round-trip
+   - [x] 5.2 Write property test for Property 1 — initial render round-trip
       - **Property 1: Initial render round-trip**
       - **Validates: Requirements 1.1, 5.4**
       - Use `fc.asyncProperty(fc.integer({ min: 1, max: 1_000_000 }), ...)` with `numRuns: 100`
       - For each `count`: create fresh `queryClient`, seed with `queryClient.setQueryData(['creator', CREATOR_ID, 'holderCount'], count)`, render `FeaturedCreatorAudienceChip` with wrapper, assert `screen.getByText(getFeaturedCreatorKeyHolderCopy(count).value)` is in the document, assert `mockFetchHolderCount` was NOT called, then `unmount()`
       - _Requirements: 1.1, 1.2, 5.4_
 
-   - [ ] 5.3 Write property test for Property 2 — stale-while-revalidate display stability
+   - [x] 5.3 Write property test for Property 2 — stale-while-revalidate display stability
       - **Property 2: Stale-while-revalidate display stability**
       - **Validates: Requirements 2.3**
       - Use `fc.asyncProperty(fc.integer({ min: 1, max: 1_000_000 }), ...)` with `numRuns: 100`
       - For each `initialCount`: seed cache, render component, call `queryClient.invalidateQueries` but do NOT resolve the pending `mockFetchHolderCount` (use a `Promise` that never resolves during the assertion window), assert old value is still visible and no blank/error state
       - _Requirements: 2.3_
 
-   - [ ] 5.4 Write property test for Property 3 — post-invalidation update round-trip
+   - [x] 5.4 Write property test for Property 3 — post-invalidation update round-trip
       - **Property 3: Post-invalidation update round-trip**
       - **Validates: Requirements 3.1, 3.2, 3.4**
       - Use `fc.asyncProperty(fc.integer({ min: 1, max: 999 }), fc.integer({ min: 1000, max: 1_000_000 }), ...)` with `numRuns: 100` (disjoint ranges guarantee `initialCount !== updatedCount`)
       - For each pair `(initialCount, updatedCount)`: seed cache with `initialCount`, render, spy on `window.location.reload`, invalidate query, await `waitFor` assertion that updated text is visible and old text is gone, assert `reloadSpy` was NOT called, `unmount()`
       - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-   - [ ] 5.5 Write property test for Property 4 — format function round-trip
+   - [x] 5.5 Write property test for Property 4 — format function round-trip
       - **Property 4: Format function round-trip**
       - **Validates: Requirements 5.1, 5.4**
       - Use synchronous `fc.property(fc.integer({ min: 1, max: 10_000_000 }), ...)` with `numRuns: 200`
       - For each `n > 0`: assert `getFeaturedCreatorKeyHolderCopy(n).value === formatCompactNumber(n) + ' key holders'`
       - _Requirements: 5.1, 5.4_
 
-   - [ ]\* 5.6 Write edge-case tests
+   - [x]\* 5.6 Write edge-case tests
       - `count = 0` renders `"No key holders yet"` — seed cache with `0`, render, assert text present
       - `count = null` renders `"Key holders unavailable"` — seed cache with `null`, render, assert text present
       - Non-matching query key: invalidate a different key, assert `mockFetchHolderCount` was NOT called and display is unchanged
       - After invalidation + resolved refetch: assert `mockFetchHolderCount` was called exactly once with `CREATOR_ID`
       - _Requirements: 1.3, 1.4, 2.2, 2.4_
 
-- [ ] 6. Checkpoint — run tests and confirm everything passes
+- [x] 6. Checkpoint — run tests and confirm everything passes
    - Run `pnpm test` (or `pnpm vitest run`) from `accesslayer-client--fork/`
    - Confirm `holderCountCacheInvalidation.test.tsx` passes all property and edge-case tests
    - Confirm `LandingPage.keyboard.test.tsx` still passes (no regression from Task 4 changes)

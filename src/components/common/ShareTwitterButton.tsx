@@ -12,9 +12,9 @@ export interface ShareTwitterButtonProps {
 	userAddress?: string | null;
 	userHoldingsCount?: number;
 	className?: string;
+	onClick?: () => void;
+	'data-testid'?: string;
 }
-
-
 
 export function ShareTwitterButton({
 	creatorId,
@@ -23,6 +23,8 @@ export function ShareTwitterButton({
 	userAddress,
 	userHoldingsCount = 0,
 	className = '',
+	onClick,
+	'data-testid': testId = 'share-twitter-button',
 }: ShareTwitterButtonProps) {
 	// Show Share button only when user is authenticated and holds at least 1 key
 	const isAuthenticated = Boolean(userAddress && userAddress.trim() !== '');
@@ -44,6 +46,10 @@ export function ShareTwitterButton({
 	const intentUrl = buildTwitterIntentUrl(tweetText);
 
 	const handleShareClick = () => {
+		if (onClick) {
+			onClick();
+			return;
+		}
 		if (typeof window !== 'undefined') {
 			window.open(intentUrl, '_blank', 'noopener,noreferrer');
 		}
@@ -52,7 +58,7 @@ export function ShareTwitterButton({
 	return (
 		<Button
 			type="button"
-			data-testid="share-twitter-button"
+			data-testid={testId}
 			onClick={handleShareClick}
 			aria-label="Share key purchase to X"
 			className={`inline-flex items-center gap-2 rounded-xl bg-[#1DA1F2]/15 border border-[#1DA1F2]/30 px-4 py-2.5 text-sm font-semibold font-jakarta text-[#1DA1F2] transition-all hover:bg-[#1DA1F2]/25 hover:text-white ${className}`}

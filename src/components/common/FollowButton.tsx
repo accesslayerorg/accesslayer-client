@@ -6,6 +6,8 @@ interface FollowButtonProps {
   isFollowing: boolean;
   onFollow: (creatorAddress: string) => Promise<void>;
   onUnfollow: (creatorAddress: string) => Promise<void>;
+  /** Extra classes so callers can theme the button for their surface. */
+  className?: string;
 }
 
 export default function FollowButton({
@@ -13,6 +15,7 @@ export default function FollowButton({
   isFollowing,
   onFollow,
   onUnfollow,
+  className,
 }: FollowButtonProps) {
   const [loading, setLoading] = useState(false);
 
@@ -34,6 +37,8 @@ export default function FollowButton({
       onClick={handleClick}
       disabled={loading}
       variant={isFollowing ? 'outline' : 'default'}
+      aria-pressed={isFollowing}
+      className={className}
       data-testid="follow-button"
     >
       {loading ? 'Loading...' : isFollowing ? 'Following' : 'Follow'}

@@ -6,15 +6,26 @@ import type { Course } from '@/services/course.service';
 import { cn } from '@/lib/utils';
 import {
 	ShoppingCart,
+	ShoppingBasket,
 	Link as LinkIcon,
 	TrendingUp,
 	MoreVertical,
 	Copy,
 	Share2,
 	ExternalLink,
+	Check,
 } from 'lucide-react';
 import { Sparkline } from '@/components/ui/sparkline';
 import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
+import {
+	useBatchBuyStore,
+	selectIsInBasket,
+	selectIsAtCap,
+} from '@/hooks/useBatchBuyStore';
+import {
+	resolveCreatorKeyPriceStroops,
+	formatCreatorKeyPriceDisplay,
+} from '@/utils/keyPriceDisplay.utils';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -27,7 +38,6 @@ import RecentActivityBadge from '@/components/common/RecentActivityBadge';
 import toast from 'react-hot-toast';
 import showToast from '@/utils/toast.util';
 import { formatCompactNumber } from '@/utils/numberFormat.utils';
-import { formatCreatorKeyPriceDisplay } from '@/utils/keyPriceDisplay.utils';
 import {
 	formatCreatorHandle,
 	truncateHandle,
@@ -38,6 +48,7 @@ import { formatJoinDate } from '@/utils/formatJoinDate';
 import { useSystemTheme } from '@/utils/useSystemTheme';
 import { Tooltip } from '@/components/ui/tooltip';
 import { AsyncButton } from '@/components/ui/async-button';
+import { isKeyDeprecated } from '@/utils/keyDeprecation.utils';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
 import { useTransactionTelemetry } from '@/hooks/useTransactionTelemetry';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
@@ -51,6 +62,10 @@ import WalletConnectCalloutBanner from '@/components/common/WalletConnectCallout
 import NetworkMismatchBanner from '@/components/common/NetworkMismatchBanner';
 import CreatorSocialLinksList from '@/components/common/CreatorSocialLinksList';
 import TransactionStatusIcon from '@/components/common/TransactionStatusIcon';
+import {
+	useContractPausedStore,
+	selectIsPaused,
+} from '@/hooks/useContractPausedStore';
 import { buildStellarExpertTxUrl, truncateTxHash } from '@/constants/stellar';
 import { env } from '@/utils/env.utils';
 import MiniStatChip from '@/components/common/MiniStatChip';
@@ -102,12 +117,15 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 	});
 	const priceChartDescriptionId = `creator-price-chart-description-${creator.id}`;
 	const { isConnected, address } = useAccount();
-	const setConnectedWalletKey = useConnectedWallet(state => state.setWalletKey);
+	const setConnectedWalletKey = useConnectedWallet(
+		state => state.setWalletKey
+	);
 	useEffect(() => {
 		setConnectedWalletKey(address);
 	}, [address, setConnectedWalletKey]);
 	const { isMismatch: isNetworkMismatch, expectedChainName } =
 		useNetworkMismatch();
+	const isPaused = useContractPausedStore(selectIsPaused);
 	const [transactionState, setTransactionState] = useState<
 		'idle' | 'submitting' | 'failed' | 'success'
 	>('idle');
@@ -121,7 +139,6 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 	const cardRef = useRef<HTMLDivElement>(null);
 
 	// Keyboard shortcut for quick buy (press 'b' when card is focused)
-
 
 	const runPurchaseAttempt = useCallback(() => {
 		setTransactionState('submitting');
@@ -180,7 +197,12 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 				setTransactionState('idle');
 			}, 1800);
 		}, 1500);
-	}, [creator.id, displayCreatorName, trackTransactionEvent, setTransactionState]);
+	}, [
+		creator.id,
+		displayCreatorName,
+		trackTransactionEvent,
+		setTransactionState,
+	]);
 
 	const isRecentlyActive = (creator.volume24h ?? 0) > 0;
 	const keyPriceDisplay = formatCreatorKeyPriceDisplay(creator);
@@ -191,7 +213,9 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 			await copyTextToClipboard(url);
 			toast.success('Profile link copied');
 		} catch {
-			toast.error('Could not copy the profile link. Please copy it manually.');
+			toast.error(
+				'Could not copy the profile link. Please copy it manually.'
+			);
 		}
 	};
 
@@ -212,6 +236,16 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 	};
 
 	const handleBuy = useCallback(() => {
+		if (isPaused) {
+			toast.error('Trading is suspended: contract is paused');
+			return;
+		}
+
+		if (isKeyDeprecated(creator)) {
+			toast.error('This key has been deprecated and can no longer be bought');
+			return;
+		}
+
 		if (!isConnected) {
 			toast.error('Please connect your wallet to purchase keys', {
 				duration: 4000,
@@ -231,10 +265,55 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 		});
 		// Implementation for contract interaction would go here
 		runPurchaseAttempt();
-	}, [isConnected, isNetworkMismatch, expectedChainName, displayCreatorName, runPurchaseAttempt]);
+	}, [
+		isPaused,
+		creator,
+		isConnected,
+		isNetworkMismatch,
+		expectedChainName,
+		displayCreatorName,
+		runPurchaseAttempt,
+	]);
 
 	const resolvedHolderCount =
-		creator.holderCount ?? creator.holdersCount ?? creator.holders ?? creator.creatorShareSupply;
+		creator.holderCount ??
+		creator.holdersCount ??
+		creator.holders ??
+		creator.creatorShareSupply;
+
+	// ── Batch buy basket (#954) ───────────────────────────────────────────
+	const addItem = useBatchBuyStore(s => s.addItem);
+	const removeItem = useBatchBuyStore(s => s.removeItem);
+	const isInBasket = useBatchBuyStore(s =>
+		selectIsInBasket(s, creator.id)
+	);
+	const isAtCap = useBatchBuyStore(selectIsAtCap);
+	const priceStroops = resolveCreatorKeyPriceStroops(creator) ?? 0;
+
+	const handleToggleBasket = () => {
+		if (isInBasket) {
+			removeItem(creator.id);
+			toast.success(`Removed ${displayCreatorName} from basket`, {
+				duration: 2000,
+			});
+			return;
+		}
+		if (isAtCap) {
+			toast.error('Batch cap reached. Remove an item first.', {
+				duration: 3000,
+			});
+			return;
+		}
+		addItem({
+			creatorId: creator.id,
+			creatorName: displayCreatorName,
+			priceStroops,
+			thumbnail: creator.thumbnail,
+		});
+		toast.success(`Added ${displayCreatorName} to basket`, {
+			duration: 2000,
+		});
+	};
 
 	return (
 		<div
@@ -281,12 +360,14 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 							<Share2 className="size-3.5" aria-hidden="true" />
 							Share creator
 						</DropdownMenuItem>
-						<DropdownMenuItem
-							onSelect={() => {}}
-							className="cursor-pointer gap-2 text-white/70 focus:bg-white/10 focus:text-white"
-						>
-							<ExternalLink className="size-3.5" aria-hidden="true" />
-							View profile
+						<DropdownMenuItem asChild>
+							<Link
+								to={`/creator/${creator.id}`}
+								className="cursor-pointer gap-2 text-white/70 focus:bg-white/10 focus:text-white flex items-center w-full"
+							>
+								<ExternalLink className="size-3.5" aria-hidden="true" />
+								View profile
+							</Link>
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
@@ -399,47 +480,55 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 					</div>
 				)}
 
-			{/* Price history sparkline */}
-			{creator.priceHistory && creator.priceHistory.length >= 2 && (() => {
-				const latest = creator.priceHistory[creator.priceHistory.length - 1];
-				const earliest = creator.priceHistory[0];
-				let lineColor = '#fbbf24';
-				if (latest > earliest) lineColor = '#22c55e';
-				else if (latest < earliest) lineColor = '#ef4444';
+				{/* Price history sparkline */}
+				{creator.priceHistory &&
+					creator.priceHistory.length >= 2 &&
+					(() => {
+						const latest =
+							creator.priceHistory[creator.priceHistory.length - 1];
+						const earliest = creator.priceHistory[0];
+						let lineColor = '#fbbf24';
+						if (latest > earliest) lineColor = '#22c55e';
+						else if (latest < earliest) lineColor = '#ef4444';
 
-				return (
-					<SectionErrorBoundary
-						sectionName="bonding curve chart"
-						title="Chart unavailable — try refreshing"
-						description=""
-						minHeight={40}
-					>
-						<div className="mt-3">
-							<Sparkline
-								data={creator.priceHistory}
-								color={lineColor}
-							/>
-							<table id={priceChartDescriptionId} className="sr-only">
-								<caption>{priceChartAccessibility.summary}</caption>
-								<thead>
-									<tr>
-										<th scope="col">Point</th>
-										<th scope="col">Key price</th>
-									</tr>
-								</thead>
-								<tbody>
-									{priceChartAccessibility.points.map(point => (
-										<tr key={point.label}>
-											<th scope="row">{point.label}</th>
-											<td>{point.value}</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-					</SectionErrorBoundary>
-				);
-			})()}
+						return (
+							<SectionErrorBoundary
+								sectionName="bonding curve chart"
+								title="Chart unavailable — try refreshing"
+								description=""
+								minHeight={40}
+							>
+								<div className="mt-3">
+									<Sparkline
+										data={creator.priceHistory}
+										color={lineColor}
+									/>
+									<table
+										id={priceChartDescriptionId}
+										className="sr-only"
+									>
+										<caption>
+											{priceChartAccessibility.summary}
+										</caption>
+										<thead>
+											<tr>
+												<th scope="col">Point</th>
+												<th scope="col">Key price</th>
+											</tr>
+										</thead>
+										<tbody>
+											{priceChartAccessibility.points.map(point => (
+												<tr key={point.label}>
+													<th scope="row">{point.label}</th>
+													<td>{point.value}</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+							</SectionErrorBoundary>
+						);
+					})()}
 
 				<div className="mt-3 flex flex-wrap gap-2">
 					<MiniStatChip label="Price" value={keyPriceDisplay} />
@@ -562,11 +651,74 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 				>
 					Purchase actions for {displayCreatorName}
 				</span>
-				<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-					<NetworkFeeHint className="shrink-0" />
-					<span className="hidden sm:inline text-xs text-white/40">
-						Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/60 font-mono">B</kbd> to quick buy
-					</span>
+				<NetworkFeeHint className="shrink-0" />
+				<div className="flex items-center gap-2">
+					{/* Add to basket button (#954) */}
+					<button
+						type="button"
+						onClick={handleToggleBasket}
+						disabled={!isInBasket && isAtCap}
+						aria-label={
+							isInBasket
+								? `Remove ${displayCreatorName} from batch basket`
+								: `Add ${displayCreatorName} to batch basket`
+						}
+						aria-pressed={isInBasket}
+						title={
+							isInBasket
+								? 'Remove from basket'
+								: isAtCap
+									? 'Batch cap reached'
+									: 'Add to basket'
+						}
+						className={cn(
+							'flex size-8 shrink-0 items-center justify-center rounded-xl border transition-colors',
+							'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60',
+							'disabled:pointer-events-none disabled:opacity-30',
+							isInBasket
+								? 'border-amber-500/60 bg-amber-500/15 text-amber-400 hover:border-red-400/60 hover:bg-red-500/10 hover:text-red-400'
+								: 'border-white/10 bg-transparent text-white/40 hover:border-amber-500/40 hover:text-amber-400'
+						)}
+					>
+						{isInBasket ? (
+							<Check className="size-3.5" aria-hidden="true" />
+						) : (
+							<ShoppingBasket className="size-3.5" aria-hidden="true" />
+						)}
+					</button>
+
+					<AsyncButton
+						onClick={handleBuy}
+						variant={isConnected ? 'default' : 'outline'}
+						size="sm"
+						isPending={transactionState === 'submitting'}
+						pendingText="Processing..."
+						disabled={isNetworkMismatch || isKeyDeprecated(creator)}
+						className={cn(
+							'rounded-xl font-bold',
+							!isConnected && 'border-white/10  hover:bg-white/5'
+						)}
+					>
+						{transactionState === 'success' && (
+							<TransactionStatusIcon status="success" />
+						)}
+						{transactionState === 'submitting' && (
+							<TransactionStatusIcon status="pending" />
+						)}
+						{transactionState === 'failed' && (
+							<TransactionStatusIcon status="failed" />
+						)}
+						<ShoppingCart className="creator-action-icon" />
+						{isKeyDeprecated(creator)
+							? 'Key Deprecated'
+							: transactionState === 'submitting'
+								? 'Processing...'
+								: transactionState === 'success'
+									? 'Completed'
+									: transactionState === 'failed'
+										? 'Retry Purchase'
+										: 'Buy Key'}
+					</AsyncButton>
 				</div>
 				<AsyncButton
 					onClick={handleBuy}
@@ -574,7 +726,8 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 					size="sm"
 					isPending={transactionState === 'submitting'}
 					pendingText="Processing..."
-					disabled={isNetworkMismatch}
+					disabled={isNetworkMismatch || isPaused || isKeyDeprecated(creator)}
+					title={isPaused ? 'Trading suspended: contract is paused' : undefined}
 					className={cn(
 						'rounded-xl font-bold',
 						!isConnected && 'border-white/10  hover:bg-white/5'
@@ -590,13 +743,15 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 						<TransactionStatusIcon status="failed" />
 					)}
 					<ShoppingCart className="creator-action-icon" />
-					{transactionState === 'submitting'
-						? 'Processing...'
-						: transactionState === 'success'
-							? 'Completed'
-							: transactionState === 'failed'
-								? 'Retry Purchase'
-								: 'Buy Key'}
+					{isKeyDeprecated(creator)
+						? 'Key Deprecated'
+						: transactionState === 'submitting'
+							? 'Processing...'
+							: transactionState === 'success'
+								? 'Completed'
+								: transactionState === 'failed'
+									? 'Retry Purchase'
+									: 'Buy Key'}
 				</AsyncButton>
 			</div>
 
@@ -604,9 +759,13 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 				state={transactionState}
 				className="mt-4"
 				disabledReason={
-					isNetworkMismatch
-						? `Switch to ${expectedChainName} to enable purchases.`
-						: undefined
+					isPaused
+						? 'Trading is currently suspended because the contract is paused.'
+						: isKeyDeprecated(creator)
+						? 'This key has been deprecated and can no longer be bought.'
+						: isNetworkMismatch
+							? `Switch to ${expectedChainName} to enable purchases.`
+							: undefined
 				}
 			/>
 

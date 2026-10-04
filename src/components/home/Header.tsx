@@ -2,15 +2,17 @@ import { useEffect, useState } from 'react';
 import { Moon, Sun, Monitor, Bookmark } from 'lucide-react';
 import WalletStatusChip from '@/components/common/WalletStatusChip';
 import NotificationBell from '@/components/common/NotificationBell';
-import MarketplaceHeaderSearch from '@/components/common/MarketplaceHeaderSearch';
+import GlobalSearch from '@/components/common/GlobalSearch';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import { useTheme } from '@/hooks/useTheme';
 import { Link } from 'react-router';
-import BatchBuyModal from '@/components/common/BatchBuyModal';
+import BatchTradePanel from '@/components/common/BatchTradePanel';
 import { useConnectedWallet, useWatchlist } from '@/hooks/useWatchlist';
 
 const navLinks = [
 	{ label: 'Marketplace', href: '/marketplace', external: false },
+	{ label: 'Discover', href: '/discovery', external: false },
+	{ label: 'Status', href: '/status', external: false },
 	{ label: 'About', href: '/about', external: false },
 	{ label: 'GitHub', href: 'https://github.com/accesslayerorg', external: true },
 ];
@@ -96,9 +98,9 @@ export default function Header() {
 					</Link>
 				</nav>
 
-				{/* Marketplace Header Search */}
+				{/* Global Header Search (#933) */}
 				<div className="flex-1 max-w-xs mx-2">
-					<MarketplaceHeaderSearch />
+					<GlobalSearch />
 				</div>
 
 				{/* Right-side actions: dark mode toggle (#750) + notification bell (#720) + wallet status chip (#686).
@@ -109,9 +111,9 @@ export default function Header() {
 						onClick={() => setBatchOpen(true)}
 						className={`rounded-xl border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 ${scrolled ? '' : ''}`}
 					>
-						Batch Buy
+						Batch Trade
 					</button>
-					<BatchBuyModal open={batchOpen} onOpenChange={setBatchOpen} />
+					<BatchTradePanel open={batchOpen} onOpenChange={setBatchOpen} />
 				<button
 					type="button"
 					onClick={toggleTheme}
