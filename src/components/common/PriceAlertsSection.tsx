@@ -1,13 +1,17 @@
 import { BellRing, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useDeletePriceAlert, usePriceAlerts } from '@/hooks/usePriceAlerts';
+import { useActivePriceAlerts, useDeletePriceAlert } from '@/hooks/usePriceAlerts';
 import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import showToast from '@/utils/toast.util';
 
-export default function PriceAlertsSection() {
-	const alertsQuery = usePriceAlerts();
-	const deleteAlert = useDeletePriceAlert();
-	const alerts = (alertsQuery.data ?? []).filter(alert => alert.active);
+interface PriceAlertsSectionProps {
+	userId: string | undefined;
+}
+
+export default function PriceAlertsSection({ userId }: PriceAlertsSectionProps) {
+	const alertsQuery = useActivePriceAlerts(userId);
+	const deleteAlert = useDeletePriceAlert(userId);
+	const alerts = alertsQuery.data ?? [];
 
 	const handleDelete = async (alertId: string) => {
 		try {

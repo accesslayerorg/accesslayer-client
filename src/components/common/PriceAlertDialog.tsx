@@ -11,26 +11,28 @@ import {
 	DialogTrigger,
 } from '@/components/ui/dialog';
 import { useCreatePriceAlert } from '@/hooks/usePriceAlerts';
-import type { PriceAlertDirection } from '@/services/priceAlert.service';
+import type { AlertDirection } from '@/services/alert.service';
 import { cn } from '@/lib/utils';
 import { parsePositivePrice } from '@/utils/priceAlert.utils';
 import showToast from '@/utils/toast.util';
 
 interface PriceAlertDialogProps {
+	userId?: string;
 	keyId: string;
 	keyName?: string;
 	currentPrice?: number | null;
 }
 
 export default function PriceAlertDialog({
+	userId,
 	keyId,
 	keyName = 'this key',
 	currentPrice,
 }: PriceAlertDialogProps) {
 	const [open, setOpen] = useState(false);
 	const [targetText, setTargetText] = useState('');
-	const [direction, setDirection] = useState<PriceAlertDirection>('above');
-	const createAlert = useCreatePriceAlert();
+	const [direction, setDirection] = useState<AlertDirection>('above');
+	const createAlert = useCreatePriceAlert(userId);
 	const targetPrice = useMemo(() => parsePositivePrice(targetText), [targetText]);
 	const invalid = targetText.trim().length > 0 && targetPrice === null;
 
@@ -44,7 +46,7 @@ export default function PriceAlertDialog({
 	const handleSave = async () => {
 		if (targetPrice === null) return;
 		try {
-			await createAlert.mutateAsync({ keyId, targetPrice, direction });
+			await createAlert.mutateAsync({ keyId, keyName, targetPrice, direction });
 			showToast.success(
 				`Price alert set for ${keyName}. We’ll notify you when the price moves ${direction} your target.`
 			);
