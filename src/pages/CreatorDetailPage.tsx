@@ -18,6 +18,7 @@ import BuyCooldownCountdown from '@/components/common/BuyCooldownCountdown';
 import KeyHolderList from '@/components/common/KeyHolderList';
 import HolderConcentrationChart from '@/components/common/HolderConcentrationChart';
 import StakingRewardsSection from '@/components/common/StakingRewardsSection';
+import StakingVaultPanel from '@/components/common/StakingVaultPanel';
 import DeprecationNotice from '@/components/common/DeprecationNotice';
 import DeprecationBanner from '@/components/common/DeprecationBanner';
 import SubscriptionAccessGate from '@/components/common/SubscriptionAccessGate';
@@ -97,8 +98,9 @@ function CreatorDetailPageContent() {
 	const [recentSettlement, setRecentSettlement] =
 		useState<KeyBuybackReceipt | null>(null);
 	const [shareModalOpen, setShareModalOpen] = useState(false);
-	const [lastPurchasedAmount, setLastPurchasedAmount] =
-		useState<number | null>(null);
+	const [lastPurchasedAmount, setLastPurchasedAmount] = useState<
+		number | null
+	>(null);
 	const [deprecationDismissed, setDeprecationDismissed] = useState(false);
 	const [buyDialogOpen, setBuyDialogOpen] = useState(false);
 	const [tradeSubmitting, setTradeSubmitting] = useState(false);
@@ -198,24 +200,24 @@ function CreatorDetailPageContent() {
 
 	const isWhitelistGateActive = Boolean(
 		creator?.isWhitelistEnabled ??
-			creator?.whitelistEnabled ??
-			creator?.earlyAccessEnabled ??
-			false
+		creator?.whitelistEnabled ??
+		creator?.earlyAccessEnabled ??
+		false
 	);
 
 	const whitelistEntries = creator?.whitelist ?? [];
 
 	const isUserWhitelisted = Boolean(
 		userAddress &&
-			(whitelistEntries.some(
-				entry =>
-					entry.walletAddress?.toUpperCase() === userAddress.toUpperCase()
+		(whitelistEntries.some(
+			entry =>
+				entry.walletAddress?.toUpperCase() === userAddress.toUpperCase()
+		) ||
+			(creator?.earlyAccessWhitelist ?? []).some(
+				address => address.toLowerCase() === userAddress.toLowerCase()
 			) ||
-				(creator?.earlyAccessWhitelist ?? []).some(
-					address => address.toLowerCase() === userAddress.toLowerCase()
-				) ||
-				(creator?.instructorId &&
-					creator.instructorId.toUpperCase() === userAddress.toUpperCase()))
+			(creator?.instructorId &&
+				creator.instructorId.toUpperCase() === userAddress.toUpperCase()))
 	);
 
 	const publicLaunchTimestamp = creator?.publicLaunchDate
@@ -771,6 +773,15 @@ function CreatorDetailPageContent() {
 
 				<StakingRewardsSection {...stakingStats} isLoading={isLoading} />
 
+				{/* Staking Vault — stake keys, track locks, claim rewards (#1017) */}
+				<StakingVaultPanel
+					keyId={id ?? ''}
+					userAddress={userAddress}
+					availableBalance={holdingsCount}
+					rewardPoolBalance={stakingStats.stakingPoolBalance ?? 0}
+					isLoading={isLoading}
+				/>
+
 				{auctionPhase !== 'active' && (
 					<>
 						<div
@@ -802,7 +813,6 @@ function CreatorDetailPageContent() {
 						/>
 					</>
 				)}
-
 				<div
 					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
 					data-testid="holder-concentration-container"
@@ -877,8 +887,8 @@ function CreatorDetailPageContent() {
 					>
 						<div className="rounded-xl border border-white/10 bg-white/[0.03] p-6">
 							<p className="text-white/80">
-								🎉 Welcome to the exclusive content section! Here you can access
-								premium videos, articles, and perks from{' '}
+								🎉 Welcome to the exclusive content section! Here you
+								can access premium videos, articles, and perks from{' '}
 								{creator.title || creator.name || 'this creator'}.
 							</p>
 						</div>
@@ -902,12 +912,14 @@ function CreatorDetailPageContent() {
 						creatorId={creator.id}
 						creatorTitle={creator.title || creator.name || 'Creator Key'}
 						holdingsCount={holdingsCount}
-						buybackPriceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
+						buybackPriceStroops={
+							resolveCreatorKeyPriceStroops(creator) ?? 0
+						}
 						userAddress={userAddress}
 						onSettled={receipt => {
 							setRecentSettlement(receipt);
 						}}
-						/>
+					/>
 				)}
 
 				{creator && (
