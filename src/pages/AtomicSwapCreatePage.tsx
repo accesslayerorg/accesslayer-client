@@ -15,6 +15,8 @@ import PortfolioHoldingRow from '@/components/common/PortfolioHoldingRow';
 import HoldingsEmptyState from '@/components/common/HoldingsEmptyState';
 import CreatorSkeleton from '@/components/common/CreatorSkeleton';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
+import { useGlobalPause } from '@/hooks/useGlobalPause';
+import { UnavailableAction } from '@/components/ui/unavailable-action';
 
 const DEMO_WALLET_ADDRESS = 'demo-wallet-address';
 
@@ -26,6 +28,7 @@ export default function AtomicSwapCreatePage() {
   const [creators, setCreators] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const { paused } = useGlobalPause();
 
   const { data: cachedHoldings = [] } = useWalletHoldings(activeWalletAddress);
 
@@ -166,17 +169,19 @@ export default function AtomicSwapCreatePage() {
                   walletAddress={activeWalletAddress}
                   isSubmitting={isNetworkMismatch}
                 />
-                <Button
-                  onClick={handleOpenForm}
-                  disabled={isNetworkMismatch || !hasHoldings}
-                  className="w-full sm:w-auto rounded-xl"
-                  size="lg"
-                >
-                  <svg className="size-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                  Create Swap Proposal
-                </Button>
+                <UnavailableAction disabled={paused} reason="Platform is currently paused">
+                  <Button
+                    onClick={handleOpenForm}
+                    disabled={isNetworkMismatch || !hasHoldings || paused}
+                    className="w-full sm:w-auto rounded-xl"
+                    size="lg"
+                  >
+                    <svg className="size-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    Create Swap Proposal
+                  </Button>
+                </UnavailableAction>
                 <p className="text-xs text-white/50 text-center sm:text-left">
                   The counterparty will need to connect their wallet and accept the proposal to execute the atomic swap.
                 </p>

@@ -1,20 +1,27 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import CreatorDetailPage from '@/pages/CreatorDetailPage';
+import CreatorDashboardPage from '@/pages/CreatorDashboardPage';
 import { courseService } from '@/services/course.service';
 import { ApiError } from '@/services/api.service';
 import { queryKeys } from '@/lib/queryKeys';
+import { useAccount } from 'wagmi';
 
 vi.mock('@/services/course.service', () => ({
 	courseService: {
 		getCourse: vi.fn(),
 		getPriceHistory: vi.fn(),
 		getHoldersPage: vi.fn(),
+		updateCourse: vi.fn(),
 	},
+}));
+
+vi.mock('wagmi', () => ({
+	useAccount: vi.fn(),
 }));
 
 vi.mock('framer-motion', async () => {
@@ -47,6 +54,8 @@ vi.mock('framer-motion', async () => {
 const mockGetCourse = vi.mocked(courseService.getCourse);
 const mockGetPriceHistory = vi.mocked(courseService.getPriceHistory);
 const mockGetHoldersPage = vi.mocked(courseService.getHoldersPage);
+const mockUpdateCourse = vi.mocked(courseService.updateCourse);
+const mockUseAccount = vi.mocked(useAccount);
 
 function makeFreshQueryClient() {
 	return new QueryClient({
@@ -74,6 +83,10 @@ describe('CreatorDetailPage Integration', () => {
 		mockGetCourse.mockReset();
 		mockGetPriceHistory.mockResolvedValue([]);
 		mockGetHoldersPage.mockReset();
+		mockUpdateCourse.mockReset();
+		mockUseAccount.mockReturnValue({ address: undefined } as ReturnType<
+			typeof useAccount
+		>);
 		mockGetHoldersPage.mockResolvedValue({
 			holders: [],
 			nextCursor: null,
@@ -340,5 +353,135 @@ describe('CreatorDetailPage Integration', () => {
 		expect(
 			screen.queryByText(/this creator page could not load/i)
 		).not.toBeInTheDocument();
+	});
+
+	it('shows early access only when enabled and gates buys by wallet whitelist', async () => {
+		const walletAddress =
+			'GABCDE1234567890ABCDE1234567890ABCDE1234567890ABCDEF';
+		mockUseAccount.mockReturnValue({ address: walletAddress } as ReturnType<
+			typeof useAccount
+		>);
+		const creator = {
+			id: 'creator-123',
+			title: 'Alex Rivers',
+			description: 'Digital Artist & Illustrator',
+			price: 0.05,
+			priceStroops: 500_000,
+			creatorShareSupply: 100,
+			instructorId: 'arivers',
+			category: 'Art',
+			level: 'BEGINNER' as const,
+			earlyAccessEnabled: true,
+			earlyAccessWhitelist: [
+				'GOTHER1234567890ABCDE1234567890ABCDE1234567890ABCDEF',
+			],
+		};
+		mockGetCourse.mockResolvedValue(creator);
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={['/creator/creator-123']}>
+					<Routes>
+						<Route path="/creator/:id" element={<CreatorDetailPage />} />
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		expect(
+			await screen.findByTestId('early-access-badge')
+		).toBeInTheDocument();
+		const buyButton = screen.getByTestId('creator-buy-button');
+		expect(buyButton).toBeDisabled();
+		expect(screen.getByRole('tooltip')).toHaveTextContent(
+			'Your wallet is not on the whitelist'
+		);
+
+		act(() => {
+			queryClient.setQueryData(queryKeys.creators.detail('creator-123'), {
+				...creator,
+				earlyAccessWhitelist: [walletAddress.toLowerCase()],
+			});
+		});
+		await waitFor(() => expect(buyButton).toBeEnabled());
+	});
+
+	it('shows the configured public launch date and removes early access badge when disabled', async () => {
+		mockGetCourse.mockResolvedValue({
+			id: 'creator-123',
+			title: 'Alex Rivers',
+			description: 'Digital Artist & Illustrator',
+			price: 0.05,
+			priceStroops: 500_000,
+			creatorShareSupply: 100,
+			instructorId: 'arivers',
+			category: 'Art',
+			level: 'BEGINNER',
+			earlyAccessEnabled: false,
+			publicLaunchDate: '2030-01-01T12:00:00.000Z',
+		});
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={['/creator/creator-123']}>
+					<Routes>
+						<Route path="/creator/:id" element={<CreatorDetailPage />} />
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		expect(await screen.findByText(/public launch:/i)).toBeInTheDocument();
+		expect(
+			screen.queryByTestId('early-access-badge')
+		).not.toBeInTheDocument();
+	});
+
+	it('persists an early access mode change from the creator settings panel', async () => {
+		const user = userEvent.setup();
+		const creator = {
+			id: 'creator-123',
+			title: 'Alex Rivers',
+			description: 'Digital Artist & Illustrator',
+			price: 0.05,
+			priceStroops: 500_000,
+			creatorShareSupply: 100,
+			instructorId: 'arivers',
+			category: 'Art',
+			level: 'BEGINNER' as const,
+			earlyAccessEnabled: false,
+		};
+		mockGetCourse.mockResolvedValue(creator);
+		mockUpdateCourse.mockResolvedValue({
+			...creator,
+			earlyAccessEnabled: true,
+		});
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter
+					initialEntries={['/creators/creator-123/dashboard?tab=settings']}
+				>
+					<Routes>
+						<Route
+							path="/creators/:id/dashboard"
+							element={<CreatorDashboardPage />}
+						/>
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		const toggle = await screen.findByRole('checkbox', {
+			name: 'Enable early access',
+		});
+		await user.click(toggle);
+
+		expect(mockUpdateCourse).toHaveBeenCalledWith('creator-123', {
+			earlyAccessEnabled: true,
+		});
+		expect(
+			await screen.findByText(/only whitelisted wallets can buy/i)
+		).toBeInTheDocument();
 	});
 });

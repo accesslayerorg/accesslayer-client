@@ -61,6 +61,9 @@ export function useUpdateMetadataMutation(creatorId: string) {
 			queryClient.invalidateQueries({
 				queryKey: queryKeys.creators.detail(creatorId),
 			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.onChainMetadata(creatorId),
+			});
 			showToast.success('Profile metadata updated');
 		},
 	});
@@ -99,6 +102,34 @@ export function useCancelAuctionMutation(creatorId: string) {
 				queryKey: queryKeys.creators.detail(creatorId),
 			});
 			showToast.success('Auction cancelled');
+		},
+	});
+}
+
+/**
+ * Places a bid during the pre-launch auction window (#924) via the contract's
+ * `place_bid` function (`{ creatorId, amount }`). On success the creator
+ * detail (auction price/sold) and the live bid history caches are invalidated
+ * so the panel and leaderboard reflect the new bid.
+ */
+export function usePlaceAuctionBidMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'place_bid', creatorId],
+		mutationFn: (amount: number) =>
+			submitContractCall('place_bid', { creatorId, amount }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.auctionBids(creatorId),
+			});
+			showToast.success('Bid placed');
 		},
 	});
 }

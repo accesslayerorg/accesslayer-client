@@ -12,6 +12,7 @@ import { useConnectedWallet, useWatchlist } from '@/hooks/useWatchlist';
 const navLinks = [
 	{ label: 'Marketplace', href: '/marketplace', external: false },
 	{ label: 'Discover', href: '/discovery', external: false },
+	{ label: 'Status', href: '/status', external: false },
 	{ label: 'About', href: '/about', external: false },
 	{ label: 'GitHub', href: 'https://github.com/accesslayerorg', external: true },
 ];

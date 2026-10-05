@@ -47,7 +47,10 @@ class CreatorPageErrorBoundary extends Component<Props, State> {
 					aria-live="assertive"
 				>
 					<div className="flex flex-col items-center gap-3">
-						<AlertCircle className="size-10 text-amber-400" aria-hidden="true" />
+						<AlertCircle
+							className="size-10 text-amber-400"
+							aria-hidden="true"
+						/>
 						<h1 className="font-grotesque text-3xl font-black tracking-tight sm:text-4xl">
 							{isNotFound
 								? 'Creator not found'
