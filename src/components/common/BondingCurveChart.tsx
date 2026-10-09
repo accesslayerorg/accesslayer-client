@@ -20,6 +20,7 @@ import {
 } from '@/utils/bondingCurve.utils';
 import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import { formatCompactNumber } from '@/utils/numberFormat.utils';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 export interface BondingCurveDataPoint {
 	supply: number;
@@ -66,6 +67,16 @@ const BondingCurveChart: React.FC<BondingCurveChartProps> = ({
 	height = 300,
 	width = '100%',
 }) => {
+	// Mobile-tuned axis layout (#1055): at <768px the chart is ~315px wide
+	// inside the page padding, so we use tighter margins, straight x-ticks
+	// (the -45° rotation wastes vertical space and overlaps at that width)
+	// and a slimmer y-axis gutter so the plot keeps a readable aspect ratio.
+	const isMobile = useIsMobile();
+	const chartMargin = isMobile
+		? { top: 16, right: 12, left: 0, bottom: 16 }
+		: { top: 20, right: 30, left: 20, bottom: 60 };
+	const xAxisHeight = isMobile ? 24 : 60;
+
 	// Use data array if provided, otherwise generate from supply/price
 	let chartData: Array<{ supply: number; priceStroops: number; priceXLM: number; isMilestone?: boolean; label?: string; isCurrent?: boolean }>;
 	let priceImpactData: { currentPrice: number; newPrice: number; priceIncrease: number; priceIncreasePercent: number } | null = null;
@@ -130,40 +141,35 @@ const BondingCurveChart: React.FC<BondingCurveChartProps> = ({
 	return (
 		<div className={cn('w-full', className)}>
 			<div style={{ height: displayHeight, width: displayWidth }}>
-				<ResponsiveContainer width="100%" height="100%">
-					<LineChart
+				<ResponsiveContainer width="100%" height="100%">					<LineChart
 						data={chartData}
-						margin={{
-							top: 20,
-							right: 30,
-							left: 20,
-							bottom: 60,
-						}}
+						margin={chartMargin}
 					>
 						<CartesianGrid
 							strokeDasharray="3 3"
 							stroke="rgba(255, 255, 255, 0.1)"
 							vertical={false}
 						/>
-						<XAxis
-							dataKey="supply"
-							stroke="#94a3b8"
-							tick={{ fill: '#94a3b8', fontSize: 12 }}
-							tickLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
-							axisLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
-							tickFormatter={(value: number) => formatCompactNumber(value)}
-							angle={-45}
-							textAnchor="end"
-							height={60}
-						/>
-						<YAxis
-							stroke="#94a3b8"
-							tick={{ fill: '#94a3b8', fontSize: 12 }}
-							tickLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
-							axisLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
-							tickFormatter={(value: number) => formatDisplayKeyPrice(value)}
-							width={80}
-						/>
+					<XAxis
+						dataKey="supply"
+						stroke="#94a3b8"
+						tick={{ fill: '#94a3b8', fontSize: isMobile ? 10 : 12 }}
+						tickLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
+						axisLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
+						tickFormatter={(value: number) => formatCompactNumber(value)}
+						angle={isMobile ? 0 : -45}
+						textAnchor={isMobile ? 'middle' : 'end'}
+						height={xAxisHeight}
+						minTickGap={isMobile ? 32 : 16}
+					/>
+					<YAxis
+						stroke="#94a3b8"
+						tick={{ fill: '#94a3b8', fontSize: isMobile ? 10 : 12 }}
+						tickLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
+						axisLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
+						tickFormatter={(value: number) => formatDisplayKeyPrice(value)}
+						width={isMobile ? 62 : 80}
+					/>
 						<Tooltip content={<CustomTooltip />} />
 						<Line
 							type="monotone"

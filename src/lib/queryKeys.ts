@@ -23,6 +23,8 @@ export const queryKeys = {
 		infiniteList: (params?: Omit<GetCoursesParams, 'page'>) =>
 			['creators', 'infiniteList', params ?? null] as const,
 		detail: (id: string) => ['creators', 'detail', id] as const,
+		onChainMetadata: (creatorId: string) =>
+			['creators', creatorId, 'onChainMetadata'] as const,
 		priceHistory: (creatorId: string, interval: string) =>
 			['creators', creatorId, 'priceHistory', interval] as const,
 		holders: (creatorId: string) =>
@@ -32,6 +34,8 @@ export const queryKeys = {
 		twap: (creatorId: string) =>
 			['creators', creatorId, 'twap', '24h'] as const,
 		stats: (creatorId: string) => ['creators', creatorId, 'stats'] as const,
+		auctionBids: (creatorId: string) =>
+			['creators', creatorId, 'auction-bids'] as const,
 		uniqueTraders: (creatorId: string) =>
 			['creators', creatorId, 'unique-traders'] as const,
 		curveConfig: (creatorId: string) =>
@@ -56,6 +60,8 @@ export const queryKeys = {
 			['creators', creatorId, 'trade-cooldown'] as const,
 		whitelist: (creatorId: string) =>
 			['creators', creatorId, 'whitelist'] as const,
+		publicProfile: (address: string) =>
+			['creators', 'public-profile', address] as const,
 		keyDeployment: (keyId: string) =>
 			['creators', 'deployment', keyId] as const,
 		discovery: {
@@ -66,11 +72,15 @@ export const queryKeys = {
 	},
 	wallet: {
 		holdings: (address: string) => ['wallet', address, 'holdings'] as const,
+		portfolioHistory: (address: string, range: string) =>
+			['wallet', address, 'portfolioHistory', range] as const,
 		activity: (address: string) => ['wallet', address, 'activity'] as const,
 		tradeHistory: (address: string) =>
 			['wallet', address, 'tradeHistory'] as const,
-		stakingPositions: (address: string) =>
-			['wallet', address, 'stakingPositions'] as const,
+	vestingPositions: (address: string) =>
+		['wallet', address, 'vestingPositions'] as const,
+	stakingPositions: (address: string) =>
+		['wallet', address, 'stakingPositions'] as const,
 		xlmBalance: (address: string) =>
 			['wallet', address, 'xlmBalance'] as const,
 	},
@@ -94,11 +104,19 @@ export const queryKeys = {
 		ratings: () => ['leaderboard', 'ratings'] as const,
 	},
 	admin: {
+		treasury: () => ['admin', 'treasury', 'balance'] as const,
+		treasuryDistributions: () => ['admin', 'treasury', 'distributions'] as const,
+		treasuryFees: () => ['admin', 'treasury', 'fees'] as const,
 		oracleCallers: () => ['admin', 'oracle', 'callers'] as const,
 		multiSigPending: () => ['admin', 'multisig', 'pending'] as const,
 		multiSigHistory: () => ['admin', 'multisig', 'history'] as const,
+		timelockPending: () => ['admin', 'timelock', 'pending'] as const,
+		timelockHistory: () => ['admin', 'timelock', 'history'] as const,
 		aclWhitelist: () => ['admin', 'acl', 'whitelist'] as const,
 		aclHistory: () => ['admin', 'acl', 'history'] as const,
+		upgradeProxyStatus: () => ['admin', 'proxy', 'status'] as const,
+		upgradeProxyPending: () => ['admin', 'proxy', 'pending'] as const,
+		upgradeProxyHistory: () => ['admin', 'proxy', 'history'] as const,
 	},
 	governance: {
 		all: () => ['governance'] as const,
@@ -129,6 +147,11 @@ export const queryKeys = {
 		summary: (wallet: string) => ['referrals', wallet, 'summary'] as const,
 		wallets: (wallet: string) => ['referrals', wallet, 'wallets'] as const,
 	},
+	staking: {
+		all: () => ['staking'] as const,
+		dashboard: (wallet: string) =>
+			['staking', wallet, 'dashboard'] as const,
+	},
 	atomicSwap: {
 		all: () => ['atomic-swap'] as const,
 		proposal: (proposalId: string) =>
@@ -141,5 +164,29 @@ export const queryKeys = {
 	bundles: {
 		all: (creatorId: string) => ['bundles', creatorId] as const,
 		list: (creatorId: string) => ['bundles', creatorId, 'list'] as const,
+		marketplace: {
+			all: () => ['bundles', 'marketplace'] as const,
+			list: () => ['bundles', 'marketplace', 'list'] as const,
+			detail: (bundleId: string) =>
+				['bundles', 'marketplace', 'detail', bundleId] as const,
+		},
+	},
+	status: {
+		all: () => ['status'] as const,
+		platform: () => ['status', 'platform'] as const,
+	},
+	creatorRevenue: {
+		all: () => ['creatorRevenue'] as const,
+		summary: (creatorId: string) =>
+			['creatorRevenue', creatorId, 'summary'] as const,
+		history: (creatorId: string, interval: string) =>
+			['creatorRevenue', creatorId, 'history', interval] as const,
+		withdrawals: (creatorId: string) =>
+			['creatorRevenue', creatorId, 'withdrawals'] as const,
+	},
+	stakingVault: {
+		/** Active vault stakes for a (wallet, key) pair. */
+		stakes: (wallet: string, keyId: string) =>
+			['staking-vault', 'stakes', wallet, keyId] as const,
 	},
 } as const;

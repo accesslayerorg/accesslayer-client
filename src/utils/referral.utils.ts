@@ -57,6 +57,39 @@ export function buildReferralLink({
 	return `${base}${path}?${params.toString()}`;
 }
 
+export interface CreatorKeyReferralLinkOptions {
+	creatorId: string;
+	wallet?: string | null;
+	origin?: string;
+}
+
+/**
+ * Builds the referral-linked URL for a creator key page (#1050).
+ *
+ * If a wallet address is provided, appends the referral query parameter (`?ref=<wallet>`).
+ * If no wallet is provided, returns the direct creator page URL.
+ */
+export function buildCreatorKeyReferralLink({
+	creatorId,
+	wallet,
+	origin,
+}: CreatorKeyReferralLinkOptions): string {
+	const base =
+		origin ??
+		(typeof window !== 'undefined' && window.location?.origin
+			? window.location.origin
+			: 'https://accesslayer.app');
+	const cleanBase = base.replace(/\/+$/, '');
+	const path = `/creator/${encodeURIComponent(creatorId)}`;
+	const trimmedWallet = wallet?.trim() ?? '';
+	if (!trimmedWallet) {
+		return `${cleanBase}${path}`;
+	}
+	const params = new URLSearchParams();
+	params.set(REFERRAL_QUERY_PARAM, trimmedWallet);
+	return `${cleanBase}${path}?${params.toString()}`;
+}
+
 /** Plain-text share caption used by the share button. */
 export function buildReferralShareText(link: string): string {
 	return `Join AccessLayer with my link and start trading creator keys: ${link}`;

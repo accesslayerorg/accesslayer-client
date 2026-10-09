@@ -37,11 +37,14 @@ import {
 	resolveCreatorKeyPriceStroops,
 } from '@/utils/keyPriceDisplay.utils';
 import { formatNumber } from '@/utils/numberFormat.utils';
+import { useUpdateCreatorProfile } from '@/hooks/useUpdateCreatorProfile';
 
 import { GraduatedCurveMilestoneChart } from '@/components/common/GraduatedCurveMilestoneChart';
+import CreatorRevenuePanel from '@/components/common/CreatorRevenuePanel';
 
 const TABS = [
 	{ label: 'Overview', value: 'overview' },
+	{ label: 'Revenue', value: 'revenue' },
 	{ label: 'Settings', value: 'settings' },
 	{ label: 'Governance', value: 'governance' },
 ];
@@ -57,11 +60,12 @@ export default function CreatorDashboardPage() {
 	const { data: creator, isLoading, isError } = useCreatorDetail(id);
 
 	const requestedTab = searchParams.get('tab');
-	const activeTab = requestedTab === 'whitelist'
-		? 'settings'
-		: TABS.some(t => t.value === requestedTab)
-		? (requestedTab as string)
-		: 'overview';
+	const activeTab =
+		requestedTab === 'whitelist'
+			? 'settings'
+			: TABS.some(t => t.value === requestedTab)
+				? (requestedTab as string)
+				: 'overview';
 
 	const metadataMutation = useUpdateMetadataMutation(id);
 	const configureAuction = useConfigureAuctionMutation(id);
@@ -72,6 +76,7 @@ export default function CreatorDashboardPage() {
 	const configureGraduatedCurve = useConfigureGraduatedCurveMutation(id);
 	const setBuyCooldown = useSetBuyCooldownMutation(id);
 	const deprecateKey = useDeprecateKeyMutation(id);
+	const updateCreatorProfile = useUpdateCreatorProfile();
 
 	const {
 		entries: whitelistEntries,
@@ -93,14 +98,13 @@ export default function CreatorDashboardPage() {
 		isLoading: isVestingLoading,
 		isError: isVestingError,
 	} = useKeyVesting(isKeyCreator ? id : undefined, address);
+
 	const { data: vestingClaims = [] } = useKeyVestingClaims(
 		isKeyCreator ? id : undefined,
 		address
 	);
-	const claimVestedTokens = useClaimVestedTokensMutation(
-		id,
-		address ?? ''
-	);
+
+	const claimVestedTokens = useClaimVestedTokensMutation(id, address ?? '');
 
 	// Curve migrations change the pricing every holder buys at, so the panel is
 	// creator-only for the same reason the vesting schedule is: the query stays
@@ -110,6 +114,7 @@ export default function CreatorDashboardPage() {
 		isLoading: isCurveMigrationsLoading,
 		isError: isCurveMigrationsError,
 	} = useCurveMigrations(isKeyCreator ? id : undefined);
+
 	const executeCurveMigration = useExecuteCurveMigrationMutation(id);
 
 	const setTab = (value: string) => {
@@ -162,13 +167,24 @@ export default function CreatorDashboardPage() {
 					<p className="mt-2 text-sm text-white/50">
 						Manage your key profile and auction configuration.
 					</p>
-					<Link
-						to={`/creator/${id}/bundles`}
-						className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-amber-300 underline-offset-4 hover:text-amber-200 hover:underline"
-						data-testid="creator-dashboard-bundles-link"
-					>
-						Manage key bundles
-					</Link>
+
+					<div className="mt-4 flex flex-wrap items-center gap-4">
+						<Link
+							to={`/creator/${id}/bundles`}
+							className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-300 underline-offset-4 hover:text-amber-200 hover:underline"
+							data-testid="creator-dashboard-bundles-link"
+						>
+							Manage key bundles
+						</Link>
+
+						<Link
+							to={`/creator/${id}/revenue`}
+							className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-400 underline-offset-4 hover:text-emerald-300 hover:underline"
+							data-testid="creator-dashboard-revenue-link"
+						>
+							Revenue & withdrawals
+						</Link>
+					</div>
 				</div>
 
 				{creator.deprecated && (
@@ -177,11 +193,13 @@ export default function CreatorDashboardPage() {
 						data-testid="key-deprecated-banner"
 					>
 						<div className="flex items-center gap-3">
-							<AlertTriangle className="size-6 text-amber-400 shrink-0" />
+							<AlertTriangle className="size-6 shrink-0 text-amber-400" />
+
 							<div>
 								<h2 className="font-grotesque text-xl font-bold text-amber-300">
 									Key deprecated
 								</h2>
+
 								<p className="mt-1 text-sm text-white/70">
 									This key has been deprecated. All new buys are
 									disabled and holders can redeem their keys for
@@ -210,29 +228,35 @@ export default function CreatorDashboardPage() {
 							<h2 className="mb-4 font-grotesque text-xl font-black tracking-tight">
 								Overview
 							</h2>
+
 							<dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
 								<div>
 									<dt className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-white/40">
 										Current price
 									</dt>
+
 									<dd className="mt-1 font-jakarta font-bold">
 										{formatDisplayKeyPrice(
 											resolveCreatorKeyPriceStroops(creator)
 										)}
 									</dd>
 								</div>
+
 								<div>
 									<dt className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-white/40">
 										Key supply
 									</dt>
+
 									<dd className="mt-1 font-jakarta font-bold">
 										{formatNumber(creator.creatorShareSupply ?? 100)}
 									</dd>
 								</div>
+
 								<div>
 									<dt className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-white/40">
 										Category
 									</dt>
+
 									<dd className="mt-1 font-jakarta font-bold">
 										{creator.category}
 									</dd>
@@ -244,6 +268,18 @@ export default function CreatorDashboardPage() {
 							keyId={id}
 							currentSupply={creator.creatorShareSupply ?? 100}
 						/>
+					</div>
+				)}
+
+				{activeTab === 'revenue' && (
+					<div
+						className="space-y-8"
+						id="profile-panel-revenue"
+						role="tabpanel"
+						aria-labelledby="profile-tab-revenue"
+						data-testid="dashboard-revenue-panel"
+					>
+						<CreatorRevenuePanel creatorId={id} wallet={address} />
 					</div>
 				)}
 
@@ -262,10 +298,12 @@ export default function CreatorDashboardPage() {
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
 								Edit Profile
 							</h2>
+
 							<p className="mb-6 text-sm text-white/50">
 								Update the display name, bio and avatar stored with your
 								key.
 							</p>
+
 							<CreatorMetadataForm
 								initialName={creator.name ?? creator.title ?? ''}
 								initialBio={creator.bio ?? creator.description ?? ''}
@@ -279,15 +317,73 @@ export default function CreatorDashboardPage() {
 
 						<section
 							className={CARD_CLASS}
+							data-testid="early-access-section"
+						>
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Early access
+							</h2>
+
+							<p className="mb-5 text-sm text-white/50">
+								Limit purchases to whitelisted wallets until public
+								launch.
+							</p>
+
+							<label className="flex max-w-md items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3">
+								<span>
+									<span className="block text-sm font-semibold text-white">
+										Enable early access
+									</span>
+
+									<span className="mt-1 block text-xs text-white/50">
+										{creator.earlyAccessEnabled
+											? 'Only whitelisted wallets can buy during early access.'
+											: 'All connected wallets can buy this key.'}
+									</span>
+								</span>
+
+								<input
+									type="checkbox"
+									checked={creator.earlyAccessEnabled ?? false}
+									disabled={updateCreatorProfile.isPending}
+									aria-label="Enable early access"
+									className="size-5 shrink-0 accent-amber-400"
+									onChange={event =>
+										updateCreatorProfile.mutate({
+											creatorId: id,
+											data: {
+												earlyAccessEnabled:
+													event.currentTarget.checked,
+											},
+										})
+									}
+								/>
+							</label>
+
+							{creator.publicLaunchDate && (
+								<p className="mt-4 text-xs text-white/55">
+									Public launch:{' '}
+									<time dateTime={creator.publicLaunchDate}>
+										{new Date(
+											creator.publicLaunchDate
+										).toLocaleString()}
+									</time>
+								</p>
+							)}
+						</section>
+
+						<section
+							className={CARD_CLASS}
 							data-testid="auction-setup-section"
 						>
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
 								Auction Setup
 							</h2>
+
 							<p className="mb-6 text-sm text-white/50">
 								Set a fixed auction price and supply allocation before
 								your key goes live.
 							</p>
+
 							<AuctionSetupPanel
 								auctionPrice={creator.auctionPrice}
 								auctionSupply={creator.auctionSupply}
@@ -326,10 +422,12 @@ export default function CreatorDashboardPage() {
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
 								Launch Penalty
 							</h2>
+
 							<p className="mb-6 text-sm text-white/50">
 								Charge early sellers a percentage fee during the first 7
 								days after key creation.
 							</p>
+
 							<LaunchPenaltyPanel
 								launchPenaltyBps={creator.launchPenaltyBps}
 								isSubmitting={setLaunchPenalty.isPending}
@@ -346,10 +444,12 @@ export default function CreatorDashboardPage() {
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
 								Buy Cooldown
 							</h2>
+
 							<p className="mb-6 text-sm text-white/50">
 								Set a delay in minutes between consecutive buys from the
 								same wallet.
 							</p>
+
 							<BuyCooldownPanel
 								buyCooldownLedgers={creator.buyCooldownLedgers}
 								isSubmitting={setBuyCooldown.isPending}
@@ -366,10 +466,12 @@ export default function CreatorDashboardPage() {
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
 								Max Buy Per Transaction
 							</h2>
+
 							<p className="mb-6 text-sm text-white/50">
 								Limit how many keys a wallet can buy in a single
 								transaction.
 							</p>
+
 							<MaxBuyQuantityPanel
 								maxBuyQuantity={creator.maxBuyQuantity}
 								isSubmitting={setMaxBuyQuantity.isPending}
@@ -384,10 +486,12 @@ export default function CreatorDashboardPage() {
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
 								Graduated Curve
 							</h2>
+
 							<p className="mb-6 text-sm text-white/50">
 								Configure up to five supply milestones and the exponent
 								applied to each tier.
 							</p>
+
 							<GraduatedCurvePanel
 								isSubmitting={configureGraduatedCurve.isPending}
 								onSubmit={milestones =>
@@ -396,55 +500,59 @@ export default function CreatorDashboardPage() {
 							/>
 						</section>
 
-					<section
-						className={CARD_CLASS}
-						data-testid="deprecate-key-section"
-					>
-						<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
-							Deprecate Key
-						</h2>
-						<p className="mb-6 text-sm text-white/50">
-							Initiate a key wind-down by setting a buyback price and
-							escrowing the required XLM.
-						</p>
-						<DeprecateKeyPanel
-							creatorId={id}
-							circulatingSupply={creator.creatorShareSupply ?? 100}
-							isDeprecated={creator.deprecated}
-							isSubmitting={deprecateKey.isPending}
-							onSubmit={params => deprecateKey.mutate(params)}
-						/>
-					</section>
-
-					{/* Creator allocation vesting (#960) — creator wallets only */}
-					{isKeyCreator && (
 						<section
 							className={CARD_CLASS}
-							data-testid="vesting-section"
+							data-testid="deprecate-key-section"
 						>
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
-								Vesting Schedule
+								Deprecate Key
 							</h2>
+
 							<p className="mb-6 text-sm text-white/50">
-								Track the creator allocation reserved for your wallet, and
-								claim the tokens that have vested.
+								Initiate a key wind-down by setting a buyback price and
+								escrowing the required XLM.
 							</p>
-							<VestingSchedulePanel
-								schedule={vesting}
-								cliffAt={vestingData?.cliffAt}
-								endAt={vestingData?.endAt}
-								claims={vestingClaims}
-								isLoading={isVestingLoading}
-								isError={isVestingError}
-								isClaiming={claimVestedTokens.isPending}
-								onClaim={() =>
-									claimVestedTokens.mutate(vesting.claimableAmount)
-								}
+
+							<DeprecateKeyPanel
+								creatorId={id}
+								circulatingSupply={creator.creatorShareSupply ?? 100}
+								isDeprecated={creator.deprecated}
+								isSubmitting={deprecateKey.isPending}
+								onSubmit={params => deprecateKey.mutate(params)}
 							/>
 						</section>
-					)}
-				</div>
-			)}
+
+						{/* Creator allocation vesting (#960) — creator wallets only */}
+						{isKeyCreator && (
+							<section
+								className={CARD_CLASS}
+								data-testid="vesting-section"
+							>
+								<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+									Vesting Schedule
+								</h2>
+
+								<p className="mb-6 text-sm text-white/50">
+									Track the creator allocation reserved for your
+									wallet, and claim the tokens that have vested.
+								</p>
+
+								<VestingSchedulePanel
+									schedule={vesting}
+									cliffAt={vestingData?.cliffAt}
+									endAt={vestingData?.endAt}
+									claims={vestingClaims}
+									isLoading={isVestingLoading}
+									isError={isVestingError}
+									isClaiming={claimVestedTokens.isPending}
+									onClaim={() =>
+										claimVestedTokens.mutate(vesting.claimableAmount)
+									}
+								/>
+							</section>
+						)}
+					</div>
+				)}
 
 				{activeTab === 'governance' && (
 					<div
@@ -461,47 +569,51 @@ export default function CreatorDashboardPage() {
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
 								Quorum Settings
 							</h2>
+
 							<p className="mb-6 text-sm text-white/50">
 								Set the minimum percentage of holders that must
 								participate in a vote for a proposal to pass.
 							</p>
-						<QuorumSettingsPanel
-							quorumBps={creator.quorumBps}
-							isSubmitting={setQuorumBps.isPending}
-							onSubmit={quorumBps => setQuorumBps.mutate(quorumBps)}
-						/>
-					</section>
 
-					{/* Curve migration management — creator wallets only */}
-					{isKeyCreator && (
-						<section
-							className={CARD_CLASS}
-							data-testid="curve-migration-section"
-						>
-							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
-								Curve Migrations
-							</h2>
-							<p className="mb-6 text-sm text-white/50">
-								Review pending bonding-curve changes, follow the timelock
-								and holder vote, then execute a migration once both
-								conditions are met.
-							</p>
-							<CurveMigrationPanel
-								migrations={curveMigrations}
-								isLoading={isCurveMigrationsLoading}
-								isError={isCurveMigrationsError}
-								executingMigrationId={
-									executeCurveMigration.isPending
-										? (executeCurveMigration.variables ?? null)
-										: null
-								}
-								onExecute={migrationId =>
-									executeCurveMigration.mutate(migrationId)
-								}
+							<QuorumSettingsPanel
+								quorumBps={creator.quorumBps}
+								isSubmitting={setQuorumBps.isPending}
+								onSubmit={quorumBps => setQuorumBps.mutate(quorumBps)}
 							/>
 						</section>
-					)}
-				</div>
+
+						{/* Curve migration management — creator wallets only */}
+						{isKeyCreator && (
+							<section
+								className={CARD_CLASS}
+								data-testid="curve-migration-section"
+							>
+								<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+									Curve Migrations
+								</h2>
+
+								<p className="mb-6 text-sm text-white/50">
+									Review pending bonding-curve changes, follow the
+									timelock and holder vote, then execute a migration
+									once both conditions are met.
+								</p>
+
+								<CurveMigrationPanel
+									migrations={curveMigrations}
+									isLoading={isCurveMigrationsLoading}
+									isError={isCurveMigrationsError}
+									executingMigrationId={
+										executeCurveMigration.isPending
+											? (executeCurveMigration.variables ?? null)
+											: null
+									}
+									onExecute={migrationId =>
+										executeCurveMigration.mutate(migrationId)
+									}
+								/>
+							</section>
+						)}
+					</div>
 				)}
 			</div>
 		</main>

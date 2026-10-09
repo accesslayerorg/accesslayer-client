@@ -11,7 +11,9 @@ import {
 	fetchCreatorBundlesPage,
 	type BundlesPage,
 	type CreateBundleRequest,
+	type BuyMarketplaceBundleResult,
 } from '@/services/bundle.service';
+import { marketplaceBundleService } from '@/services/bundle.service';
 import { courseService } from '@/services/course.service';
 import { submitCreatorContractCall } from '@/hooks/useCreatorContractActions';
 import { STROOPS_PER_XLM } from '@/constants/stellar';
@@ -20,14 +22,9 @@ import type { BundleKeyOption } from '@/utils/bundle.utils';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 
-/**
- * Bundle queries and contract calls for the creator bundle management page.
- *
- * The list query returns active and archived bundles together; the page splits
- * them with `partitionBundlesByStatus` so a bundle archives itself as soon as
- * it expires. Creating and cancelling bundles submit `create_bundle` and
- * `cancel_bundle`, invalidating the creator's bundles on success.
- */
+// =========================================================================
+// Creator-side bundle hooks (existing on `dev`)
+// =========================================================================
 
 /**
  * Cursor-paginated bundles for a creator.
@@ -177,6 +174,41 @@ export function useCancelBundleMutation(creatorId: string) {
 		},
 		onSettled: () => {
 			void queryClient.invalidateQueries({ queryKey: listKey });
+		},
+	});
+}
+
+// =========================================================================
+// Buyer-side marketplace bundle hooks (issue #981)
+// =========================================================================
+
+export function useMarketplaceBundles() {
+	return useQuery({
+		queryKey: queryKeys.bundles.marketplace.list(),
+		queryFn: () => marketplaceBundleService.listBundles(),
+	});
+}
+
+export function useMarketplaceBundle(id: string | undefined) {
+	return useQuery({
+		queryKey: queryKeys.bundles.marketplace.detail(id ?? ''),
+		queryFn: () => marketplaceBundleService.getBundle(id!),
+		enabled: !!id,
+	});
+}
+
+export function useBuyMarketplaceBundle() {
+	const queryClient = useQueryClient();
+
+	return useMutation<BuyMarketplaceBundleResult, Error, { id: string }>({
+		mutationFn: ({ id }) => marketplaceBundleService.buyBundle(id),
+		onSuccess: (_result, { id }) => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.bundles.marketplace.detail(id),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.bundles.marketplace.list(),
+			});
 		},
 	});
 }

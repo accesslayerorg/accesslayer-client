@@ -5,37 +5,61 @@ export interface ProtocolStatus {
 	pauseActivatedAt?: string;
 }
 
-const POLL_INTERVAL_MS = 60_000;
+const POLL_INTERVAL_MS = 30_000;
+
+let globalPaused = false;
+let globalPauseActivatedAt: string | undefined;
+let listeners: Array<() => void> = [];
+
+const notify = () => listeners.forEach(l => l());
+
+const check = async () => {
+	try {
+		const res = await fetch('/protocol/status');
+		if (!res.ok) return;
+		const data: ProtocolStatus = await res.json();
+		if (
+			globalPaused !== data.globalTradingPaused ||
+			globalPauseActivatedAt !== data.pauseActivatedAt
+		) {
+			globalPaused = data.globalTradingPaused;
+			globalPauseActivatedAt = data.pauseActivatedAt;
+			notify();
+		}
+	} catch {
+		// silently ignore — will retry next poll
+	}
+};
+
+let pollTimer: number | undefined;
 
 export function useGlobalPause() {
-	const [paused, setPaused] = useState(false);
-	const [pauseActivatedAt, setPauseActivatedAt] = useState<
-		string | undefined
-	>();
+	const [state, setState] = useState({
+		paused: globalPaused,
+		pauseActivatedAt: globalPauseActivatedAt,
+	});
 
 	useEffect(() => {
-		let active = true;
+		const listener = () =>
+			setState({
+				paused: globalPaused,
+				pauseActivatedAt: globalPauseActivatedAt,
+			});
+		listeners.push(listener);
 
-		const check = async () => {
-			try {
-				const res = await fetch('/protocol/status');
-				if (!res.ok) return;
-				const data: ProtocolStatus = await res.json();
-				if (!active) return;
-				setPaused(data.globalTradingPaused);
-				setPauseActivatedAt(data.pauseActivatedAt);
-			} catch {
-				// silently ignore — will retry next poll
-			}
-		};
+		if (listeners.length === 1) {
+			check();
+			pollTimer = window.setInterval(check, POLL_INTERVAL_MS);
+		}
 
-		check();
-		const id = window.setInterval(check, POLL_INTERVAL_MS);
 		return () => {
-			active = false;
-			window.clearInterval(id);
+			listeners = listeners.filter(l => l !== listener);
+			if (listeners.length === 0 && pollTimer !== undefined) {
+				window.clearInterval(pollTimer);
+				pollTimer = undefined;
+			}
 		};
 	}, []);
 
-	return { paused, pauseActivatedAt };
+	return state;
 }

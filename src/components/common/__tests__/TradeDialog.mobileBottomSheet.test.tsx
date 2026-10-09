@@ -229,7 +229,7 @@ describe('TradeDialog mobile slide-up sheet (#865)', () => {
 		it('allows changing amount and confirms trade on mobile', async () => {
 			const user = userEvent.setup();
 			const onConfirm = vi.fn();
-			render(<TestTradeDialog onConfirm={onConfirm} />);
+			render(<TestTradeDialog onConfirm={onConfirm} currentSupply={1000} />);
 
 			const input = screen.getByTestId('trade-dialog-amount');
 			await user.clear(input);

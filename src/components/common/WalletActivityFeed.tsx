@@ -178,7 +178,11 @@ const WalletActivityFeed: React.FC<WalletActivityFeedProps> = ({ address }) => {
 						className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] py-10 text-center"
 					>
 						<p className="text-sm text-white/50">
-							No {FILTER_TABS.find(t => t.value === activeFilter)?.label.toLowerCase()} events found
+							No{' '}
+							{FILTER_TABS.find(
+								t => t.value === activeFilter
+							)?.label.toLowerCase()}{' '}
+							events found
 						</p>
 					</div>
 				) : (
@@ -229,7 +233,13 @@ function FilterBar({ active, onChange, disabled = false }: FilterBarProps) {
 		<div
 			role="tablist"
 			aria-label="Filter activity by type"
-			className="flex flex-wrap gap-2"
+			/*
+			 * Horizontal scroll rail on mobile (#1055): seven filter pills don't
+			 * fit at 375px, so the rail scrolls natively (hidden scrollbar via
+			 * `no-scrollbar`) instead of wrapping or clipping. From `sm` up the
+			 * tabs always fit, so the rail degrades back to a wrapped flex row.
+			 */
+			className="no-scrollbar -mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
 		>
 			{FILTER_TABS.map(tab => (
 				<button
@@ -242,7 +252,10 @@ function FilterBar({ active, onChange, disabled = false }: FilterBarProps) {
 					onClick={() => onChange(tab.value)}
 					data-testid={`activity-filter-${tab.value}`}
 					className={cn(
-						'rounded-full border px-3.5 py-1.5 text-xs font-semibold font-jakarta transition-all duration-200 outline-none',
+						// 44px min tap target on mobile (WCAG 2.5.5): py-2.5 keeps the
+						// rendered pill ≥ 40px tall with focus/hit room; larger thumb-
+						// friendly hit area relaxes back to the compact pill on sm+.
+						'shrink-0 snap-start whitespace-nowrap rounded-full border px-4 py-2.5 text-xs font-semibold font-jakarta transition-all duration-200 outline-none sm:px-3.5 sm:py-1.5',
 						'focus-visible:ring-2 focus-visible:ring-amber-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#06111f]',
 						'disabled:cursor-not-allowed disabled:opacity-40',
 						active === tab.value

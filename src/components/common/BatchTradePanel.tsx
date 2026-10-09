@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -21,21 +21,21 @@ export default function BatchTradePanel({ open, onOpenChange }: { open: boolean;
 	const [quantity, setQuantity] = useState(1);
 	const [slippageBps, setSlippageBps] = useState(500);
 	const [results, setResults] = useState<Awaited<ReturnType<typeof mutation.mutateAsync>>['results'] | null>(null);
-	const courses = coursesQuery.data ?? [];
-	const holdings = holdingsQuery.data ?? [];
-	const getCourse = (id: string) => courses.find(course => course.id === id);
-	const orderCost = (order: DraftOrder) => {
+	const courses = useMemo(() => coursesQuery.data ?? [], [coursesQuery.data]);
+	const holdings = useMemo(() => holdingsQuery.data ?? [], [holdingsQuery.data]);
+	const getCourse = useCallback((id: string) => courses.find(course => course.id === id), [courses]);
+	const orderCost = useCallback((order: DraftOrder) => {
 		const course = getCourse(order.creatorId);
 		const price = Number(order.side === 'buy' ? course?.priceStroops : course?.priceStroops) || 0;
 		return order.side === 'buy' ? calculateFeeBreakdown({ quantity: order.quantity, keyPriceStroops: price, currentSupply: course?.creatorShareSupply ?? 0, protocolFeeBps: course?.protocolFeeBps ?? 500, creatorFeeBps: course?.creatorFeeBps ?? 500 }).totalCostStroops : 0;
-	};
-	const totalCost = useMemo(() => orders.reduce((sum, order) => sum + orderCost(order), 0), [orders, courses]);
+	}, [getCourse]);
+	const totalCost = useMemo(() => orders.reduce((sum, order) => sum + orderCost(order), 0), [orders, orderCost]);
 	const totalFees = useMemo(() => orders.reduce((sum, order) => {
 		if (order.side !== 'buy') return sum;
 		const course = getCourse(order.creatorId);
 		const gross = (Number(course?.priceStroops) || 0) * order.quantity;
 		return sum + Math.round(gross * ((course?.protocolFeeBps ?? 500) + (course?.creatorFeeBps ?? 500)) / 10_000);
-	}, 0), [orders, courses]);
+	}, 0), [orders, getCourse]);
 	const sellExceeded = orders.some(order => order.side === 'sell' && (holdings.find(item => item.creatorId === order.creatorId)?.quantity ?? 0) < order.quantity);
 	const addOrder = () => {
 		if (!creatorId || quantity < 1 || !Number.isFinite(quantity)) return;

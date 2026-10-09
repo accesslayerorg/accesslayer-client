@@ -156,6 +156,20 @@
 	}
 }
 
+/*
+ * Utility: hide the scrollbar while keeping the element scrollable (#1055).
+ * Used by horizontally scrolling mobile tab/filter rails so the overflow is
+ * reachable with a native swipe gesture but no visual scrollbar chrome is
+ * clipped off-screen.
+ */
+@utility no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
 @layer components {
 	.marketplace-section {
 		margin-top: var(--spacing-section-default);
