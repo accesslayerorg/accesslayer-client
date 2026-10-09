@@ -138,52 +138,6 @@ const BondingCurveChart: React.FC<BondingCurveChartProps> = ({
 	const displayHeight = typeof height === 'number' ? `${height}px` : height;
 	const displayWidth = typeof width === 'number' ? `${width}px` : width;
 
-	const renderTwapTooltip = ({
-		active,
-		payload,
-		label,
-	}: {
-		active?: boolean;
-		payload?: Array<{
-			dataKey?: string;
-			value?: number | string;
-			color?: string;
-		}>;
-		label?: string | number;
-	}) => {
-		if (!active || !payload || payload.length === 0) return null;
-
-		const spotEntry = payload.find(entry => entry.dataKey === 'priceXLM');
-		const twapEntry = payload.find(entry => entry.dataKey === 'twapPriceXLM');
-		const spotValue = Number(spotEntry?.value ?? 0);
-		const twapValue = Number(twapEntry?.value ?? 0);
-		const deviation =
-			spotValue > 0 ? ((twapValue - spotValue) / spotValue) * 100 : 0;
-
-		return (
-			<div className="rounded-lg border border-white/10 bg-[#171717] p-3 text-sm text-white shadow-lg">
-				<div className="mb-1 text-xs uppercase tracking-[0.2em] text-white/55">
-					{twapLabel}
-				</div>
-				<div className="space-y-1">
-					<div>Spot: {spotValue.toFixed(4)} XLM</div>
-					<div>TWAP: {twapValue.toFixed(4)} XLM</div>
-					<div
-						className={
-							deviation >= 0 ? 'text-amber-300' : 'text-emerald-300'
-						}
-					>
-						Deviation: {deviation >= 0 ? '+' : ''}
-						{deviation.toFixed(2)}%
-					</div>
-					{label !== undefined && (
-						<div className="text-white/55">Supply: {label}</div>
-					)}
-				</div>
-			</div>
-		);
-	};
-
 	return (
 		<div className={cn('w-full', className)}>
 			<div style={{ height: displayHeight, width: displayWidth }}>

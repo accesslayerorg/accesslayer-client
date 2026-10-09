@@ -437,6 +437,10 @@ function CreatorDetailPageContent() {
 
 	const twapDelta =
 		twapPrice != null && spotPrice != null ? twapPrice - spotPrice : null;
+	const twapDeviationPercent =
+		twapPrice != null && spotPrice != null && spotPrice > 0
+			? ((twapPrice - spotPrice) / spotPrice) * 100
+			: null;
 
 	const hasRealStakingData =
 		creator.stakingPoolBalance != null ||
