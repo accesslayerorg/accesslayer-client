@@ -7,7 +7,7 @@
  * queryKeys.creatorProfile.all() })`).
  */
 
-import type { GetCoursesParams } from '@/services/course.service';
+import type { GetCoursesParams, KeyTwapWindow } from '@/services/course.service';
 import type { VolumeWindow } from '@/services/leaderboard.service';
 
 export const queryKeys = {
@@ -31,8 +31,8 @@ export const queryKeys = {
 			['creators', creatorId, 'holders'] as const,
 		activity: (creatorId: string) =>
 			['creators', creatorId, 'activity'] as const,
-		twap: (creatorId: string) =>
-			['creators', creatorId, 'twap', '24h'] as const,
+		twap: (creatorId: string, window: KeyTwapWindow = '24h') =>
+			['creators', creatorId, 'twap', window] as const,
 		stats: (creatorId: string) => ['creators', creatorId, 'stats'] as const,
 		auctionBids: (creatorId: string) =>
 			['creators', creatorId, 'auction-bids'] as const,

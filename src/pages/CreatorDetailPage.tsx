@@ -439,6 +439,10 @@ function CreatorDetailPageContent() {
 
 	const twapDelta =
 		twapPrice != null && spotPrice != null ? twapPrice - spotPrice : null;
+	const twapDeviationPercent =
+		twapPrice != null && spotPrice != null && spotPrice > 0
+			? ((twapPrice - spotPrice) / spotPrice) * 100
+			: null;
 
 	const hasRealStakingData =
 		creator.stakingPoolBalance != null ||
@@ -768,6 +772,51 @@ function CreatorDetailPageContent() {
 								</span>
 							)}
 						</div>
+						{isTwapLoading ? (
+							<div
+								aria-label="Loading TWAP"
+								role="status"
+								className="mt-2"
+							>
+								<Skeleton className="h-3 w-24" />
+								<Skeleton className="mt-2 h-6 w-32" />
+							</div>
+						) : twapPrice != null ? (
+							<div className="text-right">
+								<div className="mt-1 text-xl font-bold text-white">
+									{formatDisplayKeyPrice(twapPrice)}
+								</div>
+								{twapDelta != null && (
+									<span
+										className={
+											twapDelta < 0
+												? 'text-sm font-semibold text-emerald-400'
+												: 'text-sm font-semibold text-rose-400'
+										}
+									>
+										{twapDelta < 0 ? '▼' : '▲'}{' '}
+										{formatDisplayKeyPrice(Math.abs(twapDelta))} vs
+										spot
+									</span>
+								)}
+								{twapDeviationPercent != null && (
+									<div
+										className={
+											twapDeviationPercent < 0
+												? 'mt-1 text-xs text-emerald-300'
+												: 'mt-1 text-xs text-rose-300'
+										}
+									>
+										{twapDeviationPercent >= 0 ? '+' : ''}
+										{twapDeviationPercent.toFixed(2)}% from spot
+									</div>
+								)}
+							</div>
+						) : (
+							<div className="text-right text-sm text-white/45">
+								TWAP unavailable
+							</div>
+						)}
 					</div>
 				) : null}
 
