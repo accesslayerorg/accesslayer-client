@@ -20,7 +20,6 @@ import {
 	resolveActiveTradeCooldown,
 } from '@/hooks/useTradeCooldownStatus';
 import type { ActiveTradeCooldown } from '@/utils/tradeCooldown.utils';
-import { isActiveCooldown } from '@/utils/tradeCooldown.utils';
 import KeyHolderList from '@/components/common/KeyHolderList';
 import HolderConcentrationChart from '@/components/common/HolderConcentrationChart';
 import StakingRewardsSection from '@/components/common/StakingRewardsSection';
@@ -218,7 +217,6 @@ function CreatorDetailPageContent() {
 		tradeCooldownStatus,
 		nextBuyAllowedAt
 	);
-	const isTradeCooldownActive = isActiveCooldown(tradeCooldown);
 
 	const handleConfirmBuy = async (
 		amount: number,
@@ -453,10 +451,9 @@ function CreatorDetailPageContent() {
 								? 'Key is deprecated. New buys are disabled.'
 								: isBuyCooldownActive
 									? 'Buy cooldown active for your wallet.'
-									: 'Purchase keys for this creator.'}
-								: isLockedOut
-								? 'Early access is restricted to approved whitelisted wallets.'
-								: 'Purchase keys for this creator.'}
+									: isLockedOut
+										? 'Early access is restricted to approved whitelisted wallets.'
+										: 'Purchase keys for this creator.'}
 						</p>
 						{/* Configurable bid-ask spread between buy and sell price (#951) */}
 						<SpreadIndicator
@@ -484,64 +481,56 @@ function CreatorDetailPageContent() {
 						)}
 					</div>
 					<div className="flex shrink-0 flex-col items-end gap-2">
-						<Button
-							disabled={isKeyDeprecated(creator) || isBuyCooldownActive}
-							data-testid="key-detail-buy-button"
-							onClick={() => setBuyDialogOpen(true)}
-							variant={
-								isKeyDeprecated(creator) || isBuyCooldownActive
-									? 'outline'
-									: 'default'
-							}
-							aria-describedby={
-								isBuyCooldownActive
-									? 'key-detail-buy-cooldown-reason'
-									: undefined
-							}
-							className="rounded-xl font-bold"
-						>
-							{isKeyDeprecated(creator)
-								? 'Buy Disabled (Deprecated)'
-								: isBuyCooldownActive
-									? `Buy in ${buyCooldownLabel}`
-									: 'Buy Key'}
-						</Button>
-						{isBuyCooldownActive && (
-							<p
-								className="text-right text-xs font-medium text-sky-300/80"
-								data-testid="key-detail-buy-cooldown-reason"
-								id="key-detail-buy-cooldown-reason"
+						{isKeyDeprecated(creator) ? (
+							<Button
+								disabled
+								data-testid="key-detail-buy-button"
+								variant="outline"
+								className="rounded-xl font-bold"
 							>
-								Unlocks in {buyCooldownLabel}
-							</p>
+								Buy Disabled (Deprecated)
+							</Button>
+						) : isLockedOut ? (
+							<Button
+								disabled
+								data-testid="key-detail-buy-button"
+								variant="outline"
+								className="rounded-xl font-bold"
+							>
+								Buy Locked
+							</Button>
+						) : isBuyCooldownActive ? (
+							<>
+								<Button
+									disabled
+									data-testid="key-detail-buy-button"
+									variant="outline"
+									aria-describedby="key-detail-buy-cooldown-reason"
+									className="rounded-xl font-bold"
+								>
+									{`Buy in ${buyCooldownLabel}`}
+								</Button>
+								<p
+									className="text-right text-xs font-medium text-sky-300/80"
+									data-testid="key-detail-buy-cooldown-reason"
+									id="key-detail-buy-cooldown-reason"
+								>
+									Unlocks in {buyCooldownLabel}
+								</p>
+							</>
+						) : (
+							<TradeCooldownButton
+								cooldown={tradeCooldown}
+								label="Buy Key"
+								className="rounded-xl font-bold"
+								onClick={() => setBuyDialogOpen(true)}
+								buttonProps={{
+									'data-testid': 'key-detail-buy-button',
+								}}
+							/>
 						)}
 					</div>
 				</div>
-					{isKeyDeprecated(creator) ? (
-						<Button
-							disabled
-							data-testid="key-detail-buy-button"
-							variant="outline"
-							className="rounded-xl font-bold"
-						>
-							Buy Disabled (Deprecated)
-						</Button>
-					) : (
-						<TradeCooldownButton
-							cooldown={tradeCooldown}
-							label="Buy Key"
-							className="rounded-xl font-bold"
-							onClick={() => setBuyDialogOpen(true)}
-							buttonProps={{
-								'data-testid': 'key-detail-buy-button',
-							}}
-						/>
-					)}
-				</div>
-				{/* Buy Cooldown Countdown (only meaningful for authenticated users) */}
-				{userAddress && !isTradeCooldownActive && (
-					<BuyCooldownCountdown nextBuyAllowedAt={nextBuyAllowedAt} />
-				)}
 				{/* Share to X Button (only visible for authenticated holders) */}
 				<div className="flex justify-end">
 					<ShareTwitterButton

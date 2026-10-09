@@ -766,6 +766,12 @@ class CourseService extends BaseApiService {
 			// report. Both resolve to "no cooldown" instead of an error so the
 			// buy panel keeps working.
 			if (error instanceof ApiError && error.status === 404) {
+				return null;
+			}
+			throw this.handleError(error);
+		}
+	}
+
 	// Get trade cooldown status - GET /keys/:keyId/trade-cooldown (#998)
 	async getTradeCooldownStatus(keyId: string): Promise<TradeCooldownInfo | null> {
 		try {
