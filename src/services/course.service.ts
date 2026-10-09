@@ -280,6 +280,35 @@ export interface KeyOraclePrice {
 	maxAgeSeconds?: number | null;
 }
 
+/**
+ * Per-wallet buy cooldown for a creator key (#915).
+ *
+ * Returned by `GET /keys/:keyId/buy-cooldown?wallet=...`, which reads the
+ * creator's `set_buy_cooldown` window together with the caller's last buy
+ * ledger from the contract. The cooldown is per wallet, not per creator: two
+ * wallets can buy the same key at the same time as long as each is outside its
+ * own cooldown window.
+ *
+ * `null` (a 404, or a payload with no `nextBuyAllowedAt`) means the wallet is
+ * not in a cooldown period and can buy immediately — the same "no data, no
+ * cooldown" contract the rest of the key detail page follows.
+ */
+export interface KeyBuyCooldown {
+	/** Key the cooldown belongs to, when the backend echoes it back. */
+	keyId?: string;
+	/** Wallet the cooldown is scoped to. */
+	wallet?: string | null;
+	/**
+	 * Timestamp after which this wallet may next buy the key. Accepts a
+	 * seconds epoch, ms epoch, or ISO string; `null`/absent means no cooldown.
+	 */
+	nextBuyAllowedAt?: number | string | null;
+	/** Cooldown window in Stellar ledgers configured via `set_buy_cooldown`. */
+	cooldownLedgers?: number | null;
+	/** Timestamp of this wallet's most recent buy of the key, when known. */
+	lastBuyAt?: number | string | null;
+}
+
 export type PerformanceBondState = 'staked' | 'released' | 'forfeited';
 
 /**
@@ -838,6 +867,29 @@ class CourseService extends BaseApiService {
 
 			return response.data.data;
 		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Get the connected wallet's per-key buy cooldown - GET /keys/:keyId/buy-cooldown (#915)
+	async getKeyBuyCooldown(
+		keyId: string,
+		wallet: string
+	): Promise<KeyBuyCooldown | null> {
+		try {
+			const response = await this.api.get<APIResponse<KeyBuyCooldown>>(
+				`/keys/${keyId}/buy-cooldown`,
+				{ params: { wallet } }
+			);
+			return response.data.data ?? null;
+		} catch (error: unknown) {
+			// A wallet that has never bought this key has no cooldown state yet,
+			// and a creator who never called `set_buy_cooldown` has no window to
+			// report. Both resolve to "no cooldown" instead of an error so the
+			// buy panel keeps working.
+			if (error instanceof ApiError && error.status === 404) {
+				return null;
+			}
 			throw this.handleError(error);
 		}
 	}

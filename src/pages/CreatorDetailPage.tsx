@@ -60,6 +60,8 @@ import { useKeyTwap } from '@/hooks/useKeyTwap';
 import { useKeyStats } from '@/hooks/useKeyStats';
 import { useKeyUniqueTraders } from '@/hooks/useKeyUniqueTraders';
 import { useKeyConfig } from '@/hooks/useKeyConfig';
+import { useKeyBuyCooldown } from '@/hooks/useKeyBuyCooldown';
+import { useBuyCooldownCountdown } from '@/hooks/useBuyCooldownCountdown';
 import KeyStatsPanel from '@/components/common/KeyStatsPanel';
 import Skeleton from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -78,10 +80,7 @@ import {
 	invalidateTradeCooldownStatus,
 	resolveActiveTradeCooldown,
 } from '@/hooks/useTradeCooldownStatus';
-import {
-	isActiveCooldown,
-	type ActiveTradeCooldown,
-} from '@/utils/tradeCooldown.utils';
+import type { ActiveTradeCooldown } from '@/utils/tradeCooldown.utils';
 import TradeCooldownButton from '@/components/common/TradeCooldownButton';
 import { useAccount } from 'wagmi';
 
@@ -152,10 +151,28 @@ function CreatorDetailPageContent() {
 
 	const userPosition = holdings.find(h => h.creatorId === (id || ''));
 	const holdingsCount = userPosition?.quantity ?? 0;
-
+	// Per-wallet buy cooldown (#915). The dedicated read is the source of truth
+	// for the connected wallet; the held-position value (#873) and the
+	// creator-wide fallback are kept so the countdown still works for backends
+	// that do not return a per-wallet expiry. The query is disabled until a
+	// wallet is connected, so it fires on key page load and on wallet connect.
+	const { data: buyCooldown, refetch: refetchBuyCooldown } = useKeyBuyCooldown(
+		id || '',
+		userAddress
+	);
 	const nextBuyAllowedAt =
-		userPosition?.nextBuyAllowedAt ?? creator?.nextBuyAllowedAt ?? null;
-
+		buyCooldown?.nextBuyAllowedAt ??
+		userPosition?.nextBuyAllowedAt ??
+		creator?.nextBuyAllowedAt ??
+		null;
+	// Single ticking clock shared by the countdown chip and the Buy button, so
+	// the button re-enables on the exact tick the timer hits zero. On expiry we
+	// re-read the cooldown because a configured cooldown means the next buy
+	// starts a fresh window.
+	const { isActive: isBuyCooldownActive, formattedRemaining: buyCooldownLabel } =
+		useBuyCooldownCountdown(nextBuyAllowedAt, () => {
+			void refetchBuyCooldown();
+		});
 	const { data: twap, isLoading: isTwapLoading } = useKeyTwap(id || '');
 
 	const {
@@ -293,8 +310,6 @@ function CreatorDetailPageContent() {
 		tradeCooldownStatus,
 		nextBuyAllowedAt
 	);
-
-	const isTradeCooldownActive = isActiveCooldown(tradeCooldown);
 
 	const handleConfirmBuy = async (
 		amount: number,
@@ -584,9 +599,11 @@ function CreatorDetailPageContent() {
 						<p className="mt-0.5 text-sm text-white/80">
 							{isKeyDeprecated(creator)
 								? 'Key is deprecated. New buys are disabled.'
-								: buyDisabledReason
-									? buyDisabledReason
-									: 'Purchase keys for this creator.'}
+								: isBuyCooldownActive
+									? 'Buy cooldown active for your wallet.'
+									: buyDisabledReason
+										? buyDisabledReason
+										: 'Purchase keys for this creator.'}
 						</p>
 
 						<SpreadIndicator
@@ -605,6 +622,13 @@ function CreatorDetailPageContent() {
 							source={oracleSource}
 							isLoading={isOracleLoading}
 						/>
+						{/* Per-wallet buy cooldown countdown (#915). Renders nothing when the wallet is not in a cooldown period. */}
+						{userAddress && (
+							<BuyCooldownCountdown
+								className="mt-2"
+								nextBuyAllowedAt={nextBuyAllowedAt}
+							/>
+						)}
 
 						{creator.earlyAccessEnabled && (
 							<span className="mt-2 inline-flex items-center rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-xs font-bold text-amber-200">
@@ -646,6 +670,25 @@ function CreatorDetailPageContent() {
 							>
 								Buy Disabled (Deprecated)
 							</Button>
+						) : isBuyCooldownActive ? (
+							<div className="flex flex-col items-end gap-2">
+								<Button
+									disabled
+									data-testid="key-detail-buy-button"
+									variant="outline"
+									aria-describedby="key-detail-buy-cooldown-reason"
+									className="min-h-11 w-full rounded-xl font-bold sm:h-10 sm:min-h-0 sm:w-auto"
+								>
+									{`Buy in ${buyCooldownLabel}`}
+								</Button>
+								<p
+									className="text-right text-xs font-medium text-sky-300/80"
+									data-testid="key-detail-buy-cooldown-reason"
+									id="key-detail-buy-cooldown-reason"
+								>
+									Unlocks in {buyCooldownLabel}
+								</p>
+							</div>
 						) : buyDisabledReason ? (
 							<Tooltip content={buyDisabledReason}>
 								<span
@@ -689,10 +732,7 @@ function CreatorDetailPageContent() {
 					/>
 				)}
 
-				{userAddress && !isTradeCooldownActive && (
-					<BuyCooldownCountdown nextBuyAllowedAt={nextBuyAllowedAt} />
-				)}
-
+				{/* Share to X Button (only visible for authenticated holders) */}
 				<div className="flex justify-end">
 					<ShareTwitterButton
 						creatorId={creator.id}

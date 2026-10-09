@@ -1,10 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-	computeRemainingCooldownSeconds,
-	formatCooldownDuration,
-} from '@/utils/buyCooldown.utils';
+import { useBuyCooldownCountdown } from '@/hooks/useBuyCooldownCountdown';
 
 export interface BuyCooldownCountdownProps {
 	/** Timestamp (ms epoch, seconds epoch, or ISO string) after which the authenticated user can next buy this key. */
@@ -25,37 +22,14 @@ export const BuyCooldownCountdown: React.FC<BuyCooldownCountdownProps> = ({
 	onExpire,
 	className,
 }) => {
-	const [remainingSeconds, setRemainingSeconds] = useState<number>(() =>
-		computeRemainingCooldownSeconds(nextBuyAllowedAt)
+	const { remainingSeconds, formattedRemaining } = useBuyCooldownCountdown(
+		nextBuyAllowedAt,
+		onExpire
 	);
-
-	useEffect(() => {
-		const initialRemaining = computeRemainingCooldownSeconds(nextBuyAllowedAt);
-		setRemainingSeconds(initialRemaining);
-
-		if (initialRemaining <= 0) {
-			onExpire?.();
-			return;
-		}
-
-		const intervalId = setInterval(() => {
-			const rem = computeRemainingCooldownSeconds(nextBuyAllowedAt);
-			setRemainingSeconds(rem);
-
-			if (rem <= 0) {
-				clearInterval(intervalId);
-				onExpire?.();
-			}
-		}, 1000);
-
-		return () => clearInterval(intervalId);
-	}, [nextBuyAllowedAt, onExpire]);
 
 	if (remainingSeconds <= 0 || !nextBuyAllowedAt) {
 		return null;
 	}
-
-	const formattedTime = formatCooldownDuration(remainingSeconds);
 
 	return (
 		<div
@@ -66,12 +40,12 @@ export const BuyCooldownCountdown: React.FC<BuyCooldownCountdownProps> = ({
 			data-testid="buy-cooldown-countdown"
 			role="status"
 			aria-live="polite"
-			aria-label={`Next buy available in ${formattedTime}`}
+			aria-label={`Next buy available in ${formattedRemaining}`}
 		>
 			<Timer className="size-3.5 shrink-0 text-sky-400" />
 			<span data-testid="buy-cooldown-text">
 				Next buy available in{' '}
-				<span className="font-mono tabular-nums">{formattedTime}</span>
+				<span className="font-mono tabular-nums">{formattedRemaining}</span>
 			</span>
 		</div>
 	);

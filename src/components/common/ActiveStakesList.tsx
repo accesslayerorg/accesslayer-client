@@ -53,7 +53,7 @@ function StakeRow({ stake, isPendingUnstake, onUnstake }: StakeRowProps) {
 	const expired = useMemo(() => isExpired(stake.lockExpiresAt), [stake.lockExpiresAt]);
 	const countdown = useMemo(
 		() => (expired ? 'Unlocked' : formatCountdown(stake.lockExpiresAt)),
-		// eslint-disable-next-line react-hooks/exhaustive-deps
+		 
 		[expired, stake.lockExpiresAt]
 	);
 	const lockDate = new Date(stake.lockExpiresAt).toLocaleDateString(undefined, {
