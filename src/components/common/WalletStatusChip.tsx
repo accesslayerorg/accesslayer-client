@@ -1,6 +1,6 @@
 import { useAccount, useChainId, useDisconnect } from 'wagmi';
 import { Link } from 'react-router';
-import { Copy, Check, LogOut } from 'lucide-react';
+import { Copy, Check, History, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import {
 	DropdownMenu,
@@ -95,6 +95,13 @@ export function WalletStatusChip({ className = '' }: { className?: string }) {
 				}}>
 					{copied ? <Check className="mr-2 size-4" /> : <Copy className="mr-2 size-4" />}
 					{copied ? 'Copied' : 'Copy address'}
+				</DropdownMenuItem>
+
+				<DropdownMenuItem asChild>
+					<Link to="/transactions">
+						<History className="mr-2 size-4" />
+						Transaction history
+					</Link>
 				</DropdownMenuItem>
 
 				<DropdownMenuItem
