@@ -22,10 +22,10 @@ export default function CompareBar() {
 			<div aria-hidden="true" className="h-20" />
 			<aside
 				aria-label="Key comparison"
-				className="fixed inset-x-0 bottom-0 z-40 border-t border-black/8 bg-white/95 backdrop-blur-md"
+				className="fixed inset-x-0 bottom-0 z-40 border-t border-black/8 dark:border-white/10 bg-white/95 dark:bg-[#06111f]/95 backdrop-blur-md"
 			>
 				<div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-6 py-3">
-					<p className="font-mono text-[10px] uppercase tracking-wider text-gray-500">
+					<p className="font-mono text-[10px] uppercase tracking-wider text-gray-500 dark:text-white/60">
 						Compare {keys.length}/{MAX_COMPARE_KEYS}
 					</p>
 
@@ -33,7 +33,7 @@ export default function CompareBar() {
 						{keys.map(key => (
 							<li
 								key={key.id}
-								className="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 py-1 pr-1 pl-1"
+								className="flex items-center gap-2 rounded-full border border-gray-200 dark:border-white/15 bg-gray-50 dark:bg-white/5 py-1 pr-1 pl-1"
 							>
 								<span className="size-6 overflow-hidden rounded-full">
 									<CreatorInitialsAvatar
@@ -43,14 +43,14 @@ export default function CompareBar() {
 										className="text-[9px]"
 									/>
 								</span>
-								<span className="max-w-[9rem] truncate font-jakarta text-xs font-medium text-gray-900">
+								<span className="max-w-[9rem] truncate font-jakarta text-xs font-medium text-gray-900 dark:text-white">
 									{key.title}
 								</span>
 								<button
 									type="button"
 									onClick={() => remove(key.id)}
 									aria-label={`Remove ${key.title} from compare`}
-									className="inline-flex size-6 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-900"
+									className="inline-flex size-6 items-center justify-center rounded-full text-gray-400 dark:text-white/55 transition-colors hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white"
 								>
 									<X className="size-3.5" aria-hidden="true" />
 								</button>
@@ -62,20 +62,20 @@ export default function CompareBar() {
 						<button
 							type="button"
 							onClick={clear}
-							className="rounded-sm px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-gray-500 transition-colors hover:text-gray-900"
+							className="rounded-sm px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-gray-500 dark:text-white/60 transition-colors hover:text-gray-900 dark:hover:text-white"
 						>
 							Clear all
 						</button>
 						{canCompare ? (
 							<Link
 								to="/compare"
-								className="inline-flex items-center gap-2 rounded-sm bg-gray-900 px-4 py-2 font-mono text-[10px] uppercase tracking-wider text-white transition-colors hover:bg-gray-700"
+								className="inline-flex items-center gap-2 rounded-sm bg-gray-900 dark:bg-white px-4 py-2 font-mono text-[10px] uppercase tracking-wider text-white dark:text-gray-900 transition-colors hover:bg-gray-700 dark:hover:bg-white/85"
 							>
 								Compare keys
 								<ArrowRight className="size-3.5" aria-hidden="true" />
 							</Link>
 						) : (
-							<span className="font-jakarta text-xs text-gray-400">
+							<span className="font-jakarta text-xs text-gray-400 dark:text-white/55">
 								Add one more key to compare
 							</span>
 						)}

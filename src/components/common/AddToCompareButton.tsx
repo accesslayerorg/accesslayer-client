@@ -14,7 +14,7 @@ interface AddToCompareButtonProps {
 }
 
 const BASE_CLASS =
-	'inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-1.5 font-mono text-[9px] uppercase tracking-wider transition-colors outline-none focus-visible:ring-2 focus-visible:ring-gray-400';
+	'inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-1.5 font-mono text-[9px] uppercase tracking-wider transition-colors outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-white/50';
 
 export default function AddToCompareButton({
 	compareKey,
@@ -38,7 +38,7 @@ export default function AddToCompareButton({
 				onClick={() => remove(compareKey.id)}
 				className={cn(
 					BASE_CLASS,
-					'border-gray-900 bg-gray-900 text-white hover:bg-gray-700',
+					'border-gray-900 dark:border-white bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-white/85',
 					className
 				)}
 			>
@@ -61,7 +61,7 @@ export default function AddToCompareButton({
 					onClick={event => event.preventDefault()}
 					className={cn(
 						BASE_CLASS,
-						'cursor-not-allowed border-gray-200 text-gray-300',
+						'cursor-not-allowed border-gray-200 dark:border-white/15 text-gray-300 dark:text-white/30',
 						className
 					)}
 				>
@@ -80,7 +80,7 @@ export default function AddToCompareButton({
 			onClick={() => add(compareKey)}
 			className={cn(
 				BASE_CLASS,
-				'border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900',
+				'border-gray-200 dark:border-white/15 text-gray-600 dark:text-white/70 hover:border-gray-900 dark:hover:border-white hover:text-gray-900 dark:hover:text-white',
 				className
 			)}
 		>
