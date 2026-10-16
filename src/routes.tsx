@@ -5,6 +5,7 @@ import NotificationsPage from './pages/NotificationsPage';
 import NotificationPreferencesPage from './pages/NotificationPreferencesPage';
 import TransactionHistoryPage from './pages/TransactionHistoryPage';
 import SettingsPage from './pages/SettingsPage';
+import ComparePage from './pages/ComparePage';
 
 export const routes = [
 	{
@@ -38,6 +39,10 @@ export const routes = [
 	{
 		path: '/settings',
 		element: <SettingsPage />,
+	},
+	{
+		path: '/compare',
+		element: <ComparePage />,
 	},
 	{
 		path: '*',

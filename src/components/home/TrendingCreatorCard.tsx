@@ -7,6 +7,8 @@ type Props = { creator: Course & { walletAddress: string } };
 import { formatHolderCount } from '@/utils/numberFormat.utils';
 import { cn } from '@/lib/utils';
 import { creatorCardSubtitleClampClass } from '@/utils/lineClamp.utils';
+import AddToCompareButton from '@/components/common/AddToCompareButton';
+import { toCompareKey } from '@/hooks/useCompareStore';
 
 export default function TrendingCreatorCard({ creator }: Props) {
 	const name = creator.title || 'Unnamed creator';
@@ -61,6 +63,10 @@ export default function TrendingCreatorCard({ creator }: Props) {
 							</span>
 						</div>
 					)}
+				</div>
+
+				<div className="mt-4 flex justify-end">
+					<AddToCompareButton compareKey={toCompareKey(creator)} />
 				</div>
 
 				{/* CTA */}

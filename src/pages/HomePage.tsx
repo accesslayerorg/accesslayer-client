@@ -4,6 +4,7 @@ import Header from '../components/home/Header';
 import Hero from '../components/home/Hero';
 import CreatorSpotlight from '../components/home/CreatorSpotlight';
 import TrendingCreators from '../components/home/TrendingCreators';
+import CompareBar from '../components/common/CompareBar';
 import { useNavigationTiming } from '../hooks/useNavigationTiming';
 
 export default function HomePage() {
@@ -19,6 +20,7 @@ export default function HomePage() {
 				<FAQ />
 			</main>
 			<Footer />
+			<CompareBar />
 		</>
 	);
 }
