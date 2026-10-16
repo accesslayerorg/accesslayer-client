@@ -40,6 +40,30 @@
 		/>
 		<meta name="twitter:image" content="https://accesslayer.xyz/images/og-image.png" />
 
+		<!--
+			#1085: apply the saved (or system) theme before first paint so dark
+			mode users never see a light flash. Mirrors src/lib/theme.ts —
+			keep the storage key and class name in sync.
+		-->
+		<script>
+			(function () {
+				var theme;
+				try {
+					theme = localStorage.getItem('accesslayer.theme');
+				} catch (e) {}
+				if (theme !== 'light' && theme !== 'dark') {
+					theme =
+						window.matchMedia &&
+						window.matchMedia('(prefers-color-scheme: dark)').matches
+							? 'dark'
+							: 'light';
+				}
+				var root = document.documentElement;
+				if (theme === 'dark') root.classList.add('dark');
+				root.style.colorScheme = theme;
+			})();
+		</script>
+
 		<!-- Favicon -->
 		<link rel="icon" type="image/svg+xml" href="/icons/logo.svg" />
 

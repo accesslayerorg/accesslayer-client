@@ -128,21 +128,14 @@ export default function TrendingCreators() {
 	}, []);
 
 	return (
-		<section
-			className="bg-white px-6 py-20"
-			style={{
-				backgroundImage:
-					'radial-gradient(circle, #d1d5db 0.75px, transparent 0.75px)',
-				backgroundSize: '22px 22px',
-			}}
-		>
+		<section className="bg-white dark:bg-[#06111f] bg-[radial-gradient(circle,#d1d5db_0.75px,transparent_0.75px)] bg-size-[22px_22px] px-6 py-20 dark:bg-[radial-gradient(circle,rgba(255,255,255,0.08)_0.75px,transparent_0.75px)]">
 			<div className="mx-auto max-w-5xl">
 				{/* Header */}
 				<div ref={headingRef} className="scroll-reveal">
 					{/* Eyebrow */}
 					<div className="flex items-center gap-2">
-						<span className="size-1.5 rounded-full bg-gray-300" />
-						<span className="font-jakarta text-sm text-gray-400">
+						<span className="size-1.5 rounded-full bg-gray-300 dark:bg-white/30" />
+						<span className="font-jakarta text-sm text-gray-400 dark:text-white/55">
 							Trending now
 						</span>
 					</div>
@@ -150,17 +143,17 @@ export default function TrendingCreators() {
 					{/* Heading + View all */}
 					<div className="mt-3 flex items-end justify-between gap-6">
 						<h2 className="font-pt-serif text-[clamp(1.6rem,3.5vw,2.4rem)] font-normal leading-[1.15]">
-							<span className="text-gray-900">
+							<span className="text-gray-900 dark:text-white">
 								Creators worth holding,
 							</span>
 							<br />
-							<span className="text-gray-400">
+							<span className="text-gray-400 dark:text-white/55">
 								before the price tells you so.
 							</span>
 						</h2>
 						<Link
 							to="/marketplace"
-							className="mb-1 md:flex hidden shrink-0 items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-gray-400 transition-colors hover:text-gray-900"
+							className="mb-1 md:flex hidden shrink-0 items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-gray-400 dark:text-white/55 transition-colors hover:text-gray-900 dark:hover:text-white"
 						>
 							View all
 							<ArrowRight className="size-3.5" />

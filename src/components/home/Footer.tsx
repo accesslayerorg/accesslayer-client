@@ -9,13 +9,13 @@ const links = [
 
 export default function Footer() {
 	return (
-		<footer className="border-t border-gray-100 bg-white px-6 py-14">
+		<footer className="border-t border-gray-100 dark:border-white/10 bg-white dark:bg-[#06111f] px-6 py-14">
 			<div className="mx-auto max-w-5xl">
 				<div className="flex flex-col items-start justify-between gap-10 sm:flex-row sm:items-center">
 					{/* Brand */}
 					<div className="flex items-center gap-3">
-						<img src="/icons/logo.svg" alt="Access Layer" className="size-5 opacity-30 invert" />
-						<span className="font-mono text-[12px] uppercase tracking-[0.08em] text-gray-400">
+						<img src="/icons/logo.svg" alt="Access Layer" className="size-5 opacity-30 invert dark:invert-0" />
+						<span className="font-mono text-[12px] uppercase tracking-[0.08em] text-gray-400 dark:text-white/55">
 							Access Layer
 						</span>
 					</div>
@@ -29,7 +29,7 @@ export default function Footer() {
 									href={link.href}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="font-jakarta text-sm text-gray-400 transition-colors hover:text-gray-900"
+									className="font-jakarta text-sm text-gray-400 dark:text-white/55 transition-colors hover:text-gray-900 dark:hover:text-white"
 								>
 									{link.label}
 								</a>
@@ -37,7 +37,7 @@ export default function Footer() {
 								<Link
 									key={link.label}
 									to={link.href}
-									className="font-jakarta text-sm text-gray-400 transition-colors hover:text-gray-900"
+									className="font-jakarta text-sm text-gray-400 dark:text-white/55 transition-colors hover:text-gray-900 dark:hover:text-white"
 								>
 									{link.label}
 								</Link>
@@ -46,11 +46,11 @@ export default function Footer() {
 					</nav>
 				</div>
 
-				<div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-gray-100 pt-8 sm:flex-row sm:items-center">
-					<p className="font-mono text-[10px] text-gray-300">
+				<div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-gray-100 dark:border-white/10 pt-8 sm:flex-row sm:items-center">
+					<p className="font-mono text-[10px] text-gray-300 dark:text-white/35">
 						Built on Stellar · Open source
 					</p>
-					<p className="font-mono text-[10px] text-gray-300">
+					<p className="font-mono text-[10px] text-gray-300 dark:text-white/35">
 						© {new Date().getFullYear()} Access Layer
 					</p>
 				</div>

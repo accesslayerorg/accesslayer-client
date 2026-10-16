@@ -22,7 +22,7 @@ function SpotlightSkeletonCard() {
 		<div
 			role="status"
 			aria-label="Loading spotlight creator"
-			className="relative overflow-hidden rounded-2xl border border-black/8 bg-white p-5"
+			className="relative overflow-hidden rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-white/[0.03] p-5"
 		>
 			<span className="sr-only">Loading spotlight creator</span>
 
@@ -74,24 +74,24 @@ function SpotlightCreatorCard({ creator, rank }: SpotlightCreatorCardProps) {
 	return (
 		<Link
 			to={`/creator/${creator.id}`}
-			className="group relative block overflow-hidden rounded-2xl border border-black/8 bg-white p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-[0_12px_32px_-16px_rgba(0,0,0,0.15)]"
+			className="group relative block overflow-hidden rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-white/[0.03] p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/25 hover:shadow-[0_12px_32px_-16px_rgba(0,0,0,0.15)]"
 		>
 			{/* Rank badge */}
 			<div className="mb-3 flex items-center gap-1.5">
 				{rank === 1 ? (
-					<span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 font-jakarta text-[10px] font-bold uppercase tracking-wider text-amber-700">
+					<span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-400/15 px-2.5 py-0.5 font-jakarta text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
 						<Star className="size-3 fill-amber-500 text-amber-500" />
 						Top
 					</span>
 				) : (
-					<span className="inline-flex items-center justify-center rounded-full bg-gray-100 px-2.5 py-0.5 font-jakarta text-[10px] font-bold text-gray-500">
+					<span className="inline-flex items-center justify-center rounded-full bg-gray-100 dark:bg-white/10 px-2.5 py-0.5 font-jakarta text-[10px] font-bold text-gray-500 dark:text-white/60">
 						#{rank}
 					</span>
 				)}
 			</div>
 
 			{/* Avatar */}
-			<div className="relative mb-4 aspect-square w-full overflow-hidden rounded-xl bg-gray-100">
+			<div className="relative mb-4 aspect-square w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-white/10">
 				<CreatorInitialsAvatar
 					name={name}
 					creatorId={creator.id}
@@ -101,22 +101,22 @@ function SpotlightCreatorCard({ creator, rank }: SpotlightCreatorCardProps) {
 			</div>
 
 			{/* Name */}
-			<h3 className="truncate font-jakarta text-base font-semibold text-gray-900">
+			<h3 className="truncate font-jakarta text-base font-semibold text-gray-900 dark:text-white">
 				{name}
 			</h3>
 
 			{/* Stats row */}
-			<div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+			<div className="mt-3 flex items-center justify-between border-t border-gray-100 dark:border-white/10 pt-3">
 				{/* Key price */}
 				<div className="flex items-center gap-1.5">
-					<span className="font-jakarta text-sm font-semibold text-gray-900">
+					<span className="font-jakarta text-sm font-semibold text-gray-900 dark:text-white">
 						{keyPrice}
 					</span>
-					<span className="font-jakarta text-[11px] text-gray-400">XLM</span>
+					<span className="font-jakarta text-[11px] text-gray-400 dark:text-white/55">XLM</span>
 				</div>
 
 				{/* Holder count */}
-				<div className="flex items-center gap-1.5 text-gray-400">
+				<div className="flex items-center gap-1.5 text-gray-400 dark:text-white/55">
 					<Users className="size-3.5" />
 					<span className="font-mono text-[10px] tabular-nums">
 						{formatHolderCount(holderCount)}
@@ -125,7 +125,7 @@ function SpotlightCreatorCard({ creator, rank }: SpotlightCreatorCardProps) {
 			</div>
 
 			{/* CTA */}
-			<div className="mt-3 flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider text-gray-400 transition-colors group-hover:text-gray-900">
+			<div className="mt-3 flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider text-gray-400 dark:text-white/55 transition-colors group-hover:text-gray-900 dark:group-hover:text-white">
 				View profile
 				<ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
 			</div>
@@ -171,30 +171,30 @@ export default function CreatorSpotlight() {
 	}
 
 	return (
-		<section className="bg-gradient-to-b from-white to-gray-50/50 px-6 py-20">
+		<section className="bg-gradient-to-b from-white to-gray-50/50 dark:from-[#06111f] dark:to-[#081627] px-6 py-20">
 			<div className="mx-auto max-w-5xl">
 				{/* Header */}
 				<div ref={headingRef} className="scroll-reveal">
 					<div className="flex items-center gap-2">
 						<span className="size-1.5 rounded-full bg-amber-400" />
-						<span className="font-jakarta text-sm font-medium text-amber-600">
+						<span className="font-jakarta text-sm font-medium text-amber-600 dark:text-amber-400">
 							Creator Spotlight
 						</span>
 					</div>
 
 					<div className="mt-3 flex items-end justify-between gap-6">
 						<h2 className="font-pt-serif text-[clamp(1.6rem,3.5vw,2.4rem)] font-normal leading-[1.15]">
-							<span className="text-gray-900">
+							<span className="text-gray-900 dark:text-white">
 								Most collected creators
 							</span>
 							<br />
-							<span className="text-gray-400">
+							<span className="text-gray-400 dark:text-white/55">
 								discover who has the biggest following.
 							</span>
 						</h2>
 						<Link
 							to="/marketplace"
-							className="mb-1 hidden shrink-0 items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-gray-400 transition-colors hover:text-gray-900 md:flex"
+							className="mb-1 hidden shrink-0 items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-gray-400 dark:text-white/55 transition-colors hover:text-gray-900 dark:hover:text-white md:flex"
 						>
 							View all
 							<ArrowRight className="size-3.5" />

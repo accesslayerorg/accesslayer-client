@@ -1,23 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useTheme } from '@/hooks/useTheme';
 
+/**
+ * Whether the app is currently rendering in dark mode.
+ *
+ * Kept for existing callers (e.g. sparkline colours). Since #1085 this
+ * follows the app theme — which defaults to the OS preference but can be
+ * overridden by the user — rather than reading `prefers-color-scheme`
+ * directly.
+ */
 export function useSystemTheme() {
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    const callback = (e: MediaQueryListEvent) => {
-      setIsDarkMode(e.matches);
-    };
-
-    mediaQuery.addEventListener('change', callback);
-    return () => mediaQuery.removeEventListener('change', callback);
-  }, []);
-
-  return { isDarkMode };
+	const { isDark } = useTheme();
+	return { isDarkMode: isDark };
 }

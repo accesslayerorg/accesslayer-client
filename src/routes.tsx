@@ -4,6 +4,7 @@ import CreatorDetailPage from './pages/CreatorDetailPage';
 import NotificationsPage from './pages/NotificationsPage';
 import NotificationPreferencesPage from './pages/NotificationPreferencesPage';
 import TransactionHistoryPage from './pages/TransactionHistoryPage';
+import SettingsPage from './pages/SettingsPage';
 
 export const routes = [
 	{
@@ -33,6 +34,10 @@ export const routes = [
 	{
 		path: '/transactions',
 		element: <TransactionHistoryPage />,
+	},
+	{
+		path: '/settings',
+		element: <SettingsPage />,
 	},
 	{
 		path: '*',

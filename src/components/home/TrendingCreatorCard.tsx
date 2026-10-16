@@ -16,9 +16,9 @@ export default function TrendingCreatorCard({ creator }: Props) {
 		: creator.price.toFixed(2);
 
 	return (
-		<article className="group relative overflow-hidden rounded-2xl border border-black/8 bg-white transition-all duration-300 hover:-translate-y-0.5">
+		<article className="group relative overflow-hidden rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-white/[0.03] transition-all duration-300 hover:-translate-y-0.5">
 			{/* Avatar */}
-			<div className="relative h-48 overflow-hidden bg-gray-50">
+			<div className="relative h-48 overflow-hidden bg-gray-50 dark:bg-white/5">
 				<img
 					src={avatar}
 					alt={name}
@@ -30,14 +30,14 @@ export default function TrendingCreatorCard({ creator }: Props) {
 
 			{/* Body */}
 			<div className="p-5">
-				<h3 className="truncate font-jakarta text-base font-semibold text-gray-900">
+				<h3 className="truncate font-jakarta text-base font-semibold text-gray-900 dark:text-white">
 					{name}
 				</h3>
 
 				{creator.description && (
 					<p
 						className={cn(
-							'mt-2 font-jakarta text-xs leading-relaxed text-gray-500',
+							'mt-2 font-jakarta text-xs leading-relaxed text-gray-500 dark:text-white/60',
 							creatorCardSubtitleClampClass()
 						)}
 					>
@@ -46,15 +46,15 @@ export default function TrendingCreatorCard({ creator }: Props) {
 				)}
 
 				{/* Stats row */}
-				<div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
+				<div className="mt-4 flex items-center justify-between border-t border-gray-100 dark:border-white/10 pt-4">
 					<div className="flex items-center gap-1.5">
-						<img src="/icons/key.svg" alt="" className="size-3.5 opacity-40 invert" />
-						<span className="font-jakarta text-sm font-semibold text-gray-900">
+						<img src="/icons/key.svg" alt="" className="size-3.5 opacity-40 invert dark:invert-0" />
+						<span className="font-jakarta text-sm font-semibold text-gray-900 dark:text-white">
 							{priceXlm} XLM
 						</span>
 					</div>
 					{creator.creatorShareSupply !== undefined && (
-						<div className="flex items-center gap-1.5 text-gray-400">
+						<div className="flex items-center gap-1.5 text-gray-400 dark:text-white/55">
 							<Users className="size-3.5" />
 							<span className="font-mono text-[10px]">
 								{formatHolderCount(creator.creatorShareSupply)}
@@ -66,7 +66,7 @@ export default function TrendingCreatorCard({ creator }: Props) {
 				{/* CTA */}
 				<Link
 					to={`/creator/${creator.id}`}
-					className="mt-4 flex w-full items-center justify-center gap-2 rounded-sm border border-gray-200 bg-gray-50 py-2.5 font-mono text-[9px] uppercase tracking-wider text-gray-600 transition-all hover:border-gray-900 hover:bg-gray-900 hover:text-white"
+					className="mt-4 flex w-full items-center justify-center gap-2 rounded-sm border border-gray-200 dark:border-white/15 bg-gray-50 dark:bg-white/5 py-2.5 font-mono text-[9px] uppercase tracking-wider text-gray-600 dark:text-white/70 transition-all hover:border-gray-900 dark:hover:border-white hover:bg-gray-900 dark:hover:bg-white hover:text-white dark:hover:text-gray-900"
 				>
 					Buy Keys
 					<ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />

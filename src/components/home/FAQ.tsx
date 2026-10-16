@@ -49,21 +49,21 @@ function Row({
 	onToggle: () => void;
 }) {
 	return (
-		<div className="border-t border-black/6 first:border-t-0">
+		<div className="border-t border-black/6 dark:border-white/10 first:border-t-0">
 			<button
 				onClick={onToggle}
 				className="group flex w-full items-start md:gap-6 gap-2 py-6 text-left"
 			>
-				<span className="mt-0.5 min-w-[2rem] font-mono text-[10px] text-gray-300 transition-colors group-hover:text-gray-400">
+				<span className="mt-0.5 min-w-[2rem] font-mono text-[10px] text-gray-300 dark:text-white/35 transition-colors group-hover:text-gray-400 dark:group-hover:text-white/55">
 					{String(index + 1).padStart(2, '0')}
 				</span>
 				<span
-					className={`flex-1 font-jakarta text-base font-medium transition-colors duration-200 ${open ? 'text-gray-900' : 'text-gray-600 group-hover:text-gray-900'}`}
+					className={`flex-1 font-jakarta text-base font-medium transition-colors duration-200 ${open ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-white/70 group-hover:text-gray-900 dark:group-hover:text-white'}`}
 				>
 					{q}
 				</span>
 				<span
-					className={`mt-1 font-mono text-lg leading-none text-gray-300 transition-all duration-300 group-hover:text-gray-500 ${open ? 'rotate-45' : ''}`}
+					className={`mt-1 font-mono text-lg leading-none text-gray-300 dark:text-white/35 transition-all duration-300 group-hover:text-gray-500 dark:group-hover:text-white/70 ${open ? 'rotate-45' : ''}`}
 				>
 					+
 				</span>
@@ -71,7 +71,7 @@ function Row({
 			<div
 				className={`overflow-hidden transition-all duration-300 ease-in-out ${open ? 'max-h-40 pb-6' : 'max-h-0'}`}
 			>
-				<p className="ml-14 font-jakarta text-sm leading-relaxed text-gray-400">
+				<p className="ml-14 font-jakarta text-sm leading-relaxed text-gray-400 dark:text-white/55">
 					{a}
 				</p>
 			</div>
@@ -102,19 +102,19 @@ export default function FAQ() {
 	}, []);
 
 	return (
-		<section className="bg-white px-6 py-20">
+		<section className="bg-white dark:bg-[#06111f] px-6 py-20">
 			<div className="mx-auto max-w-3xl">
 				{/* Header */}
 				<div ref={headingRef} className="scroll-reveal mb-12">
 					<div className="flex items-center gap-2">
-						<span className="size-1.5 rounded-full bg-gray-300" />
-						<span className="font-jakarta text-sm text-gray-400">
+						<span className="size-1.5 rounded-full bg-gray-300 dark:bg-white/30" />
+						<span className="font-jakarta text-sm text-gray-400 dark:text-white/55">
 							FAQ
 						</span>
 					</div>
 					<h2 className="mt-3 font-pt-serif text-[clamp(1.6rem,3.5vw,2.4rem)] font-normal leading-[1.15]">
-						<span className="text-gray-900">Your questions, </span>
-						<span className="text-gray-400">answered.</span>
+						<span className="text-gray-900 dark:text-white">Your questions, </span>
+						<span className="text-gray-400 dark:text-white/55">answered.</span>
 					</h2>
 				</div>
 

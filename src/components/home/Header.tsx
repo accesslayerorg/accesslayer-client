@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import WalletStatusChip from '@/components/common/WalletStatusChip';
 import NotificationBell from '@/components/common/NotificationBell';
+import ThemeToggle from '@/components/common/ThemeToggle';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import { Link } from 'react-router';
 
@@ -27,7 +28,7 @@ export default function Header() {
 		<header
 			className={`header-animate fixed inset-x-0  z-50 transition-all duration-300 ${
 				scrolled
-					? 'border-b border-black/8 bg-white/80 backdrop-blur-md top-0'
+					? 'border-b border-black/8 dark:border-white/10 bg-white/80 dark:bg-[#06111f]/80 backdrop-blur-md top-0'
 					: 'top-2'
 			}`}
 		>
@@ -37,9 +38,9 @@ export default function Header() {
 					<img
 						src="/icons/logo.svg"
 						alt="Access Layer"
-						className={`size-6 sm:size-5 transition-all duration-300 ${scrolled ? 'opacity-60 invert' : 'opacity-70'}`}
+						className={`size-6 sm:size-5 transition-all duration-300 ${scrolled ? 'opacity-60 invert dark:invert-0' : 'opacity-70'}`}
 					/>
-					<span className={`hidden font-mono text-[13px] uppercase tracking-[0.08em] sm:inline transition-colors duration-300 ${scrolled ? 'text-gray-700' : 'text-white/70'}`}>
+					<span className={`hidden font-mono text-[13px] uppercase tracking-[0.08em] sm:inline transition-colors duration-300 ${scrolled ? 'text-gray-700 dark:text-white/80' : 'text-white/70'}`}>
 						Access Layer
 					</span>
 				</Link>
@@ -53,7 +54,7 @@ export default function Header() {
 								href={link.href}
 								target="_blank"
 								rel="noopener noreferrer"
-								className={`font-jakarta text-sm transition-colors duration-300 ${scrolled ? 'text-gray-500 hover:text-gray-900' : 'text-white/45 hover:text-white/80'}`}
+								className={`font-jakarta text-sm transition-colors duration-300 ${scrolled ? 'text-gray-500 dark:text-white/60 hover:text-gray-900 dark:hover:text-white' : 'text-white/45 hover:text-white/80'}`}
 							>
 								{link.label}
 							</a>
@@ -61,7 +62,7 @@ export default function Header() {
 							<Link
 								key={link.href}
 								to={link.href}
-								className={`font-jakarta text-sm transition-colors duration-300 ${scrolled ? 'text-gray-500 hover:text-gray-900' : 'text-white/45 hover:text-white/80'}`}
+								className={`font-jakarta text-sm transition-colors duration-300 ${scrolled ? 'text-gray-500 dark:text-white/60 hover:text-gray-900 dark:hover:text-white' : 'text-white/45 hover:text-white/80'}`}
 							>
 								{link.label}
 							</Link>
@@ -69,7 +70,8 @@ export default function Header() {
 					)}
 				</nav>
 
-				{/* Right-side actions: notification bell (#720) + wallet status chip (#686).
+				{/* Right-side actions: notification bell (#720), theme toggle (#1085) +
+				    wallet status chip (#686).
 				    NotificationBell is only rendered when a user profile is available. */}
 				<div className="flex items-center gap-2">
 					{profile && (
@@ -77,11 +79,18 @@ export default function Header() {
 							userId={profile.id}
 							className={
 								scrolled
-									? 'text-gray-600 hover:bg-black/5 hover:text-gray-900'
+									? 'text-gray-600 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white'
 									: ''
 							}
 						/>
 					)}
+					<ThemeToggle
+						className={
+							scrolled
+								? 'text-gray-600 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white focus-visible:ring-gray-400 dark:focus-visible:ring-white/50'
+								: ''
+						}
+					/>
 					<WalletStatusChip />
 				</div>
 			</div>

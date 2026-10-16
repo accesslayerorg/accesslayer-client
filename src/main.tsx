@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
 import { registerUnhandledRejectionLogger } from './utils/unhandledRejectionLogger';
+import { initTheme } from './lib/theme';
 import { queryClient } from './providers/web3Utils';
 import {
 	restorePersistedQueries,
@@ -10,6 +11,7 @@ import {
 } from './lib/queryPersistence';
 
 registerUnhandledRejectionLogger();
+initTheme();
 
 // Restore IndexedDB-persisted queries before the first render so the UI
 // has stale data available immediately (#754).

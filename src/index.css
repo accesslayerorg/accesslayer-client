@@ -147,6 +147,30 @@
 	}
 }
 
+/*
+ * #1085: colour fade while switching themes. The class is only added for
+ * the duration of a user-initiated switch (see src/lib/theme.ts) so page
+ * loads and hover states keep their normal timing.
+ */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+	transition-property:
+		background-color, border-color, color, fill, stroke, box-shadow !important;
+	transition-duration: 300ms !important;
+	transition-timing-function: ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.theme-transition,
+	.theme-transition *,
+	.theme-transition *::before,
+	.theme-transition *::after {
+		transition: none !important;
+	}
+}
+
 @layer base {
 	* {
 		@apply border-border outline-ring/50;
