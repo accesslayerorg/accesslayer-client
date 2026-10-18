@@ -1,5 +1,8 @@
 import { Link, useParams } from 'react-router';
-import { ArrowLeft, SearchX } from 'lucide-react';
+import { ArrowLeft, SearchX, Share2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Button } from '@/components/ui/button';
+import { copyTextToClipboard } from '@/utils/clipboard.utils';
 import CreatorPublicProfileHeader from '@/components/common/CreatorPublicProfileHeader';
 import CreatorProfileStatRow from '@/components/common/CreatorProfileStatRow';
 import DeployedCreatorKeyCard from '@/components/common/DeployedCreatorKeyCard';
@@ -19,17 +22,27 @@ import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import { formatCompactNumber } from '@/utils/numberFormat.utils';
 
 /**
- * Reader-facing stats rendered above the deployed keys grid (#1054).
+ * Reader-facing stats rendered above the deployed keys grid (#1054, #1120).
  */
 function buildStatItems(profile: CreatorPublicProfile) {
 	return [
 		{
-			label: 'Total Volume Traded',
+			label: 'Total Holders',
+			value: formatCompactNumber(profile.stats.totalHolders),
+		},
+		{
+			label: 'Total Volume',
+			ariaLabel: `Total Volume Traded: ${formatDisplayKeyPrice(profile.stats.totalVolumeStroops)}`,
 			value: formatDisplayKeyPrice(profile.stats.totalVolumeStroops),
 		},
 		{
-			label: 'Total Holders',
-			value: formatCompactNumber(profile.stats.totalHolders),
+			label: 'Keys Issued',
+			ariaLabel: `Keys Deployed: ${formatCompactNumber(profile.stats.keyCount)}`,
+			value: formatCompactNumber(profile.stats.keyCount),
+		},
+		{
+			label: 'Avg Market Cap',
+			value: formatDisplayKeyPrice(profile.stats.avgMarketCapStroops ?? 0),
 		},
 		{
 			label: 'Avg Key Rating',
@@ -37,10 +50,6 @@ function buildStatItems(profile: CreatorPublicProfile) {
 				profile.stats.averageRating != null
 					? `${profile.stats.averageRating.toFixed(1)} ★`
 					: 'Unrated',
-		},
-		{
-			label: 'Keys Deployed',
-			value: formatCompactNumber(profile.stats.keyCount),
 		},
 	];
 }
@@ -108,6 +117,16 @@ function CreatorPublicProfilePageContent() {
 	const statItems = buildStatItems(profile);
 	const memberSince = formatMemberSince(profile.joinedAt);
 
+	const handleShareProfile = async () => {
+		const url = window.location.href;
+		try {
+			await copyTextToClipboard(url);
+			toast.success('Profile URL copied to clipboard');
+		} catch {
+			toast.error('Could not copy profile link');
+		}
+	};
+
 	return (
 		<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
 			<div className="mx-auto max-w-7xl space-y-8">
@@ -123,6 +142,7 @@ function CreatorPublicProfilePageContent() {
 
 				<CreatorPublicProfileHeader
 					displayName={profile.displayName}
+					bio={profile.bio}
 					handle={profile.keys[0]?.handle ?? address}
 					creatorId={address}
 					avatarUrl={profile.avatarUrl}
@@ -131,21 +151,33 @@ function CreatorPublicProfilePageContent() {
 					keyCount={profile.stats.keyCount}
 					socialLinks={profile.socialLinks}
 					actions={
-						<FollowButton
-							creatorAddress={address}
-							isFollowing={isFollowing}
-							onFollow={async target => {
-								follow(target);
-							}}
-							onUnfollow={async target => {
-								unfollow(target);
-							}}
-							className={cn(
-								'h-11 rounded-xl border px-5 font-bold',
-								!isFollowing &&
-									'border-amber-400 bg-amber-400 text-slate-950 hover:bg-amber-300'
-							)}
-						/>
+						<div className="flex flex-wrap items-center gap-3">
+							<Button
+								type="button"
+								variant="outline"
+								onClick={handleShareProfile}
+								data-testid="share-profile-button"
+								className="h-11 rounded-xl border border-white/10 px-4 font-bold text-white hover:bg-white/10"
+							>
+								<Share2 className="mr-2 size-4" aria-hidden="true" />
+								Share Profile
+							</Button>
+							<FollowButton
+								creatorAddress={address}
+								isFollowing={isFollowing}
+								onFollow={async target => {
+									follow(target);
+								}}
+								onUnfollow={async target => {
+									unfollow(target);
+								}}
+								className={cn(
+									'h-11 rounded-xl border px-5 font-bold',
+									!isFollowing &&
+										'border-amber-400 bg-amber-400 text-slate-950 hover:bg-amber-300'
+								)}
+							/>
+						</div>
 					}
 				/>
 

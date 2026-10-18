@@ -46,6 +46,8 @@ export interface CreatorProfileStats {
 	averageRating: number | null;
 	/** How many keys carry a rating (the denominator for `averageRating`). */
 	ratedKeyCount: number;
+	/** Average market cap across deployed keys in stroops. */
+	avgMarketCapStroops: number;
 }
 
 /** A single deployed key as rendered in the public profile grid. */
@@ -68,6 +70,7 @@ export interface CreatorPublicProfile {
 	/** Creator wallet address the profile was requested for. */
 	address: string;
 	displayName: string;
+	bio?: string | null;
 	avatarUrl: string | null;
 	isVerified: boolean;
 	/** ISO timestamp the creator joined; `null` when unknown. */

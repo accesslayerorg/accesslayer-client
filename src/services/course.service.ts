@@ -125,6 +125,15 @@ export interface Course {
 	 * While true, buying and selling must be disabled in the UI.
 	 */
 	tradingPaused?: boolean;
+	/**
+	 * Whether an admin has frozen trading for this specific key (#1121).
+	 * While true, buying and selling must be disabled in the UI.
+	 */
+	isFrozen?: boolean;
+	frozen?: boolean;
+	freezeReason?: string | null;
+	freezeExpiry?: string | number | null;
+	freezeExpiresAt?: string | number | null;
 	/** Performance bond status for creator key protection (#975). */
 	performanceBond?: PerformanceBond | null;
 	/** Key-level circuit breaker price impact threshold in basis points. */

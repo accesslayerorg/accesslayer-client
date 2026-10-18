@@ -150,4 +150,5 @@ const DeployedCreatorKeyCard: React.FC<DeployedCreatorKeyCardProps> = ({
 	);
 };
 
+export { DeployedCreatorKeyCard as KeyCard };
 export default DeployedCreatorKeyCard;

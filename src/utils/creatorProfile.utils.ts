@@ -88,10 +88,15 @@ export function aggregateCreatorProfileStats(
 	let totalHolders = 0;
 	let ratingSum = 0;
 	let ratedKeyCount = 0;
+	let totalMarketCapStroops = 0;
 
 	for (const key of keys) {
 		totalVolumeStroops += resolveCreatorKeyVolumeStroops(key);
 		totalHolders += resolveCreatorKeyHolderCount(key);
+
+		const priceStroops = resolveCreatorKeyPriceStroops(key) ?? 0;
+		const supply = key.creatorShareSupply ?? resolveCreatorKeyHolderCount(key) ?? 1;
+		totalMarketCapStroops += priceStroops * supply;
 
 		const rating = ratingsById?.get(key.id);
 		if (typeof rating === 'number' && Number.isFinite(rating) && rating > 0) {
@@ -99,6 +104,9 @@ export function aggregateCreatorProfileStats(
 			ratedKeyCount += 1;
 		}
 	}
+
+	const avgMarketCapStroops =
+		keys.length > 0 ? Math.round(totalMarketCapStroops / keys.length) : 0;
 
 	return {
 		keyCount: keys.length,
@@ -109,6 +117,7 @@ export function aggregateCreatorProfileStats(
 				? Math.round((ratingSum / ratedKeyCount) * 10) / 10
 				: null,
 		ratedKeyCount,
+		avgMarketCapStroops,
 	};
 }
 

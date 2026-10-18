@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 interface CreatorProfileStatItemProps {
 	label: string;
 	value: ReactNode;
+	ariaLabel?: string;
 	helperText?: ReactNode;
 	className?: string;
 }
@@ -11,10 +12,12 @@ interface CreatorProfileStatItemProps {
 const CreatorProfileStatItem: React.FC<CreatorProfileStatItemProps> = ({
 	label,
 	value,
+	ariaLabel,
 	helperText,
 	className,
 }) => {
-	const accessibleLabel = typeof value === 'string' ? `${label}: ${value}` : undefined;
+	const accessibleLabel =
+		ariaLabel ?? (typeof value === 'string' ? `${label}: ${value}` : undefined);
 
 	return (
 		<div

@@ -7,6 +7,7 @@ import { CREATOR_CARD_STAT_GRID_GAP_CLASS } from '@/utils/creatorCardTokens';
 interface CreatorProfileStatItemData {
   label: string;
   value: ReactNode;
+  ariaLabel?: string;
 }
 
 interface CreatorProfileStatRowProps {
@@ -68,7 +69,7 @@ const CreatorProfileStatRow: React.FC<CreatorProfileStatRowProps> = ({
   return (
     <div
       className={cn(
-        'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+        'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5',
         CREATOR_CARD_STAT_GRID_GAP_CLASS,
         className
       )}
@@ -78,6 +79,7 @@ const CreatorProfileStatRow: React.FC<CreatorProfileStatRowProps> = ({
           key={item.label}
           label={item.label}
           value={item.value}
+          ariaLabel={item.ariaLabel}
           className={itemClassName}
         />
       ))}

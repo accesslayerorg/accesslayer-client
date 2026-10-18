@@ -8,6 +8,7 @@ import type { CreatorSocialLink } from '@/types/creatorProfile';
 
 interface CreatorPublicProfileHeaderProps {
 	displayName: string;
+	bio?: string | null;
 	/** Raw handle; normalised for display inside the header. */
 	handle: string;
 	creatorId?: string | null;
@@ -29,6 +30,7 @@ interface CreatorPublicProfileHeaderProps {
  */
 const CreatorPublicProfileHeader: React.FC<CreatorPublicProfileHeaderProps> = ({
 	displayName,
+	bio,
 	handle,
 	creatorId,
 	avatarUrl,
@@ -82,6 +84,15 @@ const CreatorPublicProfileHeader: React.FC<CreatorPublicProfileHeaderProps> = ({
 						{displayHandle && (
 							<p className="font-mono text-sm text-white/50">
 								{displayHandle}
+							</p>
+						)}
+
+						{bio && (
+							<p
+								data-testid="creator-public-profile-bio"
+								className="max-w-xl font-jakarta text-sm text-white/70"
+							>
+								{bio}
 							</p>
 						)}
 

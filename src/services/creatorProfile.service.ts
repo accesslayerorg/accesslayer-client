@@ -52,6 +52,7 @@ class CreatorProfileService extends BaseApiService {
 			displayName:
 				normalizeCreatorDisplayName(primary.name || primary.title) ||
 				'Unnamed creator',
+			bio: primary.bio || primary.description || null,
 			avatarUrl: primary.avatarUri || primary.thumbnail || null,
 			isVerified: keys.some(key => Boolean(key.isVerified)),
 			joinedAt: primary.joinedAt || primary.createdAt || null,

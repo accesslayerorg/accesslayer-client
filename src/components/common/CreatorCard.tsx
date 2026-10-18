@@ -14,6 +14,7 @@ import {
 	Share2,
 	ExternalLink,
 	Check,
+	Package,
 } from 'lucide-react';
 import { Sparkline } from '@/components/ui/sparkline';
 import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
@@ -22,6 +23,7 @@ import {
 	selectIsInBasket,
 	selectIsAtCap,
 } from '@/hooks/useBatchBuyStore';
+import { useBundleCartStore } from '@/hooks/useBundleCartStore';
 import {
 	resolveCreatorKeyPriceStroops,
 	formatCreatorKeyPriceDisplay,
@@ -311,6 +313,31 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 			thumbnail: creator.thumbnail,
 		});
 		toast.success(`Added ${displayCreatorName} to basket`, {
+			duration: 2000,
+		});
+	};
+
+	// ── Bundle buy cart (#1118) ──────────────────────────────────────────
+	const addBundleItem = useBundleCartStore(s => s.addItem);
+	const removeBundleItem = useBundleCartStore(s => s.removeItem);
+	const isInBundle = useBundleCartStore(s => s.isInCart(creator.id));
+
+	const handleToggleBundle = () => {
+		if (isInBundle) {
+			removeBundleItem(creator.id);
+			toast.success(`Removed ${displayCreatorName} from bundle cart`, {
+				duration: 2000,
+			});
+			return;
+		}
+		addBundleItem({
+			keyId: creator.id,
+			name: displayCreatorName,
+			priceStroops,
+			thumbnail: creator.thumbnail,
+			creatorShareSupply: creator.creatorShareSupply,
+		});
+		toast.success(`Added ${displayCreatorName} to bundle cart`, {
 			duration: 2000,
 		});
 	};
@@ -684,6 +711,33 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 							<Check className="size-3.5" aria-hidden="true" />
 						) : (
 							<ShoppingBasket className="size-3.5" aria-hidden="true" />
+						)}
+					</button>
+
+					{/* Add to bundle button (#1118) */}
+					<button
+						type="button"
+						onClick={handleToggleBundle}
+						data-testid="add-to-bundle-button"
+						aria-label={
+							isInBundle
+								? `Remove ${displayCreatorName} from bundle`
+								: `Add ${displayCreatorName} to bundle`
+						}
+						aria-pressed={isInBundle}
+						title={isInBundle ? 'In bundle' : 'Add to bundle'}
+						className={cn(
+							'flex size-8 shrink-0 items-center justify-center rounded-xl border transition-colors',
+							'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60',
+							isInBundle
+								? 'border-amber-400 bg-amber-400/20 text-amber-300 hover:border-red-400/60 hover:bg-red-500/10 hover:text-red-400'
+								: 'border-white/10 bg-transparent text-white/50 hover:border-amber-500/40 hover:text-amber-400'
+						)}
+					>
+						{isInBundle ? (
+							<Check className="size-3.5" aria-hidden="true" />
+						) : (
+							<Package className="size-3.5" aria-hidden="true" />
 						)}
 					</button>
 

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreatorDetail, usePriceHistory } from '@/hooks/useCreators';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
@@ -69,6 +69,7 @@ import { UnavailableAction } from '@/components/ui/unavailable-action';
 import GraduatedCurveMilestoneChart from '@/components/common/GraduatedCurveMilestoneChart';
 import KeyDeprecationBanner from '@/components/common/KeyDeprecationBanner';
 import KeyTradingPausedBanner from '@/components/common/KeyTradingPausedBanner';
+import KeyFreezeBanner from '@/components/common/KeyFreezeBanner';
 import MergeProposalBanner from '@/components/common/MergeProposalBanner';
 import KeyBuybackModal from '@/components/common/KeyBuybackModal';
 import type { KeyBuybackReceipt } from '@/hooks/useKeyBuyback';
@@ -77,6 +78,8 @@ import PerformanceBondPanel from '@/components/common/PerformanceBondPanel';
 import WhitelistStatusBadge from '@/components/common/WhitelistStatusBadge';
 import ShareModal from '@/components/common/ShareModal';
 import PriceAlertButton from '@/components/common/PriceAlertButton';
+import { useBundleCartStore } from '@/hooks/useBundleCartStore';
+import { Package } from 'lucide-react';
 import {
 	useTradeCooldownStatus,
 	invalidateTradeCooldownStatus,
@@ -120,6 +123,55 @@ function CreatorDetailPageContent() {
 
 	const { data: priceHistory, isLoading: isPriceHistoryLoading } =
 		usePriceHistory(id || '', interval);
+
+	// ── Key freeze state & 30s polling (#1121) ───────────────────────────
+	const [isFreezeExpiredLocally, setIsFreezeExpiredLocally] = useState(false);
+	const rawFreeze = Boolean(creator?.isFrozen ?? creator?.frozen);
+	const freezeReason = creator?.freezeReason ?? null;
+	const freezeExpiry =
+		creator?.freezeExpiry ?? creator?.freezeExpiresAt ?? null;
+
+	useEffect(() => {
+		setIsFreezeExpiredLocally(false);
+	}, [creator?.isFrozen, creator?.frozen, freezeExpiry]);
+
+	const isPastFreezeExpiry = useMemo(() => {
+		if (!freezeExpiry) return false;
+		const ts =
+			typeof freezeExpiry === 'number'
+				? freezeExpiry
+				: Date.parse(freezeExpiry);
+		return !isNaN(ts) && Date.now() >= ts;
+	}, [freezeExpiry]);
+
+	const isKeyFrozen =
+		rawFreeze && !isFreezeExpiredLocally && !isPastFreezeExpiry;
+
+	useEffect(() => {
+		if (!rawFreeze) return;
+		const pollInterval = setInterval(() => {
+			void refetch();
+		}, 30_000);
+		return () => clearInterval(pollInterval);
+	}, [rawFreeze, refetch]);
+
+	// ── Bundle cart handler (#1118) ──────────────────────────────────────
+	const addBundleItem = useBundleCartStore(state => state.addItem);
+	const openBundleCart = useBundleCartStore(state => state.setIsOpen);
+
+	const handleAddToBundle = () => {
+		if (!creator) return;
+		const priceStroops = resolveCreatorKeyPriceStroops(creator) ?? 0;
+		addBundleItem({
+			keyId: creator.id,
+			name: creator.title || creator.name || 'Creator Key',
+			priceStroops,
+			thumbnail: creator.thumbnail || creator.avatarUri,
+			creatorShareSupply: creator.creatorShareSupply,
+		});
+		showToast.success(`Added ${creator.title || 'Key'} to bundle cart`);
+		openBundleCart(true);
+	};
 
 	useNavigationTiming('creator_profile');
 	useDocumentTitle(creator ? `${creator.title} — AccessLayer` : null);
@@ -495,6 +547,14 @@ function CreatorDetailPageContent() {
 
 				<KeyTradingPausedBanner tradingPaused={creator.tradingPaused} />
 
+				{/* #1121: freeze status banner */}
+				<KeyFreezeBanner
+					isFrozen={isKeyFrozen}
+					reason={freezeReason}
+					expiry={freezeExpiry}
+					onExpiryReached={() => setIsFreezeExpiredLocally(true)}
+				/>
+
 				<MergeProposalBanner
 					sourceKeyId={id || ''}
 					holdingsCount={holdingsCount}
@@ -647,6 +707,19 @@ function CreatorDetailPageContent() {
 							currentPrice={resolveCreatorKeyPriceStroops(creator) ?? 0}
 						/>
 
+						{/* #1118: Add to bundle button */}
+						<button
+							type="button"
+							onClick={handleAddToBundle}
+							data-testid="add-to-bundle-detail-button"
+							aria-label={`Add ${creator.title || 'key'} to bundle cart`}
+							disabled={isKeyFrozen || creator.tradingPaused || isKeyDeprecated(creator)}
+							className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-transparent px-3 py-2 text-xs font-bold text-white/60 transition-colors hover:border-amber-400/40 hover:bg-amber-400/10 hover:text-amber-300 disabled:pointer-events-none disabled:opacity-30"
+						>
+							<Package className="size-3.5" aria-hidden="true" />
+							Add to Bundle
+						</button>
+
 						{isKeyDeprecated(creator) ? (
 							<Button
 								disabled
@@ -656,6 +729,16 @@ function CreatorDetailPageContent() {
 							>
 								Buy Disabled (Deprecated)
 							</Button>
+						) : isKeyFrozen ? (
+							<UnavailableAction disabled reason="Key trading is frozen">
+								<Button
+									type="button"
+									data-testid="key-detail-buy-button"
+									className="min-h-11 w-full rounded-xl bg-amber-400 font-bold text-slate-950 hover:bg-amber-300 sm:h-10 sm:min-h-0 sm:w-auto"
+								>
+									Buy Key
+								</Button>
+							</UnavailableAction>
 						) : creator.tradingPaused ? (
 							<UnavailableAction disabled reason="Trading is currently paused">
 								<Button

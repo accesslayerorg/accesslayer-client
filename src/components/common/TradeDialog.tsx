@@ -136,6 +136,9 @@ export interface TradeDialogProps {
 	requireConfirmation?: boolean;
 	/** True when an admin has paused trading for this specific key (#777). */
 	tradingPaused?: boolean;
+	/** True when this key is frozen (#1121). */
+	isFrozen?: boolean;
+	freezeReason?: string | null;
 	/** Optional XLM/USD spot rate for the confirmation fee USD equivalent (#994). */
 	xlmUsdRate?: number | null;
 	onOpenChange: (open: boolean) => void;
@@ -174,6 +177,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	circuitBreakerThresholdBps,
 	requireConfirmation = false,
 	tradingPaused = false,
+	isFrozen = false,
+	freezeReason = null,
 	xlmUsdRate = null,
 	onOpenChange,
 	onConfirm,
@@ -237,8 +242,11 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	// Capture whatever had focus right before dialog opened; restore on close.
 	const triggerElementRef = useRef<HTMLElement | null>(null);
 	const { paused: globalPaused } = useGlobalPause();
-	// Trading is blocked by a platform-wide pause OR a pause on this key (#777).
-	const paused = globalPaused || tradingPaused;
+	// Trading is blocked by a platform-wide pause, a pause on this key (#777), or key freeze (#1121).
+	const paused = globalPaused || tradingPaused || isFrozen;
+	const pauseReason = isFrozen
+		? `Trading is frozen${freezeReason ? `: ${freezeReason}` : ' for this key'}`
+		: 'Trading is currently paused';
 
 	// On open: reset state, kick off allowance check + cap fetch.
 	useEffect(() => {
@@ -358,7 +366,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		if (!normalized) return 'Please enter an amount.';
 		if (!Number.isFinite(parsedAmount))
 			return 'Amount must be a valid number.';
-		if (parsedAmount <= 0) return 'Amount must be greater than zero.';
+		if (isFrozen)
+			return `Trading is currently suspended because this key is frozen${freezeReason ? `: ${freezeReason}` : ''}.`;
 		if (isPaused)
 			return 'Trading is currently suspended because the contract is paused.';
 		if (side === 'buy' && atCap)
@@ -386,6 +395,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		maxBuyable,
 		maxBuyQuantity,
 		isPaused,
+		isFrozen,
+		freezeReason,
 	]);
 
 	const amountValid = validationError === null;
@@ -482,16 +493,20 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 				? 'Circuit Breaker Tripped'
 				: atCap
 					? 'Cap reached'
-					: isPaused
-						? 'Contract paused'
-						: 'Confirm buy'
-			: isPaused
-				? 'Contract paused'
-				: side === 'sell'
-					? 'Confirm sell'
-					: side === 'stake'
-						? 'Confirm stake'
-						: 'Confirm transfer';
+					: isFrozen
+						? 'Key frozen'
+						: isPaused
+							? 'Contract paused'
+							: 'Confirm buy'
+			: isFrozen
+				? 'Key frozen'
+				: isPaused
+					? 'Contract paused'
+					: side === 'sell'
+						? 'Confirm sell'
+						: side === 'stake'
+							? 'Confirm stake'
+							: 'Confirm transfer';
 
 	const estimatedNetworkFee = formatTransactionFeeDisplay(
 		networkFeeEstimate.status === 'success'
@@ -916,12 +931,12 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 							setAdjustmentNote(null);
 						}}
 						onBlur={handleBlur}
-						disabled={isSubmitting || atCap || isPaused}
+						disabled={isSubmitting || atCap || isPaused || paused}
 						className={cn(
 							'w-full rounded-xl border bg-white/[0.04] px-3 py-2 pr-16 text-white outline-none transition-colors',
 							'border-white/10 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/15',
 							showError ? 'border-red-500/60' : '',
-							atCap || isPaused ? 'opacity-40 cursor-not-allowed' : ''
+							atCap || isPaused || paused ? 'opacity-40 cursor-not-allowed' : ''
 						)}
 						aria-label="Trade amount"
 						aria-describedby={
@@ -936,7 +951,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 						data-testid="trade-dialog-max-button"
 						onClick={handleMaxClick}
 						disabled={
-							isSubmitting || (side === 'sell' && availableHoldings <= 0)
+							isSubmitting || paused || (side === 'sell' && availableHoldings <= 0)
 						}
 						className="absolute right-2 rounded-md border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-xs font-bold text-amber-300 transition-colors hover:bg-amber-400/20 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
 					>
@@ -1112,7 +1127,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 			>
 				Cancel
 			</Button>
-			<UnavailableAction disabled={paused} reason="Trading is currently paused">
+			<UnavailableAction disabled={paused} reason={pauseReason}>
 				<Button
 					type="button"
 					onClick={handleConfirm}
