@@ -20,27 +20,7 @@ import GovernancePage from './pages/GovernancePage';
 import ProposalDetailPage from './pages/ProposalDetailPage';
 import ReferralDashboardPage from './pages/ReferralDashboardPage';
 import CreateCreatorKeyPage from './pages/CreateCreatorKeyPage';
-import StakingDashboardPage from './pages/StakingDashboardPage';
-import RevenueDistributionHistoryPage from './pages/RevenueDistributionHistoryPage';
-import BundleManagementPage from './pages/BundleManagementPage';
-import CreatorRevenueDashboardPage from './pages/CreatorRevenueDashboardPage';
-import AtomicSwapCreatePage from './pages/AtomicSwapCreatePage';
-import AtomicSwapProposalPage from './pages/AtomicSwapProposalPage';
-import StatusPage from './pages/StatusPage';
-import HolderLeaderboardPage from './pages/HolderLeaderboardPage';
-import BundlesPage from './pages/BundlesPage';
-import BundleDetailPage from './pages/BundleDetailPage';
-import SearchResultsPage from './pages/SearchResultsPage';
-import KeyDiscoveryFeedPage from './pages/KeyDiscoveryFeedPage';
-import WalletPortfolioPage from './pages/WalletPortfolioPage';
-import AutoInvestDashboardPage from './pages/AutoInvestDashboardPage';
-import RouteErrorBoundary from './components/common/RouteErrorBoundary';
-
-function withRouteErrorBoundary(element: ReactNode, routeName: string) {
-	return (
-		<RouteErrorBoundary routeName={routeName}>{element}</RouteErrorBoundary>
-	);
-}
+import AirdropsPage from './pages/AirdropsPage';
 
 export const routes = [
 	{
@@ -202,20 +182,8 @@ export const routes = [
 				element: <CreateCreatorKeyPage />,
 			},
 			{
-				path: '/staking',
-				element: <StakingDashboardPage />,
-			},
-			{
-				path: '/auto-invest',
-				element: <AutoInvestDashboardPage />,
-			},
-			{
-				path: '/swap/create',
-				element: <AtomicSwapCreatePage />,
-			},
-			{
-				path: '/swap/:proposalId',
-				element: <AtomicSwapProposalPage />,
+				path: '/airdrops',
+				element: <AirdropsPage />,
 			},
 			{
 				path: '/admin/dashboard',

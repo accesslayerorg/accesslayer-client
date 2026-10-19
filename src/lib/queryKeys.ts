@@ -162,52 +162,9 @@ export const queryKeys = {
 		summary: (wallet: string) => ['referrals', wallet, 'summary'] as const,
 		wallets: (wallet: string) => ['referrals', wallet, 'wallets'] as const,
 	},
-	staking: {
-		all: () => ['staking'] as const,
-		dashboard: (wallet: string) => ['staking', wallet, 'dashboard'] as const,
-	},
-	atomicSwap: {
-		all: () => ['atomic-swap'] as const,
-		proposal: (proposalId: string) =>
-			['atomic-swap', 'proposal', proposalId] as const,
-		proposals: (address: string, status?: string) =>
-			['atomic-swap', 'proposals', address, status ?? 'all'] as const,
-		history: (address: string) =>
-			['atomic-swap', 'history', address] as const,
-	},
-	bundles: {
-		all: (creatorId: string) => ['bundles', creatorId] as const,
-		list: (creatorId: string) => ['bundles', creatorId, 'list'] as const,
-		marketplace: {
-			all: () => ['bundles', 'marketplace'] as const,
-			list: () => ['bundles', 'marketplace', 'list'] as const,
-			detail: (bundleId: string) =>
-				['bundles', 'marketplace', 'detail', bundleId] as const,
-		},
-	},
-	status: {
-		all: () => ['status'] as const,
-		platform: () => ['status', 'platform'] as const,
-	},
-	creatorRevenue: {
-		all: () => ['creatorRevenue'] as const,
-		summary: (creatorId: string) =>
-			['creatorRevenue', creatorId, 'summary'] as const,
-		history: (creatorId: string, interval: string) =>
-			['creatorRevenue', creatorId, 'history', interval] as const,
-		withdrawals: (creatorId: string) =>
-			['creatorRevenue', creatorId, 'withdrawals'] as const,
-	},
-	stakingVault: {
-		/** Active vault stakes for a (wallet, key) pair. */
-		stakes: (wallet: string, keyId: string) =>
-			['staking-vault', 'stakes', wallet, keyId] as const,
-	},
-	autoInvest: {
-		all: () => ['auto-invest'] as const,
-		rules: () => ['auto-invest', 'rules'] as const,
-		history: (limit?: number) =>
-			['auto-invest', 'history', limit ?? 50] as const,
-		settings: () => ['auto-invest', 'settings'] as const,
+	airdrop: {
+		all: () => ['airdrop'] as const,
+		allocations: (wallet: string) =>
+			['airdrop', wallet, 'allocations'] as const,
 	},
 } as const;
