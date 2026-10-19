@@ -64,6 +64,12 @@ export const queryKeys = {
 			wallet
 				? (['creators', creatorId, 'trade-cooldown', wallet] as const)
 				: (['creators', creatorId, 'trade-cooldown'] as const),
+		// Optional wallet scopes the cache per connected wallet (#1163); omit
+		// it to address every wallet's entry for the key (e.g. invalidation).
+		lockup: (creatorId: string, wallet?: string) =>
+			wallet
+				? (['creators', creatorId, 'lockup', wallet] as const)
+				: (['creators', creatorId, 'lockup'] as const),
 		whitelist: (creatorId: string) =>
 			['creators', creatorId, 'whitelist'] as const,
 		publicProfile: (address: string) =>

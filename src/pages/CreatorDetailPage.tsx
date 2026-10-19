@@ -74,6 +74,10 @@ import KeyStatsPanel from '@/components/common/KeyStatsPanel';
 import Skeleton from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
 import { UnavailableAction } from '@/components/ui/unavailable-action';
+import { Lock } from 'lucide-react';
+import { useKeyLockup, resolveActiveKeyLockup } from '@/hooks/useKeyLockup';
+import { useNowMs } from '@/hooks/useNowMs';
+import { formatLockupCountdown } from '@/utils/lockupCountdown.utils';
 import GraduatedCurveMilestoneChart from '@/components/common/GraduatedCurveMilestoneChart';
 import KeyDeprecationBanner from '@/components/common/KeyDeprecationBanner';
 import KeyTradingPausedBanner from '@/components/common/KeyTradingPausedBanner';
@@ -178,6 +182,13 @@ function CreatorDetailPageContent() {
 
 	const userPosition = holdings.find(h => h.creatorId === (id || ''));
 	const holdingsCount = userPosition?.quantity ?? 0;
+
+	// #1163 — server-backed sell lock-up for the connected wallet's position.
+	// Resolved against a live clock so the disabled sell state and countdown
+	// drop off automatically at the unlock timestamp.
+	const nowMs = useNowMs();
+	const { data: keyLockup } = useKeyLockup(id || '', userAddress);
+	const activeLockup = resolveActiveKeyLockup(keyLockup, nowMs);
 
 	const nextBuyAllowedAt =
 		userPosition?.nextBuyAllowedAt ?? creator?.nextBuyAllowedAt ?? null;
@@ -784,8 +795,23 @@ function CreatorDetailPageContent() {
 							/>
 						)}
 
-						{holdingsCount > 0 && (
-							isFloorActive ? (
+						{holdingsCount > 0 &&
+							(activeLockup ? (
+								<UnavailableAction
+									disabled
+									reason={`LockupActive: Selling is disabled while this position is locked. Unlocks in ${formatLockupCountdown(activeLockup.remainingSeconds)}.`}
+								>
+									<Button
+										type="button"
+										disabled
+										data-testid="key-detail-sell-button"
+										variant="outline"
+										className="min-h-11 w-full rounded-xl font-bold sm:h-10 sm:min-h-0 sm:w-auto"
+									>
+										Sell Key
+									</Button>
+								</UnavailableAction>
+							) : isFloorActive ? (
 								<UnavailableAction
 									disabled
 									reason="PriceFloorActive: Price floor is active. Selling is disabled while current price is at or below the floor price."
@@ -833,6 +859,24 @@ function CreatorDetailPageContent() {
 
 				{userAddress && !isTradeCooldownActive && (
 					<BuyCooldownCountdown nextBuyAllowedAt={nextBuyAllowedAt} />
+				)}
+
+				{userAddress && holdingsCount > 0 && activeLockup && (
+					<div
+						className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-300"
+						data-testid="key-detail-lockup-countdown"
+						role="status"
+						aria-live="polite"
+						aria-label={`Selling unlocks in ${formatLockupCountdown(activeLockup.remainingSeconds)}`}
+					>
+						<Lock className="size-3.5 shrink-0 text-amber-400" />
+						<span>
+							Selling unlocks in{' '}
+							<span className="font-mono tabular-nums">
+								{formatLockupCountdown(activeLockup.remainingSeconds)}
+							</span>
+						</span>
+					</div>
 				)}
 
 				<div className="flex justify-end">

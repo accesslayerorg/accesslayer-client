@@ -34,3 +34,19 @@ export function formatCountdownTime(totalSeconds: number): string {
 
 	return `${hh}:${mm}:${ss}`;
 }
+
+/**
+ * Formats a lock-up countdown in days/hours/minutes, e.g. `2d 14h 32m`,
+ * `14h 32m`, or `32m`. Used by the API-backed lock-up indicator (#1163).
+ */
+export function formatLockupCountdown(totalSeconds: number): string {
+	if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return '0m';
+	const seconds = Math.ceil(totalSeconds);
+	const days = Math.floor(seconds / 86_400);
+	const hours = Math.floor((seconds % 86_400) / 3_600);
+	const minutes = Math.floor((seconds % 3_600) / 60);
+
+	if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+	if (hours > 0) return `${hours}h ${minutes}m`;
+	return `${minutes}m`;
+}

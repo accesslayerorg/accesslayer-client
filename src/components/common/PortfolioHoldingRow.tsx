@@ -25,6 +25,12 @@ import {
 } from '@/utils/reinvestDividend.utils';
 import { isKeyDeprecated } from '@/utils/keyDeprecation.utils';
 import type { BatchTransferRecipient } from '@/utils/batchTransfer.utils';
+import { useNowMs } from '@/hooks/useNowMs';
+import {
+	resolveActiveKeyLockup,
+	type KeyLockup,
+} from '@/hooks/useKeyLockup';
+import KeyLockupBadge from '@/components/common/KeyLockupBadge';
 
 import {
 	TrendingUp,
@@ -64,6 +70,8 @@ export interface PortfolioHoldingRowProps {
 	isReinvesting?: boolean;
 	isRedeeming?: boolean;
 	isNetworkMismatch?: boolean;
+	/** Server-backed sell lock-up status for this position (#1163). */
+	keyLockup?: KeyLockup | null;
 }
 
 export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
@@ -83,11 +91,16 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	isReinvesting = false,
 	isRedeeming = false,
 	isNetworkMismatch = false,
+	keyLockup = null,
 }) => {
 	const initialRemaining = computeRemainingLockupSeconds(
 		position.last_buy_timestamp
 	);
 	const [isLocked, setIsLocked] = useState(initialRemaining > 0);
+	// #1163 — the server-backed sell lock-up is resolved against a live clock
+	// so the badge and sell block drop off automatically at the unlock time.
+	const nowMs = useNowMs();
+	const activeLockup = resolveActiveKeyLockup(keyLockup, nowMs);
 	const [reinvestOpen, setReinvestOpen] = useState(false);
 	const [redeemOpen, setRedeemOpen] = useState(false);
 	const [batchTransferOpen, setBatchTransferOpen] = useState(false);
@@ -245,6 +258,11 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 							onExpire={() => setIsLocked(false)}
 						/>
 					)}
+					{!deprecated && activeLockup && (
+						<KeyLockupBadge
+							remainingSeconds={activeLockup.remainingSeconds}
+						/>
+					)}
 
 					<div className="flex items-center gap-2">
 						{deprecated ? (
@@ -309,6 +327,7 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 											onClick={() => onSell(position.creatorId)}
 											disabled={
 												isLocked ||
+												activeLockup != null ||
 												isLiquidEmpty ||
 												isNetworkMismatch ||
 												isSubmitting ||

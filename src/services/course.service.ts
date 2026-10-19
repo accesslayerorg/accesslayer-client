@@ -240,6 +240,29 @@ export interface KeyPriceFloor {
 	updatedAt?: string | null;
 }
 
+/**
+ * Sell lock-up status for a wallet's position in a creator key (#1163).
+ *
+ * Returned by GET /keys/:keyId/lockup/:wallet.
+ * While a lock-up is active the holder cannot sell; the position becomes
+ * sellable again once unlockAt passes.
+ */
+export interface KeyLockup {
+	/** Key this lock-up applies to, when the backend echoes it back. */
+	keyId?: string;
+	/** Wallet the lock-up is registered to, when the backend echoes it back. */
+	wallet?: string;
+	/** Whether the lock-up is currently in force. */
+	isActive?: boolean;
+	/**
+	 * Absolute timestamp (seconds epoch, milliseconds epoch, or ISO string)
+	 * at which the position becomes sellable again.
+	 */
+	unlockAt?: number | string | null;
+	/** Alias for unlockAt reported by some backends. */
+	unlockedAt?: number | string | null;
+}
+
 export interface KeyConfig {
 	/** Key this config belongs to, when the backend echoes it back. */
 	keyId?: string;
@@ -913,6 +936,25 @@ class CourseService extends BaseApiService {
 			return response.data.data;
 		} catch (error: unknown) {
 			if (error instanceof ApiError && error.status === 404) {
+				return null;
+			}
+
+			throw this.handleError(error);
+		}
+	}
+
+	// Get sell lock-up status - GET /keys/:keyId/lockup/:wallet (#1163)
+	async getKeyLockup(keyId: string, wallet: string): Promise<KeyLockup | null> {
+		try {
+			const response = await this.api.get<APIResponse<KeyLockup>>(
+				`/keys/${keyId}/lockup/${wallet}`
+			);
+
+			return response.data.data;
+		} catch (error: unknown) {
+			if (error instanceof ApiError && error.status === 404) {
+				// No lock-up record for this wallet — treat as unlocked so
+				// sell buttons stay enabled.
 				return null;
 			}
 
