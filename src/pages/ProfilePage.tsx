@@ -9,6 +9,8 @@ import {
 	ArrowLeftRight,
 	Droplets,
 	Hourglass,
+	Award,
+	Scale,
 } from 'lucide-react';
 import ReferralLinkPanel from '@/components/common/ReferralLinkPanel';
 import PortfolioSummaryHeader from '@/components/common/PortfolioSummaryHeader';
@@ -24,6 +26,8 @@ import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 import TruncatedAddress from '@/components/common/TruncatedAddress';
 import { ProfileTabPillGroup } from '@/components/common/ProfileTabPill';
 import ActivePriceAlertsList from '@/components/common/ActivePriceAlertsList';
+import MilestoneRewardsSection from '@/components/common/MilestoneRewardsSection';
+import PortfolioRebalancePanel from '@/components/common/PortfolioRebalancePanel';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useWalletHoldings } from '@/hooks/useWallet';
@@ -43,6 +47,8 @@ import VestingPositionsSection from '@/components/common/VestingPositionsSection
 
 const TABS = [
 	{ label: 'Holdings', value: 'holdings', icon: <BarChart2 /> },
+	{ label: 'Rebalance', value: 'rebalance', icon: <Scale /> },
+	{ label: 'Milestones', value: 'milestones', icon: <Award /> },
 	{ label: 'Vesting', value: 'vesting', icon: <Hourglass /> },
 	{ label: 'Staking', value: 'staking', icon: <Coins /> },
 	{ label: 'Liquidity', value: 'liquidity', icon: <Droplets /> },
@@ -344,6 +350,56 @@ export default function ProfilePage() {
 						>
 							Open referral programme
 						</Link>
+					</section>
+				)}
+
+				{/* Portfolio rebalance panel (#1139) */}
+				{activeTab === 'rebalance' && (
+					<section
+						id="profile-panel-rebalance"
+						role="tabpanel"
+						aria-labelledby="profile-tab-rebalance"
+						data-testid="portfolio-rebalance-panel"
+					>
+						<div className="mb-6">
+							<h2 className="font-grotesque text-xl font-bold text-white">
+								Rebalance Portfolio
+							</h2>
+							<p className="mt-1 text-sm text-white/60">
+								Configure target allocations across your held keys and
+								preview the swaps needed before executing a rebalance.
+							</p>
+						</div>
+						<SectionErrorBoundary sectionName="portfolio rebalance">
+							<PortfolioRebalancePanel
+								wallet={profileWallet}
+								positions={heldPositions}
+								creators={creators}
+							/>
+						</SectionErrorBoundary>
+					</section>
+				)}
+
+				{/* Milestone rewards panel (#1141) */}
+				{activeTab === 'milestones' && (
+					<section
+						id="profile-panel-milestones"
+						role="tabpanel"
+						aria-labelledby="profile-tab-milestones"
+						data-testid="portfolio-milestones-panel"
+					>
+						<div className="mb-6">
+							<h2 className="font-grotesque text-xl font-bold text-white">
+								Milestone Rewards
+							</h2>
+							<p className="mt-1 text-sm text-white/60">
+								Loyalty rewards for continuously holding a creator key
+								past 30, 90, 180, and 365 days.
+							</p>
+						</div>
+						<SectionErrorBoundary sectionName="milestone rewards">
+							<MilestoneRewardsSection wallet={profileWallet} />
+						</SectionErrorBoundary>
 					</section>
 				)}
 
