@@ -65,6 +65,7 @@ import {
 	useBatchTransferMutation,
 	type SelfFreezeAction,
 } from '@/hooks/useWallet';
+import { useKeyLockups, type KeyLockup } from '@/hooks/useKeyLockup';
 
 import toast from 'react-hot-toast';
 import showToast from '@/utils/toast.util';
@@ -881,6 +882,23 @@ function LandingPage() {
 		() => calculatePortfolioValue(heldKeyPositions),
 		[heldKeyPositions]
 	);
+	// #1163 — server-backed sell lock-up per held key, fetched only for a
+	// real connected wallet (demo positions have no on-chain state).
+	const heldCreatorIds = useMemo(
+		() =>
+			heldKeyPositions
+				.filter(position => (position.quantity ?? 0) > 0)
+				.map(position => position.creatorId),
+		[heldKeyPositions]
+	);
+	const lockupQueries = useKeyLockups(connectedAddress, heldCreatorIds);
+	const lockupsByCreatorId = useMemo(() => {
+		const map = new Map<string, KeyLockup | null>();
+		heldCreatorIds.forEach((creatorId, index) => {
+			map.set(creatorId, lockupQueries[index]?.data ?? null);
+		});
+		return map;
+	}, [heldCreatorIds, lockupQueries]);
 	const pnlSummary = useMemo(
 		() => calculatePnLSummary(heldKeyPositions),
 		[heldKeyPositions]
@@ -1701,6 +1719,11 @@ function LandingPage() {
 												key={position.creatorId}
 												position={position}
 												creator={creator}
+												keyLockup={
+													lockupsByCreatorId.get(
+														position.creatorId
+													) ?? null
+												}
 												onBuy={() => openTradeDialog('buy')}
 												onSell={() => openTradeDialog('sell')}
 												onReinvest={async creatorId => {
