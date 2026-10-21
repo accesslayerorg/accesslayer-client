@@ -30,6 +30,8 @@ export const queryKeys = {
 			['creators', creatorId, 'priceHistory', interval] as const,
 		holders: (creatorId: string) =>
 			['creators', creatorId, 'holders'] as const,
+		holderConcentration: (creatorId: string) =>
+			['creators', creatorId, 'holder-concentration'] as const,
 		holderSnapshots: (creatorId: string, range: string) =>
 			['creators', creatorId, 'holder-snapshots', range] as const,
 		activity: (creatorId: string) =>
@@ -246,5 +248,8 @@ export const queryKeys = {
 		history: (limit?: number) =>
 			['auto-invest', 'history', limit ?? 50] as const,
 		settings: () => ['auto-invest', 'settings'] as const,
+	},
+	supportTickets: {
+		mine: () => ['support-tickets', 'mine'] as const,
 	},
 } as const;
