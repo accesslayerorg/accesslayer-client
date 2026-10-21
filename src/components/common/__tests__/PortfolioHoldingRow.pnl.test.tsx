@@ -1,5 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import {
+	render as rtlRender,
+	screen,
+	type RenderResult,
+} from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import PortfolioHoldingRow from '../PortfolioHoldingRow';
 import type { HeldKeyPosition } from '@/utils/portfolioValue.utils';
 
@@ -28,8 +33,25 @@ const basePosition: HeldKeyPosition = {
 	last_buy_timestamp: null,
 };
 
-const renderRow = (position: HeldKeyPosition) =>
-	render(<PortfolioHoldingRow position={position} creator={creator} />);
+const renderRow = (position: HeldKeyPosition): RenderResult => {
+	const queryClient = new QueryClient({
+		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+	});
+	const result = rtlRender(
+		<QueryClientProvider client={queryClient}>
+			<PortfolioHoldingRow position={position} creator={creator} />
+		</QueryClientProvider>
+	);
+	return {
+		...result,
+		rerender: (nextUi: React.ReactElement) =>
+			result.rerender(
+				<QueryClientProvider client={queryClient}>
+					{nextUi}
+				</QueryClientProvider>
+			),
+	};
+};
 
 describe('PortfolioHoldingRow — unrealised P&L (#935)', () => {
 	it('shows the unrealised P&L for a profitable position', () => {

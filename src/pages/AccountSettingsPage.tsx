@@ -4,6 +4,7 @@ import { useProfileStore } from '@/hooks/useProfileStore';
 import { useSessions } from '@/hooks/useSessions';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import SessionSecuritySection from '@/components/settings/SessionSecuritySection';
+import MyTicketsSection from '@/components/settings/MyTicketsSection';
 
 /**
  * Account settings page (#1111).
@@ -57,7 +58,10 @@ export default function AccountSettingsPage() {
 				isRevoking={isRevoking}
 				onRevokeSession={revokeSession}
 				onRevokeAllOtherSessions={revokeAllOtherSessions}
+				className="mb-6"
 			/>
+
+			<MyTicketsSection />
 		</main>
 	);
 }

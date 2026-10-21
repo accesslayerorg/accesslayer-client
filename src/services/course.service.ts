@@ -161,6 +161,25 @@ export interface Course {
 	whitelist?: WhitelistEntry[];
 	/** Migration details shown when a deprecated key has a successor. */
 	deprecation?: KeyDeprecation | null;
+	/**
+	 * Whether this key has entered its retirement notice period (#1246).
+	 * Distinct from `deprecated`: retirement is a terminal state with a
+	 * guaranteed creator buyback at `retirementBuybackPriceStroops`, with a
+	 * notice window ending at `retirementNoticeExpiresAt`. A key can be
+	 * deprecated without being retired (e.g. superseded but still tradeable
+	 * on the secondary market) or retired without ever having been flagged
+	 * deprecated first.
+	 */
+	isRetiring?: boolean;
+	/** Guaranteed per-key buyback price in stroops during the retirement notice window. */
+	retirementBuybackPriceStroops?: number | null;
+	/**
+	 * ISO timestamp when the retirement notice window closes; null/absent
+	 * means no fixed deadline has been set yet. The exit-notice banner's
+	 * countdown and auto-dismiss both key off this value, the same way
+	 * `freezeExpiresAt` drives the freeze banner above.
+	 */
+	retirementNoticeExpiresAt?: string | null;
 
 	/** Whether purchases are restricted to the early-access whitelist. */
 	earlyAccessEnabled?: boolean;

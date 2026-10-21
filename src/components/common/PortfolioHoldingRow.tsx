@@ -3,6 +3,9 @@ import { Button } from '@/components/ui/button';
 import LockupCountdown from '@/components/common/LockupCountdown';
 import ReinvestDividendDialog from '@/components/common/ReinvestDividendDialog';
 import DeprecationNotice from '@/components/common/DeprecationNotice';
+import ExitNoticeBanner from '@/components/common/ExitNoticeBanner';
+import ReportIssueButton from '@/components/common/ReportIssueButton';
+import SocialShareButton from '@/components/common/SocialShareButton';
 import RedeemKeyDialog from '@/components/common/RedeemKeyDialog';
 import BatchTransferModal from '@/components/common/BatchTransferModal';
 import { computeRemainingLockupSeconds } from '@/utils/lockupCountdown.utils';
@@ -162,6 +165,14 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 
 	return (
 		<>
+			{creator?.isRetiring && (
+				<ExitNoticeBanner
+					creator={creator}
+					holdingsCount={liquidQuantity}
+					onSellNow={() => onSell?.(position.creatorId)}
+					className="mb-3"
+				/>
+			)}
 			<div
 				className={cn(
 					'flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition-opacity sm:flex-row sm:items-center sm:justify-between',
@@ -190,6 +201,32 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 							</span>
 						)}
 					</button>
+					{creator && (
+						<SocialShareButton
+							share={{
+								context: 'key',
+								keyName: creator.title || 'this key',
+								priceXlm: formatDisplayKeyPrice(
+									resolveCreatorKeyPriceStroops(position)
+								),
+								change24h: creator.change24h,
+								url:
+									typeof window !== 'undefined'
+										? `${window.location.origin}/creator/${position.creatorId}`
+										: `/creator/${position.creatorId}`,
+							}}
+							title={`Share ${creator.title || 'this key'}`}
+							className="ml-1 h-auto px-1.5 py-0.5"
+							data-testid="portfolio-row-share-button"
+						/>
+					)}
+					{creator && (
+						<ReportIssueButton
+							keyId={position.creatorId}
+							keyName={creator.title}
+							className="ml-1 h-auto px-1.5 py-0.5"
+						/>
+					)}
 					<div className="mt-1 text-xs text-white/55">
 						{formatNumber(position.quantity)} keys ·{' '}
 						{position.isPriceLoading

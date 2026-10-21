@@ -6,6 +6,7 @@ import Skeleton from '@/components/ui/skeleton';
 import { useWalletBadges } from '@/hooks/useWallet';
 import { splitBadges } from '@/utils/walletBadges.utils';
 import { cn } from '@/lib/utils';
+import SocialShareButton from '@/components/common/SocialShareButton';
 
 interface WalletBadgeShowcaseProps {
 	wallet: string;
@@ -87,6 +88,20 @@ export default function WalletBadgeShowcase({
 											<span className="text-xs text-white/60">
 												{formatEarnedDate(badge.earnedAt)}
 											</span>
+											<SocialShareButton
+												share={{
+													context: 'badge',
+													badgeName: badge.name,
+													criteria: badge.criteria,
+													url:
+														typeof window !== 'undefined'
+															? `${window.location.origin}/profile/${wallet}`
+															: `/profile/${wallet}`,
+												}}
+												title={`Share "${badge.name}" badge`}
+												className="h-auto px-1.5 py-0.5"
+												data-testid={`wallet-badge-share-${badge.id}`}
+											/>
 										</div>
 									</Tooltip>
 								);
