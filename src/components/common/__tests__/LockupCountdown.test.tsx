@@ -1,5 +1,11 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import {
+	render as rtlRender,
+	screen,
+	fireEvent,
+	act,
+} from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import LockupCountdown from '../LockupCountdown';
 import {
 	computeRemainingLockupSeconds,
@@ -12,6 +18,15 @@ vi.mock('@/hooks/useKeyLockup', () => ({
 	useRemainingUnlockSeconds: () => 0,
 	isKeyLockupActive: () => false,
 }));
+
+function render(ui: React.ReactElement) {
+	const queryClient = new QueryClient({
+		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+	});
+	return rtlRender(
+		<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+	);
+}
 
 describe('LockupCountdown', () => {
 	beforeEach(() => {
