@@ -33,6 +33,7 @@ import BundlesPage from './pages/BundlesPage';
 import BundleDetailPage from './pages/BundleDetailPage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import KeyDiscoveryFeedPage from './pages/KeyDiscoveryFeedPage';
+import KeyDiscoveryLeaderboardPage from './pages/KeyDiscoveryLeaderboardPage';
 import WalletPortfolioPage from './pages/WalletPortfolioPage';
 import CampaignsPage from './pages/CampaignsPage';
 import AutoInvestDashboardPage from './pages/AutoInvestDashboardPage';
@@ -88,6 +89,14 @@ export const routes = [
 				// Full list of seasonal campaigns linked from discovery (#1226).
 				path: '/campaigns',
 				element: <CampaignsPage />,
+			},
+			{
+				// Key discovery leaderboard ranking top performing keys (#1206).
+				path: '/discovery/leaderboard',
+				element: withRouteErrorBoundary(
+					<KeyDiscoveryLeaderboardPage />,
+					'Key discovery leaderboard'
+				),
 			},
 			{
 				path: '/leaderboard',

@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ArrowRight, RefreshCw, Flame, Sparkles, Layers } from 'lucide-react';
+import { ArrowRight, RefreshCw, Flame, Sparkles, Layers, Trophy } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useKeyDiscovery } from '@/hooks/useKeyDiscovery';
@@ -110,6 +110,15 @@ export default function DiscoveryPage() {
 								</span>
 							)}
 						</Button>
+
+						<Link
+							to="/discovery/leaderboard"
+							data-testid="discovery-leaderboard-link"
+							className="inline-flex h-7 items-center rounded-full border border-amber-400/30 bg-amber-400/10 px-3 text-[0.72rem] font-bold text-amber-300 transition-colors hover:border-amber-400/50 hover:bg-amber-400/20"
+						>
+							<Trophy className="mr-1.5 size-3.5" aria-hidden="true" />
+							Leaderboard
+						</Link>
 					</div>
 				</MarketplaceSection>
 

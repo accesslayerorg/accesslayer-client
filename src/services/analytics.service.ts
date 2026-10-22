@@ -190,6 +190,254 @@ export class AnalyticsService extends BaseApiService {
 			lastUpdated: new Date().toISOString(),
 		};
 	}
+
+	/**
+	 * Fetches platform-wide creator keys leaderboard ranked by volume,
+	 * holder count, or reputation score (#1206).
+	 */
+	async getKeyDiscoveryLeaderboard(
+		metric: LeaderboardMetric = 'volume'
+	): Promise<KeyLeaderboardEntry[]> {
+		try {
+			const response = await this.api.get<
+				APIResponse<Array<RawKeyLeaderboardEntry>>
+			>('/analytics/keys/leaderboard', {
+				params: { metric },
+			});
+			const rawData = response.data.data ?? [];
+			return rawData.map((item, index) =>
+				normalizeKeyLeaderboardEntry(item, index + 1, metric)
+			);
+		} catch {
+			return this.getMockKeyDiscoveryLeaderboard(metric);
+		}
+	}
+
+	/**
+	 * Generates deterministic top 50 ranked keys for the given metric
+	 * when backend is offline or during testing (#1206).
+	 */
+	getMockKeyDiscoveryLeaderboard(
+		metric: LeaderboardMetric = 'volume'
+	): KeyLeaderboardEntry[] {
+		const baseKeys = [
+			{ name: 'Apex Trader', symbol: 'APEX', creator: 'GDKXQ7HNV42...887A', creatorName: 'Apex Alpha' },
+			{ name: 'Stellar Nexus', symbol: 'NEXUS', creator: 'GBPL7QW411...912C', creatorName: 'Nexus Studio' },
+			{ name: 'CyberPulse', symbol: 'CPULSE', creator: 'GCKV8994MM...332X', creatorName: 'Cyber Labs' },
+			{ name: 'Quantum Core', symbol: 'QCORE', creator: 'GAZT1188NN...554B', creatorName: 'Quantum Dao' },
+			{ name: 'Solaria Prime', symbol: 'SLR', creator: 'GDOP5566WW...771Q', creatorName: 'Solaria Guild' },
+			{ name: 'Vanguard Elite', symbol: 'VNG', creator: 'GBKL3344PP...882M', creatorName: 'Vanguard Collective' },
+			{ name: 'Hyperion Alpha', symbol: 'HYP', creator: 'GDRT7788KK...991S', creatorName: 'Hyperion Capital' },
+			{ name: 'Aether Dynamics', symbol: 'AETH', creator: 'GCFF2233JJ...441L', creatorName: 'Aether Team' },
+			{ name: 'MetaNode VIP', symbol: 'NODE', creator: 'GAXX9900HH...112K', creatorName: 'MetaNode' },
+			{ name: 'Nebula Protocol', symbol: 'NBLA', creator: 'GDZZ6677GG...223J', creatorName: 'Nebula DAO' },
+			{ name: 'Chronos Yield', symbol: 'CRN', creator: 'GBMM4455FF...334H', creatorName: 'Chronos Research' },
+			{ name: 'Zenith Matrix', symbol: 'ZNTH', creator: 'GCLL1122DD...445G', creatorName: 'Zenith Labs' },
+			{ name: 'Titan Vault', symbol: 'TITAN', creator: 'GAKK8899SS...556F', creatorName: 'Titan Assets' },
+			{ name: 'Echo Stream', symbol: 'ECHO', creator: 'GDJJ5566AA...667D', creatorName: 'Echo Media' },
+			{ name: 'Orion Velocity', symbol: 'ORION', creator: 'GBHH2233ZZ...778S', creatorName: 'Orion Guild' },
+			{ name: 'Spectra Key', symbol: 'SPEC', creator: 'GCGG9900YY...889A', creatorName: 'Spectra Net' },
+			{ name: 'Vortex Syndicate', symbol: 'VTX', creator: 'GAFF6677XX...990B', creatorName: 'Vortex Org' },
+			{ name: 'Beacon Horizon', symbol: 'BCN', creator: 'GDDD3344WW...001C', creatorName: 'Beacon Hub' },
+			{ name: 'Astra Foundry', symbol: 'ASTRA', creator: 'GBSS0011VV...112D', creatorName: 'Astra Creative' },
+			{ name: 'Eclipse Capital', symbol: 'ECLP', creator: 'GCAA7788UU...223E', creatorName: 'Eclipse Fund' },
+			{ name: 'Fortress Key', symbol: 'FORT', creator: 'GAQQ4455TT...334F', creatorName: 'Fortress Security' },
+			{ name: 'Mirage Ventures', symbol: 'MRG', creator: 'GDWW1122SS...445G', creatorName: 'Mirage Studio' },
+			{ name: 'Solstice Guild', symbol: 'SLST', creator: 'GBEE8899RR...556H', creatorName: 'Solstice Group' },
+			{ name: 'Radiant Edge', symbol: 'RDNT', creator: 'GCRR5566QQ...667J', creatorName: 'Radiant DAO' },
+			{ name: 'Prism Network', symbol: 'PRISM', creator: 'GATT2233PP...778K', creatorName: 'Prism Labs' },
+			{ name: 'Obsidian Pass', symbol: 'OBSD', creator: 'GDYY9900OO...889L', creatorName: 'Obsidian Guild' },
+			{ name: 'Aura Protocol', symbol: 'AURA', creator: 'GBUU6677NN...990M', creatorName: 'Aura Collective' },
+			{ name: 'Equinox Key', symbol: 'EQNX', creator: 'GCII3344MM...001N', creatorName: 'Equinox Capital' },
+			{ name: 'Synergy Alpha', symbol: 'SYN', creator: 'GAOO0011LL...112P', creatorName: 'Synergy Core' },
+			{ name: 'Velocity Run', symbol: 'VELO', creator: 'GDLL7788KK...223Q', creatorName: 'Velocity Sports' },
+			{ name: 'Catalyst Node', symbol: 'CTLY', creator: 'GBKK4455JJ...334R', creatorName: 'Catalyst Hub' },
+			{ name: 'Polaris Vault', symbol: 'PLRS', creator: 'GCJJ1122HH...445S', creatorName: 'Polaris Tech' },
+			{ name: 'Helios DAO', symbol: 'HELI', creator: 'GAHH8899GG...556T', creatorName: 'Helios Creator' },
+			{ name: 'Starlight Key', symbol: 'STR', creator: 'GDGG5566FF...667U', creatorName: 'Starlight Media' },
+			{ name: 'Zenith Forge', symbol: 'ZFRG', creator: 'GBFF2233EE...778V', creatorName: 'Forge Alpha' },
+			{ name: 'Apex Spectrum', symbol: 'ASPC', creator: 'GCEE9900DD...889W', creatorName: 'Spectrum Labs' },
+			{ name: 'Genesis Block', symbol: 'GEN', creator: 'GADD6677CC...990X', creatorName: 'Genesis Hub' },
+			{ name: 'Olympus Peak', symbol: 'OLYM', creator: 'GDCC3344BB...001Y', creatorName: 'Olympus DAO' },
+			{ name: 'Flux Matrix', symbol: 'FLUX', creator: 'GBBB0011AA...112Z', creatorName: 'Flux Labs' },
+			{ name: 'Terra Nova', symbol: 'TRRA', creator: 'GCAA7788ZZ...223A', creatorName: 'Terra Alpha' },
+			{ name: 'Cosmic Drift', symbol: 'COSM', creator: 'GAZZ4455YY...334B', creatorName: 'Cosmic Space' },
+			{ name: 'Pulse Point', symbol: 'PLSE', creator: 'GDYY1122XX...445C', creatorName: 'Pulse Guild' },
+			{ name: 'Aetherial Key', symbol: 'AETHR', creator: 'GBXX8899WW...556D', creatorName: 'Aetherial' },
+			{ name: 'Vanguard Pass', symbol: 'VPASS', creator: 'GCWW5566VV...667E', creatorName: 'Vanguard HQ' },
+			{ name: 'Singularity Key', symbol: 'SING', creator: 'GAVV2233UU...778F', creatorName: 'Singularity DAO' },
+			{ name: 'Infinity Node', symbol: 'INFT', creator: 'GDUU9900TT...889G', creatorName: 'Infinity Studio' },
+			{ name: 'Krypton Alpha', symbol: 'KRP', creator: 'GBTT6677SS...990H', creatorName: 'Krypton Tech' },
+			{ name: 'Oasis Network', symbol: 'OASIS', creator: 'GCSS3344RR...001J', creatorName: 'Oasis Labs' },
+			{ name: 'Nexus Horizon', symbol: 'NXH', creator: 'GARR0011QQ...112K', creatorName: 'Nexus Foundation' },
+			{ name: 'Valence Key', symbol: 'VLNC', creator: 'GDQQ7788PP...223L', creatorName: 'Valence Alpha' },
+		];
+
+		return baseKeys.map((item, index) => {
+			const rank = index + 1;
+			const id = `creator-key-${rank}`;
+			let metricValue = 0;
+
+			if (metric === 'volume') {
+				// 120,000 down to 1,500 XLM
+				metricValue = Math.round(120_000 * Math.pow(0.92, index) + 1500);
+			} else if (metric === 'holders') {
+				// 5,400 down to 42 holders
+				metricValue = Math.round(5_400 * Math.pow(0.91, index) + 42);
+			} else {
+				// Reputation: 99.4 down to 54.0 score
+				metricValue = Math.round((99.4 - index * 0.9) * 10) / 10;
+			}
+
+			// Varied 24h change percentages (positive, negative, flat)
+			const changes = [
+				14.5, -3.2, 28.4, 0.0, -8.7, 12.1, 5.4, -2.1, 19.8, -12.4,
+				7.3, -1.5, 34.2, -6.8, 0.0, 9.4, -4.6, 16.2, 2.1, -15.3,
+				11.8, -7.4, 4.3, 0.0, -3.9, 21.0, -9.1, 6.7, -1.8, 13.5,
+				8.9, -5.2, 0.0, 17.3, -11.0, 3.8, -2.7, 24.6, -6.1, 5.9,
+				10.4, -8.3, 1.2, 0.0, -4.5, 18.7, -13.2, 7.8, -3.4, 9.1
+			];
+			const change24h = changes[index % changes.length];
+			const price = Math.round((45 * Math.pow(0.95, index) + 1.2) * 100) / 100;
+
+			return {
+				rank,
+				id,
+				name: item.name,
+				symbol: item.symbol,
+				thumbnail: `/avatars/key-${(index % 8) + 1}.png`,
+				creator: {
+					address: item.creator,
+					name: item.creatorName,
+				},
+				metricValue,
+				change24h,
+				price,
+			};
+		});
+	}
+}
+
+export type LeaderboardMetric = 'volume' | 'holders' | 'reputation';
+
+export interface KeyLeaderboardCreator {
+	address: string;
+	name?: string;
+	avatarUrl?: string;
+}
+
+export interface KeyLeaderboardEntry {
+	rank: number;
+	id: string;
+	name: string;
+	symbol?: string;
+	thumbnail?: string;
+	creator: KeyLeaderboardCreator;
+	metricValue: number;
+	change24h: number;
+	price?: number;
+}
+
+export interface RawKeyLeaderboardEntry {
+	rank?: number;
+	id?: string;
+	keyId?: string;
+	name?: string;
+	title?: string;
+	symbol?: string;
+	thumbnail?: string;
+	avatarUrl?: string;
+	creator?:
+		| {
+				address?: string;
+				name?: string;
+				avatarUrl?: string;
+		  }
+		| string;
+	creatorAddress?: string;
+	creatorName?: string;
+	creatorAvatar?: string;
+	metricValue?: number | string;
+	value?: number | string;
+	volume?: number | string;
+	volume24h?: number | string;
+	holders?: number | string;
+	holderCount?: number | string;
+	reputation?: number | string;
+	reputationScore?: number | string;
+	change24h?: number | string;
+	priceChange24h?: number | string;
+	price?: number | string;
+	currentPrice?: number | string;
+}
+
+export function normalizeKeyLeaderboardEntry(
+	entry: RawKeyLeaderboardEntry,
+	fallbackRank: number,
+	metric: LeaderboardMetric = 'volume'
+): KeyLeaderboardEntry {
+	const id = entry.id || entry.keyId || `key-${fallbackRank}`;
+	const name = entry.name || entry.title || `Key #${fallbackRank}`;
+	const symbol = entry.symbol;
+	const thumbnail = entry.thumbnail || entry.avatarUrl;
+
+	let creatorAddress = '';
+	let creatorName: string | undefined = entry.creatorName;
+	let creatorAvatar: string | undefined = entry.creatorAvatar;
+
+	if (typeof entry.creator === 'object' && entry.creator !== null) {
+		creatorAddress = entry.creator.address || entry.creatorAddress || '';
+		creatorName = entry.creator.name || creatorName;
+		creatorAvatar = entry.creator.avatarUrl || creatorAvatar;
+	} else if (typeof entry.creator === 'string') {
+		creatorAddress = entry.creator;
+	} else if (entry.creatorAddress) {
+		creatorAddress = entry.creatorAddress;
+	}
+
+	let metricValue = 0;
+	if (metric === 'volume') {
+		metricValue = Number(
+			entry.volume24h ?? entry.volume ?? entry.metricValue ?? entry.value ?? 0
+		);
+	} else if (metric === 'holders') {
+		metricValue = Number(
+			entry.holderCount ?? entry.holders ?? entry.metricValue ?? entry.value ?? 0
+		);
+	} else if (metric === 'reputation') {
+		metricValue = Number(
+			entry.reputationScore ??
+				entry.reputation ??
+				entry.metricValue ??
+				entry.value ??
+				0
+		);
+	}
+
+	const change24h = Number(entry.change24h ?? entry.priceChange24h ?? 0);
+	const price =
+		entry.price !== undefined
+			? Number(entry.price)
+			: entry.currentPrice !== undefined
+				? Number(entry.currentPrice)
+				: undefined;
+
+	return {
+		rank: entry.rank ?? fallbackRank,
+		id,
+		name,
+		symbol,
+		thumbnail,
+		creator: {
+			address: creatorAddress,
+			name: creatorName,
+			avatarUrl: creatorAvatar,
+		},
+		metricValue: Number.isFinite(metricValue) ? metricValue : 0,
+		change24h: Number.isFinite(change24h) ? change24h : 0,
+		price: price !== undefined && Number.isFinite(price) ? price : undefined,
+	};
 }
 
 export const analyticsService = new AnalyticsService();
+
