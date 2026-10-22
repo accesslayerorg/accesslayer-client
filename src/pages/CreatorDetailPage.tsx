@@ -32,6 +32,8 @@ import BuyCooldownCountdown from '@/components/common/BuyCooldownCountdown';
 import KeyHolderList from '@/components/common/KeyHolderList';
 import HolderConcentrationChart from '@/components/common/HolderConcentrationChart';
 import HolderSnapshotHistory from '@/components/common/HolderSnapshotHistory';
+import KeyAnalyticsHistoryChart from '@/components/common/KeyAnalyticsHistoryChart';
+import ReputationBreakdownPanel from '@/components/common/ReputationBreakdownPanel';
 import GraduationCelebration from '@/components/common/GraduationCelebration';
 import StakingRewardsSection from '@/components/common/StakingRewardsSection';
 import StakingVaultPanel from '@/components/common/StakingVaultPanel';
@@ -1213,6 +1215,32 @@ function CreatorDetailPageContent() {
 						/>
 					</>
 				)}
+				<div
+					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
+					data-testid="key-analytics-history-container"
+				>
+					<h2 className="mb-6 font-grotesque text-xl font-black tracking-tight text-white">
+						Analytics History
+					</h2>
+
+					<SectionErrorBoundary sectionName="key analytics history">
+						<KeyAnalyticsHistoryChart keyId={creator.id} />
+					</SectionErrorBoundary>
+				</div>
+
+				<div
+					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
+					data-testid="reputation-breakdown-container"
+				>
+					<h2 className="mb-6 font-grotesque text-xl font-black tracking-tight text-white">
+						Reputation
+					</h2>
+
+					<SectionErrorBoundary sectionName="reputation breakdown">
+						<ReputationBreakdownPanel keyId={creator.id} />
+					</SectionErrorBoundary>
+				</div>
+
 				<div
 					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
 					data-testid="holder-concentration-container"

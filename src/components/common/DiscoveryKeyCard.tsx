@@ -3,14 +3,10 @@ import { Link } from 'react-router';
 import type { Course } from '@/services/course.service';
 import CreatorInitialsAvatar from '@/components/common/CreatorInitialsAvatar';
 import Change24hBadge from '@/components/common/Change24hBadge';
-import AddToBundleButton from '@/components/common/AddToBundleButton';
-import AddToBatchButton from '@/components/common/AddToBatchButton';
+import ReputationScoreBadge from '@/components/common/ReputationScoreBadge';
 import { normalizeCreatorDisplayName } from '@/utils/creatorDisplayName.utils';
 import { formatCreatorHandle } from '@/utils/handleDisplay.utils';
-import {
-	formatCreatorKeyPriceDisplay,
-	resolveCreatorKeyPriceStroops,
-} from '@/utils/keyPriceDisplay.utils';
+import { formatCreatorKeyPriceDisplay } from '@/utils/keyPriceDisplay.utils';
 import { cn } from '@/lib/utils';
 
 export interface DiscoveryKeyCardProps {
@@ -103,44 +99,30 @@ export const DiscoveryKeyCard: React.FC<DiscoveryKeyCardProps> = ({
 				</div>
 			</div>
 
-			{/* Bottom Bar: Price + Add to Bundle */}
-			<div className="mt-6 flex items-center justify-between gap-2 border-t border-white/10 pt-3">
+			{/* Bottom Bar: Price */}
+			<div className="mt-6 flex items-center justify-between border-t border-white/10 pt-3">
 				<span className="text-[0.7rem] font-semibold uppercase tracking-wider text-white/45">
 					Price
 				</span>
-				<div className="flex min-w-0 items-center gap-2">
-					<div className="flex items-center gap-1.5">
-						<img
-							src="/icons/key.svg"
-							alt=""
-							className="size-3.5 opacity-60 invert"
-							aria-hidden="true"
-						/>
-						<span
-							data-testid="discovery-card-price"
-							className="font-jakarta text-sm font-extrabold text-white"
-						>
-							{priceFormatted}
-						</span>
-					</div>
-					{/* Raised above the full-card link overlay so it stays clickable. */}
-					<AddToBatchButton
-						keyId={creator.id}
-						keyName={displayName}
-						priceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
-						currentSupply={creator.creatorShareSupply ?? null}
-						thumbnail={avatarSrc}
-						className="relative z-20 shrink-0"
+				<div className="flex items-center gap-1.5">
+					<img
+						src="/icons/key.svg"
+						alt=""
+						className="size-3.5 opacity-60 invert"
+						aria-hidden="true"
 					/>
-					<AddToBundleButton
-						keyId={creator.id}
-						keyName={displayName}
-						priceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
-						currentSupply={creator.creatorShareSupply ?? null}
-						thumbnail={avatarSrc}
-						className="relative z-20 shrink-0 px-2 py-1 text-xs"
-					/>
+					<span
+						data-testid="discovery-card-price"
+						className="font-jakarta text-sm font-extrabold text-white"
+					>
+						{priceFormatted}
+					</span>
 				</div>
+			</div>
+
+			{/* Composite reputation score badge (#1143) */}
+			<div className="relative z-20 mt-2 flex justify-end">
+				<ReputationScoreBadge keyId={creator.id} />
 			</div>
 		</article>
 	);
