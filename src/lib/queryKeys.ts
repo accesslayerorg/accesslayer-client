@@ -78,6 +78,10 @@ export const queryKeys = {
 			['creators', creatorId, 'oracle-price'] as const,
 		performanceBond: (creatorId: string) =>
 			['creators', creatorId, 'performance-bond'] as const,
+		snapshotHistory: (creatorId: string, range: string) =>
+			['creators', creatorId, 'snapshot-history', range] as const,
+		reputation: (creatorId: string) =>
+			['creators', creatorId, 'reputation'] as const,
 		priceFloor: (creatorId: string) =>
 			['creators', creatorId, 'price-floor'] as const,
 		// Optional wallet scopes the cache per connected wallet (#915); omit it
@@ -277,6 +281,13 @@ export const queryKeys = {
 		/** Active vault stakes for a (wallet, key) pair. */
 		stakes: (wallet: string, keyId: string) =>
 			['staking-vault', 'stakes', wallet, keyId] as const,
+	},
+	milestoneRewards: {
+		byWallet: (wallet: string) =>
+			['milestone-rewards', wallet] as const,
+	},
+	rebalance: {
+		preview: (wallet: string) => ['rebalance', wallet, 'preview'] as const,
 	},
 	autoInvest: {
 		all: () => ['auto-invest'] as const,

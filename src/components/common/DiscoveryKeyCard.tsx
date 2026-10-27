@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import type { Course } from '@/services/course.service';
 import CreatorInitialsAvatar from '@/components/common/CreatorInitialsAvatar';
 import Change24hBadge from '@/components/common/Change24hBadge';
+import ReputationScoreBadge from '@/components/common/ReputationScoreBadge';
 import AddToBundleButton from '@/components/common/AddToBundleButton';
 import AddToBatchButton from '@/components/common/AddToBatchButton';
 import { normalizeCreatorDisplayName } from '@/utils/creatorDisplayName.utils';
@@ -141,6 +142,11 @@ export const DiscoveryKeyCard: React.FC<DiscoveryKeyCardProps> = ({
 						className="relative z-20 shrink-0 px-2 py-1 text-xs"
 					/>
 				</div>
+			</div>
+
+			{/* Composite reputation score badge (#1143) */}
+			<div className="relative z-20 mt-2 flex justify-end">
+				<ReputationScoreBadge keyId={creator.id} />
 			</div>
 		</article>
 	);
