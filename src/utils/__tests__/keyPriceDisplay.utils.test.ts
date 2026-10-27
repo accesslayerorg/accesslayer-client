@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	estimateSellProceeds,
 	formatCreatorKeyPriceDisplay,
 	formatDisplayKeyPrice,
 	resolveCreatorKeyPriceStroops,
@@ -43,6 +44,33 @@ describe('formatCreatorKeyPriceDisplay', () => {
 	});
 });
 
+describe('estimateSellProceeds', () => {
+	it('multiplies key price by sell quantity', () => {
+		expect(estimateSellProceeds(1_000_000, 50, 3)).toBe(3_000_000);
+	});
+
+	it('returns null when key price is null or undefined', () => {
+		expect(estimateSellProceeds(null, 50, 3)).toBeNull();
+		expect(estimateSellProceeds(undefined, 50, 3)).toBeNull();
+	});
+
+	it('returns null when current supply is null or undefined', () => {
+		expect(estimateSellProceeds(1_000_000, null, 3)).toBeNull();
+		expect(estimateSellProceeds(1_000_000, undefined, 3)).toBeNull();
+	});
+
+	it('returns null when sell quantity is zero or negative', () => {
+		expect(estimateSellProceeds(1_000_000, 50, 0)).toBeNull();
+		expect(estimateSellProceeds(1_000_000, 50, -1)).toBeNull();
+	});
+
+	it('returns null for non-finite inputs', () => {
+		expect(estimateSellProceeds(NaN, 50, 3)).toBeNull();
+		expect(estimateSellProceeds(1_000_000, Infinity, 3)).toBeNull();
+		expect(estimateSellProceeds(1_000_000, 50, Infinity)).toBeNull();
+	});
+});
+
 describe('formatKeyPrice', () => {
 	it('formats zero correctly with 4 decimal places', () => {
 		expect(formatKeyPrice(0n)).toBe('0.0000 XLM');
@@ -64,4 +92,3 @@ describe('formatKeyPrice', () => {
 		expect(formatKeyPrice(10_000_000_000n)).toBe('1,000.00 XLM');
 	});
 });
-
