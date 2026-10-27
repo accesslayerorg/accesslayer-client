@@ -71,6 +71,18 @@ describe('useRelativeTime', () => {
 		expect(result.current).toBe('N/A');
 	});
 
+	it('accepts an ISO date string timestamp', () => {
+		const iso = new Date(Date.now() - 30_000).toISOString();
+		const { result } = renderHook(() => useRelativeTime(iso));
+		expect(result.current).toMatch(/just now/i);
+	});
+
+	it('accepts a numeric epoch-ms timestamp', () => {
+		const epochMs = Date.now() - 2 * 60 * 60 * 1000;
+		const { result } = renderHook(() => useRelativeTime(epochMs));
+		expect(result.current).toMatch(/hour/i);
+	});
+
 	it('cleans up the interval on unmount', () => {
 		const clearIntervalSpy = vi.spyOn(window, 'clearInterval');
 		const { unmount } = renderHook(() =>
