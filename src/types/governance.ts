@@ -87,6 +87,8 @@ export interface Proposal {
 	oldValue?: string | number;
 	/** Proposed or executed new protocol parameter value (#1126). */
 	newValue?: string | number;
+	/** ISO timestamp (or ms epoch) when the timelock expires and the proposal can be executed (#1243). */
+	timelockExpiresAt?: string;
 }
 
 /** Props accepted by the QuorumIndicator component. */

@@ -50,6 +50,37 @@ export interface TreasuryDistributionSubmission {
 	transactionHash: string;
 }
 
+/** Per-source fee breakdown used for the treasury donut chart. */
+export interface TreasuryFeeSourceBreakdown {
+	source: string;
+	amountStroops: string;
+	/** Percentage share of total, 0–100. */
+	percentage: number;
+}
+
+/** A single allocation record (single-destination fund allocation). */
+export interface TreasuryAllocation {
+	id: string;
+	destinationAddress: string;
+	amountStroops: string;
+	purpose: string;
+	allocatedAt: string;
+	transactionHash: string;
+	admin: string;
+}
+
+export interface TreasuryAllocationsPage {
+	items: TreasuryAllocation[];
+	nextCursor: string | null;
+}
+
+export interface AllocateFundsInput {
+	admin: string;
+	destinationAddress: string;
+	amountStroops: string;
+	purpose: string;
+}
+
 export interface AclContract {
 	address: string;
 	functions: string[];
@@ -614,6 +645,46 @@ class AdminService extends BaseApiService {
 				APIResponse<TreasuryFeeCollectedEvent[]>
 			>('/admin/treasury/fees');
 			return response.data.data ?? [];
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/** Read per-source fee breakdown for the treasury donut chart. */
+	async getTreasuryFeeBreakdown(): Promise<TreasuryFeeSourceBreakdown[]> {
+		try {
+			const response = await this.api.get<APIResponse<TreasuryFeeSourceBreakdown[]>>(
+				'/admin/treasury/fee-breakdown'
+			);
+			return response.data.data ?? [];
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/** Read paginated allocation history. */
+	async getTreasuryAllocations(cursor?: string): Promise<TreasuryAllocationsPage> {
+		try {
+			const params: Record<string, string> = {};
+			if (cursor) params.cursor = cursor;
+			const response = await this.api.get<APIResponse<TreasuryAllocationsPage>>(
+				'/admin/treasury/allocations',
+				{ params }
+			);
+			return response.data.data ?? { items: [], nextCursor: null };
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/** Allocate treasury funds to a single destination. */
+	async allocateFunds(input: AllocateFundsInput): Promise<{ transactionHash: string }> {
+		try {
+			const response = await this.api.post<APIResponse<{ transactionHash: string }>>(
+				'/admin/treasury/allocate',
+				input
+			);
+			return response.data.data;
 		} catch (error) {
 			throw this.handleError(error);
 		}

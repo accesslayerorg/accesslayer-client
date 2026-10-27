@@ -48,6 +48,7 @@ import CreatorRevenuePanel from '@/components/common/CreatorRevenuePanel';
 import DistributeRevenuePanel from '@/components/common/DistributeRevenuePanel';
 import CreatorAnnouncementsPanel from '@/components/common/CreatorAnnouncementsPanel';
 import VestingSchedulesViewer from '@/components/creator/VestingSchedulesViewer';
+import KeyFeeHistoryChart from '@/components/common/KeyFeeHistoryChart';
 
 const TABS = [
 	{ label: 'Overview', value: 'overview' },
@@ -309,6 +310,10 @@ export default function CreatorDashboardPage() {
 							currentSupply={creator.creatorShareSupply ?? 100}
 						/>
 					</div>
+				)}
+
+				{activeTab === 'overview' && (
+					<KeyFeeHistoryChart keyId={id} />
 				)}
 
 				{activeTab === 'overview' && (

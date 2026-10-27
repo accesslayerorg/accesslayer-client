@@ -4,6 +4,7 @@ import OracleAccessPanel from '@/components/admin/OracleAccessPanel';
 import AclWhitelistPanel from '@/components/admin/AclWhitelistPanel';
 import UpgradeProxyPanel from '@/components/admin/UpgradeProxyPanel';
 import TreasuryPanel from '@/components/admin/TreasuryPanel';
+import TreasuryManagementDashboard from '@/components/admin/TreasuryManagementDashboard';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useStellarWallet } from '@/hooks/useStellarWallet';
 import { isAdminWallet } from '@/utils/adminAccess';
@@ -56,6 +57,9 @@ export default function AdminDashboardPage() {
 					<>
 						<SectionErrorBoundary sectionName="treasury">
 							<TreasuryPanel adminAddress={address ?? ''} />
+						</SectionErrorBoundary>
+						<SectionErrorBoundary sectionName="treasury management">
+							<TreasuryManagementDashboard adminAddress={address ?? ''} />
 						</SectionErrorBoundary>
 						<SectionErrorBoundary sectionName="integration ACL">
 							<AclWhitelistPanel />

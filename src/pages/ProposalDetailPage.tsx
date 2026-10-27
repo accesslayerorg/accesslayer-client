@@ -7,6 +7,7 @@ import {
 	Users,
 } from 'lucide-react';
 import ProposalOutcomeSummary from '@/components/common/ProposalOutcomeSummary';
+import ProposalExecutionCountdown from '@/components/common/ProposalExecutionCountdown';
 import ProposalVoteHistory from '@/components/common/ProposalVoteHistory';
 import { ProposalVotePanel } from '@/components/common/ProposalVotePanel';
 import QuorumIndicator from '@/components/common/QuorumIndicator';
@@ -211,6 +212,15 @@ export default function ProposalDetailPage() {
 							{proposal.description}
 						</p>
 					</section>
+
+					{proposal.status === 'passed' && proposal.timelockExpiresAt && (
+						<section className="mt-6" aria-label="Execution countdown">
+							<ProposalExecutionCountdown
+								proposalId={proposal.id}
+								timelockExpiresAt={proposal.timelockExpiresAt}
+							/>
+						</section>
+					)}
 
 					<section className="mt-8" aria-label="Proposal result">
 						<h2 className="mb-4 font-jakarta text-xl font-bold text-white">
