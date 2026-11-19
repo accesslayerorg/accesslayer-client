@@ -34,6 +34,7 @@ import {
 	type PortfolioTableSortDirection,
 	type PortfolioTableSortKey,
 } from '@/utils/portfolioTable.utils';
+import GainsReport from '@/components/common/GainsReport';
 
 const SKELETON_ROW_COUNT = 4;
 
@@ -457,6 +458,10 @@ export default function WalletPortfolioPage() {
 							</table>
 						</div>
 					)}
+				</SectionErrorBoundary>
+
+				<SectionErrorBoundary sectionName="realized gains">
+					<GainsReport walletAddress={address} />
 				</SectionErrorBoundary>
 
 				<SectionErrorBoundary sectionName="badge progress">
