@@ -137,6 +137,7 @@ import KeyLockupBadge from '@/components/common/KeyLockupBadge';
 import { useAccount } from 'wagmi';
 import { useKeyMarketMaker } from '@/hooks/useKeyMarketMaker';
 import { MarketMakerChip, MMBadge } from '@/components/common/MarketMakerChip';
+import ReportKeyModal from '@/components/common/ReportKeyModal';
 
 /** Series shown in the key detail price panel (#1220 adds the depth tab). */
 type PriceChartTab = 'primary' | 'secondary' | 'depth' | 'revenue';
@@ -161,6 +162,7 @@ function CreatorDetailPageContent() {
 	const [recentSettlement, setRecentSettlement] =
 		useState<KeyBuybackReceipt | null>(null);
 	const [shareModalOpen, setShareModalOpen] = useState(false);
+	const [reportKeyModalOpen, setReportKeyModalOpen] = useState(false);
 	const [lastPurchasedAmount, setLastPurchasedAmount] = useState<
 		number | null
 	>(null);
@@ -741,6 +743,7 @@ function CreatorDetailPageContent() {
 
 								navigate('/creators');
 							}}
+							onReport={() => setReportKeyModalOpen(true)}
 						/>
 					</div>
 
@@ -1554,6 +1557,14 @@ function CreatorDetailPageContent() {
 						).replace(' XLM', '')}
 						userAddress={userAddress}
 						onDismiss={() => setShareModalOpen(false)}
+					/>
+				)}
+				{creator && (
+					<ReportKeyModal
+						open={reportKeyModalOpen}
+						onOpenChange={setReportKeyModalOpen}
+						keyId={creator.id}
+						keyName={creator.title || creator.name || 'this key'}
 					/>
 				)}
 			</div>

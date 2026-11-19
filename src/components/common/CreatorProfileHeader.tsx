@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Share2, Pencil } from 'lucide-react';
+import { ArrowLeft, Flag, MoreHorizontal, Share2, Pencil } from 'lucide-react';
 import appendUtmParams from '@/utils/utm.utils';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,12 @@ import { normalizeCreatorDisplayName } from '@/utils/creatorDisplayName.utils';
 import { CREATOR_CARD_MEDIA_RADIUS_CLASS } from '@/utils/creatorCardTokens';
 import { isOwnWallet } from '@/utils/isOwnWallet';
 import { useFormatXlm } from '@/hooks/useFormatXlm';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface CreatorProfileHeaderProps {
 	name: string;
@@ -27,6 +33,7 @@ interface CreatorProfileHeaderProps {
 	showBackButton?: boolean;
 	onBack?: () => void;
 	isOnChainLoading?: boolean;
+	onReport?: () => void;
 }
 
 const CREATOR_PROFILE_SUBTITLE_WRAP_CLASS_NAME =
@@ -48,6 +55,7 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 	showBackButton = false,
 	onBack,
 	isOnChainLoading = false,
+	onReport,
 }) => {
 	const [copied, setCopied] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
@@ -280,6 +288,39 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 								/>
 							)}
 						</Button>
+					)}
+					{onReport && (
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button
+									type="button"
+									variant="outline"
+									size="icon"
+									aria-label="Key actions"
+									className={cn(
+										'rounded-xl border-white/10 bg-white/5 text-white hover:border-amber-500/30 hover:bg-amber-500/10',
+										isScrolled ? 'size-9' : 'size-11'
+									)}
+								>
+									<MoreHorizontal
+										className="size-4 text-amber-500"
+										aria-hidden="true"
+									/>
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent
+								align="end"
+								className="border-white/10 bg-[#0b1728] text-white"
+							>
+								<DropdownMenuItem
+									onSelect={onReport}
+									className="focus:bg-white/10 focus:text-white"
+								>
+									<Flag className="size-4" aria-hidden="true" />
+									Report
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
 					)}
 				</div>
 			</div>

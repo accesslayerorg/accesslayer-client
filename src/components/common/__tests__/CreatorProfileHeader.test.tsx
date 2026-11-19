@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import CreatorProfileHeader from '@/components/common/CreatorProfileHeader';
@@ -121,5 +122,23 @@ describe('CreatorProfileHeader', () => {
 		});
 
 		expect(window.prompt).toHaveBeenCalledWith(PROFILE_URL);
+	});
+
+	it('opens the report action from the overflow menu', async () => {
+		const user = userEvent.setup();
+		const onReport = vi.fn();
+		render(
+			<CreatorProfileHeader
+				name="Alex Rivers"
+				handle="arivers"
+				creatorId="arivers"
+				onReport={onReport}
+			/>
+		);
+
+		await user.click(screen.getByRole('button', { name: 'Key actions' }));
+		await user.click(await screen.findByRole('menuitem', { name: 'Report' }));
+
+		expect(onReport).toHaveBeenCalledOnce();
 	});
 });
