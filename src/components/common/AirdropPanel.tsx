@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import AddressInput from '@/components/common/AddressInput';
 import showToast from '@/utils/toast.util';
 import {
 	parseAirdropInput,
@@ -12,6 +13,9 @@ const MAX_RECIPIENTS = 50;
 const AirdropPanel: React.FC = () => {
 	const [rawInput, setRawInput] = useState('');
 	const [submitted, setSubmitted] = useState(false);
+	const [resolvedAddresses, setResolvedAddresses] = useState<
+		Record<number, string | null>
+	>({});
 
 	const recipients: AirdropRecipient[] = useMemo(
 		() => parseAirdropInput(rawInput),
@@ -19,18 +23,42 @@ const AirdropPanel: React.FC = () => {
 	);
 
 	const errors = useMemo(
-		() => validateAirdropRecipients(recipients),
-		[recipients]
+		() => validateAirdropRecipients(recipients, resolvedAddresses),
+		[recipients, resolvedAddresses]
 	);
+
+	const handleRecipientResolved = (index: number, resolved: string | null) => {
+		setResolvedAddresses(prev => {
+			if (prev[index] === resolved) return prev;
+			return { ...prev, [index]: resolved };
+		});
+	};
+
+	const handleUpdateAddress = (index: number, newAddress: string) => {
+		const lines = rawInput.split('\n');
+		if (lines[index] !== undefined) {
+			const parts = lines[index].split(':');
+			const qty = parts[1] !== undefined ? parts[1].trim() : '1';
+			lines[index] = `${newAddress}:${qty}`;
+			setRawInput(lines.join('\n'));
+			setSubmitted(false);
+		}
+	};
 
 	const hasLimitError = errors.some(e => e.rowIndex === -1);
 	const rowErrors = errors.filter(e => e.rowIndex >= 0);
 	const rowErrorMap = new Map(rowErrors.map(e => [e.rowIndex, e.message]));
 	const totalKeys = recipients.reduce((sum, r) => sum + r.quantity, 0);
+
+	const hasUnresolvedFederation = recipients.some(
+		(r, i) => r.address.includes('*') && !resolvedAddresses[i]
+	);
+
 	const canSubmit =
 		recipients.length > 0 &&
 		recipients.length <= MAX_RECIPIENTS &&
-		rowErrors.length === 0;
+		rowErrors.length === 0 &&
+		!hasUnresolvedFederation;
 
 	const handleSubmit = () => {
 		if (!canSubmit) return;
@@ -47,6 +75,7 @@ const AirdropPanel: React.FC = () => {
 		const reader = new FileReader();
 		reader.onload = () => {
 			setRawInput(String(reader.result ?? ''));
+			setResolvedAddresses({});
 		};
 		reader.readAsText(file);
 	};
@@ -95,7 +124,7 @@ const AirdropPanel: React.FC = () => {
 						<thead>
 							<tr className="border-b border-white/10 text-xs text-white/50">
 								<th className="pb-2 pr-4">#</th>
-								<th className="pb-2 pr-4">Address</th>
+								<th className="pb-2 pr-4 min-w-[240px]">Address</th>
 								<th className="pb-2 pr-4">Qty</th>
 								<th className="pb-2">Error</th>
 							</tr>
@@ -103,12 +132,27 @@ const AirdropPanel: React.FC = () => {
 						<tbody>
 							{recipients.map((r, i) => (
 								<tr key={i} className="border-b border-white/5">
-									<td className="py-2 pr-4 text-white/40">{i + 1}</td>
-									<td className="py-2 pr-4 font-mono text-white/80 truncate max-w-[200px]">
-										{r.address}
+									<td className="py-2 pr-4 text-white/40 align-top pt-3">
+										{i + 1}
 									</td>
-									<td className="py-2 pr-4 text-white/80">{r.quantity}</td>
-									<td className="py-2 text-red-400 text-xs">
+									<td className="py-2 pr-4 font-mono text-white/80 align-top">
+										<AddressInput
+											value={r.address}
+											onChange={e =>
+												handleUpdateAddress(i, e.target.value)
+											}
+											onResolved={resolved =>
+												handleRecipientResolved(i, resolved)
+											}
+											placeholder="Stellar address or name*domain"
+											aria-label={`Recipient ${i + 1} address`}
+											data-testid={`airdrop-recipient-address-${i}`}
+										/>
+									</td>
+									<td className="py-2 pr-4 text-white/80 align-top pt-3">
+										{r.quantity}
+									</td>
+									<td className="py-2 text-red-400 text-xs align-top pt-3">
 										{rowErrorMap.get(i) ?? '—'}
 									</td>
 								</tr>
