@@ -102,3 +102,11 @@ export interface QuorumIndicatorProps {
 	/** Optional extra class names. */
 	className?: string;
 }
+
+export interface CreateProposalPayload {
+	title: string;
+	description: string;
+	endDate: string;
+}
+
+export type CreateProposalInput = CreateProposalPayload;

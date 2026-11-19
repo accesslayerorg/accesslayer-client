@@ -17,8 +17,11 @@ import {
 	validateLpAmountInput,
 } from '@/utils/lpPositions.utils';
 import {
+	claimKeyLpRewards,
+	fetchKeyLpPositions,
 	fetchLpPool,
 	fetchLpPositions,
+	type KeyLpClaimResult,
 	type LpPosition,
 } from '@/services/lpPositions.service';
 import {
@@ -46,6 +49,8 @@ import { stellarAccountService } from '@/services/stellarAccount.service';
 const LP_POSITIONS_STALE_MS = 15_000;
 const LP_POSITIONS_REFETCH_MS = 30_000;
 
+export const lpKeyPositionsQueryKey = queryKeys.lp.keyPositions;
+
 export function useLpPositions(wallet: string | undefined) {
 	return useQuery({
 		queryKey: queryKeys.lp.positions(wallet ?? ''),
@@ -62,6 +67,19 @@ export function useLpPool(keyId: string | undefined, enabled = true) {
 		queryFn: () => fetchLpPool(keyId!),
 		enabled: Boolean(keyId) && enabled,
 		staleTime: LP_POSITIONS_STALE_MS,
+	});
+}
+
+export function useKeyLpPositions(
+	keyId: string | undefined,
+	wallet: string | undefined
+) {
+	return useQuery({
+		queryKey: lpKeyPositionsQueryKey(keyId ?? '', wallet ?? ''),
+		queryFn: () => fetchKeyLpPositions(keyId!, wallet!),
+		enabled: Boolean(keyId) && Boolean(wallet),
+		staleTime: LP_POSITIONS_STALE_MS,
+		refetchInterval: LP_POSITIONS_REFETCH_MS,
 	});
 }
 
@@ -302,6 +320,29 @@ export function useRemoveLiquidity(context: LpActionContext) {
 					queryKey: queryKeys.lp.positions(context.wallet ?? ''),
 				});
 			}
+		},
+	});
+}
+
+export interface KeyLpClaimVariables {
+	keyId: string;
+	wallet: string;
+}
+
+export function useClaimKeyLpRewards() {
+	const queryClient = useQueryClient();
+
+	return useMutation<KeyLpClaimResult, Error, KeyLpClaimVariables>({
+		mutationKey: ['lp', 'claim-key-rewards'],
+		mutationFn: ({ keyId, wallet }) => claimKeyLpRewards(keyId, wallet),
+		onSuccess: (result, { keyId, wallet }) => {
+			void queryClient.invalidateQueries({
+				queryKey: lpKeyPositionsQueryKey(keyId, wallet),
+			});
+			if (result.message) showToast.success(result.message);
+		},
+		onError: error => {
+			showToast.error(describeLpTransactionError(error));
 		},
 	});
 }

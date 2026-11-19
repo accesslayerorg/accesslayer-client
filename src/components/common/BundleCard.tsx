@@ -11,6 +11,7 @@ import {
 export interface BundleCardProps {
     bundle: MarketplaceBundle;
     className?: string;
+    onClick?: () => void;
 }
 
 /**
@@ -21,7 +22,7 @@ export interface BundleCardProps {
  * expired, the card renders in a muted "unavailable" state and the link
  * target is dropped so the expired bundle can't be navigated to.
  */
-const BundleCard: React.FC<BundleCardProps> = ({ bundle, className }) => {
+const BundleCard: React.FC<BundleCardProps> = ({ bundle, className, onClick }) => {
     const expired = isBundleExpired(bundle.expiresAt);
     const countdown = formatBundleCountdown(bundle.expiresAt);
     const totalKeys = bundle.keys.reduce((sum, k) => sum + k.quantity, 0);
@@ -106,6 +107,19 @@ const BundleCard: React.FC<BundleCardProps> = ({ bundle, className }) => {
             <div aria-disabled="true" data-testid="bundle-card-expired">
                 {cardBody}
             </div>
+        );
+    }
+
+    if (onClick) {
+        return (
+            <button
+                type="button"
+                onClick={onClick}
+                className="block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`View bundle ${bundle.name}`}
+            >
+                {cardBody}
+            </button>
         );
     }
 

@@ -13,6 +13,7 @@ export interface MarketplaceBundleKey {
     creatorHandle: string;
     quantity: number;
     individualPriceStroops: number;
+    discountedPriceStroops?: number;
 }
 
 export interface MarketplaceBundle {
@@ -28,6 +29,9 @@ export interface MarketplaceBundle {
     createdAt: string;
     imageUrl?: string;
     curatorHandle?: string;
+    purchased?: boolean;
+    isPurchased?: boolean;
+    purchasedAt?: string | null;
 }
 
 export interface BuyMarketplaceBundleResult {

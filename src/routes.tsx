@@ -39,6 +39,8 @@ import CampaignsPage from './pages/CampaignsPage';
 import AutoInvestDashboardPage from './pages/AutoInvestDashboardPage';
 import AirdropClaimsPage from './pages/AirdropClaimsPage';
 import ProtocolAnalyticsPage from './pages/ProtocolAnalyticsPage';
+import LpPositionsPage from './pages/LpPositionsPage';
+import ProposalCreatePage from './pages/ProposalCreatePage';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 
 function withRouteErrorBoundary(element: ReactNode, routeName: string) {
@@ -121,6 +123,34 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<CreatorDetailPage />,
 					'Key detail'
+				),
+			},
+			{
+				path: '/keys/:keyId/lp',
+				element: withRouteErrorBoundary(
+					<LpPositionsPage />,
+					'Liquidity positions'
+				),
+			},
+			{
+				path: '/keys/:keyId/lp/:wallet',
+				element: withRouteErrorBoundary(
+					<LpPositionsPage />,
+					'Liquidity positions'
+				),
+			},
+			{
+				path: '/lp-positions',
+				element: withRouteErrorBoundary(
+					<LpPositionsPage />,
+					'Liquidity positions'
+				),
+			},
+			{
+				path: '/liquidity',
+				element: withRouteErrorBoundary(
+					<LpPositionsPage />,
+					'Liquidity positions'
 				),
 			},
 			{
@@ -214,6 +244,14 @@ export const routes = [
 			{
 				path: '/governance',
 				element: <GovernancePage />,
+			},
+			{
+				path: '/governance/create',
+				element: <ProposalCreatePage />,
+			},
+			{
+				path: '/governance/new',
+				element: <ProposalCreatePage />,
 			},
 			{
 				path: '/governance/:proposalId',
