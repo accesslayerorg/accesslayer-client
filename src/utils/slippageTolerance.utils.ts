@@ -136,3 +136,18 @@ export function computeSlippageBounds(
 	};
 }
 
+export {
+	calculateSlippageBounds,
+	validateSlippageTolerance,
+	getSlippageWarning,
+	isHighSlippage,
+	isLowSlippage,
+	SLIPPAGE_PRESETS,
+	DEFAULT_SLIPPAGE,
+	MIN_SLIPPAGE,
+	MAX_SLIPPAGE,
+	HIGH_SLIPPAGE_THRESHOLD,
+	LOW_SLIPPAGE_THRESHOLD,
+	type SwapQuote,
+	type SwapSide,
+} from './slippage.utils';
