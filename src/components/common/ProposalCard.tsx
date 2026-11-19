@@ -1,0 +1,139 @@
+import { Link } from 'react-router';
+import { ArrowUpRight, Clock } from 'lucide-react';
+import QuorumIndicator from '@/components/common/QuorumIndicator';
+import type { Proposal } from '@/types/governance';
+import { cn } from '@/lib/utils';
+import {
+	getEligibleVotingWeight,
+	getFinalProposalOutcome,
+	getProposalOptions,
+	getProposalVoteTotal,
+	isProposalClosed,
+} from '@/utils/governance.utils';
+import { formatCompactNumber } from '@/utils/numberFormat.utils';
+
+interface ProposalCardProps {
+	proposal: Proposal;
+	className?: string;
+}
+
+const statusClasses: Record<Proposal['status'], string> = {
+	active: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+	closed: 'border-white/15 bg-white/10 text-white/60',
+	passed: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+	rejected: 'border-red-500/30 bg-red-500/10 text-red-400',
+	executed: 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+	cancelled: 'border-white/10 bg-white/[0.04] text-white/40',
+};
+
+function formatDate(iso: string): string {
+	return new Date(iso).toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+	});
+}
+
+/**
+ * Proposal card with quorum progress indicator (#826, #922).
+ *
+ * Shows the proposal title, description, per-option vote weights, the voting
+ * window, and a quorum progress bar so voters can see whether participation is
+ * on track before voting ends. The whole card links to the detail page.
+ */
+const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, className }) => {
+	const isActive = proposal.status === 'active';
+	const options = getProposalOptions(proposal);
+	const totalVotes = getProposalVoteTotal(proposal);
+	const eligibleVotingWeight = getEligibleVotingWeight(proposal);
+	const finalOutcome = isProposalClosed(proposal.status)
+		? getFinalProposalOutcome(proposal)
+		: undefined;
+	const finalLabel =
+		finalOutcome === 'passed'
+			? 'Passed'
+			: finalOutcome
+				? 'Failed'
+				: undefined;
+
+	return (
+		<Link
+			to={`/governance/${encodeURIComponent(proposal.id)}`}
+			aria-label={`View ${proposal.title}`}
+			className={cn(
+				'group block rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 transition-all duration-200 hover:border-amber-500/30 hover:bg-white/[0.05]',
+				className
+			)}
+		>
+			<div className="mb-3 flex items-start justify-between gap-3">
+				<h3 className="font-jakarta text-base font-bold leading-snug text-white group-hover:text-amber-200">
+					{proposal.title}
+				</h3>
+				<div className="flex shrink-0 items-center gap-2">
+					<span
+						className={cn(
+							'rounded-full border px-2.5 py-0.5 text-[0.65rem] font-semibold capitalize',
+							statusClasses[proposal.status]
+						)}
+					>
+						{proposal.status}
+					</span>
+					{finalLabel && (
+						<span
+							data-testid="proposal-final-outcome"
+							className={cn(
+								'rounded-full border px-2.5 py-0.5 text-[0.65rem] font-semibold',
+								finalOutcome === 'passed'
+									? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
+									: 'border-red-500/40 bg-red-500/15 text-red-300'
+							)}
+						>
+							{finalLabel}
+						</span>
+					)}
+					<ArrowUpRight className="size-4 text-white/30 transition-colors group-hover:text-amber-300" />
+				</div>
+			</div>
+
+			<p className="mb-4 line-clamp-2 text-sm leading-relaxed text-white/60">
+				{proposal.description ||
+					'No additional proposal details were provided.'}
+			</p>
+
+			<div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-white/50">
+				{options.map(option => (
+					<span
+						key={option.label}
+						className="inline-flex items-center gap-1"
+					>
+						<span className="max-w-28 truncate">{option.label}</span>
+						<span className="font-medium text-white/70">
+							{formatCompactNumber(option.weight)}
+						</span>
+					</span>
+				))}
+				<span className="ml-auto tabular-nums text-white/40">
+					{formatCompactNumber(totalVotes)} weight
+				</span>
+			</div>
+
+			{isActive && (
+				<QuorumIndicator
+					quorumBps={proposal.quorumBps}
+					totalVotingWeight={totalVotes}
+					totalCirculatingSupply={eligibleVotingWeight}
+					className="mt-4"
+				/>
+			)}
+
+			<div className="mt-4 flex items-center gap-1.5 text-xs text-white/35">
+				<Clock className="size-3" aria-hidden="true" />
+				<span>
+					{formatDate(proposal.startDate)} — {formatDate(proposal.endDate)}
+				</span>
+			</div>
+		</Link>
+	);
+};
+
+export default ProposalCard;

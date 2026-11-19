@@ -61,6 +61,44 @@ export interface CoursesPage {
 	hasMore: boolean;
 }
 
+/**
+ * Vesting schedule for a creator key's reserved creator allocation (#960).
+ *
+ * Amounts are expressed in XLM; dates are ISO timestamps.
+ * The contract remains the source of truth for vested and claimable amounts.
+ */
+export interface KeyVestingSchedule {
+	keyId?: string;
+	/** Wallet the allocation is registered to. */
+	beneficiary?: string | null;
+	/** Total allocation subject to vesting, in XLM. */
+	totalAllocationXlm?: number | null;
+	/** Amount unlocked so far, in XLM. */
+	vestedAmountXlm?: number | null;
+	/** Amount already claimed, in XLM. */
+	claimedAmountXlm?: number | null;
+	/** Vested but unclaimed amount, in XLM. */
+	claimableXlm?: number | null;
+	/** ISO timestamp at which vesting starts. */
+	startAt?: string | null;
+	/** ISO timestamp after which tokens unlock. */
+	cliffAt?: string | null;
+	/** ISO timestamp at which the allocation is fully vested. */
+	endAt?: string | null;
+}
+
+/** A single completed claim of vested creator tokens (#960). */
+export interface KeyVestingClaim {
+	/** Stable identifier for the claim record. */
+	id: string;
+	/** Amount claimed, in XLM. */
+	amountXlm: number;
+	/** ISO timestamp of the claim. */
+	claimedAt: string;
+	/** Transaction hash of the claim transaction. */
+	transactionHash: string;
+}
+
 class CourseService extends BaseApiService {
 	private readonly PROFILE_CACHE_TTL = 30000; // 30 seconds
 
@@ -173,6 +211,42 @@ class CourseService extends BaseApiService {
 			);
 
 			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Get the creator vesting schedule - GET /keys/:keyId/vesting (#960)
+	async getKeyVesting(
+		keyId: string,
+		wallet?: string
+	): Promise<KeyVestingSchedule> {
+		try {
+			const response = await this.api.get<APIResponse<KeyVestingSchedule>>(
+				`/keys/${keyId}/vesting`,
+				{ params: wallet ? { wallet } : undefined }
+			);
+
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	// Get the creator's vesting claim history - GET /keys/:keyId/vesting/claims (#960)
+	async getKeyVestingClaims(
+		keyId: string,
+		wallet: string
+	): Promise<KeyVestingClaim[]> {
+		try {
+			const response = await this.api.get<APIResponse<KeyVestingClaim[]>>(
+				`/keys/${keyId}/vesting/claims`,
+				{ params: { wallet } }
+			);
+
+			const data = response.data.data;
+
+			return Array.isArray(data) ? data : [];
 		} catch (error) {
 			throw this.handleError(error);
 		}

@@ -4,6 +4,7 @@ import Header from '../components/home/Header';
 import Hero from '../components/home/Hero';
 import CreatorSpotlight from '../components/home/CreatorSpotlight';
 import TrendingCreators from '../components/home/TrendingCreators';
+import BundleDiscoverySection from '../components/common/BundleDiscoverySection';
 import { useNavigationTiming } from '../hooks/useNavigationTiming';
 
 export default function HomePage() {
@@ -16,6 +17,9 @@ export default function HomePage() {
 				<Hero />
 				<CreatorSpotlight />
 				<TrendingCreators />
+				<div className="mx-auto max-w-6xl px-4 py-8">
+					<BundleDiscoverySection heading="Creator bundles" />
+				</div>
 				<FAQ />
 			</main>
 			<Footer />
