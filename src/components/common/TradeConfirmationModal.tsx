@@ -24,8 +24,9 @@ import {
 	computeMinPriceStroops,
 } from '@/utils/slippageTolerance.utils';
 import type { DynamicFeeBreakdown as DynamicFeeBreakdownData } from '@/utils/dynamicFeeRate.utils';
-import { ShieldCheck, ArrowRight, Info } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Info, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { validateSlippageTolerance } from '@/utils/slippage.utils';
 
 export interface TradeConfirmationModalProps {
 	open: boolean;
@@ -88,13 +89,17 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 	const [currentSlippage, setCurrentSlippage] = useState(
 		slippageTolerancePercent
 	);
+	const [slippageError, setSlippageError] = useState<string | null>(null);
 
 	useEffect(() => {
 		setCurrentSlippage(slippageTolerancePercent);
+		setSlippageError(validateSlippageTolerance(slippageTolerancePercent));
 	}, [slippageTolerancePercent]);
 
 	const handleSlippageChange = (nextPercent: number) => {
 		setCurrentSlippage(nextPercent);
+		const err = validateSlippageTolerance(nextPercent);
+		setSlippageError(err);
 		onSlippageChange?.(nextPercent);
 	};
 
@@ -111,8 +116,7 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 			? computeMinPriceStroops(totalStroops, currentSlippage)
 			: minPriceStroops;
 
-	const resolvedFeeStroops =
-		feeStroops ?? feeBreakdown?.totalFeeStroops ?? 0;
+	const resolvedFeeStroops = feeStroops ?? feeBreakdown?.totalFeeStroops ?? 0;
 	const resolvedNetReceivedStroops =
 		netReceivedStroops ??
 		feeBreakdown?.netProceedsStroops ??
@@ -195,10 +199,26 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 								data-testid="confirmation-modal-amount"
 							>
 								<span data-testid="confirmation-modal-input-amount">
-									{formatNumber(amount)} {amount === 1 ? 'key' : 'keys'}
+									{formatNumber(amount)}{' '}
+									{amount === 1 ? 'key' : 'keys'}
 								</span>
 							</span>
 						</div>
+						{(unitPriceStroops != null || totalStroops != null) && (
+							<div className="flex items-center justify-between text-sm">
+								<span className="text-white/60">Expected Price</span>
+								<span
+									className="font-mono text-white/90"
+									data-testid="confirmation-modal-expected-price"
+								>
+									<span data-testid="expected-price">
+										{formatDisplayKeyPrice(
+											unitPriceStroops ?? totalStroops
+										)}
+									</span>
+								</span>
+							</div>
+						)}
 						{unitPriceStroops != null && (
 							<div className="flex items-center justify-between text-sm">
 								<span className="text-white/60">Unit Price</span>
@@ -228,7 +248,10 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 								className="font-mono text-white/90"
 								data-testid="confirmation-modal-price-impact"
 							>
-								{formatPriceImpact(priceImpactPercent ?? 0)} (
+								<span data-testid="price-impact">
+									{formatPriceImpact(priceImpactPercent ?? 0)}
+								</span>{' '}
+								(
 								<span data-testid="confirmation-modal-price-impact-bps">
 									{resolvedPriceImpactBps} bps
 								</span>
@@ -247,15 +270,22 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 						{resolvedNetReceivedStroops != null && (
 							<div className="flex items-center justify-between border-t border-white/5 pt-2 text-sm">
 								<span className="text-white/70 font-medium">
-									Net Received
+									Minimum Received
 								</span>
 								<span
 									className="font-mono font-semibold text-emerald-300"
 									data-testid="confirmation-modal-net-received"
 								>
-									{isBuy
-										? `${formatNumber(amount)} ${amount === 1 ? 'key' : 'keys'} (${formatDisplayKeyPrice(resolvedNetReceivedStroops)})`
-										: formatDisplayKeyPrice(resolvedNetReceivedStroops)}
+									<span data-testid="confirmation-modal-min-received">
+										<span data-testid="minimum-received">
+											{isBuy
+												? `${formatNumber(amount)} ${amount === 1 ? 'key' : 'keys'} (${formatDisplayKeyPrice(resolvedNetReceivedStroops)})`
+												: formatDisplayKeyPrice(
+														resolvedMinPriceStroops ??
+															resolvedNetReceivedStroops
+													)}
+										</span>
+									</span>
 								</span>
 							</div>
 						)}
@@ -341,6 +371,34 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 						</div>
 					</div>
 
+					{/* High/Low Slippage Warning Banner */}
+					{currentSlippage > 5 && (
+						<div
+							role="status"
+							data-testid="slippage-high-warning"
+							className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-200"
+						>
+							<AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
+							<span data-testid="slippage-warning">
+								High slippage tolerance. Your transaction may be
+								frontrun or execute at an unfavorable price.
+							</span>
+						</div>
+					)}
+					{currentSlippage < 0.1 && currentSlippage >= 0.01 && (
+						<div
+							role="status"
+							data-testid="slippage-low-warning"
+							className="flex items-start gap-2 rounded-lg border border-blue-500/30 bg-blue-500/10 p-2.5 text-xs text-blue-200"
+						>
+							<AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-blue-400" />
+							<span data-testid="slippage-warning">
+								Low slippage tolerance. Your transaction may fail if the
+								market price moves slightly.
+							</span>
+						</div>
+					)}
+
 					{/* Price Impact Warning if exceeds 5% */}
 					{priceImpactPercent != null &&
 						isHighPriceImpact(
@@ -370,14 +428,15 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 					<Button
 						type="button"
 						onClick={onConfirm}
-						disabled={isSubmitting}
+						disabled={isSubmitting || slippageError != null}
 						aria-busy={isSubmitting || undefined}
 						data-testid="confirmation-modal-confirm"
 						className={cn(
 							'font-semibold',
 							isBuy
 								? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
-								: 'bg-rose-500 hover:bg-rose-400 text-white'
+								: 'bg-rose-500 hover:bg-rose-400 text-white',
+							slippageError != null && 'opacity-50 cursor-not-allowed'
 						)}
 					>
 						<StableButtonContent
