@@ -1,7 +1,11 @@
 import { BaseApiService, type APIResponse } from './api.service';
 import { cacheManager } from '@/utils/cache.utils';
 import { normalizeProposal } from '@/utils/governance.utils';
-import type { Proposal, ProposalVotesPage } from '@/types/governance';
+import type {
+	CreateProposalPayload,
+	Proposal,
+	ProposalVotesPage,
+} from '@/types/governance';
 
 /** How long fetched proposal data stays fresh (15 seconds — proposals change faster than profiles). */
 const PROPOSAL_CACHE_TTL = 15_000;
@@ -80,6 +84,36 @@ class GovernanceService extends BaseApiService {
 		}
 	}
 
+	async createProposal(
+		creatorId: string,
+		payload: CreateProposalPayload
+	): Promise<Proposal> {
+		try {
+			const response = await this.api.post<APIResponse<unknown>>(
+				'/governance/proposals',
+				{
+					creatorId,
+					title: payload.title,
+					description: payload.description,
+					endDate: payload.endDate,
+				}
+			);
+			const responseData = response.data?.data;
+			const envelope = asRecord(responseData);
+			const rawProposal = Array.isArray(responseData)
+				? responseData[0]
+				: envelope.proposal ??
+					envelope.data ??
+					(Array.isArray(envelope.items) ? envelope.items[0] : undefined) ??
+					responseData;
+			const proposal = normalizeProposal(rawProposal);
+			this.invalidateProposalListCache(creatorId);
+			return proposal;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
 	async getProposalVotes(
 		proposalId: string,
 		cursor?: string | null,
@@ -105,6 +139,16 @@ class GovernanceService extends BaseApiService {
 			return data;
 		} catch (error) {
 			throw this.handleError(error);
+		}
+	}
+
+	private invalidateProposalListCache(creatorId?: string): void {
+		for (const cacheKey of [
+			`proposals_${creatorId ?? 'all'}`,
+			'proposals_all',
+		]) {
+			cacheManager.invalidate(cacheKey);
+			this.cacheKeys.delete(cacheKey);
 		}
 	}
 

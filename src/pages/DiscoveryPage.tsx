@@ -10,6 +10,7 @@ import MarketplaceSection from '@/components/common/MarketplaceSection';
 import SectionDivider from '@/components/common/SectionDivider';
 import SpotlightBanner from '@/components/marketplace/SpotlightBanner';
 import CampaignsSection from '@/components/marketplace/CampaignsSection';
+import BundleDiscoverySection from '@/components/common/BundleDiscoverySection';
 import { Button } from '@/components/ui/button';
 import { useBatchTradeStore, selectBatchItemCount } from '@/hooks/useBatchTradeStore';
 
@@ -125,6 +126,9 @@ export default function DiscoveryPage() {
 				<main id="discovery-main" aria-label="Creator key discovery">
 					<SpotlightBanner className="mt-8" />
 					<CampaignsSection />
+					<div className="mt-8 rounded-3xl border border-white/10 bg-slate-900/40 p-6 backdrop-blur-md">
+						<BundleDiscoverySection heading="Creator bundles" />
+					</div>
 
 					{hasError ? (
 						<EmptyState

@@ -976,6 +976,14 @@ function CreatorDetailPageContent() {
 										currentPrice={resolveCreatorKeyPriceStroops(creator) ?? 0}
 									/>
 
+									<Link
+										to={`/keys/${creator.id}/lp`}
+										data-testid="creator-lp-positions-link"
+										className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 text-xs font-bold text-white/70 transition-colors hover:text-white sm:h-10 sm:min-h-0 sm:w-auto"
+									>
+										Liquidity Positions
+									</Link>
+
 									{isKeyDeprecated(creator) ? (
 										<Button
 											disabled
