@@ -30,6 +30,7 @@ import BondingCurveChart from '@/components/common/BondingCurveChart';
 import KeySimulationTool from '@/components/common/KeySimulationTool';
 import BuyCooldownCountdown from '@/components/common/BuyCooldownCountdown';
 import KeyHolderList from '@/components/common/KeyHolderList';
+import KeyHolderLeaderboard from '@/components/common/KeyHolderLeaderboard';
 import HolderConcentrationChart from '@/components/common/HolderConcentrationChart';
 import HolderConcentrationHeatmap from '@/components/common/HolderConcentrationHeatmap';
 import HolderSnapshotHistory from '@/components/common/HolderSnapshotHistory';
@@ -1379,6 +1380,13 @@ function CreatorDetailPageContent() {
 						coCreatorSplitBps={creator.coCreatorSplitBps}
 						totalPaidToCoCreator={creator.totalPaidToCoCreator}
 						totalPaidToCreator={creator.totalPaidToCreator}
+					/>
+				</SectionErrorBoundary>
+
+				<SectionErrorBoundary sectionName="key holder leaderboard">
+					<KeyHolderLeaderboard
+						keyId={creator.id}
+						connectedWalletAddress={userAddress}
 					/>
 				</SectionErrorBoundary>
 
