@@ -8,7 +8,13 @@
 
 /** Current status of a governance proposal. */
 export type ProposalStatus =
-	'active' | 'closed' | 'passed' | 'rejected' | 'executed' | 'cancelled';
+	| 'active'
+	| 'closed'
+	| 'passed'
+	| 'rejected'
+	| 'failed'
+	| 'executed'
+	| 'cancelled';
 
 export type ProposalOutcome = 'passed' | 'failed' | 'quorum_not_met';
 
@@ -75,6 +81,14 @@ export interface Proposal {
 	againstVotes: number;
 	/** Aggregate abstain weight. */
 	abstainVotes: number;
+	/** Optional protocol parameter name targeted by this proposal (#1126). */
+	paramName?: string;
+	/** Previous protocol parameter value before execution (#1126). */
+	oldValue?: string | number;
+	/** Proposed or executed new protocol parameter value (#1126). */
+	newValue?: string | number;
+	/** ISO timestamp (or ms epoch) when the timelock expires and the proposal can be executed (#1243). */
+	timelockExpiresAt?: string;
 }
 
 /** Props accepted by the QuorumIndicator component. */
@@ -89,12 +103,10 @@ export interface QuorumIndicatorProps {
 	className?: string;
 }
 
-/** Payload submitted when creating a governance proposal (#1273). */
 export interface CreateProposalPayload {
 	title: string;
 	description: string;
 	endDate: string;
 }
 
-/** Alias kept for callers that prefer the longer name. */
 export type CreateProposalInput = CreateProposalPayload;

@@ -20,24 +20,23 @@ export interface BundleDiscoverySectionProps {
 
 const DiscoveryPurchaseRunner: React.FC<{
 	bundle: MarketplaceBundle;
-	walletAddress?: string;
 	onSuccess: (result: BuyMarketplaceBundleResult) => void;
 	onError: (message: string) => void;
-}> = ({ bundle, walletAddress, onSuccess, onError }) => {
-	const mutation = useBuyMarketplaceBundle(walletAddress);
+}> = ({ bundle, onSuccess, onError }) => {
+	const mutation = useBuyMarketplaceBundle();
 	const started = useRef(false);
 
 	useEffect(() => {
 		if (started.current) return;
 		started.current = true;
 		mutation.mutate(
-			{ id: bundle.id, walletAddress },
+			{ id: bundle.id },
 			{
 				onSuccess: result => onSuccess(result),
 				onError: error => onError(error.message),
 			}
 		);
-	}, [bundle.id, walletAddress, mutation, onSuccess, onError]);
+	}, [bundle.id, mutation, onSuccess, onError]);
 
 	return null;
 };
@@ -52,7 +51,6 @@ const DiscoveryContent: React.FC<
 	bundles,
 	className,
 	heading = 'Creator bundles',
-	walletAddress,
 	onBundleSelect,
 	isLoading = false,
 	isError = false,
@@ -151,7 +149,6 @@ const DiscoveryContent: React.FC<
 			{pendingBundle && (
 				<DiscoveryPurchaseRunner
 					bundle={pendingBundle}
-					walletAddress={walletAddress}
 					onSuccess={result => {
 						setPurchase(result);
 						setPendingBundle(null);

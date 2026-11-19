@@ -49,10 +49,6 @@ export class SigningPipelineError extends Error implements SigningError {
 		this.retryable = details.retryable;
 		this.cause = cause;
 	}
-
-	get code(): SigningErrorType {
-		return this.type;
-	}
 }
 
 function readError(error: unknown): { message: string; code: string } {

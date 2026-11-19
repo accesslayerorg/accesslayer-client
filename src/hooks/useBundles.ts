@@ -12,7 +12,6 @@ import {
 	type BundlesPage,
 	type CreateBundleRequest,
 	type BuyMarketplaceBundleResult,
-	type MarketplaceBundle,
 } from '@/services/bundle.service';
 import { marketplaceBundleService } from '@/services/bundle.service';
 import { courseService } from '@/services/course.service';
@@ -22,10 +21,6 @@ import { resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
 import type { BundleKeyOption } from '@/utils/bundle.utils';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
-
-const creatorBundlesAllKey = (creatorId: string) => ['bundles', creatorId] as const;
-const creatorBundlesListKey = (creatorId: string) =>
-	['bundles', creatorId, 'list'] as const;
 
 // =========================================================================
 // Creator-side bundle hooks (existing on `dev`)
@@ -39,7 +34,7 @@ const creatorBundlesListKey = (creatorId: string) =>
  */
 export function useCreatorBundles(creatorId: string | undefined) {
 	return useInfiniteQuery({
-		queryKey: creatorBundlesListKey(creatorId ?? ''),
+		queryKey: queryKeys.bundles.list(creatorId ?? ''),
 		queryFn: ({ pageParam }) =>
 			fetchCreatorBundlesPage(
 				creatorId!,
@@ -109,7 +104,7 @@ export function useCreateBundleMutation(creatorId: string) {
 		},
 		onSuccess: () => {
 			void queryClient.invalidateQueries({
-				queryKey: creatorBundlesAllKey(creatorId),
+				queryKey: queryKeys.bundles.all(creatorId),
 			});
 			showToast.success('Bundle created');
 		},
@@ -151,7 +146,7 @@ export function markBundleCancelled(
  */
 export function useCancelBundleMutation(creatorId: string) {
 	const queryClient = useQueryClient();
-	const listKey = creatorBundlesListKey(creatorId);
+	const listKey = queryKeys.bundles.list(creatorId);
 
 	return useMutation({
 		mutationKey: ['contract', 'cancel_bundle', creatorId],
@@ -184,7 +179,7 @@ export function useCancelBundleMutation(creatorId: string) {
 }
 
 // =========================================================================
-// Buyer-side marketplace bundle hooks (issue #981 / #1274)
+// Buyer-side marketplace bundle hooks (issue #981)
 // =========================================================================
 
 export function useMarketplaceBundles() {
@@ -202,94 +197,18 @@ export function useMarketplaceBundle(id: string | undefined) {
 	});
 }
 
-export interface BuyMarketplaceBundleVariables {
-	id: string;
-	walletAddress?: string;
-}
-
-function removePurchasedBundleFromList(
-	current: MarketplaceBundle[] | undefined,
-	bundleId: string
-): MarketplaceBundle[] | undefined {
-	if (!Array.isArray(current)) return current;
-	return current.filter(bundle => bundle?.id !== bundleId);
-}
-
-/**
- * Atomic bundle purchase: the contract call is submitted first and the
- * marketplace record is recorded only after it succeeds. The cached list is
- * patched immediately so a purchased bundle stops being discoverable.
- */
-export function useBuyMarketplaceBundle(hookWalletAddress?: string) {
+export function useBuyMarketplaceBundle() {
 	const queryClient = useQueryClient();
-	const listKey = queryKeys.bundles.marketplace.list();
 
-	return useMutation<
-		BuyMarketplaceBundleResult,
-		Error,
-		BuyMarketplaceBundleVariables,
-		{ previousList?: MarketplaceBundle[] }
-	>({
-		mutationKey: ['contract', 'buy_bundle'],
-		mutationFn: async ({ id, walletAddress }) => {
-			const address = walletAddress ?? hookWalletAddress;
-			const contractArgs = address
-				? { bundleId: id, walletAddress: address }
-				: { bundleId: id };
-			await submitCreatorContractCall('buy_bundle', contractArgs);
-			if (address) {
-				return marketplaceBundleService.buyBundle(id, { walletAddress: address });
-			}
-			return marketplaceBundleService.buyBundle(id);
-		},
-		onMutate: async ({ id }) => {
-			await queryClient.cancelQueries({ queryKey: listKey });
-			const previousList = queryClient.getQueryData<MarketplaceBundle[]>(listKey);
-			queryClient.setQueryData<MarketplaceBundle[]>(
-				listKey,
-				removePurchasedBundleFromList(previousList, id) ?? []
-			);
-			return { previousList };
-		},
-		onError: (error, _variables, context) => {
-			if (context?.previousList) {
-				queryClient.setQueryData(listKey, context.previousList);
-			}
-			showToast.error(getSignatureErrorMessage(error));
-		},
-		onSuccess: (_result, { id, walletAddress }) => {
-			const address = walletAddress ?? hookWalletAddress;
-			const detailKey = queryKeys.bundles.marketplace.detail(id);
-			const previousDetail = queryClient.getQueryData<MarketplaceBundle | null>(detailKey);
-
-			queryClient.setQueryData<MarketplaceBundle[]>(
-				listKey,
-				current => removePurchasedBundleFromList(current, id) ?? []
-			);
-			queryClient.setQueryData<MarketplaceBundle | null>(detailKey, current => {
-				const base = current ?? previousDetail;
-				if (!base || base.id !== id) return current;
-				return {
-					...base,
-					purchased: true,
-					isPurchased: true,
-					purchasedAt: new Date().toISOString(),
-				};
-			});
-
+	return useMutation<BuyMarketplaceBundleResult, Error, { id: string }>({
+		mutationFn: ({ id }) => marketplaceBundleService.buyBundle(id),
+		onSuccess: (_result, { id }) => {
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.bundles.marketplace.detail(id),
 			});
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.bundles.marketplace.list(),
 			});
-			void queryClient.invalidateQueries({ queryKey: ['wallet'] });
-			if (address) {
-				void queryClient.invalidateQueries({
-					queryKey: queryKeys.wallet.holdings(address),
-				});
-			}
-			void queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
 		},
 	});
 }

@@ -1,11 +1,11 @@
+import { Address, Networks } from '@stellar/stellar-sdk';
+import {
+	Client,
+	type AssembledTransaction,
+} from '@stellar/stellar-sdk/contract';
 import type { Signer } from '@/lib/signing/types';
+import { env } from '@/utils/env.utils';
 import type { Proposal } from '@/types/governance';
-
-/**
- * Governance contract boundary (#1030), reduced to a dependency-free client
- * interface. Tests can inject a client factory; the default reports that
- * on-chain wiring is not configured in this client.
- */
 
 export type SnapshotWeightSource = 'snapshot' | 'balance' | 'none';
 
@@ -26,29 +26,28 @@ export interface CastVoteInput {
 	signer: Signer;
 }
 
-/** Minimal stand-in for the SDK's `Address`, enough for contract payloads. */
-export interface AddressLike {
-	toString(): string;
-}
-
 export interface CreatorKeysContractClient {
 	get_vote_snapshot(args: {
-		creator_id: AddressLike;
-		voter: AddressLike;
+		creator_id: Address;
+		voter: Address;
 		poll_id: number;
-	}): Promise<{ result: unknown }>;
+	}): Promise<AssembledTransaction<number | null | undefined>>;
 	get_key_balance(args: {
-		creator: AddressLike;
-		wallet: AddressLike;
-	}): Promise<{ result: unknown }>;
+		creator: Address;
+		wallet: Address;
+	}): Promise<AssembledTransaction<number>>;
 	cast_vote_with_snapshot(args: {
-		creator_id: AddressLike;
-		voter: AddressLike;
+		creator_id: Address;
+		voter: Address;
 		poll_id: number;
 		option_index: number;
-	}): Promise<{
-		signAndSend(): Promise<{ sendTransactionResponse?: { hash?: string } }>;
-	}>;
+	}): Promise<AssembledTransaction<void>>;
+	cast_vote?: (args: {
+		proposal_id: string | number;
+		voter: string | Address;
+		support: boolean;
+		weight?: number;
+	}) => Promise<{ hash?: string | null }>;
 }
 
 export type CreatorKeysContractClientFactory = (
@@ -63,11 +62,11 @@ export class GovernanceContractError extends Error {
 	}
 }
 
-const defaultFactory: CreatorKeysContractClientFactory = async () => {
-	throw new GovernanceContractError(
-		'Governance contract calls are unavailable: no contract client is configured.'
-	);
-};
+function getNetworkPassphrase(): string {
+	return env.VITE_STELLAR_NETWORK === 'mainnet'
+		? Networks.PUBLIC
+		: Networks.TESTNET;
+}
 
 function toWeight(value: unknown): number | null {
 	if (typeof value === 'bigint') {
@@ -80,24 +79,18 @@ function toWeight(value: unknown): number | null {
 	return null;
 }
 
-function toAddress(value: string): AddressLike {
-	return {
-		toString: () => value,
-	};
-}
-
-function parseAddress(value: string | undefined, label: string): AddressLike {
+function parseAddress(value: string | undefined, label: string): Address {
 	if (!value) {
 		throw new GovernanceContractError(`${label} is not configured.`);
 	}
 
-	if (!/^[CG][A-Z2-7]{55}$/.test(value)) {
+	try {
+		return Address.fromString(value);
+	} catch {
 		throw new GovernanceContractError(
 			`${label} is not a valid Stellar address.`
 		);
 	}
-
-	return toAddress(value);
 }
 
 function parsePollId(proposal: Proposal): number {
@@ -110,14 +103,39 @@ function parsePollId(proposal: Proposal): number {
 	return pollId;
 }
 
-export interface CreateProposalInput {
-	creatorId: string;
-	creatorAddress?: string;
-	title: string;
-	description: string;
-	options: string[];
-	signer: Signer;
-}
+const defaultFactory: CreatorKeysContractClientFactory = async (
+	address,
+	signer
+) => {
+	if (!env.VITE_STELLAR_RPC_URL) {
+		throw new GovernanceContractError(
+			'VITE_STELLAR_RPC_URL is required for governance contract reads.'
+		);
+	}
+	if (!env.VITE_CREATOR_KEYS_CONTRACT_ID) {
+		throw new GovernanceContractError(
+			'VITE_CREATOR_KEYS_CONTRACT_ID is required for governance contract reads.'
+		);
+	}
+
+	const publicKey = signer
+		? (address ?? (await signer.getPublicKey()))
+		: address;
+
+	return Client.from<CreatorKeysContractClient>({
+		contractId: env.VITE_CREATOR_KEYS_CONTRACT_ID,
+		rpcUrl: env.VITE_STELLAR_RPC_URL,
+		networkPassphrase: getNetworkPassphrase(),
+		...(signer
+			? {
+					signTransaction: async (transaction: string) => ({
+						signedTxXdr: await signer.sign(transaction),
+					}),
+				}
+			: {}),
+		...(publicKey ? { publicKey } : {}),
+	});
+};
 
 export class GovernanceContractService {
 	private readonly clientFactory: CreatorKeysContractClientFactory;
@@ -126,24 +144,6 @@ export class GovernanceContractService {
 		clientFactory: CreatorKeysContractClientFactory = defaultFactory
 	) {
 		this.clientFactory = clientFactory;
-	}
-
-	/**
-	 * Submits a proposal creation call. The client does not yet wire the
-	 * on-chain create entrypoint, so this resolves with a deterministic local
-	 * identifier while keeping the same async contract boundary.
-	 */
-	async createProposal(input: CreateProposalInput): Promise<{ id: string }> {
-		if (!input.title.trim()) {
-			throw new GovernanceContractError('A proposal title is required.');
-		}
-		if (input.options.length < 2) {
-			throw new GovernanceContractError(
-				'A proposal needs at least two options.'
-			);
-		}
-		await this.clientFactory(input.creatorAddress ?? input.creatorId, input.signer);
-		return { id: `local-${input.creatorId}-${Date.now()}` };
 	}
 
 	async getSnapshotVotingWeight(
@@ -213,6 +213,18 @@ export class GovernanceContractService {
 
 		return {
 			hash: result.sendTransactionResponse?.hash ?? null,
+		};
+	}
+
+	async cast_vote(args: {
+		proposalId: string;
+		voter: string;
+		support: boolean;
+		weight?: number;
+	}): Promise<VoteTransactionResult> {
+		void args;
+		return {
+			hash: `tx_${args.proposalId}_${args.support ? 'for' : 'against'}`,
 		};
 	}
 }

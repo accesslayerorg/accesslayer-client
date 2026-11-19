@@ -48,12 +48,6 @@ const LpEarningsSummaryCard: React.FC<LpEarningsSummaryCardProps> = ({
 						<p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-white/45">
 							Total LP earnings
 						</p>
-						<span
-							className="sr-only"
-							data-testid="lp-total-accrued-rewards"
-						>
-							Total accrued rewards
-						</span>
 						<p
 							role="status"
 							aria-live="polite"

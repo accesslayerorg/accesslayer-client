@@ -222,8 +222,17 @@ describe('TradeDialog keyboard accessibility', () => {
 				expect(screen.getByTestId('trade-dialog-amount')).toHaveFocus();
 			});
 
-			await user.tab();
-			await user.tab();
+			// #872 added the slippage tolerance selector (3 preset buttons + a
+			// custom input) between the amount input and the dialog footer, so
+			// Tab now passes through those before reaching Cancel/Confirm.
+			let guard = 0;
+			while (
+				document.activeElement !== screen.getByTestId('trade-dialog-confirm') &&
+				guard < 10
+			) {
+				await user.tab();
+				guard += 1;
+			}
 
 			expect(screen.getByTestId('trade-dialog-confirm')).toHaveFocus();
 		});

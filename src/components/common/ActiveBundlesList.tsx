@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { AsyncButton } from '@/components/ui/async-button';
 import { formatXlmPrice } from '@/utils/numberFormat.utils';
 import { formatAbsoluteDateTime } from '@/utils/time.utils';
-import { cn } from '@/lib/utils';
 import type { KeyBundle } from '@/services/bundle.service';
-import { getBundleQuantityTotal, getBundleTimeRemainingState } from '@/utils/bundle.utils';
+import { getBundleQuantityTotal } from '@/utils/bundle.utils';
+import BundleTimeRemaining from '@/components/common/BundleTimeRemaining';
 
 export interface ActiveBundlesListProps {
 	/** Bundles that are currently purchasable. */
@@ -35,30 +35,6 @@ function buildBundleDetailUrl(creatorId: string, bundleId: string): string {
 	const path = `/creator/${creatorId}/bundle/${bundleId}`;
 	return `${window.location.origin}${path}`;
 }
-
-const BundleTimeRemaining: React.FC<{
-	expiresAt: string | null | undefined;
-	nowMs: number;
-	className?: string;
-}> = ({ expiresAt, nowMs, className }) => {
-	const { isExpired, label } = getBundleTimeRemainingState(expiresAt, nowMs);
-
-	return (
-		<span
-			className={cn(
-				'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium tabular-nums',
-				isExpired
-					? 'border-red-400/30 bg-red-400/10 text-red-300'
-					: 'border-amber-400/30 bg-amber-400/15 text-amber-200',
-				className
-			)}
-			data-testid="bundle-time-remaining"
-			aria-live="polite"
-		>
-			{label}
-		</span>
-	);
-};
 
 /**
  * List of active bundles with purchase count and time remaining.
@@ -181,7 +157,7 @@ export const ActiveBundlesList: React.FC<ActiveBundlesListProps> = ({
 												className="py-2 pr-4 text-xs text-white/70"
 												data-testid="active-bundle-keys"
 											>
-												{getBundleQuantityTotal(bundle.items ?? [])}
+												{getBundleQuantityTotal(bundle.items)}
 											</td>
 											<td
 												className="py-2 pr-4 font-mono text-xs text-white/60"

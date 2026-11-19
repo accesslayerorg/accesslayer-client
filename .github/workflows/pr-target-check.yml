@@ -1,29 +1,29 @@
 name: Redirect PRs to dev
 
 on:
-  pull_request_target:
-    branches:
-      - main
+   pull_request_target:
+      branches:
+         - main
 
 jobs:
-  close-and-redirect:
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    steps:
-      - name: Close PR and redirect to dev
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: "👋 Thanks for your contribution! We don't accept pull requests directly to `main`. Please re-open your PR targeting the `dev` branch instead. See our contributing guide for details."
-            });
-            await github.rest.pulls.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-              state: 'closed'
-            });
+   close-and-redirect:
+      runs-on: ubuntu-latest
+      permissions:
+         pull-requests: write
+      steps:
+         - name: Close PR and redirect to dev
+           uses: actions/github-script@v7
+           with:
+              script: |
+                 await github.rest.issues.createComment({
+                   owner: context.repo.owner,
+                   repo: context.repo.repo,
+                   issue_number: context.payload.pull_request.number,
+                   body: "👋 Thanks for your contribution! We don't accept pull requests directly to `main`. Please re-open your PR targeting the `dev` branch instead. See our contributing guide for details."
+                 });
+                 await github.rest.pulls.update({
+                   owner: context.repo.owner,
+                   repo: context.repo.repo,
+                   pull_number: context.payload.pull_request.number,
+                   state: 'closed'
+                 });

@@ -5,6 +5,15 @@ import React from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
 import type { NotificationsResponse } from '@/services/notification.service';
 
+vi.mock('@/services/notification.service', () => ({
+	notificationService: {
+		getNotifications: vi.fn(),
+		markAsRead: vi.fn().mockImplementation(() => new Promise(() => {})),
+		markAllAsRead: vi.fn().mockImplementation(() => new Promise(() => {})),
+	},
+	NotificationService: vi.fn(),
+}));
+
 const USER_ID = 'user_abc123';
 
 function makeResponse(
@@ -134,16 +143,6 @@ describe('useNotifications', () => {
 				href: '/creator/bob',
 			},
 		];
-
-		// markAsRead hits the real notificationService — stub the module-level
-		// singleton so we can make it resolve without a real server.
-		vi.mock('@/services/notification.service', () => ({
-			notificationService: {
-				getNotifications: vi.fn(),
-				markAsRead: vi.fn().mockResolvedValue(undefined),
-			},
-			NotificationService: vi.fn(),
-		}));
 
 		const fetchFn = vi.fn().mockResolvedValue(
 			makeResponse({ notifications, unreadCount: 2 })

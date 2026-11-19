@@ -196,21 +196,16 @@ const LpPositionsList: React.FC<LpPositionsListProps> = ({
 									variant="outline"
 									className="rounded-lg"
 									disabled={isBusy}
-									aria-label="Add Liquidity"
 									onClick={() => onAddLiquidity?.(position)}
 									data-testid={`lp-add-${position.lpId}`}
 								>
 									Add liquidity
 								</Button>
-								<span className="sr-only">Add Liquidity</span>
 								<Button
 									type="button"
 									size="xs"
 									className="rounded-lg"
 									disabled={isBusy || !canClaim}
-									aria-label={
-										isClaiming ? 'Claiming rewards' : 'Claim Rewards'
-									}
 									onClick={() => onClaim?.(position)}
 									title={
 										canClaim ? undefined : 'No rewards to claim yet'
@@ -219,16 +214,12 @@ const LpPositionsList: React.FC<LpPositionsListProps> = ({
 								>
 									{isClaiming ? 'Claiming…' : 'Claim rewards'}
 								</Button>
-								{!isClaiming && (
-									<span className="sr-only">Claim Rewards</span>
-								)}
 								<Button
 									type="button"
 									size="xs"
 									variant="outline"
 									className="rounded-lg"
 									disabled={isBusy || !lock.canRemove}
-									aria-label="Remove Liquidity"
 									aria-describedby={
 										lock.canRemove ? undefined : removeHintId
 									}
@@ -237,7 +228,6 @@ const LpPositionsList: React.FC<LpPositionsListProps> = ({
 								>
 									{isRemoving ? 'Removing…' : 'Remove liquidity'}
 								</Button>
-								<span className="sr-only">Remove Liquidity</span>
 								{!lock.canRemove && (
 									<span id={removeHintId} className="sr-only">
 										{lock.status === 'locked'

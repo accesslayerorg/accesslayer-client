@@ -27,16 +27,8 @@ import {
 import {
 	LpContractError,
 	lpContractService,
+	type LpTransactionResult,
 } from '@/services/lpContract.service';
-
-interface LpTransactionResult<T> {
-	hash: string;
-	value: T;
-}
-
-/** Local key for the #1276 key-scoped endpoint (not part of the shared factory yet). */
-export const lpKeyPositionsQueryKey = (keyId: string, wallet: string) =>
-	['lp', 'keyPositions', keyId, wallet] as const;
 import { stellarAccountService } from '@/services/stellarAccount.service';
 
 /**
@@ -57,6 +49,8 @@ import { stellarAccountService } from '@/services/stellarAccount.service';
 const LP_POSITIONS_STALE_MS = 15_000;
 const LP_POSITIONS_REFETCH_MS = 30_000;
 
+export const lpKeyPositionsQueryKey = queryKeys.lp.keyPositions;
+
 export function useLpPositions(wallet: string | undefined) {
 	return useQuery({
 		queryKey: queryKeys.lp.positions(wallet ?? ''),
@@ -76,7 +70,6 @@ export function useLpPool(keyId: string | undefined, enabled = true) {
 	});
 }
 
-/** Polls `GET /keys/:id/lp/:wallet` for the dedicated #1276 LP page. */
 export function useKeyLpPositions(
 	keyId: string | undefined,
 	wallet: string | undefined
@@ -106,9 +99,7 @@ export function useSpendableXlmBalance(
 export function describeLpTransactionError(error: unknown): string {
 	if (error instanceof LpContractError) return error.message;
 	if (error instanceof SigningPipelineError) {
-		const type =
-			error.type ?? (error as SigningPipelineError & { code?: string }).code;
-		return type === 'UserRejected'
+		return error.type === 'UserRejected'
 			? 'Transaction cancelled in your wallet.'
 			: error.hint;
 	}
@@ -257,30 +248,6 @@ export function useClaimLpRewards(context: LpActionContext) {
 	});
 }
 
-export interface KeyLpClaimVariables {
-	keyId: string;
-	wallet: string;
-}
-
-/** API-backed claim used by the #1276 LP positions page. */
-export function useClaimKeyLpRewards() {
-	const queryClient = useQueryClient();
-
-	return useMutation<KeyLpClaimResult, Error, KeyLpClaimVariables>({
-		mutationKey: ['lp', 'claim-key-rewards'],
-		mutationFn: ({ keyId, wallet }) => claimKeyLpRewards(keyId, wallet),
-		onSuccess: (result, { keyId, wallet }) => {
-			void queryClient.invalidateQueries({
-				queryKey: lpKeyPositionsQueryKey(keyId, wallet),
-			});
-			if (result.message) showToast.success(result.message);
-		},
-		onError: error => {
-			showToast.error(describeLpTransactionError(error));
-		},
-	});
-}
-
 /**
  * Confirms from freshly fetched positions that the position still exists and
  * is unlocked. Guards against the list on screen being stale (e.g. the lock
@@ -353,6 +320,29 @@ export function useRemoveLiquidity(context: LpActionContext) {
 					queryKey: queryKeys.lp.positions(context.wallet ?? ''),
 				});
 			}
+		},
+	});
+}
+
+export interface KeyLpClaimVariables {
+	keyId: string;
+	wallet: string;
+}
+
+export function useClaimKeyLpRewards() {
+	const queryClient = useQueryClient();
+
+	return useMutation<KeyLpClaimResult, Error, KeyLpClaimVariables>({
+		mutationKey: ['lp', 'claim-key-rewards'],
+		mutationFn: ({ keyId, wallet }) => claimKeyLpRewards(keyId, wallet),
+		onSuccess: (result, { keyId, wallet }) => {
+			void queryClient.invalidateQueries({
+				queryKey: lpKeyPositionsQueryKey(keyId, wallet),
+			});
+			if (result.message) showToast.success(result.message);
+		},
+		onError: error => {
+			showToast.error(describeLpTransactionError(error));
 		},
 	});
 }

@@ -204,7 +204,6 @@ const LiquidityPositionsSection: React.FC<LiquidityPositionsSectionProps> = ({
 
 				{positions.length === 0 ? (
 					<div data-testid="lp-positions-empty">
-						<span className="sr-only">No LP positions</span>
 						<EmptyState
 							title="No liquidity positions yet"
 							description="Provide liquidity to a creator key pool to start earning a share of its trading fees."
@@ -291,7 +290,6 @@ const LiquidityPositionsSection: React.FC<LiquidityPositionsSectionProps> = ({
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Remove liquidity</DialogTitle>
-						<span className="sr-only">Remove Liquidity</span>
 						<DialogDescription className="break-words">
 							Close position #{removeTarget?.lpId} in the{' '}
 							{removeTarget?.keyName} pool. Your contribution and any

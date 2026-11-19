@@ -3,7 +3,11 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { LayoutGroup, motion } from 'framer-motion';
 import { useSearchParams } from 'react-router';
-import { courseService, type Course } from '@/services/course.service';
+import {
+	courseService,
+	type Course,
+	type CourseSortOption,
+} from '@/services/course.service';
 import SkipToContent from '@/components/common/SkipToContent';
 import { cn } from '@/lib/utils';
 import SearchBar from '@/components/common/SearchBar';
@@ -16,6 +20,7 @@ import {
 import { CreatorCardGridSkeleton } from '@/components/common/CreatorCardSkeleton';
 import EmptyState from '@/components/common/EmptyState';
 import HoldingsEmptyState from '@/components/common/HoldingsEmptyState';
+import PortfolioHoldingRow from '@/components/common/PortfolioHoldingRow';
 import EmptySearchSuggestions from '@/components/common/EmptySearchSuggestions';
 import SectionDivider from '@/components/common/SectionDivider';
 import { Button } from '@/components/ui/button';
@@ -35,12 +40,33 @@ import CreatorProfileErrorState from '@/components/common/CreatorProfileErrorSta
 import TransactionRetryNotice from '@/components/common/TransactionRetryNotice';
 import EmptyTransactionTimelineState from '@/components/common/EmptyTransactionTimelineState';
 import TradeDialog, { type TradeSide } from '@/components/common/TradeDialog';
+import type { FeeBreakdown } from '@/utils/pricePreview.utils';
+import type { SlippageBounds } from '@/utils/slippageTolerance.utils';
 import TradePanelErrorBoundary from '@/components/common/TradePanelErrorBoundary';
 import NetworkMismatchBanner from '@/components/common/NetworkMismatchBanner';
 import StellarConnectionQualityBadge from '@/components/common/StellarConnectionQualityBadge';
+import AdminPauseControl from '@/components/common/AdminPauseControl';
+import {
+	useContractPausedStore,
+	selectIsPaused,
+} from '@/hooks/useContractPausedStore';
+import KeyAnalyticsPanel from '@/components/common/KeyAnalyticsPanel';
+import TimelockAdminPanel from '@/components/common/TimelockAdminPanel';
+import MultiKeyStakingVault from '@/components/common/MultiKeyStakingVault';
+import { CreatorKeyDashboard } from '@/components/common/CreatorKeyDashboard';
 import { useAccount } from 'wagmi';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
-import { useTradeMutation, useWalletHoldings } from '@/hooks/useWallet';
+import {
+	useSelfFreezeMutation,
+	useTradeMutation,
+	useWalletHoldings,
+	useReinvestDividendMutation,
+	useRedeemDeprecatedKeyMutation,
+	useBatchTransferMutation,
+	type SelfFreezeAction,
+} from '@/hooks/useWallet';
+
+import toast from 'react-hot-toast';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 import { formatCompactNumber, formatNumber } from '@/utils/numberFormat.utils';
@@ -50,6 +76,10 @@ import {
 	formatPortfolioValueDisplay,
 	getPortfolioValueHelperText,
 	sortHoldingsByTotalValue,
+	calculatePnLSummary,
+	formatPnLDisplay,
+	formatPnLPercentage,
+	type HeldKeyPosition,
 } from '@/utils/portfolioValue.utils';
 import PrecisionModeToggle, {
 	type PrecisionMode,
@@ -65,20 +95,28 @@ import {
 	CREATOR_CARD_ENTRY_CLASS,
 	creatorCardEntryStyle,
 } from '@/utils/cardEntryAnimation.utils';
-import {
-	formatDisplayKeyPrice,
-	resolveCreatorKeyPriceStroops,
-} from '@/utils/keyPriceDisplay.utils';
+import { resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
+import { estimateReinvest } from '@/utils/reinvestDividend.utils';
+import { useTradeKeyboardShortcuts } from '@/hooks/useTradeKeyboardShortcuts';
+import KeyboardShortcutsHelp from '@/components/common/KeyboardShortcutsHelp';
+import TradeShortcutHints from '@/components/common/TradeShortcutHints';
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { CREATOR_LIST_SORT_LAYOUT_TRANSITION } from '@/utils/creatorListSortTransition';
 import { creatorListKey } from '@/utils/creatorListKey.utils';
-import { Check, ChevronDown, Copy, RefreshCw } from 'lucide-react';
+import { Check, ChevronDown, Copy, RefreshCw, Share2 } from 'lucide-react';
 import ClearedFiltersEmptyState from '@/components/common/ClearedFiltersEmptyState';
 import CreatorListPagination from '@/components/common/CreatorListPagination';
 import CreatorListGroupSeparator from '@/components/common/CreatorListGroupSeparator';
 import MarketplaceSidebar from '@/components/common/MarketplaceSidebar';
+import BatchBuyBasket from '@/components/common/BatchBuyBasket';
+import BatchBuyConfirmDialog from '@/components/common/BatchBuyConfirmDialog';
+import BatchBuyBasketTrigger from '@/components/common/BatchBuyBasketTrigger';
+import { useBatchBuyStore, selectItemCount } from '@/hooks/useBatchBuyStore';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
+import SelfFreezeDialog from '@/components/common/SelfFreezeDialog';
+import SharePortfolioModal from '@/components/common/SharePortfolioModal';
 
 const FEATURED_CREATOR_FACTS = [
 	{ label: 'Membership', value: 'Collectors Circle' },
@@ -182,7 +220,6 @@ const DEMO_CREATORS: Course[] = [
 	},
 ];
 
-const CREATOR_SORT_KEY = 'accesslayer.creator-sort';
 const CREATOR_PAGE_KEY = 'accesslayer.creator-page';
 const CREATOR_SCROLL_KEY = 'accesslayer.creator-scrollY';
 const CREATOR_LIST_MODE_KEY = 'accesslayer.creator-list-mode';
@@ -201,36 +238,6 @@ const CREATOR_REFRESH_SHORTCUT_DURATION_MS = 1800;
 const getFetchRetryHelperCopy = (attempt: number, maxAttempts: number) =>
 	`We couldn't load live creators yet. Retrying automatically (attempt ${attempt} of ${maxAttempts}).`;
 
-const isEditableShortcutTarget = (target: EventTarget | null) => {
-	if (!(target instanceof Element)) return false;
-
-	let element: Element | null = target;
-	while (element) {
-		if (
-			element.matches('input, textarea, select, [role="textbox"]') ||
-			(element instanceof HTMLElement && element.isContentEditable)
-		) {
-			return true;
-		}
-		element = element.parentElement;
-	}
-
-	return false;
-};
-
-const isCreatorRefreshShortcut = (event: KeyboardEvent) =>
-	(event.ctrlKey || event.metaKey) &&
-	event.altKey &&
-	!event.shiftKey &&
-	event.key.toLowerCase() === 'r';
-
-const isTradeShortcut = (event: KeyboardEvent) =>
-	!event.ctrlKey &&
-	!event.metaKey &&
-	!event.altKey &&
-	!event.shiftKey &&
-	event.key.toLowerCase() === 't';
-
 const toPriceFilterValue = (value: string) => {
 	if (!value.trim()) return undefined;
 	const parsed = Number(value);
@@ -239,11 +246,11 @@ const toPriceFilterValue = (value: string) => {
 
 const getCreatorListKey = (creator: Course) => creatorListKey(creator.id);
 
-type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'supply-desc';
 type CreatorListMode = 'pagination' | 'infinite';
 
 function LandingPage() {
 	useNavigationTiming('portfolio');
+	useDocumentTitle('Marketplace — AccessLayer');
 
 	const [creators, setCreators] = useState<Course[]>([]);
 	// Creators used for wallet holdings; kept separate from the marketplace
@@ -267,7 +274,11 @@ function LandingPage() {
 	const [minPriceFilter, setMinPriceFilter] = useState('');
 	const [maxPriceFilter, setMaxPriceFilter] = useState('');
 	const searchQueryRef = useRef<string>('');
-	const sortOptionRef = useRef<SortOption>('featured');
+	const [categoryFilter, setCategoryFilter] = useState<string>(() => {
+		const category = searchParams.get('category');
+		return category || '';
+	});
+	const sortOptionRef = useRef<CourseSortOption>('volume_desc');
 	const PROFILE_TABS = ['overview', 'creations', 'collectors', 'activity'];
 	const [activeProfileTab, setActiveProfileTab] = useState(() => {
 		if (typeof window === 'undefined') return 'overview';
@@ -279,27 +290,71 @@ function LandingPage() {
 	const [tradeSide, setTradeSide] = useState<TradeSide>('buy');
 	const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
 	const [tradeSubmitting, setTradeSubmitting] = useState(false);
+	const [sharePortfolioOpen, setSharePortfolioOpen] = useState(false);
+	const [selfFreezeDialog, setSelfFreezeDialog] = useState<{
+		action: SelfFreezeAction;
+		position: HeldKeyPosition;
+	} | null>(null);
 	const [stellarAddressCopied, setStellarAddressCopied] = useState(false);
 	const prefersReducedMotion = usePrefersReducedMotion();
-	const [sortOption, setSortOption] = useState<SortOption>(() => {
-		const sort = searchParams.get('sort') as SortOption | null;
+
+	// ── Batch buy basket (#954) ───────────────────────────────────────────
+	const [batchBasketOpen, setBatchBasketOpen] = useState(false);
+	const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
+	const [batchSubmitting, setBatchSubmitting] = useState(false);
+	const batchItemCount = useBatchBuyStore(selectItemCount);
+	const clearBasket = useBatchBuyStore(s => s.clearBasket);
+	const batchItems = useBatchBuyStore(s => s.items);
+
+	const handleBatchCheckout = () => {
+		setBatchBasketOpen(false);
+		setBatchConfirmOpen(true);
+	};
+
+	const handleBatchConfirm = async () => {
+		setBatchSubmitting(true);
+		try {
+			showToast.loading(
+				`Submitting batch purchase of ${batchItemCount} creator key${batchItemCount !== 1 ? 's' : ''}...`
+			);
+			// Simulated batch transaction — mirrors the existing stub pattern.
+			await new Promise<void>(resolve => window.setTimeout(resolve, 1800));
+			toast.remove();
+			const fakeTxHash =
+				'0xbatch' +
+				Math.random().toString(16).slice(2, 14).padEnd(12, '0') +
+				'deadbeef';
+			const creatorNames = batchItems
+				.map(i => i.creatorName)
+				.slice(0, 3)
+				.join(', ');
+			const extraCount =
+				batchItems.length > 3 ? ` +${batchItems.length - 3} more` : '';
+			showToast.transactionSuccess(
+				'Batch purchase confirmed!',
+				`Purchased keys for ${creatorNames}${extraCount}.`,
+				fakeTxHash,
+				`https://stellar.expert/explorer/testnet/tx/${fakeTxHash}`
+			);
+			clearBasket();
+			setBatchConfirmOpen(false);
+		} catch {
+			toast.remove();
+			showToast.error('Batch purchase failed. Please try again.');
+		} finally {
+			setBatchSubmitting(false);
+		}
+	};
+	const [sortOption, setSortOption] = useState<CourseSortOption>(() => {
+		const sort = searchParams.get('sort') as CourseSortOption | null;
 		if (
 			sort &&
-			['featured', 'price-asc', 'price-desc', 'supply-desc'].includes(sort)
+			['volume_desc', 'price_asc', 'price_desc', 'newest'].includes(sort)
 		) {
 			sortOptionRef.current = sort;
 			return sort;
 		}
-		if (typeof window !== 'undefined') {
-			const saved = window.localStorage.getItem(
-				CREATOR_SORT_KEY
-			) as SortOption | null;
-			if (saved) {
-				sortOptionRef.current = saved;
-				return saved;
-			}
-		}
-		return 'featured';
+		return 'volume_desc';
 	});
 	const [fetchRetryAttempt, setFetchRetryAttempt] = useState(0);
 	const [fetchRequestId, setFetchRequestId] = useState(0);
@@ -313,6 +368,7 @@ function LandingPage() {
 	const [isPriceRefreshing, setIsPriceRefreshing] = useState(false);
 	const [showShortcutConfirmation, setShowShortcutConfirmation] =
 		useState(false);
+	const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
 	const [page, setPage] = useState(() => {
 		if (typeof window === 'undefined') return 0;
 		const saved = window.sessionStorage.getItem(CREATOR_PAGE_KEY);
@@ -355,13 +411,6 @@ function LandingPage() {
 	const searchValidationMessage = hasInvalidSearchInput
 		? 'Only letters, numbers, spaces, hyphens, and underscores are supported.'
 		: undefined;
-
-	useEffect(() => {
-		if (typeof window !== 'undefined') {
-			window.localStorage.setItem(CREATOR_SORT_KEY, sortOption);
-		}
-	}, [sortOption]);
-
 	useEffect(() => {
 		const newParams = new URLSearchParams(searchParams);
 		let changed = false;
@@ -384,14 +433,20 @@ function LandingPage() {
 		}
 
 		const currentSort = searchParams.get('sort');
-		if (sortOption !== 'featured') {
-			if (currentSort !== sortOption) {
-				newParams.set('sort', sortOption);
+		if (currentSort !== sortOption) {
+			newParams.set('sort', sortOption);
+			changed = true;
+		}
+
+		const currentCategory = searchParams.get('category');
+		if (categoryFilter) {
+			if (currentCategory !== categoryFilter) {
+				newParams.set('category', categoryFilter);
 				changed = true;
 			}
 		} else {
-			if (searchParams.has('sort')) {
-				newParams.delete('sort');
+			if (searchParams.has('category')) {
+				newParams.delete('category');
 				changed = true;
 			}
 		}
@@ -399,7 +454,7 @@ function LandingPage() {
 		if (changed) {
 			setSearchParams(newParams, { replace: true });
 		}
-	}, [searchQuery, sortOption, searchParams, setSearchParams]);
+	}, [searchQuery, sortOption, categoryFilter, searchParams, setSearchParams]);
 
 	useEffect(() => {
 		const searchVal =
@@ -407,16 +462,22 @@ function LandingPage() {
 		if (searchVal !== searchQueryRef.current) {
 			setSearchQuery(searchVal);
 		}
-		const sort = searchParams.get('sort') as SortOption | null;
-		const validSort: SortOption =
+		const sort = searchParams.get('sort') as CourseSortOption | null;
+		const validSort: CourseSortOption =
 			sort &&
-			['featured', 'price-asc', 'price-desc', 'supply-desc'].includes(sort)
-				? (sort as SortOption)
-				: 'featured';
+			['volume_desc', 'price_asc', 'price_desc', 'newest'].includes(sort)
+				? (sort as CourseSortOption)
+				: 'volume_desc';
 		if (validSort !== sortOptionRef.current) {
+			sortOptionRef.current = validSort;
 			setSortOption(validSort);
 		}
-	}, [searchParams]);
+
+		const category = searchParams.get('category');
+		if (category !== categoryFilter) {
+			setCategoryFilter(category || '');
+		}
+	}, [searchParams, categoryFilter]);
 
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
@@ -493,7 +554,7 @@ function LandingPage() {
 					...(debouncedSearchQuery.trim()
 						? { search: debouncedSearchQuery.trim() }
 						: {}),
-					...(sortOption !== 'featured' ? { sort: sortOption } : {}),
+					sort: sortOption,
 				};
 				const data = await courseService.getCourses(
 					Object.keys(params).length > 0 ? params : undefined
@@ -574,28 +635,54 @@ function LandingPage() {
 					.toLowerCase()
 					.includes(trimmedSearchQuery.toLowerCase())
 		);
-		const sorted = [...filtered];
+
+		// Apply category filter
+		const categoryFiltered = categoryFilter
+			? filtered.filter(
+					creator =>
+						creator.category?.toLowerCase() ===
+						categoryFilter.toLowerCase()
+				)
+			: filtered;
+
+		const sorted = [...categoryFiltered];
 		const priceOf = (creator: Course) =>
 			resolveCreatorKeyPriceStroops(creator) ?? 0;
 
 		switch (sortOption) {
-			case 'price-asc':
+			case 'price_asc':
 				sorted.sort((a, b) => priceOf(a) - priceOf(b));
 				break;
-			case 'price-desc':
+			case 'price_desc':
 				sorted.sort((a, b) => priceOf(b) - priceOf(a));
 				break;
-			case 'supply-desc':
+			case 'newest':
+				sorted.sort((a, b) => {
+					const dateA = a.nextDropAt
+						? new Date(a.nextDropAt).getTime()
+						: 0;
+					const dateB = b.nextDropAt
+						? new Date(b.nextDropAt).getTime()
+						: 0;
+					return dateB - dateA;
+				});
+				break;
+			case 'volume_desc':
+			default:
 				sorted.sort(
 					(a, b) =>
 						(b.creatorShareSupply ?? 0) - (a.creatorShareSupply ?? 0)
 				);
 				break;
-			default:
-				break;
 		}
 		return sorted;
-	}, [creators, trimmedSearchQuery, hasInvalidSearchInput, sortOption]);
+	}, [
+		creators,
+		trimmedSearchQuery,
+		hasInvalidSearchInput,
+		sortOption,
+		categoryFilter,
+	]);
 
 	// Add loading state for filter changes
 	useEffect(() => {
@@ -607,7 +694,7 @@ function LandingPage() {
 		}, 300); // Short delay to show loading indicator
 
 		return () => clearTimeout(timer);
-	}, [trimmedSearchQuery, sortOption, creators.length]);
+	}, [trimmedSearchQuery, sortOption, categoryFilter, creators.length]);
 
 	// Resets pagination when the search/sort criteria actually change. Skips
 	// the initial mount so restoring a persisted page/visibleCount (#639)
@@ -620,7 +707,7 @@ function LandingPage() {
 		}
 		setPage(0);
 		setVisibleCount(PAGE_SIZE);
-	}, [trimmedSearchQuery, sortOption]);
+	}, [trimmedSearchQuery, sortOption, categoryFilter]);
 
 	// Switching modes starts the newly active view from the top of the
 	// filtered results rather than wherever the other mode left off. Skips
@@ -687,7 +774,10 @@ function LandingPage() {
 		setPage(nextPage);
 	};
 
-	const handleResetSearch = () => setSearchQuery('');
+	const handleResetSearch = () => {
+		setSearchQuery('');
+		setCategoryFilter('');
+	};
 	const handleClearPriceFilters = () => {
 		setMinPriceFilter('');
 		setMaxPriceFilter('');
@@ -711,26 +801,6 @@ function LandingPage() {
 			shortcutConfirmationTimerRef.current = null;
 		}, CREATOR_REFRESH_SHORTCUT_DURATION_MS);
 	}, []);
-
-	useEffect(() => {
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (
-				event.defaultPrevented ||
-				event.repeat ||
-				!isCreatorRefreshShortcut(event) ||
-				isEditableShortcutTarget(event.target)
-			) {
-				return;
-			}
-
-			event.preventDefault();
-			handleRetryCreatorFetch();
-			showCreatorRefreshShortcutConfirmation();
-		};
-
-		window.addEventListener('keydown', handleKeyDown);
-		return () => window.removeEventListener('keydown', handleKeyDown);
-	}, [handleRetryCreatorFetch, showCreatorRefreshShortcutConfirmation]);
 
 	// Stale-data detection (#301). 60s freshness window; when we cross it,
 	// the hook fires a background refresh exactly once until the next
@@ -761,6 +831,10 @@ function LandingPage() {
 	const activeWalletAddress = connectedAddress || DEMO_WALLET_ADDRESS;
 
 	const tradeMutation = useTradeMutation(activeWalletAddress);
+	const selfFreezeMutation = useSelfFreezeMutation(activeWalletAddress);
+	const reinvestMutation = useReinvestDividendMutation(activeWalletAddress);
+	const redeemMutation = useRedeemDeprecatedKeyMutation(activeWalletAddress);
+	const batchTransferMutation = useBatchTransferMutation(activeWalletAddress);
 	const { data: cachedHoldings = [] } = useWalletHoldings(activeWalletAddress);
 
 	// Merged: keep total-value sorting (feature/holdings-sorting-tests) while
@@ -784,9 +858,13 @@ function LandingPage() {
 						quantity: cached?.quantity ?? baseQuantity,
 						priceStroops: creator.priceStroops,
 						price: creator.price,
+						frozenQuantity: cached?.frozenQuantity ?? 0,
+						liquidQuantity:
+							cached?.liquidQuantity ?? cached?.quantity ?? baseQuantity,
 						isPriceLoading: isPriceRefreshing,
 						isPriceStale: creatorsAreStale,
 						pending: cached?.pending ?? false,
+						unclaimedDividend: cached?.unclaimedDividend ?? 0,
 					};
 				})
 			),
@@ -803,6 +881,10 @@ function LandingPage() {
 		() => calculatePortfolioValue(heldKeyPositions),
 		[heldKeyPositions]
 	);
+	const pnlSummary = useMemo(
+		() => calculatePnLSummary(heldKeyPositions),
+		[heldKeyPositions]
+	);
 	const displayedPortfolioValue = isLoading
 		? {
 				...portfolioValue,
@@ -817,30 +899,98 @@ function LandingPage() {
 		displayedPortfolioValue
 	);
 
+	const isPaused = useContractPausedStore(selectIsPaused);
+
 	const openTradeDialog = useCallback((side: TradeSide) => {
 		setTradeSide(side);
 		setTradeDialogOpen(true);
 	}, []);
 
-	// Issue 554: T key opens the trade panel from the creator profile page.
-	useEffect(() => {
-		const handleTradeShortcut = (event: KeyboardEvent) => {
-			if (
-				event.defaultPrevented ||
-				event.repeat ||
-				!isTradeShortcut(event) ||
-				isEditableShortcutTarget(event.target)
-			) {
-				return;
-			}
+	const handleConfirmTradeViaShortcut = useCallback(() => {
+		const confirmButton = document.querySelector(
+			'[data-testid="trade-dialog-confirm"]'
+		) as HTMLButtonElement | null;
+		confirmButton?.click();
+	}, []);
 
-			event.preventDefault();
-			openTradeDialog('buy');
-		};
+	const openSelfFreezeDialog = useCallback(
+		(action: SelfFreezeAction, position: HeldKeyPosition) => {
+			setSelfFreezeDialog({ action, position });
+		},
+		[]
+	);
 
-		window.addEventListener('keydown', handleTradeShortcut);
-		return () => window.removeEventListener('keydown', handleTradeShortcut);
-	}, [openTradeDialog]);
+	const handleConfirmSelfFreeze = async (amount: number) => {
+		if (!selfFreezeDialog) return;
+		const { action, position } = selfFreezeDialog;
+		try {
+			const actionVerb =
+				tradeSide === 'buy'
+					? 'buy'
+					: tradeSide === 'sell'
+						? 'sell'
+						: tradeSide === 'stake'
+							? 'stake'
+							: 'transfer';
+			showToast.loading(
+				`Submitting ${actionVerb} for ${amount} key${amount === 1 ? '' : 's'}...`
+			);
+			await selfFreezeMutation.mutateAsync({
+				creatorId: position.creatorId,
+				amount,
+				action,
+			});
+			setSelfFreezeDialog(null);
+			showToast.transactionSuccess(
+				`${action === 'freeze' ? 'Freeze' : 'Unfreeze'} confirmed`,
+				`${action === 'freeze' ? 'Froze' : 'Unfroze'} ${formatNumber(amount)} key${amount === 1 ? '' : 's'}`
+			);
+		} catch {
+			// The mutation reports the signing error and restores its optimistic cache.
+		}
+	};
+
+	// Toggle shortcuts help dialog
+	const toggleShortcutsHelp = useCallback(() => {
+		setShortcutsHelpOpen(prev => !prev);
+	}, []);
+
+	// Focus search bar via keyboard shortcut
+	const handleFocusSearch = useCallback(() => {
+		const searchInput = document.querySelector(
+			'[data-testid="search-bar-input"]'
+		) as HTMLInputElement | null;
+		searchInput?.focus();
+		searchInput?.select();
+	}, []);
+
+	// Switch profile tabs via keyboard shortcut
+	const handleTabShortcut = useCallback((tab: string) => {
+		setActiveProfileTab(tab);
+	}, []);
+
+	// Navigate to portfolio page via keyboard shortcut
+	const handleNavigateToPortfolio = useCallback(() => {
+		window.location.assign('/profile');
+	}, []);
+
+	// Centralised keyboard-shortcut manager for power trading
+	useTradeKeyboardShortcuts({
+		tradeDialogOpen,
+		onOpenTradeDialog: openTradeDialog,
+		onConfirmTrade: handleConfirmTradeViaShortcut,
+		isSubmitting: tradeSubmitting,
+		isFormValid: !tradeSubmitting,
+		helpOpen: shortcutsHelpOpen,
+		onToggleHelp: toggleShortcutsHelp,
+		onRefreshCreators: () => {
+			handleRetryCreatorFetch();
+			showCreatorRefreshShortcutConfirmation();
+		},
+		onTabChange: handleTabShortcut,
+		onFocusSearch: handleFocusSearch,
+		onNavigateToPortfolio: handleNavigateToPortfolio,
+	});
 
 	const handleCopyStellarAddress = async () => {
 		try {
@@ -855,18 +1005,27 @@ function LandingPage() {
 		}
 	};
 
-	const handleConfirmTrade = async (amount: number) => {
+	const handleConfirmTrade = async (
+		amount: number,
+		_pricePreview?: FeeBreakdown | null,
+		slippage?: SlippageBounds | null
+	) => {
 		setTradeSubmitting(true);
 		try {
 			if (tradeSide === 'buy') {
 				showToast.loading(
 					`Submitting buy for ${amount} key${amount === 1 ? '' : 's'}...`
 				);
+				const urlRef = new URL(window.location.href).searchParams.get(
+					'ref'
+				);
 				await tradeMutation.mutateAsync({
 					creatorId: '1',
 					amount,
 					priceStroops: resolveCreatorKeyPriceStroops(featuredCreator),
 					price: featuredCreator?.price,
+					ref: urlRef,
+					maxPriceStroops: slippage?.maxPriceStroops ?? null,
 				});
 				setFeaturedHoldings(current => current + amount);
 				showToast.transactionSuccess(
@@ -877,9 +1036,14 @@ function LandingPage() {
 				showToast.loading(
 					`Submitting sell for ${amount} key${amount === 1 ? '' : 's'}...`
 				);
-				await new Promise<void>(resolve => window.setTimeout(resolve, 900));
+				await tradeMutation.mutateAsync({
+					creatorId: '1',
+					amount: -amount,
+					priceStroops: resolveCreatorKeyPriceStroops(featuredCreator),
+					price: featuredCreator?.price,
+					minPriceStroops: slippage?.minPriceStroops ?? null,
+				});
 				setFeaturedHoldings(current => Math.max(0, current - amount));
-				await new Promise<void>(resolve => window.setTimeout(resolve, 250));
 				showToast.transactionSuccess(
 					'Trade confirmed',
 					`Sold ${formatNumber(amount)} key${amount === 1 ? '' : 's'} from ${FEATURED_CREATOR_NAME}`
@@ -959,8 +1123,9 @@ function LandingPage() {
 							<Button>Buy Access</Button>
 						</UnavailableAction>
 					</div>
-					<div className="mt-4 flex justify-center">
+					<div className="mt-4 flex flex-col items-center gap-3">
 						<StellarConnectionQualityBadge />
+						<AdminPauseControl className="w-full max-w-md mx-auto" />
 					</div>
 				</MarketplaceSection>
 
@@ -976,7 +1141,9 @@ function LandingPage() {
 						description="Search by creator name or handle while you keep scrolling through the marketplace. The filter shell stays visible and compact so you can refine results without losing your place."
 						resultCount={filteredCreators.length}
 						onReset={handleResetSearch}
-						showReset={searchQuery.length > 0}
+						showReset={
+							searchQuery.length > 0 || categoryFilter.length > 0
+						}
 					>
 						<div className="space-y-3">
 							<SearchBar
@@ -997,18 +1164,49 @@ function LandingPage() {
 									id="creator-sort"
 									value={sortOption}
 									onChange={e =>
-										setSortOption(e.target.value as SortOption)
+										setSortOption(e.target.value as CourseSortOption)
 									}
 									className="h-9 rounded-lg border border-white/15 bg-slate-950/80 px-3 text-sm text-white outline-none focus:border-amber-400/60"
 								>
-									<option value="featured">Featured</option>
-									<option value="price-asc">Price: Low to high</option>
-									<option value="price-desc">
+									<option value="volume_desc">
+										Volume: High to low
+									</option>
+									<option value="price_asc">Price: Low to high</option>
+									<option value="price_desc">
 										Price: High to low
 									</option>
-									<option value="supply-desc">
-										Supply: High to low
-									</option>
+									<option value="newest">Newest</option>
+								</select>
+							</div>
+							<div className="flex items-center gap-3">
+								<label
+									htmlFor="creator-category"
+									className="marketplace-label-muted text-xs font-semibold uppercase tracking-[0.16em]"
+								>
+									Category
+								</label>
+								<select
+									id="creator-category"
+									value={categoryFilter}
+									onChange={e => setCategoryFilter(e.target.value)}
+									className="h-9 rounded-lg border border-white/15 bg-slate-950/80 px-3 text-sm text-white outline-none focus:border-amber-400/60"
+								>
+									<option value="">All categories</option>
+									{Array.from(
+										new Set(
+											creators
+												.map(c => c.category)
+												.filter((cat): cat is string =>
+													Boolean(cat)
+												)
+										)
+									)
+										.sort()
+										.map(category => (
+											<option key={category} value={category}>
+												{category}
+											</option>
+										))}
 								</select>
 							</div>
 							<div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
@@ -1421,6 +1619,65 @@ function LandingPage() {
 								</span>
 							</div>
 						</div>
+						{pnlSummary.status === 'ready' &&
+							pnlSummary.totalInvested > 0 && (
+								<div
+									data-testid="pnl-summary-card"
+									className="mt-4 flex flex-col gap-3 rounded-xl border border-white/10 bg-slate-950/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+								>
+									<div className="flex flex-wrap items-center gap-6 text-sm">
+										<div>
+											<span className="text-white/45">
+												Total Invested
+											</span>
+											<span className="ml-2 font-grotesque font-bold text-white">
+												{formatPnLDisplay(pnlSummary.totalInvested)}
+											</span>
+										</div>
+										<div>
+											<span className="text-white/45">
+												Current Value
+											</span>
+											<span className="ml-2 font-grotesque font-bold text-white">
+												{formatPnLDisplay(pnlSummary.currentValue)}
+											</span>
+										</div>
+										<div>
+											<span className="text-white/45">
+												Unrealised PnL
+											</span>
+											<span
+												className={`ml-2 font-grotesque font-bold ${
+													pnlSummary.unrealisedPnL > 0
+														? 'text-emerald-400'
+														: pnlSummary.unrealisedPnL < 0
+															? 'text-red-400'
+															: 'text-white'
+												}`}
+											>
+												{formatPnLDisplay(pnlSummary.unrealisedPnL)}{' '}
+												(
+												{formatPnLPercentage(
+													pnlSummary.pnlPercentage
+												)}
+												)
+											</span>
+										</div>
+									</div>
+									<button
+										type="button"
+										data-testid="share-performance-btn"
+										onClick={() => setSharePortfolioOpen(true)}
+										className="inline-flex items-center gap-2 self-start rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-white/30 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/50 sm:self-auto cursor-pointer"
+									>
+										<Share2
+											className="size-3.5 text-amber-300"
+											aria-hidden="true"
+										/>
+										<span>Share Performance</span>
+									</button>
+								</div>
+							)}
 						{isLoading ? (
 							<CreatorHoldingsListSkeleton className="mt-6" />
 						) : heldKeyPositions.filter(
@@ -1429,7 +1686,7 @@ function LandingPage() {
 							// Settled empty only — skeleton covers loading so this never flashes.
 							<HoldingsEmptyState />
 						) : (
-							<div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+							<div className="mt-6 grid gap-3 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
 								{heldKeyPositions
 									.filter(
 										position =>
@@ -1440,40 +1697,97 @@ function LandingPage() {
 											item => item.id === position.creatorId
 										);
 										return (
-											<div
+											<PortfolioHoldingRow
 												key={position.creatorId}
-												className={cn(
-													'rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition-opacity',
-													position.pending && 'opacity-60'
-												)}
-											>
-												<div className="truncate text-sm font-bold text-white">
-													{creator?.title ?? 'Unknown creator'}
-												</div>
-												<div className="mt-1 text-xs text-white/55">
-													{position.pending && (
-														<span className="mr-2 inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
-															<span className="size-2.5 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
-															Pending
-														</span>
-													)}
-													{formatNumber(position.quantity)} keys ·{' '}
-													{position.isPriceLoading
-														? 'Refreshing price'
-														: position.isPriceStale
-															? 'Price stale'
-															: formatDisplayKeyPrice(
-																	resolveCreatorKeyPriceStroops(
-																		position
-																	)
-																)}
-												</div>
-											</div>
+												position={position}
+												creator={creator}
+												onBuy={() => openTradeDialog('buy')}
+												onSell={() => openTradeDialog('sell')}
+												onReinvest={async creatorId => {
+													const heldPosition =
+														heldKeyPositions.find(
+															item =>
+																item.creatorId === creatorId
+														);
+													const estimate = estimateReinvest(
+														heldPosition?.unclaimedDividend ?? 0,
+														resolveCreatorKeyPriceStroops(
+															heldPosition ?? {}
+														)
+													);
+													if (!estimate) {
+														showToast.error(
+															'Reinvest estimate unavailable. Please refresh prices and try again.'
+														);
+														return;
+													}
+													await reinvestMutation.mutateAsync({
+														keyId: creatorId,
+														amount:
+															heldPosition?.unclaimedDividend ??
+															0,
+														keys: estimate.wholeKeys,
+													});
+												}}
+												onRedeem={async creatorId => {
+													await redeemMutation.mutateAsync({
+														creatorId,
+														quantity:
+															heldKeyPositions.find(
+																item =>
+																	item.creatorId === creatorId
+															)?.quantity ?? 0,
+													});
+												}}
+												onFreeze={position =>
+													openSelfFreezeDialog('freeze', position)
+												}
+												onUnfreeze={position =>
+													openSelfFreezeDialog(
+														'unfreeze',
+														position
+													)
+												}
+												onBatchTransfer={() => {}}
+												onBatchTransferSubmit={async (
+													recipients,
+													creatorId
+												) => {
+													await batchTransferMutation.mutateAsync({
+														creatorId,
+														recipients,
+													});
+												}}
+												isSubmitting={
+													tradeSubmitting ||
+													batchTransferMutation.isPending
+												}
+												isReinvesting={reinvestMutation.isPending}
+												isRedeeming={redeemMutation.isPending}
+												isNetworkMismatch={isNetworkMismatch}
+											/>
 										);
 									})}
 							</div>
 						)}
 					</MarketplaceSection>
+					<SelfFreezeDialog
+						open={selfFreezeDialog !== null}
+						action={selfFreezeDialog?.action ?? 'freeze'}
+						creatorName={
+							creators.find(
+								item => item.id === selfFreezeDialog?.position.creatorId
+							)?.title ?? 'creator'
+						}
+						availableQuantity={
+							selfFreezeDialog?.action === 'unfreeze'
+								? (selfFreezeDialog.position.frozenQuantity ?? 0)
+								: (selfFreezeDialog?.position.liquidQuantity ?? 0)
+						}
+						isSubmitting={selfFreezeMutation.isPending}
+						onOpenChange={open => !open && setSelfFreezeDialog(null)}
+						onConfirm={handleConfirmSelfFreeze}
+					/>
 
 					<SectionDivider
 						title="Creator profile pattern"
@@ -1637,6 +1951,10 @@ function LandingPage() {
 													)} shares available`
 										}
 									/>
+									<KeyAnalyticsPanel
+										creatorId={featuredCreator?.id ?? 'alex-rivers'}
+										className="mt-2"
+									/>
 									{/* Issue 557: Stellar address with copy button */}
 									<div className="flex items-center justify-between gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
 										<div className="min-w-0 flex-1">
@@ -1687,7 +2005,14 @@ function LandingPage() {
 												className="rounded-xl"
 												onClick={() => openTradeDialog('buy')}
 												disabled={
-													isNetworkMismatch || tradeSubmitting
+													isNetworkMismatch ||
+													tradeSubmitting ||
+													isPaused
+												}
+												title={
+													isPaused
+														? 'Trading suspended: contract is paused'
+														: undefined
 												}
 											>
 												Buy
@@ -1697,10 +2022,51 @@ function LandingPage() {
 												variant="outline"
 												onClick={() => openTradeDialog('sell')}
 												disabled={
-													isNetworkMismatch || tradeSubmitting
+													isNetworkMismatch ||
+													tradeSubmitting ||
+													isPaused
+												}
+												title={
+													isPaused
+														? 'Trading suspended: contract is paused'
+														: undefined
 												}
 											>
 												Sell
+											</Button>
+											<Button
+												className="rounded-xl"
+												variant="outline"
+												onClick={() => openTradeDialog('stake')}
+												disabled={
+													isNetworkMismatch ||
+													tradeSubmitting ||
+													isPaused
+												}
+												title={
+													isPaused
+														? 'Trading suspended: contract is paused'
+														: undefined
+												}
+											>
+												Stake
+											</Button>
+											<Button
+												className="rounded-xl"
+												variant="outline"
+												onClick={() => openTradeDialog('transfer')}
+												disabled={
+													isNetworkMismatch ||
+													tradeSubmitting ||
+													isPaused
+												}
+												title={
+													isPaused
+														? 'Trading suspended: contract is paused'
+														: undefined
+												}
+											>
+												Transfer
 											</Button>
 										</div>
 										{tradeSubmitting && (
@@ -1716,6 +2082,24 @@ function LandingPage() {
 							</MarketplaceSection>
 						)}
 					</SectionErrorBoundary>
+
+					<SectionDivider
+						title="Staking Vault & Governance"
+						spacing="relaxed"
+					/>
+
+					<MultiKeyStakingVault className="mt-6" />
+
+					<TimelockAdminPanel className="mt-6" />
+
+					<SectionDivider
+						title="Creator Key Management"
+						spacing="relaxed"
+					/>
+
+					<div className="mt-6">
+						<CreatorKeyDashboard />
+					</div>
 
 					<div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/85 backdrop-blur-md md:hidden">
 						<div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-6 py-3">
@@ -1766,7 +2150,16 @@ function LandingPage() {
 											className="rounded-xl"
 											size="sm"
 											onClick={() => openTradeDialog('buy')}
-											disabled={isNetworkMismatch || tradeSubmitting}
+											disabled={
+												isNetworkMismatch ||
+												tradeSubmitting ||
+												isPaused
+											}
+											title={
+												isPaused
+													? 'Trading suspended: contract is paused'
+													: undefined
+											}
 										>
 											Buy
 										</Button>
@@ -1775,9 +2168,54 @@ function LandingPage() {
 											size="sm"
 											variant="outline"
 											onClick={() => openTradeDialog('sell')}
-											disabled={isNetworkMismatch || tradeSubmitting}
+											disabled={
+												isNetworkMismatch ||
+												tradeSubmitting ||
+												isPaused
+											}
+											title={
+												isPaused
+													? 'Trading suspended: contract is paused'
+													: undefined
+											}
 										>
 											Sell
+										</Button>
+										<Button
+											className="rounded-xl"
+											size="sm"
+											variant="outline"
+											onClick={() => openTradeDialog('stake')}
+											disabled={
+												isNetworkMismatch ||
+												tradeSubmitting ||
+												isPaused
+											}
+											title={
+												isPaused
+													? 'Trading suspended: contract is paused'
+													: undefined
+											}
+										>
+											Stake
+										</Button>
+										<Button
+											className="rounded-xl"
+											size="sm"
+											variant="outline"
+											onClick={() => openTradeDialog('transfer')}
+											disabled={
+												isNetworkMismatch ||
+												tradeSubmitting ||
+												isPaused
+											}
+											title={
+												isPaused
+													? 'Trading suspended: contract is paused'
+													: undefined
+											}
+										>
+											Transfer
 										</Button>
 									</div>
 									{tradeSubmitting && (
@@ -1813,11 +2251,47 @@ function LandingPage() {
 					keyPriceStroops={resolveCreatorKeyPriceStroops(featuredCreator)}
 					protocolFeeBps={250}
 					creatorFeeBps={250}
+					createdAtLedger={featuredCreator?.createdAtLedger}
+					currentLedger={featuredCreator?.currentLedger}
+					launchPenaltyBps={featuredCreator?.launchPenaltyBps}
+					maxBuyQuantity={featuredCreator?.maxBuyQuantity ?? null}
 					isSubmitting={tradeSubmitting}
 					onOpenChange={setTradeDialogOpen}
 					onConfirm={handleConfirmTrade}
 				/>
 			</TradePanelErrorBoundary>
+			{(tradeSide === 'buy' || tradeSide === 'sell') && (
+				<TradeShortcutHints open={tradeDialogOpen} side={tradeSide} />
+			)}
+			<KeyboardShortcutsHelp
+				open={shortcutsHelpOpen}
+				onOpenChange={setShortcutsHelpOpen}
+			/>
+			<SharePortfolioModal
+				open={sharePortfolioOpen}
+				onOpenChange={setSharePortfolioOpen}
+				pnlSummary={pnlSummary}
+				walletAddress={activeWalletAddress}
+				heldPositions={heldKeyPositions}
+				creators={holdingsCreators.length > 0 ? holdingsCreators : creators}
+			/>
+
+			{/* Batch buy basket (#954) */}
+			<BatchBuyBasketTrigger onClick={() => setBatchBasketOpen(true)} />
+			<BatchBuyBasket
+				open={batchBasketOpen}
+				onClose={() => setBatchBasketOpen(false)}
+				onCheckout={handleBatchCheckout}
+			/>
+			<BatchBuyConfirmDialog
+				open={batchConfirmOpen}
+				onOpenChange={open => {
+					if (!batchSubmitting) setBatchConfirmOpen(open);
+				}}
+				onConfirm={handleBatchConfirm}
+				isSubmitting={batchSubmitting}
+			/>
+
 			<ScrollToTop />
 			<IdleRefreshPrompt
 				visible={isIdlePromptVisible}

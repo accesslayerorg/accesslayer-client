@@ -57,6 +57,7 @@ function normalizeStatus(value: unknown, endDate: string): ProposalStatus {
 		status === 'closed' ||
 		status === 'passed' ||
 		status === 'rejected' ||
+		status === 'failed' ||
 		status === 'executed' ||
 		status === 'cancelled'
 	) {
@@ -178,7 +179,7 @@ function resolveOutcome(
 		(quorumBps > 0 &&
 			!isQuorumMet(voteTotal, eligibleVotingWeight, quorumBps));
 	if (missedQuorum) return 'quorum_not_met';
-	if (status === 'rejected') return 'failed';
+	if (status === 'rejected' || status === 'failed') return 'failed';
 
 	const leadingOption = getLeadingOptionFromOptions(options);
 	if (!leadingOption) return 'quorum_not_met';
@@ -275,6 +276,23 @@ export function normalizeProposal(value: unknown): Proposal {
 		quorumBps
 	);
 
+	const paramChange = asRecord(raw.paramChange ?? raw.parameterChange);
+	const paramName = toStringValue(
+		raw.paramName ??
+			raw.parameterName ??
+			raw.param_name ??
+			paramChange.paramName ??
+			paramChange.name
+	);
+	const oldValue =
+		(raw.oldValue as string | number | undefined) ??
+		(raw.old_value as string | number | undefined) ??
+		(paramChange.oldValue as string | number | undefined);
+	const newValue =
+		(raw.newValue as string | number | undefined) ??
+		(raw.new_value as string | number | undefined) ??
+		(paramChange.newValue as string | number | undefined);
+
 	return {
 		id:
 			toStringValue(raw.id) ??
@@ -309,7 +327,27 @@ export function normalizeProposal(value: unknown): Proposal {
 		abstainVotes:
 			toNonNegativeNumber(raw.abstainVotes) ?? options[2]?.weight ?? 0,
 		snapshotLedger,
+		...(paramName !== undefined ? { paramName } : {}),
+		...(oldValue !== undefined ? { oldValue } : {}),
+		...(newValue !== undefined ? { newValue } : {}),
 	};
+}
+
+export function formatProposalTimeRemaining(
+	endDate: string,
+	status: ProposalStatus,
+	nowMs: number = Date.now()
+): string {
+	if (status !== 'active') return 'Voting ended';
+	const endMs = Date.parse(endDate);
+	if (!Number.isFinite(endMs) || endMs <= nowMs) return 'Ended';
+	const diffSec = Math.floor((endMs - nowMs) / 1000);
+	const days = Math.floor(diffSec / 86400);
+	const hours = Math.floor((diffSec % 86400) / 3600);
+	const minutes = Math.floor((diffSec % 3600) / 60);
+	if (days > 0) return `${days}d ${hours}h remaining`;
+	if (hours > 0) return `${hours}h ${minutes}m remaining`;
+	return `${Math.max(1, minutes)}m remaining`;
 }
 
 export function getProposalOptions(proposal: Proposal): ProposalOption[] {

@@ -1,7 +1,8 @@
+import React from 'react';
 import { Link } from 'react-router';
+import { ArrowRight, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { RotateCcw } from 'lucide-react';
 import { EMPTY_STATE_ILLUSTRATION_SIZES } from './emptyStateIllustration.config';
 
 export interface EmptyStateCTAConfig {
@@ -13,36 +14,61 @@ export interface EmptyStateCTAConfig {
 
 export interface EmptyStateProps {
 	image?: string;
+	icon?: React.ReactNode;
 	title?: string;
 	description?: string;
 	message?: string;
 	cta?: EmptyStateCTAConfig | string;
 	ctaHref?: string;
+	ctaLabel?: string;
+	ctaText?: string;
+	onCtaClick?: () => void;
 	className?: string;
 	onReset?: () => void;
+	'data-testid'?: string;
+	role?: string;
+	'aria-label'?: string;
+	children?: React.ReactNode;
 }
 
+/**
+ * Unified empty-state component (#545).
+ * Used across holdings, creator list, marketplace, and other list pages.
+ * Displays an optional icon/illustration, title, descriptive message,
+ * and an optional call-to-action button or link.
+ */
 const EmptyState: React.FC<EmptyStateProps> = ({
 	image,
+	icon,
 	title,
 	description,
 	message,
 	cta,
 	ctaHref,
+	ctaLabel: explicitCtaLabel,
+	ctaText: explicitCtaText,
+	onCtaClick,
 	className,
 	onReset,
+	'data-testid': testId,
+	role = 'status',
+	'aria-label': ariaLabel,
+	children,
 }: EmptyStateProps) => {
 	const displayTitle = title;
 	const displayMessage = message ?? description;
-	const ariaLabelText = title || message || description || 'Empty state';
+	const ariaLabelText =
+		ariaLabel || title || message || description || 'Empty state';
 
 	const ctaObject = typeof cta === 'object' ? cta : undefined;
 	const ctaLabel =
+		explicitCtaLabel ??
+		explicitCtaText ??
 		ctaObject?.label ??
 		ctaObject?.text ??
 		(typeof cta === 'string' ? cta : undefined);
 	const resolvedHref = ctaObject?.href ?? ctaHref;
-	const resolvedOnClick = ctaObject?.onClick;
+	const resolvedOnClick = ctaObject?.onClick ?? onCtaClick;
 
 	return (
 		<div
@@ -50,10 +76,11 @@ const EmptyState: React.FC<EmptyStateProps> = ({
 				'flex flex-col items-center justify-center rounded-[2rem] border border-white/10 bg-white/5 px-8 py-14 text-center backdrop-blur-xl',
 				className
 			)}
-			role="status"
+			role={role}
 			aria-label={ariaLabelText}
+			data-testid={testId}
 		>
-			{image && (
+			{image ? (
 				<div
 					className={cn(
 						'relative mb-6 flex items-center justify-center',
@@ -71,14 +98,26 @@ const EmptyState: React.FC<EmptyStateProps> = ({
 						aria-hidden="true"
 					/>
 				</div>
-			)}
+			) : icon ? (
+				<div
+					className={cn(
+						'relative mb-6 flex items-center justify-center',
+						EMPTY_STATE_ILLUSTRATION_SIZES.heroFrame
+					)}
+				>
+					<div className="absolute inset-0 size-full rounded-full bg-amber-500/10 blur-2xl" />
+					{icon}
+				</div>
+			) : null}
+
 			{displayTitle && (
 				<h2 className="font-grotesque text-2xl font-black tracking-tight text-white mb-2">
 					{displayTitle}
 				</h2>
 			)}
+
 			{displayMessage !== undefined && (
-				<p className="max-w-[280px] font-jakarta text-sm leading-relaxed text-white/50 mb-8">
+				<p className="max-w-[300px] font-jakarta text-sm leading-relaxed text-white/50 mb-8">
 					{displayMessage}
 				</p>
 			)}
@@ -90,6 +129,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
 					className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-6 py-2.5 text-sm font-bold text-white transition-all hover:border-amber-500/30 hover:bg-amber-500/10"
 				>
 					{ctaLabel}
+					<ArrowRight className="ml-2 size-4" aria-hidden="true" />
 				</Link>
 			) : ctaLabel ? (
 				<Button
@@ -111,9 +151,10 @@ const EmptyState: React.FC<EmptyStateProps> = ({
 					Reset Search
 				</Button>
 			) : null}
+
+			{children}
 		</div>
 	);
 };
 
 export default EmptyState;
-

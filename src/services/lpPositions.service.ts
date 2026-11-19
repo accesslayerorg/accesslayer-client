@@ -98,69 +98,6 @@ function shortKey(keyId: string): string {
 	return keyId.length > 12 ? `${keyId.slice(0, 4)}…${keyId.slice(-4)}` : keyId;
 }
 
-/**
- * Validates one API record. Returns `null` for records missing an id, key,
- * or contribution, and for closed positions (the contract reports a closed
- * position with `contribution = 0`), so only active positions are listed.
- */
-export function normalizeLpPosition(
-	raw: LpPositionApiRecord
-): LpPosition | null {
-	const keyRecord = raw as LpPositionApiRecord & KeyLpPositionApiRecord;
-	const lpId =
-		parseLpId(raw.lpId) ?? parsePositionId(keyRecord.id ?? keyRecord.lp_id);
-	const keyId =
-		(typeof raw.keyId === 'string' ? raw.keyId.trim() : '') ||
-		firstString(keyRecord.key_id) ||
-		'';
-	const contributionStroops =
-		parseStroops(raw.contribution) ??
-		parseKeyAmount(keyRecord.lp_tokens ?? keyRecord.lpTokens);
-	const keySharePct = parsePercent(
-		keyRecord.pool_share_pct ?? keyRecord.poolSharePct
-	);
-
-	if (!lpId || !keyId || contributionStroops == null) return null;
-	if (contributionStroops === 0n) return null;
-
-	return {
-		lpId,
-		keyId,
-		keyName:
-			raw.keyName?.trim() ||
-			firstString(keyRecord.key_name) ||
-			shortKey(keyId),
-		creatorId:
-			raw.creatorId?.trim() || firstString(keyRecord.creator_id) || null,
-		contributionStroops,
-		shareBps:
-			parseBps(raw.share) ??
-			(keySharePct != null ? Math.round(keySharePct * 100) : null),
-		poolTotalLiquidityStroops:
-			parseStroops(raw.poolTotalLiquidity) ??
-			parseKeyAmount(
-				keyRecord.pool_total_liquidity ?? keyRecord.poolTotalLiquidity
-			),
-		pendingRewardsStroops:
-			parseStroops(raw.pendingRewards) ??
-			parseKeyAmount(keyRecord.accrued_rewards ?? keyRecord.accruedRewards),
-		claimedRewardsStroops:
-			parseStroops(raw.claimedRewards) ??
-			parseKeyAmount(keyRecord.claimed_rewards ?? keyRecord.claimedRewards),
-		lock: parseLpLock(
-			raw.unlocksAt ?? keyRecord.unlocks_at ?? keyRecord.unlocksAt
-		),
-	};
-}
-
-// ---------------------------------------------------------------------------
-// Key-scoped LP endpoint (#1276)
-// ---------------------------------------------------------------------------
-
-/**
- * Raw key-scoped LP record. The server snake_cases these fields; the camelCase
- * aliases keep the normalizer tolerant of proxied / already-mapped payloads.
- */
 export interface KeyLpPositionApiRecord {
 	id?: string | number | null;
 	lp_id?: string | number | null;
@@ -194,21 +131,13 @@ export interface KeyLpPositionApiRecord {
 	lockUntil?: string | number | null;
 }
 
-/** Normalized key-scoped LP position, compatible with `LpPosition`. */
 export interface KeyLpPosition extends LpPosition {
-	/** Alias for `lpId`, for callers that just want `position.id`. */
 	id: string;
-	/** Exact LP token / contribution amount in stroops. */
 	lpTokensStroops: bigint;
-	/** Alias retained for tests that use the snake_case name. */
 	lpTokens: bigint;
-	/** Reported pool share as a percentage (e.g. `12.5`). */
 	poolSharePct: number | null;
-	/** Exact accrued reward amount in stroops. */
 	accruedRewardsStroops: bigint | null;
-	/** Alias retained for tests that use the snake_case name. */
 	accruedRewards: bigint | null;
-	/** Whether the API says this position can be claimed now. */
 	claimable: boolean;
 }
 
@@ -241,7 +170,6 @@ function parsePositionId(value: unknown): string | null {
 	return null;
 }
 
-/** Parses integer stroops first, then plain XLM decimals from the key API. */
 function parseKeyAmount(value: unknown): bigint | null {
 	const stroops = parseStroops(value);
 	if (stroops != null) return stroops;
@@ -284,11 +212,6 @@ function parseClaimable(
 	return rewardsStroops != null && rewardsStroops > 0n;
 }
 
-/**
- * Validates one `/keys/:id/lp/:wallet` record. Keeps positions with a zero
- * contribution when they still report rewards, since rewards can remain
- * claimable for a short window after the principal is withdrawn.
- */
 export function normalizeKeyLpPosition(
 	raw: KeyLpPositionApiRecord,
 	keyId = ''
@@ -350,7 +273,6 @@ export function normalizeKeyLpPosition(
 	};
 }
 
-/** Normalizes a whole key-scoped LP payload (array, `positions`, or `lp_positions`). */
 export function normalizeKeyLpPositions(
 	payload: unknown,
 	keyId = ''
@@ -379,10 +301,8 @@ export function normalizeKeyLpPositions(
 		.filter((position): position is KeyLpPosition => position !== null);
 }
 
-/** Alias for callers using the singular `record` naming. */
 export const normalizeKeyLpPositionRecord = normalizeKeyLpPosition;
 
-/** Normalizes the claim response, tolerating bare and wrapped payloads. */
 export function normalizeKeyLpClaim(value: unknown): KeyLpClaimResult {
 	let payload = value;
 	if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -419,8 +339,36 @@ export function normalizeKeyLpClaim(value: unknown): KeyLpClaimResult {
 	return { success, claimedStroops, message };
 }
 
-/** Alias for callers that spell out `result`. */
 export const normalizeKeyLpClaimResult = normalizeKeyLpClaim;
+
+/**
+ * Validates one API record. Returns `null` for records missing an id, key,
+ * or contribution, and for closed positions (the contract reports a closed
+ * position with `contribution = 0`), so only active positions are listed.
+ */
+export function normalizeLpPosition(
+	raw: LpPositionApiRecord
+): LpPosition | null {
+	const lpId = parseLpId(raw.lpId);
+	const keyId = typeof raw.keyId === 'string' ? raw.keyId.trim() : '';
+	const contributionStroops = parseStroops(raw.contribution);
+
+	if (!lpId || !keyId || contributionStroops == null) return null;
+	if (contributionStroops === 0n) return null;
+
+	return {
+		lpId,
+		keyId,
+		keyName: raw.keyName?.trim() || shortKey(keyId),
+		creatorId: raw.creatorId?.trim() || null,
+		contributionStroops,
+		shareBps: parseBps(raw.share),
+		poolTotalLiquidityStroops: parseStroops(raw.poolTotalLiquidity),
+		pendingRewardsStroops: parseStroops(raw.pendingRewards),
+		claimedRewardsStroops: parseStroops(raw.claimedRewards),
+		lock: parseLpLock(raw.unlocksAt),
+	};
+}
 
 class LpPositionsService extends BaseApiService {
 	async getPositions(wallet: string): Promise<LpPosition[]> {
@@ -499,7 +447,6 @@ export async function fetchLpPool(keyId: string): Promise<LpPoolStats> {
 	return lpPositionsService.getPool(keyId);
 }
 
-/** Key-scoped polling source for #1276. */
 export async function fetchKeyLpPositions(
 	keyId: string,
 	wallet: string
@@ -507,7 +454,6 @@ export async function fetchKeyLpPositions(
 	return lpPositionsService.getKeyPositions(keyId, wallet);
 }
 
-/** Key-scoped claim action for #1276. */
 export async function claimKeyLpRewards(
 	keyId: string,
 	wallet: string

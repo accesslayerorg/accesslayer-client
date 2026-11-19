@@ -28,6 +28,8 @@ dist-ssr
 issue.md
 pr.md
 
+# MiMoCode
+.mimocode/
 # Test artifacts
 __snapshots__
 *.snap

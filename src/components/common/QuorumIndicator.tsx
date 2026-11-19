@@ -29,16 +29,15 @@ const QuorumIndicator: React.FC<QuorumIndicatorProps> = ({
 
 		const participation = Math.max(0, totalVotingWeight);
 		const quorum = Math.max(0, quorumBps) / 100;
+		const participationPct = Math.min(
+			(participation / totalCirculatingSupply) * 100,
+			100
+		);
 
 		return {
-			participationPct: Math.min(
-				(participation / totalCirculatingSupply) * 100,
-				100
-			),
+			participationPct,
 			quorumPct: Math.min(quorum, 100),
-			quorumReached:
-				quorum > 0 &&
-				(participation / totalCirculatingSupply) * 100 >= quorum,
+			quorumReached: quorum > 0 && participationPct >= quorum,
 		};
 	}, [quorumBps, totalVotingWeight, totalCirculatingSupply]);
 
@@ -75,6 +74,7 @@ const QuorumIndicator: React.FC<QuorumIndicatorProps> = ({
 			{/* Labels row */}
 			<div className="flex items-center justify-between text-xs">
 				<div className="flex items-center gap-1">
+					{/* Status icon */}
 					{quorumReached ? (
 						<CheckCircle
 							className="size-3.5 text-emerald-400"
@@ -86,12 +86,8 @@ const QuorumIndicator: React.FC<QuorumIndicatorProps> = ({
 							aria-hidden="true"
 						/>
 					)}
-					<span
-						className={cn(
-							'font-semibold',
-							quorumReached ? 'text-emerald-400' : 'text-amber-400'
-						)}
-					>
+					<span className={cn('font-semibold', quorumReached ? 'text-emerald-400' : 'text-amber-400')}>
+						{/* Status text */}
 						{quorumReached ? 'Quorum reached' : 'Quorum not yet reached'}
 					</span>
 				</div>

@@ -2,6 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
+import Web3Provider from './providers/Web3Provider.tsx';
+import { PendingTransactionProvider } from './contexts/PendingTransactionContext';
 import { registerUnhandledRejectionLogger } from './utils/unhandledRejectionLogger';
 import { queryClient } from './providers/web3Utils';
 import {
@@ -29,6 +31,10 @@ if ('serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')!).render(
 	<StrictMode>
-		<App />
+		<Web3Provider>
+			<PendingTransactionProvider>
+				<App />
+			</PendingTransactionProvider>
+		</Web3Provider>
 	</StrictMode>
 );

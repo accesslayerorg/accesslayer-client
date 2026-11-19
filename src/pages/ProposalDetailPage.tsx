@@ -7,6 +7,7 @@ import {
 	Users,
 } from 'lucide-react';
 import ProposalOutcomeSummary from '@/components/common/ProposalOutcomeSummary';
+import ProposalExecutionCountdown from '@/components/common/ProposalExecutionCountdown';
 import ProposalVoteHistory from '@/components/common/ProposalVoteHistory';
 import { ProposalVotePanel } from '@/components/common/ProposalVotePanel';
 import QuorumIndicator from '@/components/common/QuorumIndicator';
@@ -29,6 +30,7 @@ const STATUS_CLASSES: Record<ProposalStatus, string> = {
 	closed: 'border-white/15 bg-white/10 text-white/60',
 	passed: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
 	rejected: 'border-red-500/30 bg-red-500/10 text-red-400',
+	failed: 'border-red-500/30 bg-red-500/10 text-red-400',
 	executed: 'border-blue-500/30 bg-blue-500/10 text-blue-400',
 	cancelled: 'border-white/10 bg-white/[0.04] text-white/50',
 };
@@ -210,6 +212,15 @@ export default function ProposalDetailPage() {
 							{proposal.description}
 						</p>
 					</section>
+
+					{proposal.status === 'passed' && proposal.timelockExpiresAt && (
+						<section className="mt-6" aria-label="Execution countdown">
+							<ProposalExecutionCountdown
+								proposalId={proposal.id}
+								timelockExpiresAt={proposal.timelockExpiresAt}
+							/>
+						</section>
+					)}
 
 					<section className="mt-8" aria-label="Proposal result">
 						<h2 className="mb-4 font-jakarta text-xl font-bold text-white">

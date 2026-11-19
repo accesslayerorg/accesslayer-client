@@ -1,17 +1,27 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import CreatorDetailPage from '@/pages/CreatorDetailPage';
+import CreatorDashboardPage from '@/pages/CreatorDashboardPage';
 import { courseService } from '@/services/course.service';
 import { ApiError } from '@/services/api.service';
 import { queryKeys } from '@/lib/queryKeys';
+import { useAccount } from 'wagmi';
 
 vi.mock('@/services/course.service', () => ({
 	courseService: {
 		getCourse: vi.fn(),
+		getPriceHistory: vi.fn(),
+		getHoldersPage: vi.fn(),
+		updateCourse: vi.fn(),
 	},
+}));
+
+vi.mock('wagmi', () => ({
+	useAccount: vi.fn(),
 }));
 
 vi.mock('framer-motion', async () => {
@@ -42,6 +52,10 @@ vi.mock('framer-motion', async () => {
 });
 
 const mockGetCourse = vi.mocked(courseService.getCourse);
+const mockGetPriceHistory = vi.mocked(courseService.getPriceHistory);
+const mockGetHoldersPage = vi.mocked(courseService.getHoldersPage);
+const mockUpdateCourse = vi.mocked(courseService.updateCourse);
+const mockUseAccount = vi.mocked(useAccount);
 
 function makeFreshQueryClient() {
 	return new QueryClient({
@@ -67,6 +81,16 @@ describe('CreatorDetailPage Integration', () => {
 	beforeEach(() => {
 		queryClient = makeFreshQueryClient();
 		mockGetCourse.mockReset();
+		mockGetPriceHistory.mockResolvedValue([]);
+		mockGetHoldersPage.mockReset();
+		mockUpdateCourse.mockReset();
+		mockUseAccount.mockReturnValue({ address: undefined } as ReturnType<
+			typeof useAccount
+		>);
+		mockGetHoldersPage.mockResolvedValue({
+			holders: [],
+			nextCursor: null,
+		});
 		consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 	});
 
@@ -124,6 +148,114 @@ describe('CreatorDetailPage Integration', () => {
 		expect(screen.queryByText('250')).not.toBeInTheDocument();
 	});
 
+	it('sets the creator title and renders holder concentration after holders load', async () => {
+		mockGetCourse.mockResolvedValue({
+			id: 'creator-123',
+			title: 'Alex Rivers',
+			description: 'Digital Artist & Illustrator',
+			price: 0.05,
+			priceStroops: 500_000,
+			creatorShareSupply: 100,
+			instructorId: 'arivers',
+			category: 'Art',
+			level: 'BEGINNER',
+			creatorFeeBps: 500,
+			protocolFeeBps: 250,
+		});
+		mockGetHoldersPage.mockResolvedValue({
+			nextCursor: null,
+			holders: [
+				{
+					id: 'holder-1',
+					displayName: 'Holder 1',
+					walletAddress:
+						'GABCDE1234567890ABCDE1234567890ABCDE1234567890ABCDEF',
+					keyCount: 30,
+				},
+				{
+					id: 'holder-2',
+					displayName: 'Holder 2',
+					walletAddress:
+						'GBCDE1234567890ABCDE1234567890ABCDE1234567890ABCDEF1',
+					keyCount: 15,
+				},
+				{
+					id: 'holder-3',
+					displayName: 'Holder 3',
+					walletAddress:
+						'GCDEF1234567890ABCDE1234567890ABCDE1234567890ABCDEF2',
+					keyCount: 10,
+				},
+			],
+		});
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={['/creators/creator-123']}>
+					<Routes>
+						<Route path="/creators/:id" element={<CreatorDetailPage />} />
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		expect(
+			await screen.findByText('Alex Rivers Profile')
+		).toBeInTheDocument();
+		expect(document.title).toBe('Alex Rivers — AccessLayer');
+		expect(
+			await screen.findByTestId('holder-concentration-chart')
+		).toBeInTheDocument();
+		expect(
+			screen.getAllByTestId('holder-concentration-percent')[0]
+		).toHaveTextContent('30%');
+		expect(
+			screen.getByTestId('holder-concentration-others-percent')
+		).toHaveTextContent('45%');
+		expect(
+			screen.getByTestId('holder-concentration-warning')
+		).toHaveTextContent('Highly concentrated');
+	});
+
+	it('falls back to marketplace when the back button has no previous route entry', async () => {
+		const user = userEvent.setup();
+		mockGetCourse.mockResolvedValue({
+			id: 'creator-123',
+			title: 'Alex Rivers',
+			description: 'Digital Artist & Illustrator',
+			price: 0.05,
+			priceStroops: 500_000,
+			creatorShareSupply: 100,
+			instructorId: 'arivers',
+			category: 'Art',
+			level: 'BEGINNER',
+			creatorFeeBps: 500,
+			protocolFeeBps: 250,
+		});
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={['/creators/creator-123']}>
+					<Routes>
+						<Route path="/creators/:id" element={<CreatorDetailPage />} />
+						<Route
+							path="/creators"
+							element={<div>Marketplace fallback</div>}
+						/>
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		await user.click(
+			await screen.findByRole('button', { name: /back to previous page/i })
+		);
+
+		expect(
+			await screen.findByText('Marketplace fallback')
+		).toBeInTheDocument();
+	});
+
 	it('updates the displayed price after a background refetch without flashing a loading skeleton', async () => {
 		const initialCreator = {
 			id: 'creator-123',
@@ -163,7 +295,10 @@ describe('CreatorDetailPage Integration', () => {
 		);
 
 		expect(await screen.findByText('100.00 XLM')).toBeInTheDocument();
-		expect(screen.queryByLabelText(/loading creator profile/i)).not.toBeInTheDocument();
+		expect(await screen.findAllByText('100.00 XLM')).not.toHaveLength(0);
+		expect(
+			screen.queryByLabelText(/loading creator profile/i)
+		).not.toBeInTheDocument();
 
 		await act(async () => {
 			void queryClient.invalidateQueries({
@@ -172,12 +307,15 @@ describe('CreatorDetailPage Integration', () => {
 		});
 
 		expect(screen.getByText('100.00 XLM')).toBeInTheDocument();
-		expect(screen.queryByLabelText(/loading creator profile/i)).not.toBeInTheDocument();
+		expect(screen.getAllByText('100.00 XLM')).not.toHaveLength(0);
+		expect(
+			screen.queryByLabelText(/loading creator profile/i)
+		).not.toBeInTheDocument();
 
 		refetchDeferred.resolve(updatedCreator);
 
-		expect(await screen.findByText('150.00 XLM')).toBeInTheDocument();
-		expect(screen.queryByText('100.00 XLM')).not.toBeInTheDocument();
+		expect(await screen.findAllByText('150.00 XLM')).not.toHaveLength(0);
+		expect(screen.queryAllByText('100.00 XLM')).toHaveLength(0);
 	});
 
 	it('renders a creator-not-found state for a 404 response on the canonical /creator route', async () => {
@@ -215,5 +353,230 @@ describe('CreatorDetailPage Integration', () => {
 		expect(
 			screen.queryByText(/this creator page could not load/i)
 		).not.toBeInTheDocument();
+	});
+
+	it('shows early access only when enabled and gates buys by wallet whitelist', async () => {
+		const walletAddress =
+			'GABCDE1234567890ABCDE1234567890ABCDE1234567890ABCDEF';
+		mockUseAccount.mockReturnValue({ address: walletAddress } as ReturnType<
+			typeof useAccount
+		>);
+		const creator = {
+			id: 'creator-123',
+			title: 'Alex Rivers',
+			description: 'Digital Artist & Illustrator',
+			price: 0.05,
+			priceStroops: 500_000,
+			creatorShareSupply: 100,
+			instructorId: 'arivers',
+			category: 'Art',
+			level: 'BEGINNER' as const,
+			earlyAccessEnabled: true,
+			earlyAccessWhitelist: [
+				'GOTHER1234567890ABCDE1234567890ABCDE1234567890ABCDEF',
+			],
+		};
+		mockGetCourse.mockResolvedValue(creator);
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={['/creator/creator-123']}>
+					<Routes>
+						<Route path="/creator/:id" element={<CreatorDetailPage />} />
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		expect(
+			await screen.findByTestId('early-access-badge')
+		).toBeInTheDocument();
+		const buyButton =
+			screen.queryByTestId('creator-buy-button') ??
+			screen.getByTestId('key-detail-buy-button');
+		expect(buyButton).toBeDisabled();
+		expect(screen.getByRole('tooltip')).toHaveTextContent(
+			'Your wallet is not on the whitelist'
+		);
+
+		act(() => {
+			queryClient.setQueryData(queryKeys.creators.detail('creator-123'), {
+				...creator,
+				earlyAccessWhitelist: [walletAddress.toLowerCase()],
+			});
+		});
+		await waitFor(() => expect(buyButton).toBeEnabled());
+	});
+
+	it('shows the configured public launch date and removes early access badge when disabled', async () => {
+		mockGetCourse.mockResolvedValue({
+			id: 'creator-123',
+			title: 'Alex Rivers',
+			description: 'Digital Artist & Illustrator',
+			price: 0.05,
+			priceStroops: 500_000,
+			creatorShareSupply: 100,
+			instructorId: 'arivers',
+			category: 'Art',
+			level: 'BEGINNER',
+			earlyAccessEnabled: false,
+			publicLaunchDate: '2030-01-01T12:00:00.000Z',
+		});
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={['/creator/creator-123']}>
+					<Routes>
+						<Route path="/creator/:id" element={<CreatorDetailPage />} />
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		expect(await screen.findByText(/public launch:/i)).toBeInTheDocument();
+		expect(
+			screen.queryByTestId('early-access-badge')
+		).not.toBeInTheDocument();
+	});
+
+	it('persists an early access mode change from the creator settings panel', async () => {
+		const user = userEvent.setup();
+		const creator = {
+			id: 'creator-123',
+			title: 'Alex Rivers',
+			description: 'Digital Artist & Illustrator',
+			price: 0.05,
+			priceStroops: 500_000,
+			creatorShareSupply: 100,
+			instructorId: 'arivers',
+			category: 'Art',
+			level: 'BEGINNER' as const,
+			earlyAccessEnabled: false,
+		};
+		mockGetCourse.mockResolvedValue(creator);
+		mockUpdateCourse.mockResolvedValue({
+			...creator,
+			earlyAccessEnabled: true,
+		});
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter
+					initialEntries={['/creators/creator-123/dashboard?tab=settings']}
+				>
+					<Routes>
+						<Route
+							path="/creators/:id/dashboard"
+							element={<CreatorDashboardPage />}
+						/>
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		const toggle = await screen.findByRole('checkbox', {
+			name: 'Enable early access',
+		});
+		await user.click(toggle);
+
+		expect(mockUpdateCourse).toHaveBeenCalledWith('creator-123', {
+			earlyAccessEnabled: true,
+		});
+		expect(
+			await screen.findByText(/only whitelisted wallets can buy/i)
+		).toBeInTheDocument();
+	});
+
+	it('renders mint progress bar and remaining chip when maxSupply is configured', async () => {
+		mockGetCourse.mockResolvedValue({
+			id: 'creator-capped',
+			title: 'Capped Creator',
+			description: 'Has supply cap',
+			price: 0.1,
+			priceStroops: 1_000_000,
+			creatorShareSupply: 150,
+			maxSupply: 300,
+			instructorId: 'capped',
+			category: 'Art',
+			level: 'BEGINNER',
+		});
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={['/creators/creator-capped']}>
+					<Routes>
+						<Route path="/creators/:id" element={<CreatorDetailPage />} />
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		expect(await screen.findByRole('progressbar')).toBeInTheDocument();
+		expect(screen.getByTestId('mint-progress-percentage')).toHaveTextContent('50%');
+		expect(screen.getByTestId('remaining-mintable-chip')).toHaveTextContent('150 keys');
+		expect(screen.getByTestId('buy-key-button')).not.toBeDisabled();
+	});
+
+	it('disables buy button at cap and displays MaxSupplyReached message on key detail', async () => {
+		mockGetCourse.mockResolvedValue({
+			id: 'creator-maxed',
+			title: 'Maxed Creator',
+			description: 'Has hit supply cap',
+			price: 0.1,
+			priceStroops: 1_000_000,
+			creatorShareSupply: 250,
+			maxSupply: 250,
+			instructorId: 'maxed',
+			category: 'Art',
+			level: 'BEGINNER',
+		});
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={['/creators/creator-maxed']}>
+					<Routes>
+						<Route path="/creators/:id" element={<CreatorDetailPage />} />
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		expect(await screen.findByRole('progressbar')).toBeInTheDocument();
+		expect(screen.getByTestId('mint-progress-percentage')).toHaveTextContent('100%');
+		expect(screen.getByTestId('remaining-mintable-chip')).toHaveTextContent('0 keys');
+		expect(screen.getByTestId('buy-key-button')).toBeDisabled();
+		expect(screen.getByTestId('max-supply-message')).toHaveTextContent(
+			/maximum supply reached/i
+		);
+	});
+
+	it('hides progress bar and remaining chip when key has no maxSupply configured', async () => {
+		mockGetCourse.mockResolvedValue({
+			id: 'creator-uncapped',
+			title: 'Uncapped Creator',
+			description: 'No supply cap',
+			price: 0.1,
+			priceStroops: 1_000_000,
+			creatorShareSupply: 100,
+			maxSupply: null,
+			instructorId: 'uncapped',
+			category: 'Art',
+			level: 'BEGINNER',
+		});
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={['/creators/creator-uncapped']}>
+					<Routes>
+						<Route path="/creators/:id" element={<CreatorDetailPage />} />
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		expect(await screen.findByText('Uncapped Creator Profile')).toBeInTheDocument();
+		expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+		expect(screen.queryByTestId('remaining-mintable-chip')).not.toBeInTheDocument();
+		expect(screen.getByTestId('buy-key-button')).not.toBeDisabled();
 	});
 });

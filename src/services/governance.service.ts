@@ -84,10 +84,6 @@ class GovernanceService extends BaseApiService {
 		}
 	}
 
-	/**
-	 * Create a governance proposal for a creator.
-	 * POST /governance/proposals { creatorId, title, description, endDate }
-	 */
 	async createProposal(
 		creatorId: string,
 		payload: CreateProposalPayload
@@ -108,9 +104,7 @@ class GovernanceService extends BaseApiService {
 				? responseData[0]
 				: envelope.proposal ??
 					envelope.data ??
-					(Array.isArray(envelope.items)
-						? envelope.items[0]
-						: undefined) ??
+					(Array.isArray(envelope.items) ? envelope.items[0] : undefined) ??
 					responseData;
 			const proposal = normalizeProposal(rawProposal);
 			this.invalidateProposalListCache(creatorId);

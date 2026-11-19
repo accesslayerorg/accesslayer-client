@@ -1,0 +1,737 @@
+import { useMemo } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router';
+import { useAccount } from 'wagmi';
+import { useCreatorDetail } from '@/hooks/useCreators';
+import { useWalletHoldings } from '@/hooks/useWallet';
+import { useCreatorPrices } from '@/hooks/useCreatorPrices';
+import { CreatorDashboardSkeleton } from '@/components/common/CreatorSkeleton';
+import { ProfileTabPillGroup } from '@/components/common/ProfileTabPill';
+import CreatorMetadataForm from '@/components/common/CreatorMetadataForm';
+import AuctionSetupPanel from '@/components/common/AuctionSetupPanel';
+import LaunchPenaltyPanel from '@/components/common/LaunchPenaltyPanel';
+import MaxBuyQuantityPanel from '@/components/common/MaxBuyQuantityPanel';
+import QuorumSettingsPanel from '@/components/common/QuorumSettingsPanel';
+import ContentGatePanel from '@/components/common/ContentGatePanel';
+import GraduatedCurvePanel from '@/components/common/GraduatedCurvePanel';
+import BuyCooldownPanel from '@/components/common/BuyCooldownPanel';
+import DeprecateKeyPanel from '@/components/common/DeprecateKeyPanel';
+import VestingSchedulePanel from '@/components/common/VestingSchedulePanel';
+import CurveMigrationPanel from '@/components/common/CurveMigrationPanel';
+import WhitelistManagementPanel from '@/components/common/WhitelistManagementPanel';
+import { AlertTriangle } from 'lucide-react';
+import {
+	useCancelAuctionMutation,
+	useConfigureAuctionMutation,
+	useUpdateMetadataMutation,
+	useSetLaunchPenaltyMutation,
+	useSetMaxBuyQuantityMutation,
+	useSetQuorumBpsMutation,
+	useConfigureGraduatedCurveMutation,
+	useSetBuyCooldownMutation,
+	useDeprecateKeyMutation,
+	useClaimVestedTokensMutation,
+	useExecuteCurveMigrationMutation,
+} from '@/hooks/useCreatorContractActions';
+import { useKeyVesting, useKeyVestingClaims } from '@/hooks/useKeyVesting';
+import { useCurveMigrations } from '@/hooks/useCurveMigrations';
+import { useCreatorWhitelist } from '@/hooks/useCreatorWhitelist';
+import { isOwnWallet } from '@/utils/isOwnWallet';
+import {
+	formatDisplayKeyPrice,
+	resolveCreatorKeyPriceStroops,
+} from '@/utils/keyPriceDisplay.utils';
+import { formatNumber } from '@/utils/numberFormat.utils';
+import { useUpdateCreatorProfile } from '@/hooks/useUpdateCreatorProfile';
+
+import { GraduatedCurveMilestoneChart } from '@/components/common/GraduatedCurveMilestoneChart';
+import CreatorRevenuePanel from '@/components/common/CreatorRevenuePanel';
+import DistributeRevenuePanel from '@/components/common/DistributeRevenuePanel';
+import CreatorAnnouncementsPanel from '@/components/common/CreatorAnnouncementsPanel';
+import VestingSchedulesViewer from '@/components/creator/VestingSchedulesViewer';
+import KeyFeeHistoryChart from '@/components/common/KeyFeeHistoryChart';
+
+const TABS = [
+	{ label: 'Overview', value: 'overview' },
+	{ label: 'Revenue', value: 'revenue' },
+	{ label: 'Settings', value: 'settings' },
+	{ label: 'Governance', value: 'governance' },
+];
+
+const CARD_CLASS =
+	'rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8';
+
+export default function CreatorDashboardPage() {
+	const { id = '' } = useParams<{ id: string }>();
+	const [searchParams, setSearchParams] = useSearchParams();
+	const { address } = useAccount();
+
+	const { data: creator, isLoading, isError } = useCreatorDetail(id);
+
+	const requestedTab = searchParams.get('tab');
+	const activeTab =
+		requestedTab === 'whitelist'
+			? 'settings'
+			: TABS.some(t => t.value === requestedTab)
+				? (requestedTab as string)
+				: 'overview';
+
+	const metadataMutation = useUpdateMetadataMutation(id);
+	const configureAuction = useConfigureAuctionMutation(id);
+	const cancelAuction = useCancelAuctionMutation(id);
+	const setLaunchPenalty = useSetLaunchPenaltyMutation(id);
+	const setMaxBuyQuantity = useSetMaxBuyQuantityMutation(id);
+	const setQuorumBps = useSetQuorumBpsMutation(id);
+	const configureGraduatedCurve = useConfigureGraduatedCurveMutation(id);
+	const setBuyCooldown = useSetBuyCooldownMutation(id);
+	const deprecateKey = useDeprecateKeyMutation(id);
+	const updateCreatorProfile = useUpdateCreatorProfile();
+
+	const {
+		entries: whitelistEntries,
+		isWhitelistEnabled,
+		addAddresses: addWhitelistAddresses,
+		removeAddress: removeWhitelistAddress,
+		disableWhitelist,
+		setWhitelistMode,
+		isAdding: isAddingWhitelist,
+		isRemoving: isRemovingWhitelist,
+		isDisabling: isDisablingWhitelist,
+	} = useCreatorWhitelist(id, creator);
+
+	// The vesting schedule is only meaningful to the wallet the allocation is
+	// registered to (#960), so both queries stay disabled for everyone else.
+	const isKeyCreator = isOwnWallet(address, creator?.instructorId);
+	const {
+		data: vestingData,
+		vesting,
+		isLoading: isVestingLoading,
+		isError: isVestingError,
+	} = useKeyVesting(isKeyCreator ? id : undefined, address);
+
+	const { data: vestingClaims = [] } = useKeyVestingClaims(
+		isKeyCreator ? id : undefined,
+		address
+	);
+
+	const claimVestedTokens = useClaimVestedTokensMutation(id, address ?? '');
+
+	// Keys to check for the wallet's vesting allocations (#1117): the key this
+	// dashboard belongs to plus every key the wallet currently holds, so the
+	// viewer can list all active schedules in one place.
+	const { data: walletHoldings = [] } = useWalletHoldings(address ?? '');
+	const { data: allCreators = [] } = useCreatorPrices();
+
+	const viewerKeyIds = useMemo(() => {
+		const ids = new Set<string>();
+		if (id) ids.add(id);
+		for (const holding of walletHoldings) {
+			if (holding.creatorId) ids.add(holding.creatorId);
+		}
+		return [...ids];
+	}, [id, walletHoldings]);
+
+	const viewerKeyNames = useMemo(() => {
+		const map: Record<string, string | undefined> = {};
+		if (id) map[id] = creator?.title;
+		for (const candidate of allCreators) {
+			map[candidate.id] = candidate.title;
+		}
+		return map;
+	}, [id, creator, allCreators]);
+
+	// Curve migrations change the pricing every holder buys at, so the panel is
+	// creator-only for the same reason the vesting schedule is: the query stays
+	// disabled and nothing is rendered for anyone but the key's creator.
+	const {
+		data: curveMigrations = [],
+		isLoading: isCurveMigrationsLoading,
+		isError: isCurveMigrationsError,
+	} = useCurveMigrations(isKeyCreator ? id : undefined);
+
+	const executeCurveMigration = useExecuteCurveMigrationMutation(id);
+
+	const setTab = (value: string) => {
+		setSearchParams(
+			prev => {
+				const next = new URLSearchParams(prev);
+				next.set('tab', value);
+				return next;
+			},
+			{ replace: true }
+		);
+	};
+
+	if (isLoading) {
+		return (
+			<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
+				<div className="mx-auto max-w-5xl">
+					<CreatorDashboardSkeleton />
+				</div>
+			</main>
+		);
+	}
+
+	if (isError || !creator) {
+		return (
+			<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
+				<div className="mx-auto max-w-5xl">
+					<h1 className="font-grotesque text-3xl font-black">
+						Creator dashboard
+					</h1>
+					<p
+						className="mt-4 text-white/60"
+						data-testid="creator-dashboard-error"
+					>
+						We couldn&apos;t load this creator&apos;s dashboard. Try again
+						shortly.
+					</p>
+				</div>
+			</main>
+		);
+	}
+
+	return (
+		<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
+			<div className="mx-auto max-w-5xl space-y-8">
+				<div>
+					<h1 className="font-grotesque text-3xl font-black tracking-tight">
+						{creator.title} · Creator dashboard
+					</h1>
+					<p className="mt-2 text-sm text-white/50">
+						Manage your key profile and auction configuration.
+					</p>
+
+					<div className="mt-4 flex flex-wrap items-center gap-4">
+						<Link
+							to={`/creator/${id}/bundles`}
+							className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-300 underline-offset-4 hover:text-amber-200 hover:underline"
+							data-testid="creator-dashboard-bundles-link"
+						>
+							Manage key bundles
+						</Link>
+
+						<Link
+							to={`/creator/${id}/revenue`}
+							className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-400 underline-offset-4 hover:text-emerald-300 hover:underline"
+							data-testid="creator-dashboard-revenue-link"
+						>
+							Revenue & withdrawals
+						</Link>
+
+						<Link
+							to={`/creator/${id}/spotlight`}
+							className="inline-flex items-center gap-1.5 text-sm font-semibold text-sky-300 underline-offset-4 hover:text-sky-200 hover:underline"
+							data-testid="creator-dashboard-spotlight-link"
+						>
+							Spotlight auction
+						</Link>
+					</div>
+				</div>
+
+				{creator.deprecated && (
+					<div
+						className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 text-white"
+						data-testid="key-deprecated-banner"
+					>
+						<div className="flex items-center gap-3">
+							<AlertTriangle className="size-6 shrink-0 text-amber-400" />
+
+							<div>
+								<h2 className="font-grotesque text-xl font-bold text-amber-300">
+									Key deprecated
+								</h2>
+
+								<p className="mt-1 text-sm text-white/70">
+									This key has been deprecated. All new buys are
+									disabled and holders can redeem their keys for
+									escrowed buyback value.
+								</p>
+							</div>
+						</div>
+					</div>
+				)}
+
+				<ProfileTabPillGroup
+					tabs={TABS}
+					activeTab={activeTab}
+					onTabChange={setTab}
+				/>
+
+				{activeTab === 'overview' && (
+					<div className="space-y-8">
+						<section
+							className={CARD_CLASS}
+							id="profile-panel-overview"
+							role="tabpanel"
+							aria-labelledby="profile-tab-overview"
+							data-testid="dashboard-overview-panel"
+						>
+							<h2 className="mb-4 font-grotesque text-xl font-black tracking-tight">
+								Overview
+							</h2>
+
+							<dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+								<div>
+									<dt className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-white/40">
+										Current price
+									</dt>
+
+									<dd className="mt-1 font-jakarta font-bold">
+										{formatDisplayKeyPrice(
+											resolveCreatorKeyPriceStroops(creator)
+										)}
+									</dd>
+								</div>
+
+								<div>
+									<dt className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-white/40">
+										Key supply
+									</dt>
+
+									<dd className="mt-1 font-jakarta font-bold">
+										{formatNumber(creator.creatorShareSupply ?? 100)}
+									</dd>
+								</div>
+
+								<div>
+									<dt className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-white/40">
+										Category
+									</dt>
+
+									<dd className="mt-1 font-jakarta font-bold">
+										{creator.category}
+									</dd>
+								</div>
+							</dl>
+						</section>
+
+						<GraduatedCurveMilestoneChart
+							keyId={id}
+							currentSupply={creator.creatorShareSupply ?? 100}
+						/>
+					</div>
+				)}
+
+				{activeTab === 'overview' && (
+					<KeyFeeHistoryChart keyId={id} />
+				)}
+
+				{activeTab === 'overview' && (
+					<section
+						className={CARD_CLASS}
+						aria-labelledby="dashboard-announcements-heading"
+						data-testid="dashboard-announcements-section"
+					>
+						<h2
+							id="dashboard-announcements-heading"
+							className="mb-1 font-grotesque text-xl font-black tracking-tight"
+						>
+							Announcements
+						</h2>
+						<p className="mb-6 text-sm text-white/50">
+							Post updates to your key holders.
+						</p>
+						<CreatorAnnouncementsPanel creatorId={id} />
+					</section>
+				)}
+
+				{activeTab === 'revenue' && (
+					<div
+						className="space-y-8"
+						id="profile-panel-revenue"
+						role="tabpanel"
+						aria-labelledby="profile-tab-revenue"
+						data-testid="dashboard-revenue-panel"
+					>
+						<CreatorRevenuePanel creatorId={id} wallet={address} />
+
+						{/* Revenue distribution to key holders — creator wallets only */}
+						{isKeyCreator && (
+							<DistributeRevenuePanel
+								creatorId={id}
+								wallet={address}
+							/>
+						)}
+					</div>
+				)}
+
+				{activeTab === 'settings' && (
+					<div
+						className="space-y-8"
+						id="profile-panel-settings"
+						role="tabpanel"
+						aria-labelledby="profile-tab-settings"
+						data-testid="dashboard-settings-panel"
+					>
+						<section
+							className={CARD_CLASS}
+							data-testid="edit-profile-section"
+						>
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Edit Profile
+							</h2>
+
+							<p className="mb-6 text-sm text-white/50">
+								Update the display name, bio and avatar stored with your
+								key.
+							</p>
+
+							<CreatorMetadataForm
+								initialName={creator.name ?? creator.title ?? ''}
+								initialBio={creator.bio ?? creator.description ?? ''}
+								initialAvatarUri={
+									creator.avatarUri ?? creator.thumbnail ?? ''
+								}
+								isSubmitting={metadataMutation.isPending}
+								onSubmit={change => metadataMutation.mutate(change)}
+							/>
+						</section>
+
+						<section
+							className={CARD_CLASS}
+							data-testid="early-access-section"
+						>
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Early access
+							</h2>
+
+							<p className="mb-5 text-sm text-white/50">
+								Limit purchases to whitelisted wallets until public
+								launch.
+							</p>
+
+							<label className="flex max-w-md items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3">
+								<span>
+									<span className="block text-sm font-semibold text-white">
+										Enable early access
+									</span>
+
+									<span className="mt-1 block text-xs text-white/50">
+										{creator.earlyAccessEnabled
+											? 'Only whitelisted wallets can buy during early access.'
+											: 'All connected wallets can buy this key.'}
+									</span>
+								</span>
+
+								<input
+									type="checkbox"
+									checked={creator.earlyAccessEnabled ?? false}
+									disabled={updateCreatorProfile.isPending}
+									aria-label="Enable early access"
+									className="size-5 shrink-0 accent-amber-400"
+									onChange={event =>
+										updateCreatorProfile.mutate({
+											creatorId: id,
+											data: {
+												earlyAccessEnabled:
+													event.currentTarget.checked,
+											},
+										})
+									}
+								/>
+							</label>
+
+							{creator.publicLaunchDate && (
+								<p className="mt-4 text-xs text-white/55">
+									Public launch:{' '}
+									<time dateTime={creator.publicLaunchDate}>
+										{new Date(
+											creator.publicLaunchDate
+										).toLocaleString()}
+									</time>
+								</p>
+							)}
+						</section>
+
+						<section
+							className={CARD_CLASS}
+							data-testid="auction-setup-section"
+						>
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Auction Setup
+							</h2>
+
+							<p className="mb-6 text-sm text-white/50">
+								Set a fixed auction price and supply allocation before
+								your key goes live.
+							</p>
+
+							<AuctionSetupPanel
+								auctionPrice={creator.auctionPrice}
+								auctionSupply={creator.auctionSupply}
+								auctionSold={creator.auctionSold}
+								isSubmitting={
+									configureAuction.isPending || cancelAuction.isPending
+								}
+								onConfigure={input => configureAuction.mutate(input)}
+								onCancel={() => cancelAuction.mutate()}
+							/>
+						</section>
+
+						{isKeyCreator && (
+							<section
+								className={CARD_CLASS}
+								data-testid="whitelist-section"
+							>
+								<WhitelistManagementPanel
+									creatorId={id}
+									ownerAddress={creator.instructorId}
+									connectedAddress={address}
+									isWhitelistEnabled={isWhitelistEnabled}
+									whitelist={whitelistEntries}
+									onAddAddresses={addWhitelistAddresses}
+									onRemoveAddress={removeWhitelistAddress}
+									onDisableWhitelist={disableWhitelist}
+									onSetWhitelistMode={setWhitelistMode}
+									isSubmitting={
+										isAddingWhitelist ||
+										isRemovingWhitelist ||
+										isDisablingWhitelist
+									}
+								/>
+							</section>
+						)}
+
+						<section
+							className={CARD_CLASS}
+							data-testid="launch-penalty-section"
+						>
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Launch Penalty
+							</h2>
+
+							<p className="mb-6 text-sm text-white/50">
+								Charge early sellers a percentage fee during the first 7
+								days after key creation.
+							</p>
+
+							<LaunchPenaltyPanel
+								launchPenaltyBps={creator.launchPenaltyBps}
+								isSubmitting={setLaunchPenalty.isPending}
+								onSubmit={penaltyBps =>
+									setLaunchPenalty.mutate(penaltyBps)
+								}
+							/>
+						</section>
+
+						<section
+							className={CARD_CLASS}
+							data-testid="buy-cooldown-section"
+						>
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Buy Cooldown
+							</h2>
+
+							<p className="mb-6 text-sm text-white/50">
+								Set a delay in minutes between consecutive buys from the
+								same wallet.
+							</p>
+
+							<BuyCooldownPanel
+								buyCooldownLedgers={creator.buyCooldownLedgers}
+								isSubmitting={setBuyCooldown.isPending}
+								onSubmit={cooldownLedgers =>
+									setBuyCooldown.mutate(cooldownLedgers)
+								}
+							/>
+						</section>
+
+						<section
+							className={CARD_CLASS}
+							data-testid="max-buy-quantity-section"
+						>
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Max Buy Per Transaction
+							</h2>
+
+							<p className="mb-6 text-sm text-white/50">
+								Limit how many keys a wallet can buy in a single
+								transaction.
+							</p>
+
+							<MaxBuyQuantityPanel
+								maxBuyQuantity={creator.maxBuyQuantity}
+								isSubmitting={setMaxBuyQuantity.isPending}
+								onSubmit={value => setMaxBuyQuantity.mutate(value)}
+							/>
+						</section>
+
+						<section
+							className={CARD_CLASS}
+							data-testid="content-gate-section"
+						>
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Content Gate
+							</h2>
+
+							<p className="mb-6 text-sm text-white/50">
+								Choose who can view the gated content attached to this key.
+							</p>
+
+							<ContentGatePanel creatorId={id} wallet={address} />
+						</section>
+
+						<section
+							className={CARD_CLASS}
+							data-testid="graduated-curve-section"
+						>
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Graduated Curve
+							</h2>
+
+							<p className="mb-6 text-sm text-white/50">
+								Configure up to five supply milestones and the exponent
+								applied to each tier.
+							</p>
+
+							<GraduatedCurvePanel
+								isSubmitting={configureGraduatedCurve.isPending}
+								onSubmit={milestones =>
+									configureGraduatedCurve.mutate(milestones)
+								}
+							/>
+						</section>
+
+						<section
+							className={CARD_CLASS}
+							data-testid="deprecate-key-section"
+						>
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Deprecate Key
+							</h2>
+
+							<p className="mb-6 text-sm text-white/50">
+								Initiate a key wind-down by setting a buyback price and
+								escrowing the required XLM.
+							</p>
+
+							<DeprecateKeyPanel
+								creatorId={id}
+								circulatingSupply={creator.creatorShareSupply ?? 100}
+								isDeprecated={creator.deprecated}
+								isSubmitting={deprecateKey.isPending}
+								onSubmit={params => deprecateKey.mutate(params)}
+							/>
+						</section>
+
+						{/* Creator allocation vesting (#960) — creator wallets only */}
+						{isKeyCreator && (
+							<section
+								className={CARD_CLASS}
+								data-testid="vesting-section"
+							>
+								<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+									Vesting Schedule
+								</h2>
+
+								<p className="mb-6 text-sm text-white/50">
+									Track the creator allocation reserved for your
+									wallet, and claim the tokens that have vested.
+								</p>
+
+								<VestingSchedulePanel
+									schedule={vesting}
+									cliffAt={vestingData?.cliffAt}
+									endAt={vestingData?.endAt}
+									claims={vestingClaims}
+									isLoading={isVestingLoading}
+									isError={isVestingError}
+									isClaiming={claimVestedTokens.isPending}
+									onClaim={() =>
+										claimVestedTokens.mutate(vesting.claimableAmount)
+									}
+								/>
+							</section>
+						)}
+
+						{/* Multi-key vesting schedules viewer (#1117) — creator wallets only */}
+						{isKeyCreator && (
+							<section
+								className={CARD_CLASS}
+								data-testid="vesting-schedules-viewer-section"
+							>
+								<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+									Vesting Schedules
+								</h2>
+
+								<p className="mb-6 text-sm text-white/50">
+									Every vesting allocation registered to this wallet
+									across your keys, with claimable amounts and the next
+									unlock countdown.
+								</p>
+
+								<VestingSchedulesViewer
+									wallet={address ?? ''}
+									keyIds={viewerKeyIds}
+									keyNames={viewerKeyNames}
+								/>
+							</section>
+						)}
+					</div>
+				)}
+
+				{activeTab === 'governance' && (
+					<div
+						className="space-y-8"
+						id="profile-panel-governance"
+						role="tabpanel"
+						aria-labelledby="profile-tab-governance"
+						data-testid="dashboard-governance-panel"
+					>
+						<section
+							className={CARD_CLASS}
+							data-testid="quorum-settings-section"
+						>
+							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+								Quorum Settings
+							</h2>
+
+							<p className="mb-6 text-sm text-white/50">
+								Set the minimum percentage of holders that must
+								participate in a vote for a proposal to pass.
+							</p>
+
+							<QuorumSettingsPanel
+								quorumBps={creator.quorumBps}
+								isSubmitting={setQuorumBps.isPending}
+								onSubmit={quorumBps => setQuorumBps.mutate(quorumBps)}
+							/>
+						</section>
+
+						{/* Curve migration management — creator wallets only */}
+						{isKeyCreator && (
+							<section
+								className={CARD_CLASS}
+								data-testid="curve-migration-section"
+							>
+								<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">
+									Curve Migrations
+								</h2>
+
+								<p className="mb-6 text-sm text-white/50">
+									Review pending bonding-curve changes, follow the
+									timelock and holder vote, then execute a migration
+									once both conditions are met.
+								</p>
+
+								<CurveMigrationPanel
+									migrations={curveMigrations}
+									isLoading={isCurveMigrationsLoading}
+									isError={isCurveMigrationsError}
+									executingMigrationId={
+										executeCurveMigration.isPending
+											? (executeCurveMigration.variables ?? null)
+											: null
+									}
+									onExecute={migrationId =>
+										executeCurveMigration.mutate(migrationId)
+									}
+								/>
+							</section>
+						)}
+					</div>
+				)}
+			</div>
+		</main>
+	);
+}

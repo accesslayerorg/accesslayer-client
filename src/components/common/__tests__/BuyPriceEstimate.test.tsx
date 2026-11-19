@@ -38,17 +38,55 @@ describe('BuyPriceEstimate', () => {
 		expect(screen.getByTestId('buy-price-estimate-buy-button')).toBeInTheDocument();
 	});
 
-	it('displays 0 XLM and no buy button for quantity 0', () => {
-		render(<BuyPriceEstimate currentSupply={0} quantity={0} />);
+	it.each([0, -1])(
+		'shows an invalid quantity error and disables confirm for quantity %s',
+		quantity => {
+		render(<BuyPriceEstimate currentSupply={0} quantity={quantity} />);
 
 		act(() => {
 			vi.runAllTimers();
 		});
 
-		expect(screen.getByTestId('buy-price-total')).toHaveTextContent('0 XLM');
-		expect(
-			screen.queryByTestId('buy-price-estimate-buy-button')
-		).not.toBeInTheDocument();
+		expect(screen.getByTestId('buy-price-invalid-quantity')).toHaveTextContent(
+			'Enter a valid quantity'
+		);
+		expect(screen.queryByTestId('buy-price-total')).not.toBeInTheDocument();
+		expect(screen.getByTestId('buy-price-estimate-buy-button')).toBeDisabled();
+		}
+	);
+
+	it('displays the base price at supply 0', () => {
+		render(<BuyPriceEstimate currentSupply={0} quantity={1} />);
+
+		act(() => {
+			vi.runAllTimers();
+		});
+
+		const expectedCostStroops = bondingCurveUtils.computeBuyCost(
+			0,
+			1,
+			bondingCurveUtils.DEFAULT_BONDING_CURVE_PARAMS
+		);
+		expect(screen.getByTestId('buy-price-total')).toHaveTextContent(
+			formatDisplayKeyPrice(expectedCostStroops)
+		);
+	});
+
+	it('displays the curve step-up at supply 10', () => {
+		render(<BuyPriceEstimate currentSupply={10} quantity={1} />);
+
+		act(() => {
+			vi.runAllTimers();
+		});
+
+		const expectedCostStroops = bondingCurveUtils.computeBuyCost(
+			10,
+			1,
+			bondingCurveUtils.DEFAULT_BONDING_CURVE_PARAMS
+		);
+		expect(screen.getByTestId('buy-price-total')).toHaveTextContent(
+			formatDisplayKeyPrice(expectedCostStroops)
+		);
 	});
 
 	it('displays a higher total price for a large quantity than for quantity 1', () => {

@@ -23,3 +23,13 @@ describe('MarketingPage community links', () => {
 		expect(telegramLink).toHaveAttribute('rel', 'noopener noreferrer');
 	});
 });
+
+it('keeps both community links external in the same render', () => {
+		render(<MarketingPage />);
+
+		for (const name of [/github/i, /telegram/i]) {
+			const link = screen.getByRole('link', { name });
+			expect(link).toHaveAttribute('target', '_blank');
+			expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+		}
+	});

@@ -81,3 +81,76 @@ describe('KeyHolderList', () => {
 		expect(screen.getByLabelText('Rank 1')).toBeInTheDocument();
 	});
 });
+
+function stakedHolder(
+	id: string,
+	displayName: string,
+	keyCount: number,
+	stakedQuantity: number
+): KeyHolder {
+	return { id, displayName, keyCount, stakedQuantity };
+}
+
+describe('KeyHolderList staking columns (#814)', () => {
+	it('renders Staked and Liquid values per holder', () => {
+		render(
+			<KeyHolderList holders={[stakedHolder('a', 'Alice', 20, 8)]} />
+		);
+
+		expect(screen.getByTestId('key-holder-staked')).toHaveTextContent('8');
+		expect(screen.getByTestId('key-holder-liquid')).toHaveTextContent('12');
+		expect(screen.getByTestId('key-holder-key-count')).toHaveTextContent('20');
+	});
+
+	it('shows a staking badge only on rows with stakedQuantity greater than zero', () => {
+		render(
+			<KeyHolderList
+				holders={[
+					stakedHolder('a', 'Staker', 20, 8),
+					stakedHolder('b', 'Plain', 15, 0),
+				]}
+			/>
+		);
+
+		const badges = screen.getAllByTestId('key-holder-staking-badge');
+		expect(badges).toHaveLength(1);
+
+		const rows = screen.getAllByTestId('key-holder-row');
+		const stakerRow = rows.find(r => within(r).queryByText('Staker'))!;
+		const plainRow = rows.find(r => within(r).queryByText('Plain'))!;
+		expect(within(stakerRow).getByTestId('key-holder-staking-badge')).toBeInTheDocument();
+		expect(within(plainRow).queryByTestId('key-holder-staking-badge')).not.toBeInTheDocument();
+	});
+
+	it('renders 0 for a holder with no staked keys and no badge', () => {
+		render(<KeyHolderList holders={[stakedHolder('a', 'Alice', 10, 0)]} />);
+
+		expect(screen.getByTestId('key-holder-staked')).toHaveTextContent('0');
+		expect(screen.getByTestId('key-holder-liquid')).toHaveTextContent('10');
+		expect(screen.queryByTestId('key-holder-staking-badge')).not.toBeInTheDocument();
+	});
+
+	it('treats holders without a stakedQuantity field as fully liquid', () => {
+		render(<KeyHolderList holders={[holder('a', 'Alice', 10)]} />);
+
+		expect(screen.getByTestId('key-holder-staked')).toHaveTextContent('0');
+		expect(screen.getByTestId('key-holder-liquid')).toHaveTextContent('10');
+	});
+
+	it('orders rows by total quantity descending regardless of staked split', () => {
+		render(
+			<KeyHolderList
+				holders={[
+					stakedHolder('a', 'Alice', 10, 0),
+					stakedHolder('b', 'Bob', 30, 30),
+					stakedHolder('c', 'Cara', 20, 5),
+				]}
+			/>
+		);
+
+		const rows = screen.getAllByTestId('key-holder-row');
+		expect(
+			rows.map(row => within(row).getByText(/^(Alice|Bob|Cara)$/).textContent)
+		).toEqual(['Bob', 'Cara', 'Alice']);
+	});
+});

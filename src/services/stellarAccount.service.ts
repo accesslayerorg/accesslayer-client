@@ -1,5 +1,12 @@
+import { rpc, type xdr } from '@stellar/stellar-sdk';
+import { env } from '@/utils/env.utils';
+
 /**
  * Spendable native XLM balance for a Stellar account (#1030).
+ *
+ * Read straight from the account ledger entry over Soroban RPC (the same
+ * `VITE_STELLAR_RPC_URL` the contract services use), so the add-liquidity
+ * modal validates against the chain rather than a cached API figure.
  *
  * "Spendable" follows Stellar's reserve rules: the account must keep
  * `(2 + subentries + sponsoring - sponsored) * baseReserve` and cannot spend
@@ -17,30 +24,6 @@ export interface NativeAccountBalanceFields {
 	sellingLiabilitiesStroops: bigint;
 }
 
-interface AccountEntryLike {
-	balance: bigint;
-	numSubEntries: number;
-	ext?: {
-		type?: string;
-		v1?: {
-			liabilities?: { selling?: bigint };
-			ext?: {
-				type?: string;
-				v2?: { numSponsoring?: number; numSponsored?: number };
-			};
-		};
-	};
-}
-
-function toBigInt(value: unknown): bigint {
-	if (typeof value === 'bigint') return value;
-	if (typeof value === 'number' && Number.isSafeInteger(value)) {
-		return BigInt(value);
-	}
-	if (typeof value === 'string' && /^-?\d+$/.test(value)) return BigInt(value);
-	return 0n;
-}
-
 /** Pure reserve math; see the file header for the rule. Never negative. */
 export function computeSpendableNativeStroops(
 	fields: NativeAccountBalanceFields,
@@ -55,25 +38,25 @@ export function computeSpendableNativeStroops(
 	return spendable > 0n ? spendable : 0n;
 }
 
-/** Extracts the reserve-relevant fields from an account ledger entry. */
+/** Extracts the reserve-relevant fields from an `AccountEntry` XDR. */
 export function readNativeAccountBalanceFields(
-	entry: AccountEntryLike
+	entry: xdr.AccountEntry
 ): NativeAccountBalanceFields {
 	let sellingLiabilitiesStroops = 0n;
 	let numSponsoring = 0;
 	let numSponsored = 0;
 
-	if (entry.ext?.type === 'v1' && entry.ext.v1) {
+	if (entry.ext.type === 'v1') {
 		const v1 = entry.ext.v1;
-		sellingLiabilitiesStroops = toBigInt(v1.liabilities?.selling);
-		if (v1.ext?.type === 'v2' && v1.ext.v2) {
-			numSponsoring = v1.ext.v2.numSponsoring ?? 0;
-			numSponsored = v1.ext.v2.numSponsored ?? 0;
+		sellingLiabilitiesStroops = v1.liabilities.selling;
+		if (v1.ext.type === 'v2') {
+			numSponsoring = v1.ext.v2.numSponsoring;
+			numSponsored = v1.ext.v2.numSponsored;
 		}
 	}
 
 	return {
-		balanceStroops: toBigInt(entry.balance),
+		balanceStroops: entry.balance,
 		numSubEntries: entry.numSubEntries,
 		numSponsoring,
 		numSponsored,
@@ -81,10 +64,13 @@ export function readNativeAccountBalanceFields(
 	};
 }
 
-export type AccountEntryReader = (address: string) => Promise<AccountEntryLike>;
+export type AccountEntryReader = (address: string) => Promise<xdr.AccountEntry>;
 
-const defaultReader: AccountEntryReader = async () => {
-	throw new Error('Account entry reader is not configured.');
+const defaultReader: AccountEntryReader = async address => {
+	if (!env.VITE_STELLAR_RPC_URL) {
+		throw new Error('VITE_STELLAR_RPC_URL is required to read balances.');
+	}
+	return new rpc.Server(env.VITE_STELLAR_RPC_URL).getAccountEntry(address);
 };
 
 export class StellarAccountService {
@@ -95,10 +81,12 @@ export class StellarAccountService {
 	}
 
 	/**
-	 * Spendable XLM in stroops. An unfunded account resolves to `0n`.
+	 * Spendable XLM in stroops. An account that doesn't exist on-chain yet
+	 * (unfunded) has nothing to spend, so it resolves to `0n` rather than an
+	 * error.
 	 */
 	async getSpendableXlmStroops(address: string): Promise<bigint> {
-		let entry: AccountEntryLike;
+		let entry: xdr.AccountEntry;
 		try {
 			entry = await this.readAccountEntry(address);
 		} catch (error) {

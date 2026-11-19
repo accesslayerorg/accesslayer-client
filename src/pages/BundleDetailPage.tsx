@@ -14,53 +14,53 @@ import type { BuyMarketplaceBundleResult } from '@/types/bundles';
  * the panel renders the message inline and the button stays clickable.
  */
 const BundleDetailPage: React.FC = () => {
-	const { id } = useParams<{ id: string }>();
-	const { data: bundle, isLoading } = useMarketplaceBundle(id);
-	const buyMutation = useBuyMarketplaceBundle();
-	const [purchase, setPurchase] = useState<BuyMarketplaceBundleResult | null>(null);
+    const { id } = useParams<{ id: string }>();
+    const { data: bundle, isLoading } = useMarketplaceBundle(id);
+    const buyMutation = useBuyMarketplaceBundle();
+    const [purchase, setPurchase] = useState<BuyMarketplaceBundleResult | null>(null);
 
-	if (isLoading) {
-		return (
-			<main className="mx-auto max-w-3xl px-4 py-8">
-				<p className="text-sm text-muted-foreground">Loading bundle…</p>
-			</main>
-		);
-	}
+    if (isLoading) {
+        return (
+            <main className="mx-auto max-w-3xl px-4 py-8">
+                <p className="text-sm text-muted-foreground">Loading bundle…</p>
+            </main>
+        );
+    }
 
-	if (!bundle) {
-		return (
-			<main className="mx-auto max-w-3xl px-4 py-8">
-				<EmptyState
-					title="Bundle not found"
-					description="The bundle you are looking for does not exist or was removed."
-				/>
-			</main>
-		);
-	}
+    if (!bundle) {
+        return (
+            <main className="mx-auto max-w-3xl px-4 py-8">
+                <EmptyState
+                    title="Bundle not found"
+                    description="The bundle you are looking for does not exist or was removed."
+                />
+            </main>
+        );
+    }
 
-	if (purchase) {
-		return (
-			<main className="mx-auto max-w-3xl px-4 py-8">
-				<BundleSuccessState result={purchase} />
-			</main>
-		);
-	}
+    if (purchase) {
+        return (
+            <main className="mx-auto max-w-3xl px-4 py-8">
+                <BundleSuccessState result={purchase} />
+            </main>
+        );
+    }
 
-	return (
-		<main className="mx-auto max-w-3xl px-4 py-8">
-			<BundleDetailPanel
-				bundle={bundle}
-				isBuying={buyMutation.isPending}
-				buyError={buyMutation.error?.message ?? null}
-				onBuy={() => {
-					buyMutation.mutate(
-						{ id: bundle.id },
-						{ onSuccess: result => setPurchase(result) }
-					);
-				}}
-			/>
-		</main>
-	);
+    return (
+        <main className="mx-auto max-w-3xl px-4 py-8">
+            <BundleDetailPanel
+                bundle={bundle}
+                isBuying={buyMutation.isPending}
+                buyError={buyMutation.error?.message ?? null}
+                onBuy={() => {
+                    buyMutation.mutate(
+                        { id: bundle.id },
+                        { onSuccess: result => setPurchase(result) }
+                    );
+                }}
+            />
+        </main>
+    );
 };
 
 export default BundleDetailPage;

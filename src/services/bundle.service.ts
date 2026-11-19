@@ -114,8 +114,6 @@ export interface MarketplaceBundleKey {
 	quantity: number;
 	/** Per-key price in stroops when bought individually. */
 	individualPriceStroops: number;
-	/** Per-key price in stroops when bought inside the bundle. */
-	discountedPriceStroops?: number;
 }
 
 /** A discounted marketplace bundle of creator keys. */
@@ -137,12 +135,6 @@ export interface MarketplaceBundle {
 	createdAt: string;
 	imageUrl?: string;
 	curatorHandle?: string;
-	/** Whether the current buyer already owns this bundle. */
-	purchased?: boolean;
-	/** Alias used by API responses that name the purchase flag differently. */
-	isPurchased?: boolean;
-	/** ISO timestamp of the buyer's purchase, when known. */
-	purchasedAt?: string;
 }
 
 export interface BuyMarketplaceBundleResult {
@@ -154,10 +146,6 @@ export interface BuyMarketplaceBundleResult {
 		creatorName: string;
 		quantity: number;
 	}>;
-}
-
-export interface BuyMarketplaceBundleOptions {
-	walletAddress?: string;
 }
 
 /**
@@ -289,17 +277,6 @@ function stubMarketplaceBundles(): MarketplaceBundle[] {
 	];
 }
 
-const STUB_BUNDLE_IDS = new Set([
-	'bundle-art-starter',
-	'bundle-dev-stack',
-	'bundle-fintech',
-]);
-const purchasedBundleIds = new Set<string>();
-
-function isTestEnvironment(): boolean {
-	return import.meta.env.MODE === 'test';
-}
-
 /**
  * Buyer-side marketplace bundle service (issue #981).
  *
@@ -311,37 +288,18 @@ function isTestEnvironment(): boolean {
 class MarketplaceBundleService extends BaseApiService {
 	async listBundles(): Promise<MarketplaceBundle[]> {
 		// TODO(#981): replace with this.api.get<APIResponse<MarketplaceBundle[]>>('/bundles')
-		return stubMarketplaceBundles().filter(bundle => !purchasedBundleIds.has(bundle.id));
+		return stubMarketplaceBundles();
 	}
 
 	async getBundle(id: string): Promise<MarketplaceBundle | null> {
 		// TODO(#981): replace with this.api.get<APIResponse<MarketplaceBundle>>(`/bundles/${id}`)
-		if (purchasedBundleIds.has(id)) return null;
 		const all = await this.listBundles();
 		return all.find(b => b.id === id) ?? null;
 	}
 
-	async buyBundle(
-		id: string,
-		options?: BuyMarketplaceBundleOptions
-	): Promise<BuyMarketplaceBundleResult> {
-		const canUseApi = !isTestEnvironment() && !STUB_BUNDLE_IDS.has(id);
-		if (canUseApi) {
-			try {
-				const response = await this.api.post<APIResponse<BuyMarketplaceBundleResult>>(
-					`/bundles/${encodeURIComponent(id)}/buy`,
-					options?.walletAddress ? { walletAddress: options.walletAddress } : undefined
-				);
-				const data = response?.data?.data;
-				if (data && Array.isArray(data.receivedKeys) && typeof data.txHash === 'string') {
-					purchasedBundleIds.add(id);
-					return data;
-				}
-			} catch {
-				// Fall through to the deterministic demo result.
-			}
-		}
-
+	async buyBundle(id: string): Promise<BuyMarketplaceBundleResult> {
+		// TODO(#981): replace with this.api.post<APIResponse<BuyMarketplaceBundleResult>>(...)
+		// and, when the contract ABI lands, with a signed contract call.
 		const bundle = await this.getBundle(id);
 		if (!bundle) {
 			throw new Error('Bundle not found');
@@ -350,14 +308,15 @@ class MarketplaceBundleService extends BaseApiService {
 			throw new Error('Bundle has expired');
 		}
 
-		purchasedBundleIds.add(id);
+		const receivedKeys = bundle.keys.map(k => ({
+			creatorId: k.creatorId,
+			creatorName: k.creatorName,
+			quantity: k.quantity,
+		}));
+
 		return {
 			txHash: '0x' + 'a1b2c3d4'.repeat(8),
-			receivedKeys: bundle.keys.map(k => ({
-				creatorId: k.creatorId,
-				creatorName: k.creatorName,
-				quantity: k.quantity,
-			})),
+			receivedKeys,
 		};
 	}
 }

@@ -1,14 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
 import { Users, Star, ArrowRight } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router';
 import { courseService, type Course } from '@/services/course.service';
 import { queryKeys } from '@/lib/queryKeys';
-import { STROOPS_PER_XLM } from '@/constants/stellar';
 import { formatHolderCount } from '@/utils/numberFormat.utils';
 import { normalizeCreatorDisplayName } from '@/utils/creatorDisplayName.utils';
 import { cn } from '@/lib/utils';
 import CreatorInitialsAvatar from '@/components/common/CreatorInitialsAvatar';
+import { useFormatXlm } from '@/hooks/useFormatXlm';
 
 /* ------------------------------------------------------------------ */
 /*  Skeleton                                                          */
@@ -27,10 +27,17 @@ function SpotlightSkeletonCard() {
 			<span className="sr-only">Loading spotlight creator</span>
 
 			{/* Rank badge placeholder */}
-			<div className={cn('mb-3 h-6 w-16 rounded-full', skeletonBlockClass)} />
+			<div
+				className={cn('mb-3 h-6 w-16 rounded-full', skeletonBlockClass)}
+			/>
 
 			{/* Avatar */}
-			<div className={cn('mb-4 aspect-square w-full rounded-xl', skeletonBlockClass)} />
+			<div
+				className={cn(
+					'mb-4 aspect-square w-full rounded-xl',
+					skeletonBlockClass
+				)}
+			/>
 
 			{/* Name */}
 			<div className={cn('mb-2 h-5 w-3/5', skeletonBlockClass)} />
@@ -65,9 +72,10 @@ interface SpotlightCreatorCardProps {
 
 function SpotlightCreatorCard({ creator, rank }: SpotlightCreatorCardProps) {
 	const name = normalizeCreatorDisplayName(creator.title) || 'Unnamed creator';
+	const { format: formatXlm } = useFormatXlm();
 	const keyPrice =
 		creator.priceStroops != null
-			? (creator.priceStroops / STROOPS_PER_XLM).toFixed(2)
+			? formatXlm(creator.priceStroops)
 			: creator.price.toFixed(2);
 	const holderCount = creator.creatorShareSupply ?? 0;
 
@@ -112,7 +120,9 @@ function SpotlightCreatorCard({ creator, rank }: SpotlightCreatorCardProps) {
 					<span className="font-jakarta text-sm font-semibold text-gray-900">
 						{keyPrice}
 					</span>
-					<span className="font-jakarta text-[11px] text-gray-400">XLM</span>
+					<span className="font-jakarta text-[11px] text-gray-400">
+						XLM
+					</span>
 				</div>
 
 				{/* Holder count */}
@@ -142,8 +152,9 @@ export default function CreatorSpotlight() {
 	const gridRef = useRef<HTMLDivElement>(null);
 
 	const { data: creators, isLoading } = useQuery({
-		queryKey: queryKeys.creators.list({ sort: 'supply-desc', limit: 3 }),
-		queryFn: () => courseService.getCourses({ sort: 'supply-desc', limit: 3 }),
+		queryKey: queryKeys.creators.list({ sort: 'volume_desc', limit: 3 }),
+		queryFn: () =>
+			courseService.getCourses({ sort: 'volume_desc', limit: 3 }),
 	});
 
 	useEffect(() => {

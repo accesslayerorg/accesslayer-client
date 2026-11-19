@@ -139,9 +139,6 @@ export interface CreateProposalMutationInput extends CreateProposalPayload {
 	creatorId?: string;
 }
 
-/**
- * Creates a governance proposal for a creator and refreshes governance queries.
- */
 export function useCreateProposalMutation(creatorId?: string) {
 	const queryClient = useQueryClient();
 

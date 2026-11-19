@@ -58,6 +58,7 @@ export function formatXlmPrice(value: number | null | undefined): string {
 	return `${formatted} XLM`;
 }
 
+
 /**
  * Formats holder counts for compact display across creator profile surfaces.
  *

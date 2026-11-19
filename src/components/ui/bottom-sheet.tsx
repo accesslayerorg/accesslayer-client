@@ -235,6 +235,11 @@ export const BottomSheetContent = React.forwardRef<
 					<DialogPrimitive.Content
 						ref={setRefs}
 						data-slot="bottom-sheet-content"
+						// Radix's Dialog.Content does not stamp aria-modal
+						// itself; set it explicitly (#876) — role="dialog" and
+						// the focus trap / Escape-to-dismiss / focus-restore
+						// behavior are already provided by Radix.
+						aria-modal="true"
 						className={cn(
 							"fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-lg touch-pan-y rounded-t-2xl border border-white/10 bg-slate-950/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl backdrop-blur-xl",
 							"data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-bottom-8 data-[state=closed]:slide-out-to-bottom-8",

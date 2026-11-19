@@ -145,7 +145,7 @@ export const ExpiredBundlesArchive: React.FC<ExpiredBundlesArchiveProps> = ({
 									className="py-2 pr-4 text-xs text-white/60"
 									data-testid="expired-bundle-keys"
 								>
-									{getBundleQuantityTotal(bundle.items ?? [])}
+									{getBundleQuantityTotal(bundle.items)}
 								</td>
 								<td
 									className="py-2 pr-4 font-mono text-xs text-white/60"

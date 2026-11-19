@@ -3,17 +3,37 @@ import { queryKeys } from '@/lib/queryKeys';
 import { cacheManager } from '@/utils/cache.utils';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
+import { curveMigrationCacheKey } from '@/services/curveMigration.service';
+import { buildCurveMigrationExecuteCall } from '@/utils/curveMigration.utils';
+import type { CreatorMetadataChange } from '@/utils/creatorMetadata.utils';
+import type { GraduatedCurveMilestone } from '@/components/common/GraduatedCurvePanel';
+import {
+	announcementService,
+	type AnnouncementCategory,
+} from '@/services/announcement.service';
 
 /**
- * Creator-facing contract calls issued from dashboard and portfolio surfaces.
+ * Creator-facing contract calls issued from the dashboard tabs
+ * (`update_metadata` — #818, `configure_auction` / `cancel_auction` — #816,
+ * `set_launch_penalty`, `set_max_buy_quantity`, `set_quorum_bps` — #828,
+ * `set_buy_cooldown` — #889, `execute_curve_migration`).
  *
- * The on-chain wiring is not in this client yet, so calls simulate signing
- * latency and resolve. Exported so mutations in their own hooks submit calls
- * the same way.
+ * Each mutation simulates signing latency and resolves. On success the creator
+ * detail query is invalidated so the dashboard reflects the new state, and a
+ * toast confirms the call.
  */
+
 const SIGN_LATENCY_MS = 1200;
 
+/**
+ * Signs and submits a creator contract call.
+ *
+ * The on-chain wiring is not in the client yet, so this simulates the signing
+ * latency and resolves. Exported so creator-facing mutations that live in their
+ * own hooks (e.g. key bundles) submit calls the same way.
+ */
 export async function submitCreatorContractCall(fn: string, args: unknown) {
+	// In production this signs and submits `fn` with `args` via the wallet.
 	void fn;
 	void args;
 	await new Promise<void>(resolve =>
@@ -29,14 +49,14 @@ export interface AuctionConfigInput {
 	supply: number;
 }
 
-export type GraduatedCurveConfigInput = unknown[];
+export type GraduatedCurveConfigInput = GraduatedCurveMilestone[];
 
 export function useUpdateMetadataMutation(creatorId: string) {
 	const queryClient = useQueryClient();
 
 	return useMutation({
 		mutationKey: ['contract', 'update_metadata', creatorId],
-		mutationFn: (change: Record<string, unknown>) =>
+		mutationFn: (change: CreatorMetadataChange) =>
 			submitContractCall('update_metadata', { creatorId, ...change }),
 		onError: error => {
 			showToast.error(getSignatureErrorMessage(error));
@@ -90,6 +110,12 @@ export function useCancelAuctionMutation(creatorId: string) {
 	});
 }
 
+/**
+ * Places a bid during the pre-launch auction window (#924) via the contract's
+ * `place_bid` function (`{ creatorId, amount }`). On success the creator
+ * detail (auction price/sold) and the live bid history caches are invalidated
+ * so the panel and leaderboard reflect the new bid.
+ */
 export function usePlaceAuctionBidMutation(creatorId: string) {
 	const queryClient = useQueryClient();
 
@@ -108,6 +134,73 @@ export function usePlaceAuctionBidMutation(creatorId: string) {
 				queryKey: queryKeys.creators.auctionBids(creatorId),
 			});
 			showToast.success('Bid placed');
+		},
+	});
+}
+
+export interface PlaceSpotlightBidInput {
+	slotId: string;
+	amount: number;
+}
+
+/**
+ * Places a spotlight discovery bid (#1147). The success toast is rendered by
+ * the caller so this hook stays free of JSX.
+ */
+export function usePlaceSpotlightBidMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'place_spotlight_bid', creatorId],
+		mutationFn: ({ slotId, amount }: PlaceSpotlightBidInput) =>
+			submitContractCall('place_spotlight_bid', { creatorId, slotId, amount }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.spotlightAuction(creatorId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.spotlightBids(creatorId),
+			});
+		},
+	});
+}
+
+export interface PostAnnouncementInput {
+	title: string;
+	category: AnnouncementCategory;
+	content: string;
+}
+
+/**
+ * Posts a creator announcement (#1159). The body is pinned to IPFS first so the
+ * contract call receives the content hash, not the raw text.
+ */
+export function usePostAnnouncementMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'post_announcement', creatorId],
+		mutationFn: async ({ title, category, content }: PostAnnouncementInput) => {
+			const contentHash =
+				await announcementService.uploadAnnouncementContent(content);
+			return submitContractCall('post_announcement', {
+				creatorId,
+				title,
+				contentHash,
+				category,
+			});
+		},
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.announcements(creatorId),
+			});
+			showToast.success('Announcement published');
 		},
 	});
 }
@@ -164,6 +257,8 @@ export function useSetBuyCooldownMutation(creatorId: string) {
 			showToast.error(getSignatureErrorMessage(error));
 		},
 		onSuccess: () => {
+			// Drop the 30s course cache entry so the refetch below returns the
+			// freshly committed cooldown and the panel reflects it immediately.
 			cacheManager.invalidate(`course_${creatorId}`);
 			queryClient.invalidateQueries({
 				queryKey: queryKeys.creators.detail(creatorId),
@@ -184,6 +279,8 @@ export function useSetQuorumBpsMutation(creatorId: string) {
 			showToast.error(getSignatureErrorMessage(error));
 		},
 		onSuccess: () => {
+			// Drop the 30s course cache entry so the refetch below returns the
+			// freshly committed quorum and the slider reflects it immediately.
 			cacheManager.invalidate(`course_${creatorId}`);
 			queryClient.invalidateQueries({
 				queryKey: queryKeys.creators.detail(creatorId),
@@ -245,21 +342,31 @@ export function useDeprecateKeyMutation(creatorId: string) {
 	});
 }
 
+/**
+ * Executes an approved curve migration on a creator key.
+ *
+ * The button that triggers this is only enabled once the governance vote
+ * carried the migration *and* its timelock has elapsed; the contract re-checks
+ * both before applying {@link proposedParams}. On success the migration cache
+ * and query are invalidated together so the migration moves from the pending
+ * list into the executed history with its new params and execution date.
+ */
 export function useExecuteCurveMigrationMutation(creatorId: string) {
 	const queryClient = useQueryClient();
 
 	return useMutation({
 		mutationKey: ['contract', 'execute_curve_migration', creatorId],
-		mutationFn: (migrationId: string) =>
-			submitContractCall('execute_curve_migration', {
-				creatorId,
-				migrationId,
-			}),
+		mutationFn: (migrationId: string) => {
+			const call = buildCurveMigrationExecuteCall({ creatorId, migrationId });
+			return submitContractCall(call.functionName, call.args);
+		},
 		onError: error => {
 			showToast.error(getSignatureErrorMessage(error));
 		},
 		onSuccess: () => {
-			cacheManager.invalidate(`curve_migrations_${creatorId}`);
+			// Drop both cache layers so the refetch returns the migration in
+			// its executed state with the params it actually applied.
+			cacheManager.invalidate(curveMigrationCacheKey(creatorId));
 			queryClient.invalidateQueries({
 				queryKey: queryKeys.creators.curveMigrations(creatorId),
 			});
@@ -269,7 +376,11 @@ export function useExecuteCurveMigrationMutation(creatorId: string) {
 }
 
 /**
- * Claims a creator's vested allocation for a key (#960).
+ * Claims the creator's vested allocation for a key (#960).
+ *
+ * On success the whole `vesting` query family is invalidated so the panel's
+ * claimable amount, progress bar, and claim history all reflect the new state
+ * without a manual refresh.
  */
 export function useClaimVestedTokensMutation(
 	creatorId: string,

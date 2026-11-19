@@ -85,7 +85,6 @@ const AddLiquidityDialog: React.FC<AddLiquidityDialogProps> = ({
 			<DialogContent className="max-h-[90vh] overflow-y-auto">
 				<DialogHeader>
 					<DialogTitle>Add liquidity</DialogTitle>
-					<span className="sr-only">Add Liquidity</span>
 					<DialogDescription className="break-words">
 						Deposit XLM into the {position?.keyName} pool to earn a share
 						of its trading fees.

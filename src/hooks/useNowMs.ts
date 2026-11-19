@@ -17,5 +17,3 @@ export function useNowMs(intervalMs = 1000): number {
 
 	return nowMs;
 }
-
-export default useNowMs;

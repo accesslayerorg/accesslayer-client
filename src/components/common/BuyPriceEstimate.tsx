@@ -28,8 +28,8 @@ const PRICE_CALCULATION_DEBOUNCE_MS = 150;
 /**
  * Shows the total XLM cost to buy `quantity` keys at the current bonding
  * curve price, recalculating via computeBuyCost() whenever the quantity (or
- * current supply) changes. Renders a buy button only for a positive
- * quantity, and 0 XLM with no buy button for a zero quantity.
+ * current supply) changes. Invalid quantities show an error and disable the
+ * buy button.
  */
 export default function BuyPriceEstimate({
 	currentSupply,
@@ -62,7 +62,11 @@ export default function BuyPriceEstimate({
 
 	return (
 		<div data-testid="buy-price-estimate">
-			{isCalculating ? (
+			{quantity <= 0 ? (
+				<span role="alert" data-testid="buy-price-invalid-quantity">
+					Enter a valid quantity
+				</span>
+			) : isCalculating ? (
 				<span role="status" aria-live="polite" data-testid="buy-price-loading">
 					Calculating price…
 				</span>
@@ -71,16 +75,14 @@ export default function BuyPriceEstimate({
 					{formatDisplayKeyPrice(totalCostStroops)}
 				</span>
 			)}
-			{quantity > 0 && (
-				<button
-					type="button"
-					disabled={!canBuy}
-					onClick={() => onBuy?.(quantity)}
-					data-testid="buy-price-estimate-buy-button"
-				>
-					Buy {quantity} {quantity === 1 ? 'key' : 'keys'}
-				</button>
-			)}
+			<button
+				type="button"
+				disabled={!canBuy}
+				onClick={() => onBuy?.(quantity)}
+				data-testid="buy-price-estimate-buy-button"
+			>
+				Buy {quantity} {quantity === 1 ? 'key' : 'keys'}
+			</button>
 		</div>
 	);
 }

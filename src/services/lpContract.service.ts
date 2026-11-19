@@ -1,11 +1,27 @@
+import { Address, Networks } from '@stellar/stellar-sdk';
+import { Client } from '@stellar/stellar-sdk/contract';
 import type { Signer } from '@/lib/signing/types';
+import { env } from '@/utils/env.utils';
+import {
+	describeLpContractErrorCode,
+	extractContractErrorCode,
+} from '@/utils/lpPositions.utils';
 
 /**
- * On-chain liquidity-provider actions (#1030), reduced to a dependency-free
- * contract boundary. Consumers can inject a client factory in tests; the
- * default factory reports that on-chain wiring is not configured here.
+ * On-chain liquidity-provider actions (#1030).
+ *
+ * Calls the LP entrypoints on the Creator Keys contract (accesslayer-contracts
+ * #1002 / PR #1004): `add_liquidity`, `claim_lp_rewards`, `remove_liquidity`.
+ * Same construction as `governanceContract.service`: a Soroban contract
+ * `Client` built from the deployed contract spec, signing through the app's
+ * `Signer` (Freighter or Ledger via `useStellarWallet`).
+ *
+ * Success is only reported after the network confirms the transaction
+ * (`getTransaction` status `SUCCESS`). A transaction that lands but fails
+ * on-chain is surfaced as an error, never as success.
  */
 
+/** Minimal slice of `AssembledTransaction` this service relies on. */
 export interface LpAssembledTransaction {
 	/** Simulation response; carries `error` when the contract rejected it. */
 	simulation?: unknown;
@@ -22,8 +38,8 @@ export interface LpSentTransaction {
 
 export interface LpContractClient {
 	add_liquidity(args: {
-		key_id: string;
-		provider: string;
+		key_id: Address;
+		provider: Address;
 		amount: bigint;
 	}): Promise<LpAssembledTransaction>;
 	claim_lp_rewards(args: { lp_id: bigint }): Promise<LpAssembledTransaction>;
@@ -64,21 +80,40 @@ export interface LpTransactionResult<T> {
 	value: T;
 }
 
-const defaultFactory: LpContractClientFactory = async () => {
-	throw new LpContractError(
-		'NOT_CONFIGURED',
-		'Liquidity actions are unavailable: no contract client is configured.'
-	);
+function getNetworkPassphrase(): string {
+	return env.VITE_STELLAR_NETWORK === 'mainnet'
+		? Networks.PUBLIC
+		: Networks.TESTNET;
+}
+
+const defaultFactory: LpContractClientFactory = async (address, signer) => {
+	if (!env.VITE_STELLAR_RPC_URL || !env.VITE_CREATOR_KEYS_CONTRACT_ID) {
+		throw new LpContractError(
+			'NOT_CONFIGURED',
+			'Liquidity actions are unavailable: VITE_STELLAR_RPC_URL and VITE_CREATOR_KEYS_CONTRACT_ID must be configured.'
+		);
+	}
+
+	return Client.from<LpContractClient>({
+		contractId: env.VITE_CREATOR_KEYS_CONTRACT_ID,
+		rpcUrl: env.VITE_STELLAR_RPC_URL,
+		networkPassphrase: getNetworkPassphrase(),
+		publicKey: address,
+		signTransaction: async (transaction: string) => ({
+			signedTxXdr: await signer.sign(transaction),
+		}),
+	});
 };
 
-function parseAddress(value: string, label: string): string {
-	if (!/^[CG][A-Z2-7]{55}$/.test(value)) {
+function parseAddress(value: string, label: string): Address {
+	try {
+		return Address.fromString(value);
+	} catch {
 		throw new LpContractError(
 			'INVALID_INPUT',
 			`${label} is not a valid Stellar address.`
 		);
 	}
-	return value;
 }
 
 function parseLpId(lpId: string): bigint {
@@ -106,27 +141,21 @@ function isResultLike(value: unknown): value is ResultLike {
 	);
 }
 
-function extractContractErrorCode(text: string): number | null {
-	const match = /#(\d+)/.exec(text);
-	return match ? Number(match[1]) : null;
-}
-
-function describeContractErrorCode(code: number): string {
-	if (code === 2) return 'This liquidity position no longer exists.';
-	if (code === 6) return 'This liquidity position has already been closed.';
-	return 'The liquidity contract rejected this transaction.';
-}
-
 function toContractRejection(text: string): LpContractError {
 	const code = extractContractErrorCode(text);
 	return new LpContractError(
 		'CONTRACT_REJECTED',
 		code === null
 			? 'The liquidity contract rejected this transaction.'
-			: describeContractErrorCode(code)
+			: describeLpContractErrorCode(code)
 	);
 }
 
+/**
+ * Reads the simulated return value, throwing when simulation failed.
+ * Runs before the wallet prompt so a transaction the contract would reject
+ * is never put in front of the user to sign.
+ */
 function readSimulatedValue(tx: LpAssembledTransaction): unknown {
 	const simulationError = (tx.simulation as { error?: unknown } | undefined)
 		?.error;
@@ -226,7 +255,13 @@ export class LpContractService {
 		return signSendAndConfirm(tx);
 	}
 
-	/** `claim_lp_rewards(lp_id)`; resolves with the amount claimed. */
+	/**
+	 * `claim_lp_rewards(lp_id)`; resolves with the amount claimed.
+	 *
+	 * The simulated return value is the exact amount the contract would pay
+	 * out. When it is zero, the contract would succeed as a no-op (it returns
+	 * `Ok(0)`), so we stop before asking the user to sign and pay a fee.
+	 */
 	async claimRewards({
 		lpId,
 		provider,
