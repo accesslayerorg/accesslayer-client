@@ -138,6 +138,13 @@ import { useAccount } from 'wagmi';
 import { useKeyMarketMaker } from '@/hooks/useKeyMarketMaker';
 import { MarketMakerChip, MMBadge } from '@/components/common/MarketMakerChip';
 import ReportKeyModal from '@/components/common/ReportKeyModal';
+import LimitOrderForm from '@/components/common/LimitOrderForm';
+import OpenOrdersTable from '@/components/common/OpenOrdersTable';
+import {
+	useCancelLimitOrder,
+	useCreateLimitOrder,
+	useLimitOrders,
+} from '@/hooks/useLimitOrders';
 
 /** Series shown in the key detail price panel (#1220 adds the depth tab). */
 type PriceChartTab = 'primary' | 'secondary' | 'depth' | 'revenue';
@@ -399,6 +406,9 @@ function CreatorDetailPageContent() {
 	);
 
 	const tradeMutation = useTradeMutation(connectedWalletAddress ?? '');
+	const limitOrdersQuery = useLimitOrders(id || '', userAddress);
+	const createLimitOrderMutation = useCreateLimitOrder(id || '', userAddress);
+	const cancelLimitOrderMutation = useCancelLimitOrder(id || '', userAddress);
 
 	const { data: tradeCooldownStatus } = useTradeCooldownStatus(
 		id || '',
@@ -873,10 +883,13 @@ function CreatorDetailPageContent() {
 
 				<div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
 					<Tabs defaultValue="buy" className="w-full">
-						<TabsList className="grid w-full grid-cols-2 bg-white/5 mb-4">
+						<TabsList className="grid w-full grid-cols-3 bg-white/5 mb-4">
 							<TabsTrigger value="buy" data-testid="invest-tab-buy">
 								Buy
 							</TabsTrigger>
+							<TabsTrigger value="limit" data-testid="invest-tab-limit">
+								Limit
+						</TabsTrigger>
 							<TabsTrigger value="subscribe" data-testid="invest-tab-subscribe">
 								Subscribe
 							</TabsTrigger>
@@ -1103,6 +1116,38 @@ function CreatorDetailPageContent() {
 										/>
 									)}
 								</div>
+							</div>
+						</TabsContent>
+
+						<TabsContent value="limit" className="space-y-6">
+							<div>
+								<p className="text-sm text-white/80">
+									Set a target price and your order will execute when the market reaches it.
+								</p>
+								<div className="mt-4 max-w-xl">
+									<LimitOrderForm
+										currentPrice={resolveCreatorKeyPriceStroops(creator) ?? 0}
+										availableHoldings={holdingsCount}
+										isSubmitting={createLimitOrderMutation.isPending}
+										onSubmit={input => {
+											createLimitOrderMutation.mutate(input, {
+												onSuccess: () => showToast.success('Limit order placed'),
+												onError: error => showToast.error(getSignatureErrorMessage(error)),
+											});
+										}}
+									/>
+								</div>
+							</div>
+							<div className="border-t border-white/10 pt-4">
+								<h3 className="mb-3 text-sm font-semibold text-white">Open orders</h3>
+								<OpenOrdersTable
+									orders={limitOrdersQuery.data ?? []}
+									isCancelling={cancelLimitOrderMutation.isPending}
+									onCancel={orderId => cancelLimitOrderMutation.mutate(orderId, {
+										onSuccess: () => showToast.success('Limit order cancelled'),
+										onError: error => showToast.error(getSignatureErrorMessage(error)),
+									})}
+								/>
 							</div>
 						</TabsContent>
 
