@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { formatNumber } from '@/utils/numberFormat.utils';
+import { useNetworkFeeEstimate } from '@/hooks/useNetworkFeeEstimate';
 import {
 	formatDisplayKeyPrice,
 	estimateSellProceeds,
@@ -309,6 +310,23 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 		estimatedProceedsStroops,
 	]);
 
+	const networkFeeEstimate = useNetworkFeeEstimate({
+		creatorId,
+		side,
+		quantity: parsedAmount,
+		enabled: isValid && !confirmationOpen,
+	});
+
+	const networkFeeStroopsForTotal = networkFeeEstimate.data?.feeStroops ?? 0;
+	const networkFeeXlmBalance = networkFeeEstimate.data?.walletXlmBalanceStroops ?? null;
+	const isInsufficientXlmForFee =
+		networkFeeXlmBalance != null &&
+		networkFeeEstimate.data?.feeStroops != null &&
+		networkFeeXlmBalance < networkFeeEstimate.data.feeStroops;
+
+	const totalWithNetworkFeeStroops =
+		totalStroops != null ? totalStroops + networkFeeStroopsForTotal : null;
+
 	// Slippage bounds computation
 	const slippageBounds = useMemo<SlippageBounds | null>(() => {
 		if (totalStroops == null) return null;
@@ -386,6 +404,7 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 			!isValid ||
 			isCapLimitReached ||
 			isCapBreached ||
+			isInsufficientXlmForFee ||
 			isCircuitBreakerBreached ||
 			(impactWarningActive && !impactAcknowledged)
 		) {
@@ -399,6 +418,7 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 		if (
 			isCapLimitReached ||
 			isCapBreached ||
+			isInsufficientXlmForFee ||
 			isCircuitBreakerBreached ||
 			(impactWarningActive && !impactAcknowledged)
 		) {
@@ -766,6 +786,11 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 				amount={parsedAmount}
 				unitPriceStroops={keyPriceStroops}
 				totalStroops={totalStroops}
+				networkFeeStroops={networkFeeEstimate.data?.feeStroops ?? null}
+				networkFeeLoading={networkFeeEstimate.isLoading}
+				networkFeeError={networkFeeEstimate.isError}
+				totalWithNetworkFeeStroops={totalWithNetworkFeeStroops}
+				insufficientXlmForFee={isInsufficientXlmForFee}
 				slippageTolerancePercent={slippageTolerancePercent}
 				onSlippageChange={setSlippageTolerancePercent}
 				maxPriceStroops={slippageBounds?.maxPriceStroops ?? null}

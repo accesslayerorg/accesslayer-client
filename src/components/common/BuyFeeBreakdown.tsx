@@ -1,7 +1,7 @@
 /**
  * Buy fee breakdown display component.
  * Shows gross cost, protocol fee, creator fee, loyalty discount (#1173),
- * and total before purchase confirmation.
+ * network fee estimate, and total before purchase confirmation.
  */
 
 import React from 'react';
@@ -16,6 +16,13 @@ import {
 	hasActiveDiscount,
 	type FeeDiscount,
 } from '@/utils/feeDiscount.utils';
+
+export interface NetworkFeeEstimate {
+	/** Estimated network (resource) fee in stroops */
+	networkFeeStroops: number;
+	/** Whether the simulation succeeded */
+	available: boolean;
+}
 
 export interface BuyFeeBreakdownProps {
 	/** Fee breakdown data from price preview */
@@ -32,12 +39,21 @@ export interface BuyFeeBreakdownProps {
 	 * discounted amount. When absent, no chip is shown.
 	 */
 	feeDiscount?: FeeDiscount | null;
+	/**
+	 * Network fee estimate from transaction simulation. While `isEstimating`
+	 * is true a skeleton row is shown; when `available` is false an
+	 * "estimate unavailable" fallback is shown and the total excludes the fee
+	 * without blocking the transaction.
+	 */
+	networkFee?: NetworkFeeEstimate | null;
+	/** Whether the network fee is currently being estimated */
+	isEstimatingNetworkFee?: boolean;
 }
 
 /**
  * Displays a detailed fee breakdown for a buy transaction.
- * Renders base price, protocol fee (%), creator royalty (%), and total cost.
- * Shows loading and error states with inline retry capability.
+ * Renders base price, protocol fee (%), creator royalty (%), network fee,
+ * and total cost. Shows loading and error states with inline retry capability.
  */
 const BuyFeeBreakdown: React.FC<BuyFeeBreakdownProps> = ({
 	breakdown,
@@ -45,6 +61,8 @@ const BuyFeeBreakdown: React.FC<BuyFeeBreakdownProps> = ({
 	error,
 	onRetry,
 	feeDiscount = null,
+	networkFee = null,
+	isEstimatingNetworkFee = false,
 }) => {
 	if (error) {
 		return (
@@ -103,8 +121,10 @@ const BuyFeeBreakdown: React.FC<BuyFeeBreakdownProps> = ({
 	// user would pay without the tier; the chip sits between base and final.
 	const baseFeeStroops = breakdown.protocolFeeStroops + breakdown.creatorFeeStroops;
 	const feeRows = buildFeeDiscountBreakdown(baseFeeStroops, feeDiscount);
+	const networkFeeStroops =
+		networkFee?.available ? networkFee.networkFeeStroops : 0;
 	const discountedTotalStroops =
-		breakdown.grossCostStroops + feeRows.finalFee;
+		breakdown.grossCostStroops + feeRows.finalFee + networkFeeStroops;
 
 	return (
 		<div
@@ -203,6 +223,37 @@ const BuyFeeBreakdown: React.FC<BuyFeeBreakdownProps> = ({
 					{formatDisplayKeyPrice(feeRows.finalFee)}
 				</span>
 			</div>
+
+			{/* Network fee row (estimated via transaction simulation) */}
+			{isEstimatingNetworkFee ? (
+				<div
+					className="flex justify-between items-center text-xs"
+					role="status"
+					aria-live="polite"
+					data-testid="buy-fee-breakdown-network-fee-skeleton"
+				>
+					<span className="text-white/60">Network fee</span>
+					<span className="h-3 w-12 bg-white/10 rounded animate-pulse" />
+				</div>
+			) : networkFee && networkFee.available ? (
+				<div
+					className="flex justify-between items-center text-xs"
+					data-testid="buy-fee-breakdown-network-fee"
+				>
+					<span className="text-white/70">Network fee</span>
+					<span className="font-mono text-white/90">
+						{formatDisplayKeyPrice(networkFee.networkFeeStroops)}
+					</span>
+				</div>
+			) : networkFee && !networkFee.available ? (
+				<div
+					className="flex justify-between items-center text-xs"
+					data-testid="buy-fee-breakdown-network-fee-unavailable"
+				>
+					<span className="text-white/70">Network fee</span>
+					<span className="text-white/50 italic">estimate unavailable</span>
+				</div>
+			) : null}
 
 			{/* Total row */}
 			<div
