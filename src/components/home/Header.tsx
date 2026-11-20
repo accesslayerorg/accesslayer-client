@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Bookmark } from 'lucide-react';
 import WalletStatusChip from '@/components/common/WalletStatusChip';
 import NotificationBell from '@/components/common/NotificationBell';
+import PendingTransactionsDrawer from '@/components/common/PendingTransactionsDrawer';
 import GlobalSearch from '@/components/common/GlobalSearch';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import ThemeToggle from '@/components/common/ThemeToggle';
@@ -120,6 +121,19 @@ export default function Header() {
 							: 'text-white/60 hover:text-white/90'
 					}
 				/>
+					}`}
+				>
+					{theme === 'dark' && <Sun className="size-4" aria-hidden="true" />}
+					{theme === 'light' && <Moon className="size-4" aria-hidden="true" />}
+					{theme === 'system' && <Monitor className="size-4" aria-hidden="true" />}
+				</button>
+					<PendingTransactionsDrawer
+						className={
+							scrolled
+								? 'text-gray-600 hover:bg-black/5 hover:text-gray-900'
+								: ''
+						}
+					/>
 					{profile && (
 						<NotificationBell
 							userId={profile.id}

@@ -6,7 +6,7 @@ import { courseService, type PerformanceBond } from '@/services/course.service';
 export const PERFORMANCE_BOND_REFRESH_INTERVAL_MS = 60_000;
 
 /**
- * Hook to fetch performance bond status for a creator key (#975).
+ * Hook to fetch performance bond status and slash history for a creator key.
  *
  * Returns performance bond data, loading state, and error status.
  * Enabled only when keyId is provided.
