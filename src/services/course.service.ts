@@ -375,7 +375,24 @@ export interface KeyOraclePrice {
 	maxAgeSeconds?: number | null;
 }
 
-export type PerformanceBondState = 'staked' | 'released' | 'forfeited';
+export type PerformanceBondState =
+	| 'active'
+	| 'slashed'
+	| 'released'
+	| 'staked'
+	| 'forfeited';
+
+export interface PerformanceBondSlashEvent {
+	/** Slashed amount in XLM. */
+	amountXlm?: number | null;
+	/** Slashed amount in stroops. */
+	amountStroops?: number | null;
+	/** Backward-compatible API amount, expressed in XLM. */
+	amount?: number | string | null;
+	reason: string;
+	/** ISO timestamp or ledger sequence at which the slash occurred. */
+	ledgerTimestamp: string | number;
+}
 
 /**
  * Creator performance bond status (#975).
@@ -391,6 +408,10 @@ export interface PerformanceBond {
 	amountStroops?: number | null;
 	/** Current state of the bond. */
 	state: PerformanceBondState | string;
+	/** Status alias used by the creator dashboard performance-bond API. */
+	status?: PerformanceBondState | string;
+	/** Scheduled bond release date. */
+	releaseDate?: string | null;
 	/** Maturity milestone required for bond release. */
 	milestone?: string | null;
 	targetMilestone?: string | null;
@@ -399,6 +420,8 @@ export interface PerformanceBond {
 	/** Reason for forfeiture. */
 	forfeitureReason?: string | null;
 	reason?: string | null;
+	/** Slash history, in any order supplied by the API. */
+	slashEvents?: PerformanceBondSlashEvent[] | null;
 }
 
 export type CourseSortOption =

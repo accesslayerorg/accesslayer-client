@@ -407,3 +407,32 @@ export function useClaimVestedTokensMutation(
 		},
 	});
 }
+
+/**
+ * Tops up a creator performance bond through the creator contract-call
+ * abstraction and refreshes the bond status shown on the dashboard.
+ */
+export function useTopUpPerformanceBondMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'deposit_performance_bond', creatorId],
+		mutationFn: (amountXlm: number) =>
+			submitContractCall('deposit_performance_bond', {
+				creatorId,
+				amountXlm,
+			}),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.performanceBond(creatorId),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Performance bond topped up');
+		},
+	});
+}
