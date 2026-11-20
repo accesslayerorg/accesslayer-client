@@ -6,6 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import RecipientPicker from '@/components/common/RecipientPicker';
+import { useAddressBook, validateAddressBookInput } from '@/hooks/useAddressBook';
 import { Loader, Send, CheckCircle, Clock } from 'lucide-react';
 import showToast from '@/utils/toast.util';
 
@@ -43,12 +46,24 @@ export default function KeyTransferUI({
 }: KeyTransferUIProps) {
   const [showTransferForm, setShowTransferForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { register, handleSubmit, reset } = useForm<KeyTransferFormData>({
+  const [saveRecipient, setSaveRecipient] = useState(false);
+  const [saveLabel, setSaveLabel] = useState('');
+  const entries = useAddressBook(state => state.entries);
+  const addToAddressBook = useAddressBook(state => state.add);
+  const { register, handleSubmit, reset, watch, setValue } = useForm<KeyTransferFormData>({
     defaultValues: {
       recipientAddress: '',
       transferMessage: '',
     },
   });
+
+  const recipientValue = watch('recipientAddress');
+  // Offer to save only when the typed address is valid and not saved yet.
+  const canOfferSave =
+    validateAddressBookInput(entries, {
+      label: 'x',
+      address: recipientValue ?? '',
+    })?.field !== 'address';
 
   const handleInitiateTransfer = async (data: KeyTransferFormData) => {
     if (!data.recipientAddress) {
@@ -66,6 +81,19 @@ export default function KeyTransferUI({
       // });
 
       showToast.success('Transfer initiated. Waiting for recipient acceptance.');
+      if (saveRecipient && canOfferSave) {
+        const saved = addToAddressBook({
+          label: saveLabel,
+          address: data.recipientAddress,
+        });
+        if (saved.ok) {
+          showToast.success('Recipient saved to your address book.');
+        } else {
+          showToast.error(`Recipient not saved: ${saved.error.message}`);
+        }
+      }
+      setSaveRecipient(false);
+      setSaveLabel('');
       setShowTransferForm(false);
       reset();
       onTransferInitiated?.();
@@ -220,15 +248,44 @@ export default function KeyTransferUI({
 
                 <div>
                   <Label htmlFor="recipientAddress">Recipient Address</Label>
-                  <Input
-                    id="recipientAddress"
-                    placeholder="0x..."
+                  <input
+                    type="hidden"
                     {...register('recipientAddress', {
                       required: 'Recipient address is required',
                     })}
-                    className="mt-1 font-mono text-sm"
                   />
+                  <div className="mt-1">
+                    <RecipientPicker
+                      id="recipientAddress"
+                      value={recipientValue ?? ''}
+                      onChange={value =>
+                        setValue('recipientAddress', value, { shouldDirty: true })
+                      }
+                      disabled={isLoading}
+                    />
+                  </div>
                 </div>
+
+                {canOfferSave && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="saveRecipient"
+                        checked={saveRecipient}
+                        onCheckedChange={setSaveRecipient}
+                      />
+                      <Label htmlFor="saveRecipient">Save recipient</Label>
+                    </div>
+                    {saveRecipient && (
+                      <Input
+                        aria-label="Recipient label"
+                        placeholder="Label, e.g. Alice"
+                        value={saveLabel}
+                        onChange={e => setSaveLabel(e.target.value)}
+                      />
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <Label htmlFor="transferMessage">Message (Optional)</Label>
