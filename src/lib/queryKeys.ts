@@ -79,6 +79,9 @@ export const queryKeys = {
 		positions: (wallet: string) => ['lp', 'positions', wallet] as const,
 		pool: (keyId: string) => ['lp', 'pool', keyId] as const,
 	},
+	transaction: {
+		status: (hash: string) => ['transaction', hash, 'status'] as const,
+	},
 	notifications: {
 		all: () => ['notifications'] as const,
 		list: (userId: string) => ['notifications', userId, 'list'] as const,
