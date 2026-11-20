@@ -18,6 +18,7 @@ import CreatorProfileHeader from '@/components/common/CreatorProfileHeader';
 import CreatorSocialSection from '@/components/common/CreatorSocialSection';
 import CreatorProfileInfoGrid from '@/components/common/CreatorProfileInfoGrid';
 import CreatorActivityFeed from '@/components/common/CreatorActivityFeed';
+import RelatedKeysCarousel from '@/components/common/RelatedKeysCarousel';
 import AnnouncementFeed from '@/components/common/AnnouncementFeed';
 import SecondaryMarketSellPanel from '@/components/common/SecondaryMarketSellPanel';
 import ActiveAuctionCard from '@/components/common/ActiveAuctionCard';
@@ -1509,6 +1510,10 @@ function CreatorDetailPageContent() {
 						<CreatorActivityFeed creatorId={creator.id} />
 					</SectionErrorBoundary>
 				</div>
+
+				<SectionErrorBoundary sectionName="related keys">
+					<RelatedKeysCarousel keyId={creator.id} />
+				</SectionErrorBoundary>
 
 				{isKeyDeprecated(creator) && (
 					<KeyBuybackModal
