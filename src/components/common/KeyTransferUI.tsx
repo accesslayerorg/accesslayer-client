@@ -77,7 +77,7 @@ export default function KeyTransferUI({
 			address: resolvedRecipient,
 		})?.field;
 
-	const handleInitiateTransfer = async (data: KeyTransferFormData) => {
+	const handleInitiateTransfer = async () => {
 		const finalAddress = resolvedRecipient;
 
 		if (!finalAddress) {
