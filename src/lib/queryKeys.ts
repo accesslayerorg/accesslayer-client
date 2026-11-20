@@ -154,6 +154,9 @@ export const queryKeys = {
 		keyPositions: (keyId: string, wallet: string) =>
 			['lp', 'key-positions', keyId, wallet] as const,
 	},
+	transaction: {
+		status: (hash: string) => ['transaction', hash, 'status'] as const,
+	},
 	notifications: {
 		all: () => ['notifications'] as const,
 		list: (userId: string) => ['notifications', userId, 'list'] as const,

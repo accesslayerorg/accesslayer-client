@@ -22,6 +22,7 @@ import type {
 	WalletBadgeMetrics,
 } from '@/utils/walletBadges.utils';
 import { fetchTradeHistoryPage } from '@/services/tradeHistory.service';
+import { usePendingTxStore } from '@/hooks/usePendingTxStore';
 
 export function useWalletHoldings(address: string) {
 	return useQuery<HeldKeyPosition[]>({
@@ -236,8 +237,25 @@ export function recordTradeCostBasis(
 		.recordSell(address, trade.creatorId, { quantity });
 }
 
+/**
+ * Placeholder transaction hash for the stubbed trade submission. The on-chain
+ * call that replaces the simulation populates this from
+ * `sendTransactionResponse.hash`; until then the pending-transaction tracker
+ * needs a 32-byte hash to display and poll.
+ */
+function createSubmittedTradeHash(): string {
+	let hash = '';
+	for (let index = 0; index < 64; index += 1) {
+		hash += Math.floor(Math.random() * 16).toString(16);
+	}
+	return hash;
+}
+
 export function useTradeMutation(address: string) {
 	const queryClient = useQueryClient();
+	const addPendingTransaction = usePendingTxStore(
+		state => state.addPendingTransaction
+	);
 
 	const mutation = useMutation({
 		mutationKey: ['trade', address],
@@ -250,7 +268,7 @@ export function useTradeMutation(address: string) {
 			// accepted and can be used by instrumentation or contract calls.
 			void variables;
 			await new Promise<void>(resolve => window.setTimeout(resolve, 900));
-			return { success: true as const };
+			return { success: true as const, txHash: createSubmittedTradeHash() };
 		},
 		onMutate: async ({
 			creatorId,
@@ -390,7 +408,15 @@ export function useTradeMutation(address: string) {
 				});
 			}
 		},
-		onSuccess: (_data, variables) => {
+		onSuccess: (data, variables) => {
+			// #1286 — surface the submission in the pending-transactions drawer
+			// so it can be tracked after the user leaves the swap screen.
+			addPendingTransaction({
+				hash: data.txHash,
+				type: variables.amount > 0 ? 'buy' : 'sell',
+				keyId: variables.creatorId,
+			});
+
 			queryClient.setQueryData<HeldKeyPosition[]>(
 				queryKeys.wallet.holdings(address),
 				(old = []) =>
