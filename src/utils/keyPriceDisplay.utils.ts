@@ -64,9 +64,7 @@ export function formatDisplayKeyPrice(
 		minimumFractionDigits: 0,
 	});
 
-	const parsedXlm = Number.parseFloat(xlmFormatted.replace(/,/g, ''));
-	const xlmWouldRoundToZero =
-		stroops > 0 && (!Number.isFinite(parsedXlm) || parsedXlm === 0);
+	const xlmWouldRoundToZero = stroops > 0 && xlm === 0;
 
 	if (xlmWouldRoundToZero) {
 		return `${stroops.toLocaleString()} stroops`;

@@ -29,6 +29,7 @@ import {
 	matchesSupplyTier,
 	type SupplyTierFilter,
 } from '@/utils/supplyTier.utils';
+import { useTranslation } from 'react-i18next';
 
 const PAGE_LIMIT = 12;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -63,6 +64,7 @@ function creatorMatchesSearch(creator: Course, query: string): boolean {
  * full page refetch.
  */
 export default function MarketplacePage() {
+	const { t } = useTranslation();
 	useNavigationTiming('marketplace');
 	useDocumentTitle('Marketplace — AccessLayer');
 
@@ -174,16 +176,13 @@ export default function MarketplacePage() {
 						alt="Access Layer logo"
 					/>
 					<p className="mb-3 text-sm font-bold uppercase tracking-[0.25em] text-amber-400/80">
-						Creator Keys Marketplace
+						{t('marketplace.eyebrow')}
 					</p>
 					<h1 className="mb-4 font-grotesque text-[clamp(2.5rem,8vw,4rem)] font-extrabold leading-[1.1] tracking-tight text-white">
-						Explore the market
+						{t('marketplace.heading')}
 					</h1>
 					<p className="mx-auto mb-6 max-w-2xl font-jakarta text-sm leading-relaxed text-white/55">
-						Every creator key on Access Layer, priced live from its
-						bonding curve. Sort by volume or price, filter by supply
-						milestone, and watch prices refresh automatically — no page
-						reloads.
+						{t('marketplace.description')}
 					</p>
 					<div className="flex justify-center">
 						<span
@@ -205,15 +204,15 @@ export default function MarketplacePage() {
 								/>
 							)}
 							{isRefreshing
-								? 'Refreshing live prices…'
-								: 'Prices refresh every 30s'}
+								? t('marketplace.refreshing')
+								: t('marketplace.refreshEvery')}
 						</span>
 					</div>
 				</MarketplaceSection>
 
 				<main
 					id="marketplace-listing-main"
-					aria-label="Creator key marketplace listing"
+					aria-label={t('marketplace.listingLabel')}
 				>
 					<SectionErrorBoundary sectionName="spotlight">
 						<SpotlightBanner />
@@ -223,12 +222,12 @@ export default function MarketplacePage() {
 						<TrendingCreatorsSection />
 					</SectionErrorBoundary>
 
-					<SectionDivider title="Discover creators" spacing="relaxed" />
+					<SectionDivider title={t('marketplace.discoverCreators')} spacing="relaxed" />
 
 					<StickyFilterBar
-						eyebrow="Marketplace filters"
-						title="Sort and filter creator keys"
-						description="Sort by 24h volume, bonding-curve price, or newest. Filter by supply milestone tier. Both apply instantly to the keys already loaded — they never trigger a page refetch."
+						eyebrow={t('marketplace.filters')}
+						title={t('marketplace.filterHeading')}
+						description={t('marketplace.filterDescription')}
 						resultCount={
 							isLoadingFirstPage ? undefined : visibleCreators.length
 						}
@@ -239,7 +238,7 @@ export default function MarketplacePage() {
 							<SearchBar
 								value={searchQuery}
 								onChange={setSearchQuery}
-								placeholder="Search creators by name or handle"
+								placeholder={t('marketplace.searchPlaceholder')}
 								className="max-w-none"
 							/>
 							<div className="flex flex-col gap-3 sm:flex-row">
@@ -248,7 +247,7 @@ export default function MarketplacePage() {
 										htmlFor="marketplace-sort"
 										className="marketplace-label-muted text-xs font-semibold uppercase tracking-[0.16em]"
 									>
-										Sort
+										{t('marketplace.sort')}
 									</label>
 									<select
 										id="marketplace-sort"
@@ -276,7 +275,7 @@ export default function MarketplacePage() {
 										htmlFor="marketplace-supply-tier"
 										className="marketplace-label-muted text-xs font-semibold uppercase tracking-[0.16em]"
 									>
-										Supply tier
+										{t('marketplace.supplyTier')}
 									</label>
 									<select
 										id="marketplace-supply-tier"
@@ -289,7 +288,7 @@ export default function MarketplacePage() {
 										}
 										className="h-9 w-full rounded-lg border border-white/15 bg-slate-950/80 px-3 text-sm text-white outline-none focus:border-amber-400/60"
 									>
-										<option value="all">All supply tiers</option>
+										<option value="all">{t('marketplace.allSupplyTiers')}</option>
 										{SUPPLY_TIERS.map(tier => (
 											<option key={tier.id} value={tier.id}>
 												{tier.label}
@@ -301,7 +300,7 @@ export default function MarketplacePage() {
 						</div>
 					</StickyFilterBar>
 
-					<SectionDivider title="Marketplace results" spacing="default" />
+					<SectionDivider title={t('marketplace.results')} spacing="default" />
 
 					<SectionErrorBoundary
 						sectionName="marketplace results"
@@ -319,9 +318,9 @@ export default function MarketplacePage() {
 								</div>
 							) : error && creators.length === 0 ? (
 								<EmptyState
-									title="Couldn't load the marketplace"
-									description="We couldn't load creator keys right now. Check your connection and try again."
-									cta={{ label: 'Try again', onClick: handleRetry }}
+									title={t('marketplace.loadErrorTitle')}
+									description={t('marketplace.loadErrorDescription')}
+									cta={{ label: t('marketplace.tryAgain'), onClick: handleRetry }}
 									className="mx-auto w-full max-w-xl"
 								/>
 							) : visibleCreators.length === 0 ? (
@@ -334,8 +333,8 @@ export default function MarketplacePage() {
 									) : (
 										<EmptyState
 											image="/images/no-results.png"
-											title="No creators found"
-											description={`No creator keys match your current filters. Try a different name, handle, or supply tier.`}
+											title={t('marketplace.noCreators')}
+											description={t('marketplace.noCreatorsDescription')}
 											onReset={handleResetFilters}
 											className="w-full max-w-xl"
 										/>

@@ -13,6 +13,7 @@ import CampaignsSection from '@/components/marketplace/CampaignsSection';
 import BundleDiscoverySection from '@/components/common/BundleDiscoverySection';
 import { Button } from '@/components/ui/button';
 import { useBatchTradeStore, selectBatchItemCount } from '@/hooks/useBatchTradeStore';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Key Discovery Page (#937).
@@ -27,6 +28,7 @@ import { useBatchTradeStore, selectBatchItemCount } from '@/hooks/useBatchTradeS
  * 7. Seasonal campaigns with wallet eligibility below the spotlight (#1226).
  */
 export default function DiscoveryPage() {
+	const { t } = useTranslation();
 	useNavigationTiming('discovery');
 	useDocumentTitle('Discover Creator Keys — AccessLayer');
 
@@ -60,14 +62,13 @@ export default function DiscoveryPage() {
 						alt="Access Layer logo"
 					/>
 					<p className="mb-3 text-sm font-bold uppercase tracking-[0.25em] text-amber-400/80">
-						Key Discovery
+						{t('discovery.eyebrow')}
 					</p>
 					<h1 className="mb-4 font-grotesque text-[clamp(2.5rem,8vw,4rem)] font-extrabold leading-[1.1] tracking-tight text-white">
-						Find active opportunities
+						{t('discovery.heading')}
 					</h1>
 					<p className="mx-auto mb-6 max-w-2xl font-jakarta text-sm leading-relaxed text-white/60">
-						Explore top creator keys trending by 24-hour trading volume and the freshest
-						listings on Access Layer, updated live every 60 seconds without page reloads.
+						{t('discovery.description')}
 					</p>
 
 					{/* 60s Live Auto-Refresh Status & Batch Trade Trigger */}
@@ -90,7 +91,7 @@ export default function DiscoveryPage() {
 									aria-hidden="true"
 								/>
 							)}
-							{isRefreshing ? 'Refreshing live data…' : 'Data refreshes every 60s'}
+							{isRefreshing ? t('discovery.refreshing') : t('discovery.refreshEvery')}
 						</span>
 
 						<Button
@@ -101,7 +102,7 @@ export default function DiscoveryPage() {
 							className="h-7 rounded-full border-amber-400/30 bg-amber-400/10 px-3 text-[0.72rem] font-bold text-amber-300 hover:bg-amber-400/20 hover:border-amber-400/50"
 						>
 							<Layers className="mr-1.5 size-3.5" aria-hidden="true" />
-							Batch Trade
+							{t('discovery.batchTrade')}
 							{batchItemCount > 0 && (
 								<span
 									className="ml-1.5 rounded-full bg-amber-400 px-1.5 py-0.2 font-mono text-[0.65rem] font-bold text-slate-950"
@@ -118,23 +119,23 @@ export default function DiscoveryPage() {
 							className="inline-flex h-7 items-center rounded-full border border-amber-400/30 bg-amber-400/10 px-3 text-[0.72rem] font-bold text-amber-300 transition-colors hover:border-amber-400/50 hover:bg-amber-400/20"
 						>
 							<Trophy className="mr-1.5 size-3.5" aria-hidden="true" />
-							Leaderboard
+							{t('discovery.leaderboard')}
 						</Link>
 					</div>
 				</MarketplaceSection>
 
-				<main id="discovery-main" aria-label="Creator key discovery">
+				<main id="discovery-main" aria-label={t('discovery.mainLabel')}>
 					<SpotlightBanner className="mt-8" />
 					<CampaignsSection />
 					<div className="mt-8 rounded-3xl border border-white/10 bg-slate-900/40 p-6 backdrop-blur-md">
-						<BundleDiscoverySection heading="Creator bundles" />
+						<BundleDiscoverySection heading={t('discovery.creatorBundles')} />
 					</div>
 
 					{hasError ? (
 						<EmptyState
-							title="Couldn't load discovery opportunities"
-							description="We couldn't load trending or new creator keys right now. Check your connection and try again."
-							cta={{ label: 'Try again', onClick: () => void refetch() }}
+							title={t('discovery.loadErrorTitle')}
+							description={t('discovery.loadErrorDescription')}
+							cta={{ label: t('discovery.tryAgain'), onClick: () => void refetch() }}
 							className="mx-auto my-12 w-full max-w-xl"
 						/>
 					) : (
@@ -150,17 +151,17 @@ export default function DiscoveryPage() {
 										<div className="flex items-center gap-2 text-amber-400">
 											<Flame className="size-5" aria-hidden="true" />
 											<span className="font-mono text-xs font-bold uppercase tracking-wider">
-												Top by 24h Volume
+												{t('discovery.topVolume')}
 											</span>
 										</div>
 										<h2
 											id="trending-section-title"
 											className="mt-1 font-grotesque text-2xl font-bold tracking-tight text-white sm:text-3xl"
 										>
-											Trending Keys
+											{t('discovery.trendingKeys')}
 										</h2>
 										<p className="mt-1 font-jakarta text-xs text-white/50">
-											Top 5 keys by 24h trading volume
+											{t('discovery.trendingDescription')}
 										</p>
 									</div>
 
@@ -169,7 +170,7 @@ export default function DiscoveryPage() {
 										data-testid="view-all-trending"
 										className="inline-flex items-center gap-1.5 font-jakarta text-xs font-semibold text-amber-400 transition-colors hover:text-amber-300"
 									>
-										View all trending keys
+										{t('discovery.viewAllTrending')}
 										<ArrowRight className="size-3.5" aria-hidden="true" />
 									</Link>
 								</div>
@@ -181,7 +182,7 @@ export default function DiscoveryPage() {
 								) : trendingKeys.length === 0 ? (
 									<div className="rounded-2xl border border-white/10 bg-slate-900/40 p-8 text-center backdrop-blur-md">
 										<p className="font-jakarta text-sm text-white/50">
-											No trending keys found right now.
+											{t('discovery.trendingEmpty')}
 										</p>
 									</div>
 								) : (
@@ -200,7 +201,7 @@ export default function DiscoveryPage() {
 								)}
 							</section>
 
-							<SectionDivider title="New on Access Layer" spacing="relaxed" />
+							<SectionDivider title={t('discovery.newOn')} spacing="relaxed" />
 
 							{/* ================= NEW LISTINGS SECTION ================= */}
 							<section
@@ -213,17 +214,17 @@ export default function DiscoveryPage() {
 										<div className="flex items-center gap-2 text-emerald-400">
 											<Sparkles className="size-5" aria-hidden="true" />
 											<span className="font-mono text-xs font-bold uppercase tracking-wider">
-												Fresh Arrivals
+												{t('discovery.freshArrivals')}
 											</span>
 										</div>
 										<h2
 											id="new-listings-section-title"
 											className="mt-1 font-grotesque text-2xl font-bold tracking-tight text-white sm:text-3xl"
 										>
-											New Listings
+											{t('discovery.newListings')}
 										</h2>
 										<p className="mt-1 font-jakarta text-xs text-white/50">
-											Latest 10 keys ordered by creation date
+											{t('discovery.newListingsDescription')}
 										</p>
 									</div>
 
@@ -232,7 +233,7 @@ export default function DiscoveryPage() {
 										data-testid="view-all-newest"
 										className="inline-flex items-center gap-1.5 font-jakarta text-xs font-semibold text-emerald-400 transition-colors hover:text-emerald-300"
 									>
-										View all new listings
+										{t('discovery.viewAllNew')}
 										<ArrowRight className="size-3.5" aria-hidden="true" />
 									</Link>
 								</div>
@@ -244,7 +245,7 @@ export default function DiscoveryPage() {
 								) : newListings.length === 0 ? (
 									<div className="rounded-2xl border border-white/10 bg-slate-900/40 p-8 text-center backdrop-blur-md">
 										<p className="font-jakarta text-sm text-white/50">
-											No new listings available right now.
+											{t('discovery.newEmpty')}
 										</p>
 									</div>
 								) : (

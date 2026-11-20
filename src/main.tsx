@@ -10,6 +10,7 @@ import {
 	restorePersistedQueries,
 	subscribeToQueryCache,
 } from './lib/queryPersistence';
+import './lib/i18n';
 
 registerUnhandledRejectionLogger();
 
