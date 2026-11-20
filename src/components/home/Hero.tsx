@@ -1,6 +1,8 @@
 import { Search } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { cn } from '@/lib/utils';
 
 const stats = [
 	{ label: 'Keys traded on-chain' },
@@ -17,6 +19,7 @@ const stats = [
 
 export default function Hero() {
 	const [query, setQuery] = useState('');
+	const reducedMotion = useReducedMotion();
 	const navigate = useNavigate();
 
 	function handleSearch(e: React.FormEvent) {
@@ -133,9 +136,20 @@ export default function Hero() {
 				</form>
 			</div>
 
-			{/* Infinite scrolling stats strip */}
-			<div className="absolute inset-x-0 bottom-15 z-10 overflow-hidden">
-				<div className="flex w-max animate-marquee items-center gap-0">
+			{/* Infinite scrolling stats strip. With reduced motion the marquee is
+			    replaced by a manually scrollable strip. */}
+			<div
+				className={cn(
+					'absolute inset-x-0 bottom-15 z-10',
+					reducedMotion ? 'overflow-x-auto' : 'overflow-hidden'
+				)}
+			>
+				<div
+					className={cn(
+						'flex w-max items-center gap-0',
+						!reducedMotion && 'animate-marquee'
+					)}
+				>
 					{[...stats, ...stats].map((item, i) => (
 						<div key={i} className="flex items-center gap-6 px-6">
 							<span className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.15em] text-white/35">

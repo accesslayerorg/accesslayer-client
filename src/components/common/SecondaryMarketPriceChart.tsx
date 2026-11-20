@@ -12,6 +12,7 @@ import {
 import type { ReactNode } from 'react';
 import Skeleton from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type {
 	SecondaryPricePoint,
 	SecondaryPriceRange,
@@ -48,6 +49,7 @@ export function SecondaryMarketPriceChart({
 	onRangeChange,
 }: SecondaryMarketPriceChartProps) {
 	const [range, setRange] = useState<SecondaryPriceRange>('7d');
+	const reducedMotion = useReducedMotion();
 
 	const handleRangeChange = (next: SecondaryPriceRange) => {
 		setRange(next);
@@ -162,6 +164,7 @@ export function SecondaryMarketPriceChart({
 								dataKey="volume"
 								fill="#34d39933"
 								barSize={8}
+								isAnimationActive={!reducedMotion}
 							/>
 							<Line
 								yAxisId="price"
@@ -171,6 +174,7 @@ export function SecondaryMarketPriceChart({
 								strokeWidth={2}
 								dot={{ fill: '#34d399', r: 3, strokeWidth: 0 }}
 								activeDot={{ r: 5 }}
+								isAnimationActive={!reducedMotion}
 							/>
 						</ComposedChart>
 					</ResponsiveContainer>
