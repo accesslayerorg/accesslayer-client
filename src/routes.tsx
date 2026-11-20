@@ -41,6 +41,7 @@ import AirdropClaimsPage from './pages/AirdropClaimsPage';
 import ProtocolAnalyticsPage from './pages/ProtocolAnalyticsPage';
 import LpPositionsPage from './pages/LpPositionsPage';
 import ProposalCreatePage from './pages/ProposalCreatePage';
+import ApiKeysPage from './pages/ApiKeysPage';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 
 function withRouteErrorBoundary(element: ReactNode, routeName: string) {
@@ -325,6 +326,11 @@ export const routes = [
 				// Global search results page (#1053).
 				path: '/search',
 				element: <SearchResultsPage />,
+			},
+			{
+				// Developer API key management for integrators and creators (#1322).
+				path: '/settings/developer',
+				element: <ApiKeysPage />,
 			},
 			{
 				path: '/settings/notifications',
