@@ -131,14 +131,17 @@ function escapeCsv(value: string): string {
 
 /** Creates a spreadsheet-safe CSV for the selected realized-gain rows. */
 export function exportGainsCsv(rows: readonly RealizedGain[]): string {
-	return [[...GAINS_CSV_HEADERS], ...rows.map(row => [
-		new Date(row.timestamp).toISOString(),
-		row.keyName,
-		String(row.quantity),
-		String(row.proceeds),
-		String(row.costBasis),
-		String(row.gain),
-	])]
+	return [
+		[...GAINS_CSV_HEADERS],
+		...rows.map(row => [
+			new Date(row.timestamp).toISOString(),
+			row.keyName,
+			String(row.quantity),
+			String(row.proceeds),
+			String(row.costBasis),
+			String(row.gain),
+		]),
+	]
 		.map(row => row.map(escapeCsv).join(','))
 		.join('\r\n');
 }
