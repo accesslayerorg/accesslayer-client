@@ -5,6 +5,7 @@ import { useSessions } from '@/hooks/useSessions';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import SessionSecuritySection from '@/components/settings/SessionSecuritySection';
 import MyTicketsSection from '@/components/settings/MyTicketsSection';
+import AddressBookPanel from '@/components/settings/AddressBookPanel';
 
 /**
  * Account settings page (#1111).
@@ -60,6 +61,8 @@ export default function AccountSettingsPage() {
 				onRevokeAllOtherSessions={revokeAllOtherSessions}
 				className="mb-6"
 			/>
+
+			<AddressBookPanel className="mb-6" />
 
 			<MyTicketsSection />
 		</main>

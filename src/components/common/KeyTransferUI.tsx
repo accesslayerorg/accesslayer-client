@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useAddressBook, validateAddressBookInput } from '@/hooks/useAddressBook';
 import { Loader, Send, CheckCircle, Clock } from 'lucide-react';
 import showToast from '@/utils/toast.util';
 
@@ -54,6 +57,12 @@ export default function KeyTransferUI({
 	const [resolvedRecipient, setResolvedRecipient] = useState<string | null>(
 		null
 	);
+	const [saveRecipient, setSaveRecipient] = useState(false);
+	const [saveLabel, setSaveLabel] = useState('');
+
+	const entries = useAddressBook(state => state.entries);
+	const addToAddressBook = useAddressBook(state => state.add);
+
 	const { register, handleSubmit, reset } = useForm<KeyTransferFormData>({
 		defaultValues: {
 			recipientAddress: '',
@@ -61,14 +70,28 @@ export default function KeyTransferUI({
 		},
 	});
 
-	const handleInitiateTransfer = async () => {
-		const finalAddress = resolvedRecipient || recipientInput.trim();
-		if (!finalAddress || !resolvedRecipient) {
+	const canOfferSave =
+		!!resolvedRecipient &&
+		!validateAddressBookInput(entries, {
+			label: 'x',
+			address: resolvedRecipient,
+		})?.field;
+
+	const handleInitiateTransfer = async (data: KeyTransferFormData) => {
+		const finalAddress = resolvedRecipient;
+
+		if (!finalAddress) {
 			showToast.error('Please enter a valid recipient address');
 			return;
 		}
 
+		if (saveRecipient && !saveLabel.trim()) {
+			showToast.error('Please enter a label for the recipient');
+			return;
+		}
+
 		setIsLoading(true);
+
 		try {
 			// TODO: Integrate with key transfer service
 			// const result = await initiateKeyTransfer({
@@ -80,10 +103,29 @@ export default function KeyTransferUI({
 			showToast.success(
 				'Transfer initiated. Waiting for recipient acceptance.'
 			);
+
+			if (saveRecipient && canOfferSave) {
+				const saved = addToAddressBook({
+					label: saveLabel.trim(),
+					address: finalAddress,
+				});
+
+				if (saved.ok) {
+					showToast.success('Recipient saved to your address book.');
+				} else {
+					showToast.error(
+						`Recipient not saved: ${saved.error.message}`
+					);
+				}
+			}
+
 			setShowTransferForm(false);
 			setRecipientInput('');
 			setResolvedRecipient(null);
+			setSaveRecipient(false);
+			setSaveLabel('');
 			reset();
+
 			onTransferInitiated?.();
 		} catch (error) {
 			showToast.error(
@@ -100,6 +142,7 @@ export default function KeyTransferUI({
 		if (!pendingTransfer) return;
 
 		setIsLoading(true);
+
 		try {
 			// TODO: Integrate with key transfer service
 			// const result = await acceptKeyTransfer({
@@ -111,7 +154,9 @@ export default function KeyTransferUI({
 			onTransferAccepted?.();
 		} catch (error) {
 			showToast.error(
-				error instanceof Error ? error.message : 'Failed to accept transfer'
+				error instanceof Error
+					? error.message
+					: 'Failed to accept transfer'
 			);
 		} finally {
 			setIsLoading(false);
@@ -122,6 +167,7 @@ export default function KeyTransferUI({
 		if (!pendingTransfer) return;
 
 		setIsLoading(true);
+
 		try {
 			// TODO: Integrate with key transfer service
 			// const result = await cancelKeyTransfer({
@@ -133,7 +179,9 @@ export default function KeyTransferUI({
 			onTransferCancelled?.();
 		} catch (error) {
 			showToast.error(
-				error instanceof Error ? error.message : 'Failed to cancel transfer'
+				error instanceof Error
+					? error.message
+					: 'Failed to cancel transfer'
 			);
 		} finally {
 			setIsLoading(false);
@@ -158,6 +206,7 @@ export default function KeyTransferUI({
 							</Badge>
 						</div>
 					</CardHeader>
+
 					<CardContent className="space-y-4">
 						<div>
 							<p className="text-sm text-orange-800">
@@ -175,18 +224,16 @@ export default function KeyTransferUI({
 						</div>
 
 						{canAcceptTransfer && (
-							<div className="flex gap-2">
-								<Button
-									onClick={handleAcceptTransfer}
-									disabled={isLoading}
-									className="flex-1"
-								>
-									{isLoading ? (
-										<Loader className="h-4 w-4 animate-spin" />
-									) : null}
-									Accept Transfer
-								</Button>
-							</div>
+							<Button
+								onClick={handleAcceptTransfer}
+								disabled={isLoading}
+								className="w-full"
+							>
+								{isLoading && (
+									<Loader className="h-4 w-4 animate-spin mr-2" />
+								)}
+								Accept Transfer
+							</Button>
 						)}
 
 						{!canAcceptTransfer && (
@@ -232,6 +279,7 @@ export default function KeyTransferUI({
 							Initiate a handover of "{keyName}" to another creator
 						</CardDescription>
 					</CardHeader>
+
 					<CardContent>
 						{!showTransferForm ? (
 							<Button
@@ -257,15 +305,47 @@ export default function KeyTransferUI({
 									<Label htmlFor="recipientAddress">
 										Recipient Address
 									</Label>
+
 									<AddressInput
 										id="recipientAddress"
 										placeholder="Stellar address (G...) or name*domain"
 										value={recipientInput}
-										onChange={e => setRecipientInput(e.target.value)}
+										onChange={e => {
+											setRecipientInput(e.target.value);
+											setResolvedRecipient(null);
+										}}
 										onResolved={setResolvedRecipient}
 										className="mt-1 font-mono text-sm"
 									/>
 								</div>
+
+								{canOfferSave && (
+									<div className="space-y-2">
+										<div className="flex items-center gap-2">
+											<Checkbox
+												id="saveRecipient"
+												checked={saveRecipient}
+												onCheckedChange={checked =>
+													setSaveRecipient(checked === true)
+												}
+											/>
+											<Label htmlFor="saveRecipient">
+												Save recipient
+											</Label>
+										</div>
+
+										{saveRecipient && (
+											<Input
+												aria-label="Recipient label"
+												placeholder="Label, e.g. Alice"
+												value={saveLabel}
+												onChange={e =>
+													setSaveLabel(e.target.value)
+												}
+											/>
+										)}
+									</div>
+								)}
 
 								<div>
 									<Label htmlFor="transferMessage">
@@ -282,18 +362,30 @@ export default function KeyTransferUI({
 								<div className="flex gap-2">
 									<Button
 										type="submit"
-										disabled={isLoading || !resolvedRecipient}
+										disabled={
+											isLoading ||
+											!resolvedRecipient ||
+											(saveRecipient && !saveLabel.trim())
+										}
 										className="flex-1"
 									>
-										{isLoading ? (
-											<Loader className="h-4 w-4 animate-spin" />
-										) : null}
+										{isLoading && (
+											<Loader className="h-4 w-4 animate-spin mr-2" />
+										)}
 										Send Transfer Request
 									</Button>
+
 									<Button
 										type="button"
 										variant="outline"
-										onClick={() => setShowTransferForm(false)}
+										onClick={() => {
+											setShowTransferForm(false);
+											setRecipientInput('');
+											setResolvedRecipient(null);
+											setSaveRecipient(false);
+											setSaveLabel('');
+											reset();
+										}}
 										disabled={isLoading}
 									>
 										Cancel

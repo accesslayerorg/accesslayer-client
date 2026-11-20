@@ -13,6 +13,7 @@ import type {
 	ProtocolTimeRange,
 	LeaderboardMetric,
 } from '@/services/analytics.service';
+import type { KeyHolderLeaderboardMetric } from '@/services/keyLeaderboard.service';
 
 export const queryKeys = {
 	creatorProfile: {
@@ -154,6 +155,9 @@ export const queryKeys = {
 		keyPositions: (keyId: string, wallet: string) =>
 			['lp', 'key-positions', keyId, wallet] as const,
 	},
+	transaction: {
+		status: (hash: string) => ['transaction', hash, 'status'] as const,
+	},
 	notifications: {
 		all: () => ['notifications'] as const,
 		list: (userId: string) => ['notifications', userId, 'list'] as const,
@@ -261,6 +265,10 @@ export const queryKeys = {
 		all: () => ['analytics', 'keys', 'leaderboard'] as const,
 		byMetric: (metric: LeaderboardMetric = 'volume') =>
 			['analytics', 'keys', 'leaderboard', metric] as const,
+		holders: (
+			keyId: string,
+			metric: KeyHolderLeaderboardMetric = 'volume'
+		) => ['keys', keyId, 'leaderboard', metric] as const,
 	},
 	creatorRevenue: {
 		all: () => ['creatorRevenue'] as const,

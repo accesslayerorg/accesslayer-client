@@ -4,6 +4,8 @@ import { useAccount } from 'wagmi';
 import { useCreatorDetail } from '@/hooks/useCreators';
 import { useWalletHoldings } from '@/hooks/useWallet';
 import { useCreatorPrices } from '@/hooks/useCreatorPrices';
+import { usePerformanceBond } from '@/hooks/usePerformanceBond';
+import { useTopUpPerformanceBondMutation } from '@/hooks/useCreatorContractActions';
 import { CreatorDashboardSkeleton } from '@/components/common/CreatorSkeleton';
 import { ProfileTabPillGroup } from '@/components/common/ProfileTabPill';
 import CreatorMetadataForm from '@/components/common/CreatorMetadataForm';
@@ -48,6 +50,7 @@ import CreatorRevenuePanel from '@/components/common/CreatorRevenuePanel';
 import DistributeRevenuePanel from '@/components/common/DistributeRevenuePanel';
 import CreatorAnnouncementsPanel from '@/components/common/CreatorAnnouncementsPanel';
 import VestingSchedulesViewer from '@/components/creator/VestingSchedulesViewer';
+import PerformanceBondCard from '@/components/creator/PerformanceBondCard';
 import KeyFeeHistoryChart from '@/components/common/KeyFeeHistoryChart';
 
 const TABS = [
@@ -101,6 +104,13 @@ export default function CreatorDashboardPage() {
 	// The vesting schedule is only meaningful to the wallet the allocation is
 	// registered to (#960), so both queries stay disabled for everyone else.
 	const isKeyCreator = isOwnWallet(address, creator?.instructorId);
+	const {
+		data: performanceBond,
+		isLoading: isPerformanceBondLoading,
+		isError: isPerformanceBondError,
+		refetch: refetchPerformanceBond,
+	} = usePerformanceBond(isKeyCreator ? id : undefined);
+	const topUpPerformanceBond = useTopUpPerformanceBondMutation(id);
 	const {
 		data: vestingData,
 		vesting,
@@ -304,6 +314,19 @@ export default function CreatorDashboardPage() {
 								</div>
 							</dl>
 						</section>
+
+						{isKeyCreator && (
+							<PerformanceBondCard
+								bond={performanceBond}
+								isLoading={isPerformanceBondLoading}
+								isError={isPerformanceBondError}
+								isTopUpPending={topUpPerformanceBond.isPending}
+								onRetry={() => void refetchPerformanceBond()}
+								onTopUp={async amountXlm => {
+									await topUpPerformanceBond.mutateAsync(amountXlm);
+								}}
+							/>
+						)}
 
 						<GraduatedCurveMilestoneChart
 							keyId={id}
