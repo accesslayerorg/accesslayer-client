@@ -114,19 +114,13 @@ export default function Header() {
 						Batch Trade
 					</button>
 					<BatchTradePanel open={batchOpen} onOpenChange={setBatchOpen} />
-				<ThemeToggle
-					className={
-						scrolled
-							? 'text-gray-600 hover:bg-black/5 hover:text-gray-900'
-							: 'text-white/60 hover:text-white/90'
-					}
-				/>
-					}`}
-				>
-					{theme === 'dark' && <Sun className="size-4" aria-hidden="true" />}
-					{theme === 'light' && <Moon className="size-4" aria-hidden="true" />}
-					{theme === 'system' && <Monitor className="size-4" aria-hidden="true" />}
-				</button>
+					<ThemeToggle
+						className={
+							scrolled
+								? 'text-gray-600 hover:bg-black/5 hover:text-gray-900'
+								: 'text-white/60 hover:text-white/90'
+						}
+					/>
 					<PendingTransactionsDrawer
 						className={
 							scrolled
