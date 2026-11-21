@@ -242,6 +242,10 @@ export const queryKeys = {
 		history: (address: string) =>
 			['atomic-swap', 'history', address] as const,
 	},
+	limitOrders: {
+		list: (creatorId: string, walletAddress: string) =>
+			['limitOrders', creatorId, walletAddress] as const,
+	},
 	bundles: {
 		all: (creatorId: string) => ['bundles', creatorId] as const,
 		list: (creatorId: string) => ['bundles', creatorId, 'list'] as const,
