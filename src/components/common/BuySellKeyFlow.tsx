@@ -311,21 +311,20 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 	]);
 
 	const networkFeeEstimate = useNetworkFeeEstimate({
-		creatorId,
-		side,
 		quantity: parsedAmount,
 		enabled: isValid && !confirmationOpen,
 	});
 
-	const networkFeeStroopsForTotal = networkFeeEstimate.data?.feeStroops ?? 0;
-	const networkFeeXlmBalance = networkFeeEstimate.data?.walletXlmBalanceStroops ?? null;
-	const isInsufficientXlmForFee =
-		networkFeeXlmBalance != null &&
-		networkFeeEstimate.data?.feeStroops != null &&
-		networkFeeXlmBalance < networkFeeEstimate.data.feeStroops;
+	const totalWithNetworkFeeStroops = useMemo(() => {
+		if (totalStroops == null) return null;
+		const feeStroops = networkFeeEstimate?.feeStroops ?? 0;
+		return side === 'buy'
+			? totalStroops + feeStroops
+			: totalStroops - feeStroops;
+	}, [totalStroops, networkFeeEstimate?.feeStroops, side]);
 
-	const totalWithNetworkFeeStroops =
-		totalStroops != null ? totalStroops + networkFeeStroopsForTotal : null;
+	const isInsufficientXlmForFee =
+		networkFeeEstimate?.balanceSufficient === false;
 
 	// Slippage bounds computation
 	const slippageBounds = useMemo<SlippageBounds | null>(() => {
@@ -786,9 +785,6 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 				amount={parsedAmount}
 				unitPriceStroops={keyPriceStroops}
 				totalStroops={totalStroops}
-				networkFeeStroops={networkFeeEstimate.data?.feeStroops ?? null}
-				networkFeeLoading={networkFeeEstimate.isLoading}
-				networkFeeError={networkFeeEstimate.isError}
 				totalWithNetworkFeeStroops={totalWithNetworkFeeStroops}
 				insufficientXlmForFee={isInsufficientXlmForFee}
 				slippageTolerancePercent={slippageTolerancePercent}

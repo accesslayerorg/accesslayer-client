@@ -3,7 +3,13 @@
  * the RPC `simulateTransaction` endpoint and reading `minResourceFee`.
  */
 
-import { rpc, Transaction, FeeBumpTransaction } from '@stellar/stellar-sdk';
+import {
+	rpc,
+	TransactionBuilder,
+	Networks,
+	Transaction,
+	FeeBumpTransaction,
+} from '@stellar/stellar-sdk';
 
 const STROOPS_PER_XLM = 10_000_000;
 
@@ -17,6 +23,8 @@ export interface NetworkFeeEstimate {
 export interface EstimateNetworkFeeOptions {
 	/** Soroban RPC server instance. */
 	server: rpc.Server;
+	/** Network passphrase the transaction was built for. Defaults to testnet. */
+	networkPassphrase?: string;
 }
 
 /**
@@ -32,9 +40,12 @@ export async function estimateNetworkFee(
 		throw new Error('Transaction XDR is required to estimate network fee');
 	}
 
-	const { server } = options;
-	const tx = Transaction.fromXDR(txXdr, '') as Transaction | FeeBumpTransaction;
-	const response = await server.simulateTransaction(tx as Transaction);
+	const { server, networkPassphrase = Networks.TESTNET } = options;
+	const tx: Transaction | FeeBumpTransaction = TransactionBuilder.fromXDR(
+		txXdr,
+		networkPassphrase
+	);
+	const response = await server.simulateTransaction(tx);
 
 	if (rpc.Api.isSimulationError(response)) {
 		throw new Error(`Simulation failed: ${response.error}`);
