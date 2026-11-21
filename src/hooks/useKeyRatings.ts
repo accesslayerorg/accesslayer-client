@@ -13,7 +13,6 @@ import type {
 	KeyRating,
 	KeyRatingSummary,
 	KeyRatingsPage,
-	SubmitKeyRatingInput,
 } from '@/types/keyRating';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
@@ -130,10 +129,8 @@ export function useSubmitKeyRatingMutation(
 					rating: normalizedRating,
 					review: trimmedReview,
 				});
-			} else if (
-				typeof (creatorKeysContractService as any).submitRating === 'function'
-			) {
-				await (creatorKeysContractService as any).submitRating({
+			} else if (typeof creatorKeysContractService.submitRating === 'function') {
+				await creatorKeysContractService.submitRating({
 					keyId,
 					rating: normalizedRating,
 					review: trimmedReview,
