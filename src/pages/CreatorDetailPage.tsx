@@ -136,6 +136,12 @@ import {
 	isKeyLockupActive,
 } from '@/hooks/useKeyLockup';
 import { formatUnlockCountdown } from '@/utils/lockupCountdown.utils';
+import RentalEscrowNotice from '@/components/rentals/RentalEscrowNotice';
+import { useWalletRentals } from '@/hooks/useKeyRentals';
+import {
+	getEscrowedKeyQuantity,
+	RENTAL_ESCROW_REASON,
+} from '@/utils/keyRental.utils';
 import KeyLockupBadge from '@/components/common/KeyLockupBadge';
 import { useAccount } from 'wagmi';
 import { useKeyMarketMaker } from '@/hooks/useKeyMarketMaker';
@@ -239,6 +245,19 @@ function CreatorDetailPageContent() {
 
 	const userPosition = holdings.find(h => h.creatorId === (id || ''));
 	const holdingsCount = userPosition?.quantity ?? 0;
+
+	// #1360 — keys listed for rent stay escrowed by the rental contract: they
+	// cannot be sold, transferred or staked until the rental ends.
+	const { data: walletRentals } = useWalletRentals(userAddress);
+	const rentalEscrowedQuantity = getEscrowedKeyQuantity(
+		walletRentals ?? [],
+		userAddress,
+		id || ''
+	);
+	const tradableHoldingsCount = Math.max(
+		0,
+		holdingsCount - rentalEscrowedQuantity
+	);
 
 	// #1163 — wallet-scoped lock-up status: while active, selling is
 	// disabled with a LockupActive reason and a live unlock countdown.
@@ -1096,6 +1115,21 @@ function CreatorDetailPageContent() {
 													Sell Key (Locked)
 												</Button>
 											</UnavailableAction>
+										) : tradableHoldingsCount <= 0 ? (
+											<UnavailableAction
+												disabled
+												reason={RENTAL_ESCROW_REASON}
+											>
+												<Button
+													type="button"
+													disabled
+													data-testid="key-detail-sell-button"
+													variant="outline"
+													className="min-h-11 w-full rounded-xl font-bold sm:h-10 sm:min-h-0 sm:w-auto"
+												>
+													Sell Key (Listed for rent)
+												</Button>
+											</UnavailableAction>
 										) : isFloorActive ? (
 											<UnavailableAction
 												disabled
@@ -1133,6 +1167,10 @@ function CreatorDetailPageContent() {
 										/>
 									)}
 								</div>
+								<RentalEscrowNotice
+									escrowedQuantity={rentalEscrowedQuantity}
+									className="mt-3"
+								/>
 							</div>
 						</TabsContent>
 
@@ -1271,7 +1309,7 @@ function CreatorDetailPageContent() {
 				<StakingVaultPanel
 					keyId={id ?? ''}
 					userAddress={userAddress}
-					availableBalance={holdingsCount}
+					availableBalance={tradableHoldingsCount}
 					rewardPoolBalance={stakingStats.stakingPoolBalance ?? 0}
 					isLoading={isLoading}
 				/>
@@ -1579,7 +1617,7 @@ function CreatorDetailPageContent() {
 						open={buyDialogOpen}
 						side={tradeSide}
 						creatorName={creator.title || creator.name || 'Creator'}
-						availableHoldings={holdingsCount}
+						availableHoldings={tradableHoldingsCount}
 						keyPriceStroops={resolveCreatorKeyPriceStroops(creator)}
 						currentSupply={creator.creatorShareSupply}
 						maxBuyQuantity={creator.maxBuyQuantity}

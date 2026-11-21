@@ -238,6 +238,13 @@ export const queryKeys = {
 		all: () => ['airdropClaims'] as const,
 		list: (wallet: string) => ['airdropClaims', wallet, 'list'] as const,
 	},
+	keyRentals: {
+		all: () => ['keyRentals'] as const,
+		available: () => ['keyRentals', 'available'] as const,
+		wallet: (wallet: string) => ['keyRentals', 'wallet', wallet] as const,
+		activeRenter: (keyId: string, wallet: string) =>
+			['keyRentals', 'activeRenter', keyId, wallet] as const,
+	},
 	atomicSwap: {
 		all: () => ['atomic-swap'] as const,
 		proposal: (proposalId: string) =>

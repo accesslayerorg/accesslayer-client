@@ -36,6 +36,8 @@ import KeyDiscoveryFeedPage from './pages/KeyDiscoveryFeedPage';
 import KeyDiscoveryLeaderboardPage from './pages/KeyDiscoveryLeaderboardPage';
 import WalletPortfolioPage from './pages/WalletPortfolioPage';
 import CampaignsPage from './pages/CampaignsPage';
+import RentalMarketPage from './pages/RentalMarketPage';
+import MyRentalsPage from './pages/MyRentalsPage';
 import AutoInvestDashboardPage from './pages/AutoInvestDashboardPage';
 import AirdropClaimsPage from './pages/AirdropClaimsPage';
 import ProtocolAnalyticsPage from './pages/ProtocolAnalyticsPage';
@@ -88,6 +90,19 @@ export const routes = [
 				// Key discovery feed with sort + category filters (#1113).
 				path: '/discovery/feed',
 				element: <KeyDiscoveryFeedPage />,
+			},
+			{
+				// Key rental market: listings with fee, max days and collateral (#1360).
+				path: '/rentals',
+				element: withRouteErrorBoundary(
+					<RentalMarketPage />,
+					'Key rentals'
+				),
+			},
+			{
+				// Listed, rented out and rented in keys for the wallet (#1360).
+				path: '/rentals/mine',
+				element: withRouteErrorBoundary(<MyRentalsPage />, 'My rentals'),
 			},
 			{
 				// Full list of seasonal campaigns linked from discovery (#1226).
