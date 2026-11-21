@@ -38,6 +38,7 @@ import WalletPortfolioPage from './pages/WalletPortfolioPage';
 import CampaignsPage from './pages/CampaignsPage';
 import AutoInvestDashboardPage from './pages/AutoInvestDashboardPage';
 import AirdropClaimsPage from './pages/AirdropClaimsPage';
+import DistributionsPage from './pages/DistributionsPage';
 import ProtocolAnalyticsPage from './pages/ProtocolAnalyticsPage';
 import LpPositionsPage from './pages/LpPositionsPage';
 import ProposalCreatePage from './pages/ProposalCreatePage';
@@ -303,6 +304,14 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<AdminDashboardPage />,
 					'Admin dashboard'
+				),
+			},
+			{
+				// Holder-facing distribution history with combined earnings chart (#1259).
+				path: '/distributions',
+				element: withRouteErrorBoundary(
+					<DistributionsPage />,
+					'Distributions'
 				),
 			},
 			{
