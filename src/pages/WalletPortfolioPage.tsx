@@ -6,17 +6,15 @@ import EmptyState from '@/components/common/EmptyState';
 import { Button } from '@/components/ui/button';
 import { useBatchTradeStore, selectBatchItemCount } from '@/hooks/useBatchTradeStore';
 import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
-import BadgeProgressTracker from '@/components/common/BadgeProgressTracker';
 import Skeleton from '@/components/ui/skeleton';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useWalletHoldings } from '@/hooks/useWallet';
 import { useCreatorPrices } from '@/hooks/useCreatorPrices';
 import { cn } from '@/lib/utils';
-import { formatDisplayKeyPrice, resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
+import { resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
 import { useActiveKeySplits } from '@/hooks/useKeySplit';
 import { isSplitActive } from '@/utils/keySplit.utils';
 import KeySplitBanner from '@/components/common/KeySplitBanner';
-import SplitAppliedBadge from '@/components/common/SplitAppliedBadge';
 import {
 	calculatePnLSummary,
 	calculatePortfolioValue,
@@ -370,45 +368,7 @@ export default function WalletPortfolioPage() {
 								</thead>
 								<tbody>
 									{sortedRows.map(row => (
-										<tr
-											key={row.creatorId}
-											className="border-b border-white/5 last:border-0 hover:bg-white/[0.03]"
-											onClick={() => navigate(`/keys/${row.creatorId}`)}
-										>
-											<td className="py-3 pr-4">
-												<Link
-													to={`/keys/${row.creatorId}`}
-													className="font-bold text-white hover:text-amber-300"
-												>
-													{row.keyName}
-												</Link>
-											</td>
-											<td className="py-3 pr-4 text-right font-mono">
-												{row.quantity}
-											</td>
-											<td className="py-3 pr-4 text-right font-mono">
-												{row.avgBuyPriceDisplay}
-											</td>
-											<td className="py-3 pr-4 text-right font-mono">
-												{row.currentPriceDisplay}
-											</td>
-											<td
-												className={cn(
-												'py-3 pr-4 text-right font-mono',
-												getPnLToneClassName(row.unrealisedPnL)
-											)}
-											>
-												{row.unrealisedPnLDisplay}
-											</td>
-											<td
-												className={cn(
-												'py-3 pr-4 text-right font-mono',
-												getPnLToneClassName(row.pnlPercentage)
-											)}
-											>
-												{row.pnlPercentageDisplay}
-											</td>
-										</tr>
+										<tr key={row.creatorId} className="border-b border-white/5"></tr>
 									))}
 								</tbody>
 							</table>
