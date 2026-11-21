@@ -1,21 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { createWebhook } from '../../services/webhooks';
 import type { CreatedWebhook, WebhookEvent } from '../../services/webhooks';
-
-export const WEBHOOK_EVENTS: WebhookEvent[] = ['key.bought', 'key.sold', 'holder.new'];
-
-export function validateWebhookUrl(raw: string): string | null {
-  const value = raw.trim();
-  if (!value) return 'URL is required';
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch {
-    return 'Enter a valid URL';
-  }
-  if (parsed.protocol !== 'https:') return 'Webhook URL must use HTTPS';
-  return null;
-}
+import { WEBHOOK_EVENTS, validateWebhookUrl } from './webhookConstants';
 
 interface WebhookFormProps {
   onCreated: (webhook: CreatedWebhook) => void;
@@ -34,7 +21,7 @@ export function WebhookForm({ onCreated }: WebhookFormProps) {
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitError(null);
     const urlError = validateWebhookUrl(url);

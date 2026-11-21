@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { WebhookForm } from './WebhookForm';
 import { DeliveryLog } from './DeliveryLog';
 import { deleteWebhook, listWebhooks } from '../../services/webhooks';
@@ -15,10 +15,10 @@ export function WebhookManager() {
   useEffect(() => {
     let cancelled = false;
     listWebhooks()
-      .then((rows) => {
+      .then((rows: Webhook[]) => {
         if (!cancelled) setWebhooks(rows);
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load webhooks');
       })
       .finally(() => {
@@ -30,7 +30,11 @@ export function WebhookManager() {
   }, []);
 
   const handleCreated = (created: CreatedWebhook) => {
-    const { secret, ...webhook } = created;
+    const webhook: Webhook = {
+      id: created.id,
+      url: created.url,
+      events: created.events,
+    } as Webhook;
     setWebhooks((prev) => [...prev, webhook]);
     setRevealed(created);
     setCopied(false);

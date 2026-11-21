@@ -1,13 +1,33 @@
-import React, { useEffect, useState } from 'react';
-import { listDeliveries, redeliver } from '../../services/webhooks';
-import type { WebhookDelivery } from '../../services/webhooks';
+import { useEffect, useState } from 'react';
+
+export interface WebhookDelivery {
+  id: string;
+  event: string;
+  statusCode: number | null;
+  timestamp: string;
+}
+
+function isSuccessStatus(statusCode: number | null): boolean {
+  return statusCode !== null && statusCode >= 200 && statusCode < 300;
+}
+
+async function listDeliveries(webhookId: string): Promise<WebhookDelivery[]> {
+  const res = await fetch(`/api/webhooks/${encodeURIComponent(webhookId)}/deliveries`);
+  if (!res.ok) throw new Error(`Failed to load deliveries (${res.status})`);
+  return (await res.json()) as WebhookDelivery[];
+}
+
+async function redeliver(webhookId: string, deliveryId: string): Promise<WebhookDelivery> {
+  const res = await fetch(
+    `/api/webhooks/${encodeURIComponent(webhookId)}/deliveries/${encodeURIComponent(deliveryId)}/redeliver`,
+    { method: 'POST' },
+  );
+  if (!res.ok) throw new Error(`Redelivery failed (${res.status})`);
+  return (await res.json()) as WebhookDelivery;
+}
 
 interface DeliveryLogProps {
   webhookId: string;
-}
-
-export function isSuccessStatus(statusCode: number | null): boolean {
-  return statusCode !== null && statusCode >= 200 && statusCode < 300;
 }
 
 export function DeliveryLog({ webhookId }: DeliveryLogProps) {
@@ -20,10 +40,10 @@ export function DeliveryLog({ webhookId }: DeliveryLogProps) {
     let cancelled = false;
     setLoading(true);
     listDeliveries(webhookId)
-      .then((rows) => {
+      .then((rows: WebhookDelivery[]) => {
         if (!cancelled) setDeliveries(rows);
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load deliveries');
       })
       .finally(() => {
@@ -65,7 +85,13 @@ export function DeliveryLog({ webhookId }: DeliveryLogProps) {
         {deliveries.map((d) => {
           const ok = isSuccessStatus(d.statusCode);
           return (
-            <tr key={d.id} data-testid="delivery-row" data-failed={ok ? 'false' : 'true'} className={ok ? undefined : 'delivery-failed'} style={ok ? undefined : { backgroundColor: '#fde8e8' }}>
+            <tr
+              key={d.id}
+              data-testid="delivery-row"
+              data-failed={ok ? 'false' : 'true'}
+              className={ok ? undefined : 'delivery-failed'}
+              style={ok ? undefined : { backgroundColor: '#fde8e8' }}
+            >
               <td>{d.event}</td>
               <td>{d.statusCode ?? 'No response'}</td>
               <td>{new Date(d.timestamp).toLocaleString()}</td>
