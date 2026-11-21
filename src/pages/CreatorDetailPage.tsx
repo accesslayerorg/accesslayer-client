@@ -46,11 +46,16 @@ import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 import { isKeyDeprecated } from '@/utils/keyDeprecation.utils';
 import { Button } from '@/components/ui/button';
 import { CreatorDashboardSkeleton } from '@/components/common/CreatorSkeleton';
-import { bpsToPercent, formatNumber } from '@/utils/numberFormat.utils';
+import {
+	bpsToPercent,
+	formatHolderCount,
+	formatNumber,
+} from '@/utils/numberFormat.utils';
 import {
 	resolveCreatorKeyPriceStroops,
 	formatDisplayKeyPrice,
 } from '@/utils/keyPriceDisplay.utils';
+import { resolveCreatorKeyHolderCount } from '@/utils/creatorProfile.utils';
 import {
 	resolveHighestBid,
 	formatAuctionBidAmount,
@@ -572,11 +577,7 @@ function CreatorDetailPageContent() {
 		},
 		{
 			label: 'Total Holders',
-			value: formatNumber(
-				creator.creatorShareSupply
-					? Math.ceil(creator.creatorShareSupply / 2)
-					: 10
-			),
+			value: formatHolderCount(resolveCreatorKeyHolderCount(creator)),
 		},
 		// Reserve backstop (#1208); hidden until the key has accrued a reserve.
 		...(keyReserve && getKeyReserveStatus(keyReserve).visible
