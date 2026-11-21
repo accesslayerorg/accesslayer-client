@@ -139,6 +139,9 @@ import { useAccount } from 'wagmi';
 import { useKeyMarketMaker } from '@/hooks/useKeyMarketMaker';
 import { MarketMakerChip, MMBadge } from '@/components/common/MarketMakerChip';
 import ReportKeyModal from '@/components/common/ReportKeyModal';
+import ShareQrModal from '@/components/common/ShareQrModal';
+import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
+import { QrCode } from 'lucide-react';
 
 /** Series shown in the key detail price panel (#1220 adds the depth tab). */
 type PriceChartTab = 'primary' | 'secondary' | 'depth' | 'revenue';
@@ -175,6 +178,7 @@ function CreatorDetailPageContent() {
 	const [priceChartTab, setPriceChartTab] = useState<PriceChartTab>('primary');
 	const [secondaryRange, setSecondaryRange] =
 		useState<SecondaryPriceRange>('7d');
+	const [qrModalOpen, setQrModalOpen] = useState(false);
 
 	const {
 		data: creator,
@@ -284,20 +288,14 @@ function CreatorDetailPageContent() {
 		isError: isPerformanceBondError,
 	} = usePerformanceBond(id || '');
 
-	const {
-		data: earlyIncentive,
-		isLoading: isEarlyIncentiveLoading,
-	} = useEarlyIncentive(id || '');
+	const { data: earlyIncentive, isLoading: isEarlyIncentiveLoading } =
+		useEarlyIncentive(id || '');
 
-	const {
-		data: secondaryPrices,
-		isLoading: isSecondaryPricesLoading,
-	} = useSecondaryPrices(id || '', secondaryRange);
+	const { data: secondaryPrices, isLoading: isSecondaryPricesLoading } =
+		useSecondaryPrices(id || '', secondaryRange);
 
-	const {
-		data: paymentSchedule,
-		isLoading: isPaymentScheduleLoading,
-	} = usePaymentSchedule(id || '');
+	const { data: paymentSchedule, isLoading: isPaymentScheduleLoading } =
+		usePaymentSchedule(id || '');
 
 	const performanceBond =
 		performanceBondData ?? creator?.performanceBond ?? null;
@@ -664,6 +662,18 @@ function CreatorDetailPageContent() {
 							}}
 							title={`Share ${creator.title || creator.name || 'this key'}`}
 						/>
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							onClick={() => setQrModalOpen(true)}
+							aria-label="QR code"
+							data-testid="key-detail-qr-button"
+							className="gap-1.5 text-white/50 hover:text-white/80"
+						>
+							<QrCode className="size-3.5" aria-hidden="true" />
+							<span>QR code</span>
+						</Button>
 						<ReportIssueButton
 							keyId={creator.id}
 							keyName={creator.title || creator.name}
@@ -878,7 +888,10 @@ function CreatorDetailPageContent() {
 							<TabsTrigger value="buy" data-testid="invest-tab-buy">
 								Buy
 							</TabsTrigger>
-							<TabsTrigger value="subscribe" data-testid="invest-tab-subscribe">
+							<TabsTrigger
+								value="subscribe"
+								data-testid="invest-tab-subscribe"
+							>
 								Subscribe
 							</TabsTrigger>
 						</TabsList>
@@ -933,28 +946,33 @@ function CreatorDetailPageContent() {
 										className="mt-2"
 									/>
 
-									{creator.publicLaunchDate && hasValidPublicLaunchDate && (
-										<p className="mt-2 text-sm text-white/70">
-											{isPublicLaunchPending
-												? 'Public launch: '
-												: 'Public trading is open. '}
+									{creator.publicLaunchDate &&
+										hasValidPublicLaunchDate && (
+											<p className="mt-2 text-sm text-white/70">
+												{isPublicLaunchPending
+													? 'Public launch: '
+													: 'Public trading is open. '}
 
-											{isPublicLaunchPending && (
-												<time dateTime={creator.publicLaunchDate}>
-													{new Date(
-														creator.publicLaunchDate
-													).toLocaleString()}
-												</time>
-											)}
-										</p>
-									)}
+												{isPublicLaunchPending && (
+													<time
+														dateTime={creator.publicLaunchDate}
+													>
+														{new Date(
+															creator.publicLaunchDate
+														).toLocaleString()}
+													</time>
+												)}
+											</p>
+										)}
 								</div>
 
 								<div className="flex flex-wrap items-center gap-2">
 									<AddToBatchButton
 										keyId={creator.id}
 										keyName={displayName}
-										priceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
+										priceStroops={
+											resolveCreatorKeyPriceStroops(creator) ?? 0
+										}
 										currentSupply={creator.creatorShareSupply ?? null}
 										thumbnail={displayAvatar ?? undefined}
 										disabled={Boolean(keyFreeze)}
@@ -965,7 +983,9 @@ function CreatorDetailPageContent() {
 									<AddToBundleButton
 										keyId={creator.id}
 										keyName={displayName}
-										priceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
+										priceStroops={
+											resolveCreatorKeyPriceStroops(creator) ?? 0
+										}
 										currentSupply={creator.creatorShareSupply ?? null}
 										thumbnail={displayAvatar ?? undefined}
 										disabled={Boolean(keyFreeze)}
@@ -976,8 +996,12 @@ function CreatorDetailPageContent() {
 									<PriceAlertButton
 										userId={userAddress}
 										keyId={creator.id}
-										keyName={creator.title || creator.name || 'Creator Key'}
-										currentPrice={resolveCreatorKeyPriceStroops(creator) ?? 0}
+										keyName={
+											creator.title || creator.name || 'Creator Key'
+										}
+										currentPrice={
+											resolveCreatorKeyPriceStroops(creator) ?? 0
+										}
 									/>
 
 									<Link
@@ -998,7 +1022,10 @@ function CreatorDetailPageContent() {
 											Buy Disabled (Deprecated)
 										</Button>
 									) : keyFreeze ? (
-										<UnavailableAction disabled reason={keyFreeze.reason}>
+										<UnavailableAction
+											disabled
+											reason={keyFreeze.reason}
+										>
 											<Button
 												type="button"
 												data-testid="key-detail-buy-button"
@@ -1110,16 +1137,22 @@ function CreatorDetailPageContent() {
 						<TabsContent value="subscribe" className="space-y-4">
 							<SubscriptionInvestmentPanel
 								creatorId={creator.id}
-								currentPriceStroops={resolveCreatorKeyPriceStroops(creator)}
-								disabled={isKeyDeprecated(creator) || Boolean(keyFreeze) || creator.tradingPaused}
+								currentPriceStroops={resolveCreatorKeyPriceStroops(
+									creator
+								)}
+								disabled={
+									isKeyDeprecated(creator) ||
+									Boolean(keyFreeze) ||
+									creator.tradingPaused
+								}
 								disabledReason={
 									isKeyDeprecated(creator)
 										? 'Key is deprecated. Subscriptions are disabled.'
 										: keyFreeze
-										? keyFreeze.reason
-										: creator.tradingPaused
-										? 'Trading is currently paused.'
-										: undefined
+											? keyFreeze.reason
+											: creator.tradingPaused
+												? 'Trading is currently paused.'
+												: undefined
 								}
 							/>
 						</TabsContent>
@@ -1454,9 +1487,13 @@ function CreatorDetailPageContent() {
 									auctionId: 'active',
 									seller: userAddress ?? '',
 									fractionAmount: Math.max(1, holdingsCount),
-									reservePriceStroops: resolveCreatorKeyPriceStroops(creator) ?? 0,
+									reservePriceStroops:
+										resolveCreatorKeyPriceStroops(creator) ?? 0,
 									highestBidStroops: Math.round(
-										(resolveHighestBid(creator.auctionBids, creator.auctionHighestBid) ?? 0) * 1e7
+										(resolveHighestBid(
+											creator.auctionBids,
+											creator.auctionHighestBid
+										) ?? 0) * 1e7
 									),
 									highestBidder: null,
 									endsAt: new Date(Date.now() + 3_600_000),
@@ -1493,10 +1530,7 @@ function CreatorDetailPageContent() {
 							isHolder={holdingsCount > 0}
 							userAddress={userAddress}
 						/>
-						<RecentTipsFeed
-							creatorId={creator.id}
-							className="mt-6"
-						/>
+						<RecentTipsFeed creatorId={creator.id} className="mt-6" />
 					</SectionErrorBoundary>
 				</div>
 
@@ -1573,6 +1607,17 @@ function CreatorDetailPageContent() {
 						onOpenChange={setReportKeyModalOpen}
 						keyId={creator.id}
 						keyName={creator.title || creator.name || 'this key'}
+					/>
+				)}
+				{creator && (
+					<ShareQrModal
+						open={qrModalOpen}
+						onOpenChange={setQrModalOpen}
+						url={buildCreatorProfileReferralLink({
+							handle: creator.socialHandle || creator.instructorId,
+							wallet: userAddress,
+						})}
+						handle={creator.socialHandle || creator.instructorId}
 					/>
 				)}
 			</div>

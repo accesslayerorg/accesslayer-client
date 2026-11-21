@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Flag, MoreHorizontal, Share2, Pencil } from 'lucide-react';
+import {
+	ArrowLeft,
+	Flag,
+	MoreHorizontal,
+	Share2,
+	Pencil,
+	QrCode,
+} from 'lucide-react';
 import appendUtmParams from '@/utils/utm.utils';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -18,6 +25,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import ShareQrModal from '@/components/common/ShareQrModal';
+import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
 
 interface CreatorProfileHeaderProps {
 	name: string;
@@ -59,6 +68,7 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 }) => {
 	const [copied, setCopied] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
+	const [qrOpen, setQrOpen] = useState(false);
 	const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const { format } = useFormatXlm();
 
@@ -269,25 +279,43 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 						</>
 					)}
 					{canShowShareButton && (
-						<Button
-							type="button"
-							onClick={handleShare}
-							aria-label={copied ? 'Copied!' : 'Share profile'}
-							variant="outline"
-							className={cn(
-								'rounded-xl border-white/10 bg-white/5 font-bold text-white transition-all hover:border-amber-500/30 hover:bg-amber-500/10 active:scale-95',
-								isScrolled ? 'h-9 px-3 text-xs' : 'h-11 px-4 text-sm'
-							)}
-						>
-							{copied ? (
-								<span>Copied!</span>
-							) : (
-								<Share2
+						<>
+							<Button
+								type="button"
+								onClick={() => setQrOpen(true)}
+								aria-label="QR code"
+								variant="outline"
+								className={cn(
+									'gap-2 rounded-xl border-white/10 bg-white/5 font-bold text-white transition-all hover:border-amber-500/30 hover:bg-amber-500/10 active:scale-95',
+									isScrolled ? 'h-9 px-3 text-xs' : 'h-11 px-4 text-sm'
+								)}
+							>
+								<QrCode
 									className="size-4 text-amber-500"
 									aria-hidden="true"
 								/>
-							)}
-						</Button>
+								<span className="hidden sm:inline">QR code</span>
+							</Button>
+							<Button
+								type="button"
+								onClick={handleShare}
+								aria-label={copied ? 'Copied!' : 'Share profile'}
+								variant="outline"
+								className={cn(
+									'rounded-xl border-white/10 bg-white/5 font-bold text-white transition-all hover:border-amber-500/30 hover:bg-amber-500/10 active:scale-95',
+									isScrolled ? 'h-9 px-3 text-xs' : 'h-11 px-4 text-sm'
+								)}
+							>
+								{copied ? (
+									<span>Copied!</span>
+								) : (
+									<Share2
+										className="size-4 text-amber-500"
+										aria-hidden="true"
+									/>
+								)}
+							</Button>
+						</>
 					)}
 					{onReport && (
 						<DropdownMenu>
@@ -324,6 +352,15 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 					)}
 				</div>
 			</div>
+			<ShareQrModal
+				open={qrOpen}
+				onOpenChange={setQrOpen}
+				url={buildCreatorProfileReferralLink({
+					handle,
+					wallet: connectedWalletAddress,
+				})}
+				handle={displayHandle || handle}
+			/>
 		</div>
 	);
 };
