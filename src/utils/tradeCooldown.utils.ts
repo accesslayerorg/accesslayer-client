@@ -48,6 +48,11 @@ export function isActiveCooldown(
 	nowSec: number = Math.floor(Date.now() / 1000)
 ): status is ActiveTradeCooldown {
 	if (!status || status.nextBuyAllowedAt == null) return false;
+	if (
+		status.cooldownDurationSeconds != null &&
+		status.cooldownDurationSeconds <= 0
+	)
+		return false;
 	const targetSec = normalizeTimestampToSeconds(status.nextBuyAllowedAt);
 	if (targetSec == null) return false;
 	return targetSec > nowSec;

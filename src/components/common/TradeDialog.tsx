@@ -83,6 +83,9 @@ import { useContractPausedStore, selectIsPaused } from '@/hooks/useContractPause
 import { useAllowanceStore, selectNeedsApproval } from '@/hooks/useAllowanceStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useHoldingCapStore, isAtHoldingCap, remainingCapacity } from '@/hooks/useHoldingCapStore';
+import { useTradeCooldown } from '@/hooks/useTradeCooldown';
+import CooldownBadge from '@/components/common/CooldownBadge';
+import { formatCooldownDuration } from '@/utils/buyCooldown.utils';
 
 export type TradeSide = 'buy' | 'sell' | 'stake' | 'transfer';
 
@@ -201,6 +204,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 }) => {
 	const { address } = useAccount();
 	const activeAddress = walletAddress ?? address;
+	const tradeCooldown = useTradeCooldown(creatorId ?? '', activeAddress);
 
 	// ── Contract pause state (#953) ───────────────────────────────────────
 	const isPaused = useContractPausedStore(selectIsPaused);
@@ -907,6 +911,13 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 
 	const bodyContent = (
 		<>
+			{tradeCooldown.isCoolingDown && (
+				<CooldownBadge
+					keyId={creatorId}
+					wallet={activeAddress}
+					className="mb-3"
+				/>
+			)}
 			{/* Key frozen alert (#1121) */}
 			{keyFreeze && (
 				<div
@@ -1232,9 +1243,16 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 				Cancel
 			</Button>
 			<UnavailableAction
-				disabled={frozen || paused || (side === 'sell' && isFloorActive)}
+				disabled={
+					frozen ||
+					paused ||
+					tradeCooldown.isCoolingDown ||
+					(side === 'sell' && isFloorActive)
+				}
 				reason={
-					keyFreeze
+					tradeCooldown.isCoolingDown
+						? `Trade cooldown active. Try again in ${formatCooldownDuration(tradeCooldown.remainingSeconds)}.`
+						: keyFreeze
 						? keyFreeze.reason
 						: globalPaused
 							? 'Platform Paused'
@@ -1253,6 +1271,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 						(side === 'buy' && (previewLoading || previewError != null)) ||
 						paused ||
 						frozen ||
+						tradeCooldown.isCoolingDown ||
 						(side === 'sell' && isFloorActive)
 					}
 					aria-busy={isSubmitting || undefined}
@@ -1298,6 +1317,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 				}}
 				onCancel={() => setConfirmationOpen(false)}
 				isSubmitting={isSubmitting}
+				disabled={tradeCooldown.isCoolingDown}
 			/>
 		) : null;
 

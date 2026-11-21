@@ -43,6 +43,9 @@ import {
 	isTradeLimitReached,
 } from '@/utils/tradeLimit.utils';
 import { UnavailableAction } from '@/components/ui/unavailable-action';
+import { useAccount } from 'wagmi';
+import { useTradeCooldown } from '@/hooks/useTradeCooldown';
+import CooldownBadge from '@/components/common/CooldownBadge';
 export interface BuySellTradeParams {
 	creatorId?: string;
 	side: 'buy' | 'sell';
@@ -128,6 +131,8 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 	priceFloorActive,
 	className,
 }) => {
+	const { address } = useAccount();
+	const tradeCooldown = useTradeCooldown(creatorId ?? '', address);
 	const effectiveHoldingCap = useMemo(
 		() =>
 			holdingCap ??
@@ -722,10 +727,23 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 			)}
 
 			{/* Review / Proceed to Confirmation Button */}
+			{tradeCooldown.isCoolingDown && (
+				<CooldownBadge
+					keyId={creatorId}
+					wallet={address}
+					className="mb-2"
+				/>
+			)}
 			<UnavailableAction
-				disabled={paused || (side === 'sell' && isFloorActive)}
+				disabled={
+					paused ||
+					tradeCooldown.isCoolingDown ||
+					(side === 'sell' && isFloorActive)
+				}
 				reason={
-					globalPaused
+					tradeCooldown.isCoolingDown
+						? 'Trade cooldown active'
+						: globalPaused
 						? 'Platform Paused'
 						: side === 'sell' && isFloorActive
 							? 'PriceFloorActive: Selling is disabled while current price is at or below the floor price.'
@@ -740,6 +758,7 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 						isSubmitting ||
 						(impactWarningActive && !impactAcknowledged) ||
 						paused ||
+						tradeCooldown.isCoolingDown ||
 						(side === 'sell' && isFloorActive)
 					}
 					data-testid="trade-review-button"
@@ -774,6 +793,7 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 				onConfirm={handleConfirmSubmission}
 				onCancel={() => setConfirmationOpen(false)}
 				isSubmitting={isSubmitting}
+				disabled={tradeCooldown.isCoolingDown}
 			/>
 		</div>
 	);
