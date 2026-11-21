@@ -1,88 +1,35 @@
-﻿import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/queryKeys';
-import {
-        alertService,
-        type AlertDirection,
-        type PriceAlert,
-} from '@/services/alert.service';
+import { create } from 'zustand';
+import { priceAlertStorage } from '@/lib/priceAlertStorage';
+import type { PriceAlert, CreatePriceAlertPayload } from '@/types/priceAlert.types';
 
-export interface CreatePriceAlertInput {
-        keyId: string;
-        keyName?: string;
-        targetPrice: number;
-        direction: AlertDirection;
+interface PriceAlertsState {
+  alerts: PriceAlert[];
+  addAlert: (payload: CreatePriceAlertPayload) => void;
+  removeAlert: (id: string) => void;
+  updateAlert: (id: string, patch: Partial<PriceAlert>) => void;
 }
 
-export interface UpdatePriceAlertInput {
-        alertId: string;
-        targetPrice: number;
-        direction: AlertDirection;
-}
+export const usePriceAlerts = create<PriceAlertsState>(() => ({
+  alerts: priceAlertStorage.getAll(),
 
-/**
- * Fetch the current user's active price alerts. Polls every 60s so a
- * backend-triggered alert disappears from the list promptly.
- */
-export function useActivePriceAlerts(userId: string | undefined) {
-        return useQuery({
-                queryKey: queryKeys.alerts.active(userId ?? ''),
-                queryFn: () => alertService.getActiveAlerts(userId as string),
-                enabled: Boolean(userId),
-                refetchInterval: 60000,
-        });
-}
+  addAlert(payload: CreatePriceAlertPayload): void {
+    const newAlert = priceAlertStorage.add(payload);
+    usePriceAlerts.setState(state => ({
+      alerts: [...state.alerts, newAlert],
+    }));
+  },
 
-/** Create a price alert and refresh the active list. */
-export function useCreatePriceAlert(userId: string | undefined) {
-        const queryClient = useQueryClient();
-        return useMutation({
-                mutationFn: (input: CreatePriceAlertInput) => alertService.createAlert(input),
-                onSuccess: () => {
-                        void queryClient.invalidateQueries({
-                                queryKey: queryKeys.alerts.active(userId ?? ''),
-                        });
-                },
-        });
-}
+  removeAlert(id: string): void {
+    priceAlertStorage.remove(id);
+    usePriceAlerts.setState(state => ({
+      alerts: state.alerts.filter(a => a.id !== id),
+    }));
+  },
 
-/** Update an existing alert's target price and/or direction. */
-export function useUpdatePriceAlert(userId: string | undefined) {
-        const queryClient = useQueryClient();
-        return useMutation({
-                mutationFn: ({ alertId, targetPrice, direction }: UpdatePriceAlertInput) =>
-                        alertService.updateAlert(alertId, { targetPrice, direction }),
-                onSuccess: () => {
-                        void queryClient.invalidateQueries({
-                                queryKey: queryKeys.alerts.active(userId ?? ''),
-                        });
-                },
-        });
-}
-
-/** Delete an alert. Optimistically removes it from the active list. */
-export function useDeletePriceAlert(userId: string | undefined) {
-        const queryClient = useQueryClient();
-        const queryKey = queryKeys.alerts.active(userId ?? '');
-        return useMutation({
-                mutationFn: (alertId: string) => alertService.deleteAlert(alertId),
-                onMutate: async (alertId: string) => {
-                        await queryClient.cancelQueries({ queryKey });
-                        const previous = queryClient.getQueryData<PriceAlert[]>(queryKey);
-                        if (previous) {
-                                queryClient.setQueryData<PriceAlert[]>(
-                                        queryKey,
-                                        previous.filter(alert => alert.id !== alertId)
-                                );
-                        }
-                        return { previous };
-                },
-                onError: (_err, _id, context) => {
-                        if (context?.previous) {
-                                queryClient.setQueryData(queryKey, context.previous);
-                        }
-                },
-                onSettled: () => {
-                        void queryClient.invalidateQueries({ queryKey });
-                },
-        });
-}
+  updateAlert(id: string, patch: Partial<PriceAlert>): void {
+    priceAlertStorage.update(id, patch);
+    usePriceAlerts.setState(state => ({
+      alerts: state.alerts.map(a => (a.id === id ? { ...a, ...patch } : a)),
+    }));
+  },
+}));

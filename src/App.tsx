@@ -14,6 +14,7 @@ import BadgeAchievementListener from './components/common/BadgeAchievementListen
 import { useContractPausedStore } from './hooks/useContractPausedStore';
 import { routes } from './routes';
 import { useRouteChangeLogging } from './hooks/useRouteChangeLogging';
+import { usePriceAlertMonitor } from './hooks/usePriceAlertMonitor';
 import {
 	useMotionOverrideStore,
 	useReducedMotion,
@@ -23,6 +24,7 @@ const router = createBrowserRouter(routes);
 
 function App() {
 	useRouteChangeLogging();
+	usePriceAlertMonitor();
 	const reducedMotion = useReducedMotion();
 	const motionOverride = useMotionOverrideStore(state => state.override);
 
