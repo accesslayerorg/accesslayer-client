@@ -57,6 +57,8 @@ export const queryKeys = {
 			['creators', creatorId, 'tips'] as const,
 		uniqueTraders: (creatorId: string) =>
 			['creators', creatorId, 'unique-traders'] as const,
+		ratings: (creatorId: string) =>
+			['creators', creatorId, 'ratings'] as const,
 		reserve: (creatorId: string) =>
 			['creators', creatorId, 'reserve'] as const,
 		curveConfig: (creatorId: string) =>
