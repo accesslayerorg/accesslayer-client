@@ -5,6 +5,12 @@
  * fee, volume-tier discount, protocol fee, and creator royalty — plus the
  * highlighted effective rate and the total fee in both key units (XLM) and
  * its USD equivalent. Every component label carries a tooltip explaining it.
+ *
+ * Network fee estimate (issue: buy/sell fee preview): when `networkFee` is
+ * provided, the component shows the estimated Soroban network fee, the grand
+ * total (key cost + protocol fee + network fee), and a fallback when the
+ * simulation is unavailable. Insufficient XLM balance disables confirmation
+ * via `canConfirm` and surfaces a message.
  */
 
 import React from 'react';
@@ -19,6 +25,17 @@ import type {
 	DynamicFeeBreakdown as DynamicFeeBreakdownData,
 } from '@/utils/dynamicFeeRate.utils';
 
+export interface NetworkFeeEstimateState {
+	/** Estimated resource fee in stroops, or null when unavailable. */
+	feeStroops: number | null;
+	/** True while the simulation is in flight. */
+	isLoading: boolean;
+	/** True when simulation failed (fallback should be shown). */
+	isUnavailable: boolean;
+	/** Wallet XLM balance in stroops, used to gate confirmation. */
+	walletBalanceStroops?: number | null;
+}
+
 export interface DynamicFeeBreakdownProps {
 	/** Fee quote computed from the contract's dynamic rate. */
 	breakdown: DynamicFeeBreakdownData | null;
@@ -28,6 +45,8 @@ export interface DynamicFeeBreakdownProps {
 	error: string | null;
 	/** Retry callback for the error state. */
 	onRetry: () => void;
+	/** Optional network fee estimate from transaction simulation. */
+	networkFee?: NetworkFeeEstimateState;
 }
 
 /** Explanation copy surfaced by each component tooltip. */
@@ -42,6 +61,8 @@ export const FEE_COMPONENT_EXPLANATIONS = {
 		'Royalty paid to the creator on every trade. Creators set this rate when they deploy their key.',
 	effectiveRate:
 		'Effective fee rate after the volume-tier discount: base fee − discount + protocol fee + creator royalty.',
+	networkFee:
+		'Estimated Soroban network (resource) fee for this transaction, paid to the Stellar network in XLM.',
 } as const;
 
 const DynamicFeeBreakdown: React.FC<DynamicFeeBreakdownProps> = ({
@@ -49,6 +70,7 @@ const DynamicFeeBreakdown: React.FC<DynamicFeeBreakdownProps> = ({
 	isLoading,
 	error,
 	onRetry,
+	networkFee,
 }) => {
 	if (error) {
 		return (
@@ -137,6 +159,17 @@ const DynamicFeeBreakdown: React.FC<DynamicFeeBreakdownProps> = ({
 		},
 	];
 
+	const networkFeeStroops = networkFee?.feeStroops ?? null;
+	const hasNetworkFee = networkFeeStroops != null;
+	const insufficientBalance =
+		hasNetworkFee &&
+		networkFee?.walletBalanceStroops != null &&
+		networkFee.walletBalanceStroops < networkFeeStroops;
+
+	const grandTotalStroops = hasNetworkFee
+		? breakdown.totalFeeStroops + networkFeeStroops
+		: null;
+
 	return (
 		<div
 			className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-2.5"
@@ -175,6 +208,47 @@ const DynamicFeeBreakdown: React.FC<DynamicFeeBreakdownProps> = ({
 					</span>
 				</div>
 			))}
+
+			{/* Network fee estimate */}
+			{networkFee?.isLoading && (
+				<div
+					className="flex items-center justify-between text-xs"
+					data-testid="fee-breakdown-network-fee-skeleton"
+				>
+					<span className="text-white/60">Network Fee</span>
+					<Skeleton className="h-3 w-12 bg-white/10" />
+				</div>
+			)}
+			{networkFee && !networkFee.isLoading && networkFee.isUnavailable && (
+				<div
+					className="flex items-center justify-between text-xs"
+					data-testid="fee-breakdown-network-fee-unavailable"
+				>
+					<span className="text-white/60">Network Fee</span>
+					<span className="text-white/50 italic">estimate unavailable</span>
+				</div>
+			)}
+			{hasNetworkFee && !networkFee?.isLoading && (
+				<div
+					className="flex items-center justify-between text-xs"
+					data-testid="fee-breakdown-network-fee"
+				>
+					<span className="flex items-center gap-1 text-white/60">
+						<span>Network Fee</span>
+						<Tooltip content={FEE_COMPONENT_EXPLANATIONS.networkFee}>
+							<span
+								className="inline-flex cursor-help text-white/50 hover:text-white/80"
+								aria-label="Network Fee info"
+							>
+								<HelpCircle className="h-3 w-3" />
+							</span>
+						</Tooltip>
+					</span>
+					<span className="font-mono tabular-nums text-white/90">
+						{formatDisplayKeyPrice(networkFeeStroops as number)}
+					</span>
+				</div>
+			)}
 
 			{/* Effective rate + totals */}
 			<div
@@ -223,6 +297,28 @@ const DynamicFeeBreakdown: React.FC<DynamicFeeBreakdownProps> = ({
 					)}
 				</span>
 			</div>
+
+			{grandTotalStroops != null && (
+				<div
+					className="flex items-center justify-between text-sm"
+					data-testid="fee-breakdown-grand-total"
+				>
+					<span className="font-medium text-white">Total incl. network fee</span>
+					<span className="font-mono font-bold text-amber-300">
+						{formatDisplayKeyPrice(grandTotalStroops)}
+					</span>
+				</div>
+			)}
+
+			{insufficientBalance && (
+				<p
+					className="text-xs text-red-300"
+					role="alert"
+					data-testid="fee-breakdown-insufficient-balance"
+				>
+					Insufficient XLM balance to cover the network fee.
+				</p>
+			)}
 
 			{breakdown.isSell && breakdown.netProceedsStroops != null && (
 				<div

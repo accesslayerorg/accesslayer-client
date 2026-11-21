@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { formatNumber } from '@/utils/numberFormat.utils';
+import { useNetworkFeeEstimate } from '@/hooks/useNetworkFeeEstimate';
 import {
 	formatDisplayKeyPrice,
 	estimateSellProceeds,
@@ -309,6 +310,22 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 		estimatedProceedsStroops,
 	]);
 
+	const networkFeeEstimate = useNetworkFeeEstimate({
+		quantity: parsedAmount,
+		enabled: isValid && !confirmationOpen,
+	});
+
+	const totalWithNetworkFeeStroops = useMemo(() => {
+		if (totalStroops == null) return null;
+		const feeStroops = networkFeeEstimate?.feeStroops ?? 0;
+		return side === 'buy'
+			? totalStroops + feeStroops
+			: totalStroops - feeStroops;
+	}, [totalStroops, networkFeeEstimate?.feeStroops, side]);
+
+	const isInsufficientXlmForFee =
+		networkFeeEstimate?.balanceSufficient === false;
+
 	// Slippage bounds computation
 	const slippageBounds = useMemo<SlippageBounds | null>(() => {
 		if (totalStroops == null) return null;
@@ -386,6 +403,7 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 			!isValid ||
 			isCapLimitReached ||
 			isCapBreached ||
+			isInsufficientXlmForFee ||
 			isCircuitBreakerBreached ||
 			(impactWarningActive && !impactAcknowledged)
 		) {
@@ -399,6 +417,7 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 		if (
 			isCapLimitReached ||
 			isCapBreached ||
+			isInsufficientXlmForFee ||
 			isCircuitBreakerBreached ||
 			(impactWarningActive && !impactAcknowledged)
 		) {
@@ -766,6 +785,8 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 				amount={parsedAmount}
 				unitPriceStroops={keyPriceStroops}
 				totalStroops={totalStroops}
+				totalWithNetworkFeeStroops={totalWithNetworkFeeStroops}
+				insufficientXlmForFee={isInsufficientXlmForFee}
 				slippageTolerancePercent={slippageTolerancePercent}
 				onSlippageChange={setSlippageTolerancePercent}
 				maxPriceStroops={slippageBounds?.maxPriceStroops ?? null}
