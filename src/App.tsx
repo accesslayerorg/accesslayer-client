@@ -5,6 +5,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router';
 
 import AppErrorBoundary from './components/common/AppErrorBoundary';
 import ContractPausedBanner from './components/common/ContractPausedBanner';
+import EscapeBanner from './components/common/EscapeBanner';
 import OfflineBanner from './components/common/OfflineBanner';
 import GlobalPauseBanner from './components/common/GlobalPauseBanner';
 import PendingTransactionBanner from './components/common/PendingTransactionBanner';
@@ -45,6 +46,7 @@ function App() {
 		<AppErrorBoundary>
 			{/* Full-width banner when contract emergency pause is active (#953) */}
 			<ContractPausedBanner />
+			<EscapeBanner />
 			<OfflineBanner />
 			<GlobalPauseBanner />
 			<PendingTransactionBanner />

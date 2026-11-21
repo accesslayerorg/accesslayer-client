@@ -53,8 +53,7 @@ export const queryKeys = {
 			['creators', creatorId, 'spotlight-bids'] as const,
 		announcements: (creatorId: string) =>
 			['creators', creatorId, 'announcements'] as const,
-		tips: (creatorId: string) =>
-			['creators', creatorId, 'tips'] as const,
+		tips: (creatorId: string) => ['creators', creatorId, 'tips'] as const,
 		uniqueTraders: (creatorId: string) =>
 			['creators', creatorId, 'unique-traders'] as const,
 		reserve: (creatorId: string) =>
@@ -69,8 +68,7 @@ export const queryKeys = {
 			['creators', creatorId, 'buyback'] as const,
 		keyConfig: (creatorId: string) =>
 			['creators', creatorId, 'key-config'] as const,
-		split: (creatorId: string) =>
-			['creators', creatorId, 'split'] as const,
+		split: (creatorId: string) => ['creators', creatorId, 'split'] as const,
 		vesting: (creatorId: string) =>
 			['creators', creatorId, 'vesting'] as const,
 		vestingClaims: (creatorId: string, wallet: string) =>
@@ -146,7 +144,8 @@ export const queryKeys = {
 			['wallet', address, 'stakingPositions'] as const,
 		xlmBalance: (address: string) =>
 			['wallet', address, 'xlmBalance'] as const,
-		feeDiscount: (address: string) => ['wallet', address, 'fee-discount'] as const,
+		feeDiscount: (address: string) =>
+			['wallet', address, 'fee-discount'] as const,
 	},
 	lp: {
 		all: () => ['lp'] as const,
@@ -261,14 +260,16 @@ export const queryKeys = {
 		data: (range: ProtocolTimeRange = '30d') =>
 			['protocolAnalytics', 'data', range] as const,
 	},
+	escape: {
+		all: () => ['escape'] as const,
+		status: () => ['escape', 'status'] as const,
+	},
 	keyLeaderboard: {
 		all: () => ['analytics', 'keys', 'leaderboard'] as const,
 		byMetric: (metric: LeaderboardMetric = 'volume') =>
 			['analytics', 'keys', 'leaderboard', metric] as const,
-		holders: (
-			keyId: string,
-			metric: KeyHolderLeaderboardMetric = 'volume'
-		) => ['keys', keyId, 'leaderboard', metric] as const,
+		holders: (keyId: string, metric: KeyHolderLeaderboardMetric = 'volume') =>
+			['keys', keyId, 'leaderboard', metric] as const,
 	},
 	creatorRevenue: {
 		all: () => ['creatorRevenue'] as const,
@@ -293,8 +294,7 @@ export const queryKeys = {
 			['staking-vault', 'stakes', wallet, keyId] as const,
 	},
 	milestoneRewards: {
-		byWallet: (wallet: string) =>
-			['milestone-rewards', wallet] as const,
+		byWallet: (wallet: string) => ['milestone-rewards', wallet] as const,
 	},
 	rebalance: {
 		preview: (wallet: string) => ['rebalance', wallet, 'preview'] as const,
