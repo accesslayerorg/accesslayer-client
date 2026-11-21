@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import Skeleton from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type {
 	RevenueHistoryPoint,
 	RevenueTimeRange,
@@ -49,6 +50,8 @@ export const CreatorRevenueChart: React.FC<CreatorRevenueChartProps> = ({
 	onIntervalChange,
 	className,
 }) => {
+	const reducedMotion = useReducedMotion();
+
 	return (
 		<div
 			className={cn(
@@ -250,6 +253,7 @@ export const CreatorRevenueChart: React.FC<CreatorRevenueChartProps> = ({
 								fillOpacity={1}
 								fill="url(#colorRoyalties)"
 								name="royalties"
+								isAnimationActive={!reducedMotion}
 							/>
 							<Area
 								type="monotone"
@@ -259,6 +263,7 @@ export const CreatorRevenueChart: React.FC<CreatorRevenueChartProps> = ({
 								fillOpacity={1}
 								fill="url(#colorSubscriptions)"
 								name="subscriptionFees"
+								isAnimationActive={!reducedMotion}
 							/>
 							<Area
 								type="monotone"
@@ -268,6 +273,7 @@ export const CreatorRevenueChart: React.FC<CreatorRevenueChartProps> = ({
 								fillOpacity={1}
 								fill="url(#colorDividends)"
 								name="dividendDeposits"
+								isAnimationActive={!reducedMotion}
 							/>
 						</AreaChart>
 					</ResponsiveContainer>
