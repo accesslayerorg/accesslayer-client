@@ -42,8 +42,7 @@ export const usePriceAlerts = create<PriceAlertsState>(() => ({
 // ---------------------------------------------------------------------------
 
 /** Returns all alerts for the current user from local storage. */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function useActivePriceAlerts(userId?: string) {
+export function useActivePriceAlerts(_userId?: string) {
   const alerts = usePriceAlerts(state => state.alerts);
   // Map to the ServicePriceAlert shape expected by existing dev components.
   const data: ServicePriceAlert[] = alerts.map(a => ({
@@ -72,8 +71,7 @@ interface CreateAlertVars {
 }
 
 /** Returns a mutation-compatible object for creating a new alert. */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function useCreatePriceAlert(userId?: string) {
+export function useCreatePriceAlert(_userId?: string) {
   const { addAlert } = usePriceAlerts.getState();
   return {
     mutate(vars: CreateAlertVars) {
@@ -108,8 +106,7 @@ interface UpdateAlertVars {
 }
 
 /** Returns a mutation-compatible object for updating an existing alert. */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function useUpdatePriceAlert(userId?: string) {
+export function useUpdatePriceAlert(_userId?: string) {
   const { updateAlert } = usePriceAlerts.getState();
   return {
     mutate(vars: UpdateAlertVars) {
@@ -133,8 +130,7 @@ export function useUpdatePriceAlert(userId?: string) {
 }
 
 /** Returns a mutation-compatible object for deleting an alert. */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function useDeletePriceAlert(userId?: string) {
+export function useDeletePriceAlert(_userId?: string) {
   const { removeAlert } = usePriceAlerts.getState();
   return {
     mutate(alertId: string) {
