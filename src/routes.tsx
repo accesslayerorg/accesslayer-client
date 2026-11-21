@@ -39,8 +39,10 @@ import CampaignsPage from './pages/CampaignsPage';
 import AutoInvestDashboardPage from './pages/AutoInvestDashboardPage';
 import AirdropClaimsPage from './pages/AirdropClaimsPage';
 import ProtocolAnalyticsPage from './pages/ProtocolAnalyticsPage';
+import EscapeRedeemPage from './pages/EscapeRedeemPage';
 import LpPositionsPage from './pages/LpPositionsPage';
 import ProposalCreatePage from './pages/ProposalCreatePage';
+import ApiKeysPage from './pages/ApiKeysPage';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 
 function withRouteErrorBoundary(element: ReactNode, routeName: string) {
@@ -322,9 +324,22 @@ export const routes = [
 				),
 			},
 			{
+				// Emergency redemption page for escape hatch withdrawals (#1320).
+				path: '/escape',
+				element: withRouteErrorBoundary(
+					<EscapeRedeemPage />,
+					'Emergency redemption'
+				),
+			},
+			{
 				// Global search results page (#1053).
 				path: '/search',
 				element: <SearchResultsPage />,
+			},
+			{
+				// Developer API key management for integrators and creators (#1322).
+				path: '/settings/developer',
+				element: <ApiKeysPage />,
 			},
 			{
 				path: '/settings/notifications',

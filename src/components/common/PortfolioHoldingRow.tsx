@@ -8,6 +8,7 @@ import ReportIssueButton from '@/components/common/ReportIssueButton';
 import SocialShareButton from '@/components/common/SocialShareButton';
 import RedeemKeyDialog from '@/components/common/RedeemKeyDialog';
 import BatchTransferModal from '@/components/common/BatchTransferModal';
+import GiftKeyModal from '@/components/common/GiftKeyModal';
 import { computeRemainingLockupSeconds } from '@/utils/lockupCountdown.utils';
 import { formatNumber } from '@/utils/numberFormat.utils';
 import {
@@ -42,6 +43,7 @@ import {
 	Minus,
 	MoreVertical,
 	Users,
+	Gift,
 } from 'lucide-react';
 import {
 	DropdownMenu,
@@ -70,6 +72,7 @@ export interface PortfolioHoldingRowProps {
 		recipients: BatchTransferRecipient[],
 		creatorId: string
 	) => Promise<void> | void;
+	onGift?: (position: HeldKeyPosition) => void;
 	onBurn?: (creatorId: string) => void;
 	isSubmitting?: boolean;
 	isReinvesting?: boolean;
@@ -89,6 +92,7 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	onTransfer,
 	onBatchTransfer,
 	onBatchTransferSubmit,
+	onGift,
 	onBurn,
 	isSubmitting = false,
 	isReinvesting = false,
@@ -102,6 +106,7 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	const [reinvestOpen, setReinvestOpen] = useState(false);
 	const [redeemOpen, setRedeemOpen] = useState(false);
 	const [batchTransferOpen, setBatchTransferOpen] = useState(false);
+	const [giftOpen, setGiftOpen] = useState(false);
 	const [isExpanded, setIsExpanded] = useState(false);
 	const frozenQuantity = position.frozenQuantity ?? 0;
 	const liquidQuantity = position.liquidQuantity ?? position.quantity ?? 0;
@@ -161,6 +166,11 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	const handleBatchTransferClick = () => {
 		setBatchTransferOpen(true);
 		onBatchTransfer?.(position);
+	};
+
+	const handleGiftClick = () => {
+		setGiftOpen(true);
+		onGift?.(position);
 	};
 
 	return (
@@ -386,6 +396,7 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 								)}
 								{(onBatchTransfer ||
 									onTransfer ||
+									onGift ||
 									onFreeze ||
 									onUnfreeze ||
 									onBurn) && (
@@ -416,6 +427,17 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 												>
 													<Users className="mr-2 size-4 text-amber-400" />
 													Batch Transfer
+												</DropdownMenuItem>
+											)}
+											{onGift && (
+												<DropdownMenuItem
+													onClick={handleGiftClick}
+													disabled={isLiquidEmpty || isSubmitting}
+													data-testid="holding-action-gift"
+													className="cursor-pointer"
+												>
+													<Gift className="mr-2 size-4 text-amber-400" />
+													Gift
 												</DropdownMenuItem>
 											)}
 											{onTransfer && (
@@ -541,6 +563,17 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 										Batch Transfer
 									</Button>
 								)}
+								{onGift && (
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={handleGiftClick}
+										disabled={isLiquidEmpty || isSubmitting}
+										data-testid="holding-gift-button"
+									>
+										Gift
+									</Button>
+								)}
 								{onBurn && (
 									<Button
 										size="sm"
@@ -567,6 +600,17 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 					liquidBalance={liquidQuantity}
 					isSubmitting={isSubmitting}
 					onConfirm={onBatchTransferSubmit}
+				/>
+			)}
+
+			{giftOpen && (
+				<GiftKeyModal
+					open
+					onOpenChange={setGiftOpen}
+					keyId={position.creatorId}
+					keyName={creator?.title ?? 'this creator'}
+					availableBalance={liquidQuantity}
+					isSubmitting={isSubmitting}
 				/>
 			)}
 

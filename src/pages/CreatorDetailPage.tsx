@@ -18,6 +18,7 @@ import CreatorProfileHeader from '@/components/common/CreatorProfileHeader';
 import CreatorSocialSection from '@/components/common/CreatorSocialSection';
 import CreatorProfileInfoGrid from '@/components/common/CreatorProfileInfoGrid';
 import CreatorActivityFeed from '@/components/common/CreatorActivityFeed';
+import RelatedKeysCarousel from '@/components/common/RelatedKeysCarousel';
 import AnnouncementFeed from '@/components/common/AnnouncementFeed';
 import SecondaryMarketSellPanel from '@/components/common/SecondaryMarketSellPanel';
 import ActiveAuctionCard from '@/components/common/ActiveAuctionCard';
@@ -30,6 +31,8 @@ import BondingCurveChart from '@/components/common/BondingCurveChart';
 import KeySimulationTool from '@/components/common/KeySimulationTool';
 import BuyCooldownCountdown from '@/components/common/BuyCooldownCountdown';
 import KeyHolderList from '@/components/common/KeyHolderList';
+import CommentSection from '@/components/common/CommentSection';
+import KeyHolderLeaderboard from '@/components/common/KeyHolderLeaderboard';
 import HolderConcentrationChart from '@/components/common/HolderConcentrationChart';
 import HolderConcentrationHeatmap from '@/components/common/HolderConcentrationHeatmap';
 import HolderSnapshotHistory from '@/components/common/HolderSnapshotHistory';
@@ -145,6 +148,9 @@ import {
 	useCreateLimitOrder,
 	useLimitOrders,
 } from '@/hooks/useLimitOrders';
+import ShareQrModal from '@/components/common/ShareQrModal';
+import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
+import { QrCode } from 'lucide-react';
 
 /** Series shown in the key detail price panel (#1220 adds the depth tab). */
 type PriceChartTab = 'primary' | 'secondary' | 'depth' | 'revenue';
@@ -181,6 +187,7 @@ function CreatorDetailPageContent() {
 	const [priceChartTab, setPriceChartTab] = useState<PriceChartTab>('primary');
 	const [secondaryRange, setSecondaryRange] =
 		useState<SecondaryPriceRange>('7d');
+	const [qrModalOpen, setQrModalOpen] = useState(false);
 
 	const {
 		data: creator,
@@ -290,20 +297,14 @@ function CreatorDetailPageContent() {
 		isError: isPerformanceBondError,
 	} = usePerformanceBond(id || '');
 
-	const {
-		data: earlyIncentive,
-		isLoading: isEarlyIncentiveLoading,
-	} = useEarlyIncentive(id || '');
+	const { data: earlyIncentive, isLoading: isEarlyIncentiveLoading } =
+		useEarlyIncentive(id || '');
 
-	const {
-		data: secondaryPrices,
-		isLoading: isSecondaryPricesLoading,
-	} = useSecondaryPrices(id || '', secondaryRange);
+	const { data: secondaryPrices, isLoading: isSecondaryPricesLoading } =
+		useSecondaryPrices(id || '', secondaryRange);
 
-	const {
-		data: paymentSchedule,
-		isLoading: isPaymentScheduleLoading,
-	} = usePaymentSchedule(id || '');
+	const { data: paymentSchedule, isLoading: isPaymentScheduleLoading } =
+		usePaymentSchedule(id || '');
 
 	const performanceBond =
 		performanceBondData ?? creator?.performanceBond ?? null;
@@ -673,6 +674,18 @@ function CreatorDetailPageContent() {
 							}}
 							title={`Share ${creator.title || creator.name || 'this key'}`}
 						/>
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							onClick={() => setQrModalOpen(true)}
+							aria-label="QR code"
+							data-testid="key-detail-qr-button"
+							className="gap-1.5 text-white/50 hover:text-white/80"
+						>
+							<QrCode className="size-3.5" aria-hidden="true" />
+							<span>QR code</span>
+						</Button>
 						<ReportIssueButton
 							keyId={creator.id}
 							keyName={creator.title || creator.name}
@@ -889,8 +902,11 @@ function CreatorDetailPageContent() {
 							</TabsTrigger>
 							<TabsTrigger value="limit" data-testid="invest-tab-limit">
 								Limit
-						</TabsTrigger>
-							<TabsTrigger value="subscribe" data-testid="invest-tab-subscribe">
+							</TabsTrigger>
+							<TabsTrigger
+								value="subscribe"
+								data-testid="invest-tab-subscribe"
+							>
 								Subscribe
 							</TabsTrigger>
 						</TabsList>
@@ -945,28 +961,33 @@ function CreatorDetailPageContent() {
 										className="mt-2"
 									/>
 
-									{creator.publicLaunchDate && hasValidPublicLaunchDate && (
-										<p className="mt-2 text-sm text-white/70">
-											{isPublicLaunchPending
-												? 'Public launch: '
-												: 'Public trading is open. '}
+									{creator.publicLaunchDate &&
+										hasValidPublicLaunchDate && (
+											<p className="mt-2 text-sm text-white/70">
+												{isPublicLaunchPending
+													? 'Public launch: '
+													: 'Public trading is open. '}
 
-											{isPublicLaunchPending && (
-												<time dateTime={creator.publicLaunchDate}>
-													{new Date(
-														creator.publicLaunchDate
-													).toLocaleString()}
-												</time>
-											)}
-										</p>
-									)}
+												{isPublicLaunchPending && (
+													<time
+														dateTime={creator.publicLaunchDate}
+													>
+														{new Date(
+															creator.publicLaunchDate
+														).toLocaleString()}
+													</time>
+												)}
+											</p>
+										)}
 								</div>
 
 								<div className="flex flex-wrap items-center gap-2">
 									<AddToBatchButton
 										keyId={creator.id}
 										keyName={displayName}
-										priceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
+										priceStroops={
+											resolveCreatorKeyPriceStroops(creator) ?? 0
+										}
 										currentSupply={creator.creatorShareSupply ?? null}
 										thumbnail={displayAvatar ?? undefined}
 										disabled={Boolean(keyFreeze)}
@@ -977,7 +998,9 @@ function CreatorDetailPageContent() {
 									<AddToBundleButton
 										keyId={creator.id}
 										keyName={displayName}
-										priceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
+										priceStroops={
+											resolveCreatorKeyPriceStroops(creator) ?? 0
+										}
 										currentSupply={creator.creatorShareSupply ?? null}
 										thumbnail={displayAvatar ?? undefined}
 										disabled={Boolean(keyFreeze)}
@@ -988,8 +1011,12 @@ function CreatorDetailPageContent() {
 									<PriceAlertButton
 										userId={userAddress}
 										keyId={creator.id}
-										keyName={creator.title || creator.name || 'Creator Key'}
-										currentPrice={resolveCreatorKeyPriceStroops(creator) ?? 0}
+										keyName={
+											creator.title || creator.name || 'Creator Key'
+										}
+										currentPrice={
+											resolveCreatorKeyPriceStroops(creator) ?? 0
+										}
 									/>
 
 									<Link
@@ -1010,7 +1037,10 @@ function CreatorDetailPageContent() {
 											Buy Disabled (Deprecated)
 										</Button>
 									) : keyFreeze ? (
-										<UnavailableAction disabled reason={keyFreeze.reason}>
+										<UnavailableAction
+											disabled
+											reason={keyFreeze.reason}
+										>
 											<Button
 												type="button"
 												data-testid="key-detail-buy-button"
@@ -1122,31 +1152,46 @@ function CreatorDetailPageContent() {
 						<TabsContent value="limit" className="space-y-6">
 							<div>
 								<p className="text-sm text-white/80">
-									Set a target price and your order will execute when the market reaches it.
+									Set a target price and your order will execute when
+									the market reaches it.
 								</p>
 								<div className="mt-4 max-w-xl">
 									<LimitOrderForm
-										currentPrice={resolveCreatorKeyPriceStroops(creator) ?? 0}
+										currentPrice={
+											resolveCreatorKeyPriceStroops(creator) ?? 0
+										}
 										availableHoldings={holdingsCount}
 										isSubmitting={createLimitOrderMutation.isPending}
 										onSubmit={input => {
 											createLimitOrderMutation.mutate(input, {
-												onSuccess: () => showToast.success('Limit order placed'),
-												onError: error => showToast.error(getSignatureErrorMessage(error)),
+												onSuccess: () =>
+													showToast.success('Limit order placed'),
+												onError: error =>
+													showToast.error(
+														getSignatureErrorMessage(error)
+													),
 											});
 										}}
 									/>
 								</div>
 							</div>
 							<div className="border-t border-white/10 pt-4">
-								<h3 className="mb-3 text-sm font-semibold text-white">Open orders</h3>
+								<h3 className="mb-3 text-sm font-semibold text-white">
+									Open orders
+								</h3>
 								<OpenOrdersTable
 									orders={limitOrdersQuery.data ?? []}
 									isCancelling={cancelLimitOrderMutation.isPending}
-									onCancel={orderId => cancelLimitOrderMutation.mutate(orderId, {
-										onSuccess: () => showToast.success('Limit order cancelled'),
-										onError: error => showToast.error(getSignatureErrorMessage(error)),
-									})}
+									onCancel={orderId =>
+										cancelLimitOrderMutation.mutate(orderId, {
+											onSuccess: () =>
+												showToast.success('Limit order cancelled'),
+											onError: error =>
+												showToast.error(
+													getSignatureErrorMessage(error)
+												),
+										})
+									}
 								/>
 							</div>
 						</TabsContent>
@@ -1154,16 +1199,22 @@ function CreatorDetailPageContent() {
 						<TabsContent value="subscribe" className="space-y-4">
 							<SubscriptionInvestmentPanel
 								creatorId={creator.id}
-								currentPriceStroops={resolveCreatorKeyPriceStroops(creator)}
-								disabled={isKeyDeprecated(creator) || Boolean(keyFreeze) || creator.tradingPaused}
+								currentPriceStroops={resolveCreatorKeyPriceStroops(
+									creator
+								)}
+								disabled={
+									isKeyDeprecated(creator) ||
+									Boolean(keyFreeze) ||
+									creator.tradingPaused
+								}
 								disabledReason={
 									isKeyDeprecated(creator)
 										? 'Key is deprecated. Subscriptions are disabled.'
 										: keyFreeze
-										? keyFreeze.reason
-										: creator.tradingPaused
-										? 'Trading is currently paused.'
-										: undefined
+											? keyFreeze.reason
+											: creator.tradingPaused
+												? 'Trading is currently paused.'
+												: undefined
 								}
 							/>
 						</TabsContent>
@@ -1427,6 +1478,13 @@ function CreatorDetailPageContent() {
 					/>
 				</SectionErrorBoundary>
 
+				<SectionErrorBoundary sectionName="key holder leaderboard">
+					<KeyHolderLeaderboard
+						keyId={creator.id}
+						connectedWalletAddress={userAddress}
+					/>
+				</SectionErrorBoundary>
+
 				<div
 					data-testid="creator-holders-container"
 					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
@@ -1446,6 +1504,13 @@ function CreatorDetailPageContent() {
 						/>
 					</SectionErrorBoundary>
 				</div>
+
+				<SectionErrorBoundary sectionName="key comments">
+					<CommentSection
+						keyId={creator.id}
+						creatorAddress={creator.instructorId}
+					/>
+				</SectionErrorBoundary>
 
 				<div className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8">
 					<h2 className="mb-6 font-grotesque text-xl font-black tracking-tight text-white">
@@ -1491,9 +1556,13 @@ function CreatorDetailPageContent() {
 									auctionId: 'active',
 									seller: userAddress ?? '',
 									fractionAmount: Math.max(1, holdingsCount),
-									reservePriceStroops: resolveCreatorKeyPriceStroops(creator) ?? 0,
+									reservePriceStroops:
+										resolveCreatorKeyPriceStroops(creator) ?? 0,
 									highestBidStroops: Math.round(
-										(resolveHighestBid(creator.auctionBids, creator.auctionHighestBid) ?? 0) * 1e7
+										(resolveHighestBid(
+											creator.auctionBids,
+											creator.auctionHighestBid
+										) ?? 0) * 1e7
 									),
 									highestBidder: null,
 									endsAt: new Date(Date.now() + 3_600_000),
@@ -1530,10 +1599,7 @@ function CreatorDetailPageContent() {
 							isHolder={holdingsCount > 0}
 							userAddress={userAddress}
 						/>
-						<RecentTipsFeed
-							creatorId={creator.id}
-							className="mt-6"
-						/>
+						<RecentTipsFeed creatorId={creator.id} className="mt-6" />
 					</SectionErrorBoundary>
 				</div>
 
@@ -1546,6 +1612,10 @@ function CreatorDetailPageContent() {
 						<CreatorActivityFeed creatorId={creator.id} />
 					</SectionErrorBoundary>
 				</div>
+
+				<SectionErrorBoundary sectionName="related keys">
+					<RelatedKeysCarousel keyId={creator.id} />
+				</SectionErrorBoundary>
 
 				{isKeyDeprecated(creator) && (
 					<KeyBuybackModal
@@ -1610,6 +1680,17 @@ function CreatorDetailPageContent() {
 						onOpenChange={setReportKeyModalOpen}
 						keyId={creator.id}
 						keyName={creator.title || creator.name || 'this key'}
+					/>
+				)}
+				{creator && (
+					<ShareQrModal
+						open={qrModalOpen}
+						onOpenChange={setQrModalOpen}
+						url={buildCreatorProfileReferralLink({
+							handle: creator.socialHandle || creator.instructorId,
+							wallet: userAddress,
+						})}
+						handle={creator.socialHandle || creator.instructorId}
 					/>
 				)}
 			</div>

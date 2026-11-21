@@ -23,6 +23,7 @@ vi.mock('@/hooks/useWallet', () => ({
 			{ creatorId: 'creator-2', quantity: 2, liquidQuantity: 2 },
 		],
 	}),
+	useReceivedGifts: () => ({ data: [] }),
 }));
 
 vi.mock('@/services/course.service', () => ({

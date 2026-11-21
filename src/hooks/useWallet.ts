@@ -13,15 +13,19 @@ import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 import { fetchWalletActivityPage } from '@/services/walletActivity.service';
 import {
+	fetchReceivedGifts,
 	fetchWalletBadgeMetrics,
 	fetchWalletBadges,
 	fetchWalletHoldings,
 } from '@/services/wallet.service';
+import { creatorKeysContractService } from '@/services/creatorKeysContract.service';
+import type { ReceivedGift } from '@/utils/giftKey.utils';
 import type {
 	WalletBadge,
 	WalletBadgeMetrics,
 } from '@/utils/walletBadges.utils';
 import { fetchTradeHistoryPage } from '@/services/tradeHistory.service';
+import { usePendingTxStore } from '@/hooks/usePendingTxStore';
 
 export function useWalletHoldings(address: string) {
 	return useQuery<HeldKeyPosition[]>({
@@ -54,6 +58,15 @@ export function useWalletBadgeMetrics(address: string) {
 		queryFn: () => fetchWalletBadgeMetrics(address),
 		enabled: !!address,
 		refetchInterval: BADGE_METRICS_POLL_INTERVAL_MS,
+	});
+}
+
+/** Key gifts received by a wallet, used to surface the portfolio banner. */
+export function useReceivedGifts(address: string) {
+	return useQuery<ReceivedGift[]>({
+		queryKey: queryKeys.wallet.receivedGifts(address),
+		queryFn: () => fetchReceivedGifts(address),
+		enabled: !!address,
 	});
 }
 
@@ -236,8 +249,25 @@ export function recordTradeCostBasis(
 		.recordSell(address, trade.creatorId, { quantity });
 }
 
+/**
+ * Placeholder transaction hash for the stubbed trade submission. The on-chain
+ * call that replaces the simulation populates this from
+ * `sendTransactionResponse.hash`; until then the pending-transaction tracker
+ * needs a 32-byte hash to display and poll.
+ */
+function createSubmittedTradeHash(): string {
+	let hash = '';
+	for (let index = 0; index < 64; index += 1) {
+		hash += Math.floor(Math.random() * 16).toString(16);
+	}
+	return hash;
+}
+
 export function useTradeMutation(address: string) {
 	const queryClient = useQueryClient();
+	const addPendingTransaction = usePendingTxStore(
+		state => state.addPendingTransaction
+	);
 
 	const mutation = useMutation({
 		mutationKey: ['trade', address],
@@ -250,7 +280,7 @@ export function useTradeMutation(address: string) {
 			// accepted and can be used by instrumentation or contract calls.
 			void variables;
 			await new Promise<void>(resolve => window.setTimeout(resolve, 900));
-			return { success: true as const };
+			return { success: true as const, txHash: createSubmittedTradeHash() };
 		},
 		onMutate: async ({
 			creatorId,
@@ -390,7 +420,15 @@ export function useTradeMutation(address: string) {
 				});
 			}
 		},
-		onSuccess: (_data, variables) => {
+		onSuccess: (data, variables) => {
+			// #1286 — surface the submission in the pending-transactions drawer
+			// so it can be tracked after the user leaves the swap screen.
+			addPendingTransaction({
+				hash: data.txHash,
+				type: variables.amount > 0 ? 'buy' : 'sell',
+				keyId: variables.creatorId,
+			});
+
 			queryClient.setQueryData<HeldKeyPosition[]>(
 				queryKeys.wallet.holdings(address),
 				(old = []) =>
@@ -892,6 +930,87 @@ export function useBatchTransferMutation(address?: string) {
 				});
 			}
 			queryClient.invalidateQueries({ queryKey: ['creators'] });
+		},
+	});
+}
+
+export interface GiftKeyVariables {
+	/** Creator key being gifted. */
+	keyId: string;
+	quantity: number;
+	/** Recipient wallet address. */
+	to: string;
+	/** Optional note shown to the recipient. */
+	message?: string;
+}
+
+/**
+ * Gifts keys to another wallet, moving the gifted quantity out of the
+ * sender's position while the transfer is in flight.
+ */
+export function useGiftKeyMutation(address?: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'gift_key', address],
+		mutationFn: (variables: GiftKeyVariables) =>
+			creatorKeysContractService.giftKey(variables),
+		onMutate: async ({ keyId, quantity }) => {
+			if (!address) return {};
+			const queryKey = queryKeys.wallet.holdings(address);
+			await queryClient.cancelQueries({ queryKey });
+			const previousHoldings =
+				queryClient.getQueryData<HeldKeyPosition[]>(queryKey) ?? [];
+
+			queryClient.setQueryData<HeldKeyPosition[]>(
+				queryKey,
+				(holdings = []) =>
+					holdings.map(holding => {
+						if (holding.creatorId !== keyId) return holding;
+						const currentLiquid =
+							holding.liquidQuantity ?? holding.quantity ?? 0;
+						return {
+							...holding,
+							liquidQuantity: Math.max(0, currentLiquid - quantity),
+							quantity: Math.max(
+								0,
+								(holding.quantity ?? 0) - quantity
+							),
+							pending: true,
+						};
+					})
+			);
+
+			return { previousHoldings };
+		},
+		onError: (error, _variables, context) => {
+			if (address && context?.previousHoldings) {
+				queryClient.setQueryData(
+					queryKeys.wallet.holdings(address),
+					context.previousHoldings
+				);
+			}
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: (_data, variables) => {
+			if (address) {
+				queryClient.setQueryData<HeldKeyPosition[]>(
+					queryKeys.wallet.holdings(address),
+					(holdings = []) =>
+						holdings.map(holding =>
+							holding.creatorId === variables.keyId
+								? { ...holding, pending: false }
+								: holding
+						)
+				);
+			}
+		},
+		onSettled: () => {
+			if (address) {
+				queryClient.invalidateQueries({
+					queryKey: queryKeys.wallet.holdings(address),
+				});
+			}
 		},
 	});
 }
