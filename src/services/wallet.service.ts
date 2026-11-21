@@ -1,5 +1,6 @@
 import { BaseApiService, type APIResponse } from './api.service';
 import type { HeldKeyPosition } from '@/utils/portfolioValue.utils';
+import type { ReceivedGift } from '@/utils/giftKey.utils';
 import type {
 	WalletBadge,
 	WalletBadgeMetrics,
@@ -66,6 +67,22 @@ class WalletService extends BaseApiService {
 			throw apiError;
 		}
 	}
+
+	/** Key gifts received by a wallet, newest first. */
+	async getReceivedGifts(address: string): Promise<ReceivedGift[]> {
+		try {
+			const response = await this.api.get<APIResponse<ReceivedGift[]>>(
+				`/wallets/${address}/gifts`
+			);
+			const payload = response.data.data;
+			return Array.isArray(payload) ? payload : [];
+		} catch (error) {
+			const apiError = this.handleError(error);
+			// Gifting may not be enabled for every wallet yet.
+			if (apiError.status === 404) return [];
+			throw apiError;
+		}
+	}
 }
 
 export const walletService = new WalletService();
@@ -86,4 +103,10 @@ export async function fetchWalletBadgeMetrics(
 	address: string
 ): Promise<Partial<WalletBadgeMetrics>> {
 	return walletService.getBadgeMetrics(address);
+}
+
+export async function fetchReceivedGifts(
+	address: string
+): Promise<ReceivedGift[]> {
+	return walletService.getReceivedGifts(address);
 }

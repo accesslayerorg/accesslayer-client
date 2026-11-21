@@ -133,6 +133,8 @@ export const queryKeys = {
 		badges: (address: string) => ['wallet', address, 'badges'] as const,
 		badgeMetrics: (address: string) =>
 			['wallet', address, 'badgeMetrics'] as const,
+		receivedGifts: (address: string) =>
+			['wallet', address, 'receivedGifts'] as const,
 		portfolioHistory: (address: string, range: string) =>
 			['wallet', address, 'portfolioHistory', range] as const,
 		activity: (address: string) => ['wallet', address, 'activity'] as const,
