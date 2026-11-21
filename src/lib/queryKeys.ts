@@ -85,6 +85,8 @@ export const queryKeys = {
 			['creators', creatorId, 'reputation'] as const,
 		priceFloor: (creatorId: string) =>
 			['creators', creatorId, 'price-floor'] as const,
+		priceCeiling: (keyId: string) =>
+			['creators', keyId, 'price-ceiling'] as const,
 		// Optional wallet scopes the cache per connected wallet (#915); omit it
 		// to address every wallet's entry for the key (e.g. invalidation).
 		tradeCooldown: (creatorId: string, wallet?: string) =>

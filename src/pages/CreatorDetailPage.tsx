@@ -8,6 +8,7 @@ import {
 	resolvePriceFloorStroops,
 	isPriceFloorActive,
 } from '@/hooks/useKeyPriceFloor';
+import { usePriceCeiling } from '@/hooks/usePriceCeiling';
 import type { TradeSide } from '@/components/common/TradeDialog';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useCreatorProfileStaleIndicator } from '@/hooks/useCreatorProfileStaleIndicator';
@@ -29,6 +30,8 @@ import CreatorProfileStatRow from '@/components/common/CreatorProfileStatRow';
 import BondingCurveChart from '@/components/common/BondingCurveChart';
 import KeySimulationTool from '@/components/common/KeySimulationTool';
 import BuyCooldownCountdown from '@/components/common/BuyCooldownCountdown';
+import CeilingIndicator from '@/components/common/CeilingIndicator';
+import CooloffNotice from '@/components/common/CooloffNotice';
 import KeyHolderList from '@/components/common/KeyHolderList';
 import KeyHolderLeaderboard from '@/components/common/KeyHolderLeaderboard';
 import HolderConcentrationChart from '@/components/common/HolderConcentrationChart';
@@ -198,6 +201,11 @@ function CreatorDetailPageContent() {
 		priceFloorStroops
 	);
 
+	const {
+		data: priceCeiling,
+		isCooloffActive: isCeilingCooloffActive,
+	} = usePriceCeiling(id || '');
+
 	useNavigationTiming('creator_profile');
 	useDocumentTitle(creator ? `${creator.title} — AccessLayer` : null);
 
@@ -351,13 +359,15 @@ function CreatorDetailPageContent() {
 		!isUserWhitelisted &&
 		(isEarlyAccessRestricted || !creator?.publicLaunchDate);
 
-	const buyDisabledReason = !userAddress
-		? 'Connect your wallet to buy this key.'
-		: auctionPhase === 'active'
-			? 'Key is currently in launch auction. Place a bid below to participate.'
-			: isLockedOut
-				? 'Early access is restricted to approved whitelisted wallets.'
-				: undefined;
+	const buyDisabledReason = isCeilingCooloffActive
+		? 'Buying is paused while the price ceiling cool-off is active.'
+		: !userAddress
+			? 'Connect your wallet to buy this key.'
+			: auctionPhase === 'active'
+				? 'Key is currently in launch auction. Place a bid below to participate.'
+				: isLockedOut
+					? 'Early access is restricted to approved whitelisted wallets.'
+					: undefined;
 
 	const {
 		data: onChainMetadata,
@@ -920,6 +930,20 @@ function CreatorDetailPageContent() {
 										source={oracleSource}
 										isLoading={isOracleLoading}
 									/>
+
+									<CeilingIndicator
+										className="mt-2"
+										currentPriceStroops={spotPriceStroops}
+										ceilingStroops={priceCeiling?.ceilingStroops}
+										isActive={priceCeiling?.isActive}
+									/>
+
+									{isCeilingCooloffActive && (
+										<CooloffNotice
+											className="mt-2"
+											cooloffEndsAt={priceCeiling?.cooloffEndsAt}
+										/>
+									)}
 
 									{creator.earlyAccessEnabled && (
 										<span className="mt-2 inline-flex items-center rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-xs font-bold text-amber-200">
@@ -1547,6 +1571,9 @@ function CreatorDetailPageContent() {
 						keyFreeze={keyFreeze}
 						priceFloorStroops={priceFloorStroops}
 						priceFloorActive={isFloorActive}
+						priceCeilingStroops={priceCeiling?.ceilingStroops}
+						priceCeilingActive={priceCeiling?.isActive}
+						ceilingCooloffActive={isCeilingCooloffActive}
 					/>
 				)}
 
