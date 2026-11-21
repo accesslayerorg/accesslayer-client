@@ -6,11 +6,13 @@ import AppErrorBoundary from './components/common/AppErrorBoundary';
 import OfflineBanner from './components/common/OfflineBanner';
 import { routes } from './routes';
 import { useRouteChangeLogging } from './hooks/useRouteChangeLogging';
+import { usePriceAlertMonitor } from './hooks/usePriceAlertMonitor';
 
 const router = createBrowserRouter(routes);
 
 function App() {
 	useRouteChangeLogging();
+	usePriceAlertMonitor();
 
 	useEffect(() => {
 		const lenis = new Lenis({
