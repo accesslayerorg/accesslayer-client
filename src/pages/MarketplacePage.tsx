@@ -353,23 +353,6 @@ export default function MarketplacePage() {
 										))}
 									</div>
 
-								<div
-									role="status"
-									aria-live="polite"
-									className="mt-8 flex flex-col items-center gap-3"
-								>
-									{hasMore && !isFetchingNextPage ? (
-										<Button
-											type="button"
-											variant="outline"
-											data-testid="marketplace-load-more"
-											onClick={() => void fetchNextPage()}
-											className="rounded-full border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-white"
-										>
-											<CreatorCardGridSkeleton count={3} />
-										</div>
-									)}
-
 									{hasMore && (
 										<div
 											ref={sentinelRef}
@@ -388,6 +371,7 @@ export default function MarketplacePage() {
 											<Button
 												type="button"
 												variant="outline"
+												data-testid="marketplace-load-more"
 												onClick={() => void fetchNextPage()}
 												className="rounded-full border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-white"
 											>
