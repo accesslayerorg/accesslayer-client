@@ -142,8 +142,7 @@ export default function WalletPortfolioPage() {
 		[heldPositions]
 	);
 
-	const isLoading =
-		holdingsQuery.isLoading || areCreatorsLoading;
+	const isLoading = holdingsQuery.isLoading || areCreatorsLoading;
 
 	const { isKeySplitActive: isKeySplitActiveFromHook } =
 		useActiveKeySplits(address);
@@ -323,144 +322,98 @@ export default function WalletPortfolioPage() {
 								<thead>
 									<tr className="border-b border-white/10 text-[0.65rem] uppercase tracking-[0.18em] text-white/40">
 										{COLUMNS.map(column => {
-										const isActive =
-											column.sortKey != null &&
-											column.sortKey === sortKey;
-										return (
-											<th
-												key={column.label}
-												scope="col"
-												aria-sort={
-													column.sortKey == null
-														? undefined
-														: isActive
-															? sortDirection === 'asc'
-																? 'ascending'
-																: 'descending'
-															: 'none'
-												}
-												className={cn(
-													'py-3 pr-4 font-bold',
-													column.alignRight && 'text-right'
-												)}
-											>
-												{column.sortKey ? (
-													<button
-														type="button"
-														data-testid={`portfolio-sort-${column.sortKey}`}
-														onClick={() => handleSort(column.sortKey!)}
-														className={cn(
-															'inline-flex items-center gap-1 uppercase tracking-[0.18em] transition-colors hover:text-white',
-															isActive && 'text-amber-300'
-														)}
-													>
-														{column.label}
-														{isActive && (
-															<span aria-hidden="true">
-																{sortDirection === 'asc' ? '↑' : '↓'}
-															</span>
-														)}
-													</button>
-												) : (
-													column.label
-												)}
-											</th>
-										);
-									})}
+											const isActive =
+												column.sortKey != null &&
+												column.sortKey === sortKey;
+											return (
+												<th
+													key={column.label}
+													scope="col"
+													aria-sort={
+														column.sortKey == null
+															? undefined
+															: isActive
+																? sortDirection === 'asc'
+																	? 'ascending'
+																	: 'descending'
+																: 'none'
+													}
+													className={cn(
+														'py-3 pr-4 font-bold',
+														column.alignRight && 'text-right'
+													)}
+												>
+													{column.sortKey ? (
+														<button
+															type="button"
+															data-testid={`portfolio-sort-${column.sortKey}`}
+															onClick={() => handleSort(column.sortKey!)}
+															className={cn(
+																'inline-flex items-center gap-1 uppercase tracking-[0.18em] transition-colors hover:text-white',
+																isActive && 'text-amber-300'
+															)}
+														>
+															{column.label}
+															{isActive && (
+																<span aria-hidden="true">
+																	{sortDirection === 'asc' ? '↑' : '↓'}
+																</span>
+															)}
+														</button>
+													) : (
+														column.label
+													)}
+												</th>
+											);
+										})}
 									</tr>
 								</thead>
 								<tbody>
-									{sortedRows.map(row => {
-										const isLoadingRow = row.pnl.status === 'loading';
-										const isUnavailable = row.pnl.status === 'unavailable';
-										const displayPnL =
-											row.pnl.unrealisedPnLStroops == null
-												? '—'
-												: formatPnLDisplay(row.pnl.unrealisedPnLStroops);
-										const displayPnLPercent =
-											row.pnl.pnlPercentage == null
-												? '—'
-												: formatPnLPercentage(row.pnl.pnlPercentage);
-
-										return (
-											<tr
-												key={row.creatorId}
-												data-testid="portfolio-position-row"
-												data-key-id={row.creatorId}
-												onClick={() => navigate(`/creator/${row.creatorId}`)}
-												className="cursor-pointer border-b border-white/5 transition-colors hover:bg-white/[0.04]"
+									{sortedRows.map(row => (
+										<tr
+											key={row.creatorId}
+											className="border-b border-white/5 last:border-0 hover:bg-white/[0.03]"
+											onClick={() => navigate(`/keys/${row.creatorId}`)}
+										>
+											<td className="py-3 pr-4">
+												<Link
+													to={`/keys/${row.creatorId}`}
+													className="font-bold text-white hover:text-amber-300"
+												>
+													{row.keyName}
+												</Link>
+											</td>
+											<td className="py-3 pr-4 text-right font-mono">
+												{row.quantity}
+											</td>
+											<td className="py-3 pr-4 text-right font-mono">
+												{row.avgBuyPriceDisplay}
+											</td>
+											<td className="py-3 pr-4 text-right font-mono">
+												{row.currentPriceDisplay}
+											</td>
+											<td
+												className={cn(
+												'py-3 pr-4 text-right font-mono',
+												getPnLToneClassName(row.unrealisedPnL)
+											)}
 											>
-												<td className="py-3 pr-4">
-													<div className="flex items-center gap-2">
-														<Link
-															to={`/creator/${row.creatorId}`}
-															className="font-semibold text-white hover:text-amber-300"
-															onClick={event => event.stopPropagation()}
-														>
-															{row.keyName}
-														</Link>
-														{checkKeySplitActive(row.creatorId) && (
-															<SplitAppliedBadge />
-														)}
-													</div>
-												</td>
-												<td className="py-3 pr-4 text-right font-mono text-white/80">
-													{row.pnl.quantity}
-												</td>
-												<td className="py-3 pr-4 text-right font-mono text-white/80">
-													{isLoadingRow
-														? '—'
-														: formatDisplayKeyPrice(
-																row.pnl.averagePurchasePriceStroops
-															)}
-												</td>
-												<td
-													className="py-3 pr-4 text-right font-mono text-white"
-													data-testid="portfolio-row-current-price"
-												>
-													{isLoadingRow || isUnavailable
-														? '—'
-														: formatDisplayKeyPrice(
-																row.pnl.currentPriceStroops
-															)}
-												</td>
-												<td
-													className={cn(
-														'py-3 pr-4 text-right font-mono font-semibold',
-														row.pnl.unrealisedPnLStroops == null
-															? 'text-white/50'
-															: getPnLToneClassName(
-																	row.pnl.unrealisedPnLStroops
-																)
-													)}
-													data-testid="portfolio-row-pnl"
-												>
-													{displayPnL}
-												</td>
-												<td
-													className={cn(
-														'py-3 pr-4 text-right font-mono font-semibold',
-														row.pnl.pnlPercentage == null
-															? 'text-white/50'
-															: getPnLToneClassName(
-																	row.pnl.pnlPercentage
-																)
-													)}
-													data-testid="portfolio-row-pnl-percent"
-												>
-													{displayPnLPercent}
-												</td>
-											</tr>
-										);
-									})}
+												{row.unrealisedPnLDisplay}
+											</td>
+											<td
+												className={cn(
+												'py-3 pr-4 text-right font-mono',
+												getPnLToneClassName(row.pnlPercentage)
+											)}
+											>
+												{row.pnlPercentageDisplay}
+											</td>
+										</tr>
+									))}
 								</tbody>
 							</table>
 						</div>
 					)}
-				</SectionErrorBoundary>
-
-				<SectionErrorBoundary sectionName="badge progress">
-					<BadgeProgressTracker wallet={address} className="mt-10" />
 				</SectionErrorBoundary>
 			</div>
 		</main>
