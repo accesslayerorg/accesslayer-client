@@ -31,6 +31,7 @@ import BondingCurveChart from '@/components/common/BondingCurveChart';
 import KeySimulationTool from '@/components/common/KeySimulationTool';
 import BuyCooldownCountdown from '@/components/common/BuyCooldownCountdown';
 import KeyHolderList from '@/components/common/KeyHolderList';
+import CommentSection from '@/components/common/CommentSection';
 import KeyHolderLeaderboard from '@/components/common/KeyHolderLeaderboard';
 import HolderConcentrationChart from '@/components/common/HolderConcentrationChart';
 import HolderConcentrationHeatmap from '@/components/common/HolderConcentrationHeatmap';
@@ -1443,6 +1444,13 @@ function CreatorDetailPageContent() {
 						/>
 					</SectionErrorBoundary>
 				</div>
+
+				<SectionErrorBoundary sectionName="key comments">
+					<CommentSection
+						keyId={creator.id}
+						creatorAddress={creator.instructorId}
+					/>
+				</SectionErrorBoundary>
 
 				<div className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8">
 					<h2 className="mb-6 font-grotesque text-xl font-black tracking-tight text-white">
