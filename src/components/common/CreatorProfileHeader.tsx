@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Share2, Pencil } from 'lucide-react';
+import { ArrowLeft, Flag, MoreHorizontal, Share2, Pencil } from 'lucide-react';
 import appendUtmParams from '@/utils/utm.utils';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -12,9 +12,16 @@ import { normalizeCreatorDisplayName } from '@/utils/creatorDisplayName.utils';
 import { CREATOR_CARD_MEDIA_RADIUS_CLASS } from '@/utils/creatorCardTokens';
 import { isOwnWallet } from '@/utils/isOwnWallet';
 import { useFormatXlm } from '@/hooks/useFormatXlm';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface CreatorProfileHeaderProps {
 	name: string;
+	symbol?: string | null;
 	handle: string;
 	creatorId?: string | number | null;
 	avatarUrl?: string;
@@ -25,6 +32,8 @@ interface CreatorProfileHeaderProps {
 	connectedWalletAddress?: string | null;
 	showBackButton?: boolean;
 	onBack?: () => void;
+	isOnChainLoading?: boolean;
+	onReport?: () => void;
 }
 
 const CREATOR_PROFILE_SUBTITLE_WRAP_CLASS_NAME =
@@ -34,6 +43,7 @@ const COPIED_FEEDBACK_MS = 2000;
 
 const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 	name,
+	symbol,
 	handle,
 	creatorId,
 	avatarUrl,
@@ -44,6 +54,8 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 	connectedWalletAddress,
 	showBackButton = false,
 	onBack,
+	isOnChainLoading = false,
+	onReport,
 }) => {
 	const [copied, setCopied] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
@@ -150,11 +162,15 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 							CREATOR_CARD_MEDIA_RADIUS_CLASS
 						)}
 					>
-						<CreatorInitialsAvatar
-							name={displayName}
-							creatorId={creatorId}
-							imageSrc={avatarUrl}
-						/>
+						{isOnChainLoading ? (
+							<div className="size-full animate-pulse bg-white/10" />
+						) : (
+							<CreatorInitialsAvatar
+								name={displayName}
+								creatorId={creatorId}
+								imageSrc={avatarUrl}
+							/>
+						)}
 					</motion.div>
 					<div className="min-w-0 space-y-0.5">
 						<div className="flex items-center gap-2 overflow-hidden">
@@ -176,6 +192,11 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 								<div className="shrink-0">
 									<VerifiedBadge verified={true} />
 								</div>
+							)}
+							{symbol && (
+								<span className="shrink-0 rounded-lg bg-amber-500/15 px-2.5 py-0.5 text-xs font-bold font-mono tracking-wide text-amber-300 border border-amber-500/30">
+									{symbol}
+								</span>
 							)}
 						</div>
 						{!isScrolled ? (
@@ -267,6 +288,39 @@ const CreatorProfileHeader: React.FC<CreatorProfileHeaderProps> = ({
 								/>
 							)}
 						</Button>
+					)}
+					{onReport && (
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button
+									type="button"
+									variant="outline"
+									size="icon"
+									aria-label="Key actions"
+									className={cn(
+										'rounded-xl border-white/10 bg-white/5 text-white hover:border-amber-500/30 hover:bg-amber-500/10',
+										isScrolled ? 'size-9' : 'size-11'
+									)}
+								>
+									<MoreHorizontal
+										className="size-4 text-amber-500"
+										aria-hidden="true"
+									/>
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent
+								align="end"
+								className="border-white/10 bg-[#0b1728] text-white"
+							>
+								<DropdownMenuItem
+									onSelect={onReport}
+									className="focus:bg-white/10 focus:text-white"
+								>
+									<Flag className="size-4" aria-hidden="true" />
+									Report
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
 					)}
 				</div>
 			</div>

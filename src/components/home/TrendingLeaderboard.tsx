@@ -163,8 +163,8 @@ export default function TrendingLeaderboard() {
 								discover what the market is trading.
 							</span>
 						</h2>
-						<Link
-							to="/leaderboard"
+                                                <Link
+                                                        to="/leaderboard?view=volume"
 							className="mb-1 hidden shrink-0 items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-gray-400 transition-colors hover:text-gray-900 md:flex"
 						>
 							View all
@@ -200,8 +200,8 @@ export default function TrendingLeaderboard() {
 
 				{/* Mobile View all link */}
 				<div className="mt-4 flex justify-center md:hidden">
-					<Link
-						to="/leaderboard"
+                                        <Link
+                                                to="/leaderboard?view=volume"
 						className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-gray-400 transition-colors hover:text-gray-900"
 					>
 						View all

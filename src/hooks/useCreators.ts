@@ -4,6 +4,7 @@ import {
 	courseService,
 	type Course,
 	type GetCoursesParams,
+	type PriceHistoryInterval,
 } from '@/services/course.service';
 import showToast from '@/utils/toast.util';
 
@@ -14,10 +15,26 @@ export function useCreatorList(params?: GetCoursesParams) {
 	});
 }
 
+/**
+ * Key detail refresh cadence (#1121): polling every 30s lets the UI pick up
+ * an admin freeze (or an unfreeze) without requiring a page reload.
+ */
+export const CREATOR_DETAIL_REFRESH_INTERVAL_MS = 30_000;
+
 export function useCreatorDetail(id: string) {
 	return useQuery({
 		queryKey: queryKeys.creators.detail(id),
 		queryFn: () => courseService.getCourse(id),
+		enabled: !!id,
+		staleTime: CREATOR_DETAIL_REFRESH_INTERVAL_MS,
+		refetchInterval: CREATOR_DETAIL_REFRESH_INTERVAL_MS,
+	});
+}
+
+export function usePriceHistory(id: string, interval: PriceHistoryInterval) {
+	return useQuery({
+		queryKey: queryKeys.creators.priceHistory(id, interval),
+		queryFn: () => courseService.getPriceHistory(id, interval),
 		enabled: !!id,
 	});
 }
@@ -47,5 +64,3 @@ export function useSetCoCreator(courseId: string) {
 		},
 	});
 }
-
-

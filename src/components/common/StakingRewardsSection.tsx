@@ -8,6 +8,8 @@ import {
 	hasStakingActivity,
 	type StakingPoolStats,
 } from '@/utils/stakingRewards.utils';
+import { useGlobalPause } from '@/hooks/useGlobalPause';
+import { UnavailableAction } from '@/components/ui/unavailable-action';
 
 export interface StakingRewardsSectionProps extends StakingPoolStats {
 	/** Whether the key detail data is still loading. */
@@ -35,6 +37,8 @@ const StakingRewardsSection: React.FC<StakingRewardsSectionProps> = ({
 	isLoading = false,
 	stakeHref = '/profile?tab=staking',
 }) => {
+	const { paused } = useGlobalPause();
+
 	if (isLoading) {
 		return (
 			<section className={CARD_CLASS} data-testid="staking-rewards-skeleton" aria-busy="true">
@@ -110,9 +114,11 @@ const StakingRewardsSection: React.FC<StakingRewardsSectionProps> = ({
 				current pool balance. Actual rewards vary with trading volume.
 			</p>
 
-			<Button asChild className="mt-6" data-testid="staking-cta">
-				<Link to={stakeHref}>Stake your keys</Link>
-			</Button>
+			<UnavailableAction disabled={paused} reason="Platform is currently paused">
+				<Button asChild className="mt-6" data-testid="staking-cta" disabled={paused}>
+					<Link to={stakeHref}>Stake your keys</Link>
+				</Button>
+			</UnavailableAction>
 		</section>
 	);
 };

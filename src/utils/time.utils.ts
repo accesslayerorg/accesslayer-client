@@ -99,6 +99,28 @@ export function formatRelativeTimeLabel(date: Date, now: Date = new Date()): str
 	return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/**
+ * Formats the time elapsed since `startMs`, e.g. `8s` or `2m 05s`.
+ * Used by the pending-transaction drawer to show how long a submission has
+ * been waiting for ledger inclusion.
+ */
+export function formatElapsedTime(
+	startMs: number,
+	nowMs: number = Date.now()
+): string {
+	const elapsedSec = Math.max(0, Math.floor((nowMs - startMs) / 1000));
+	if (elapsedSec < 60) return `${elapsedSec}s`;
+
+	const elapsedMin = Math.floor(elapsedSec / 60);
+	const seconds = elapsedSec % 60;
+	if (elapsedMin < 60) {
+		return `${elapsedMin}m ${String(seconds).padStart(2, '0')}s`;
+	}
+
+	const hours = Math.floor(elapsedMin / 60);
+	return `${hours}h ${String(elapsedMin % 60).padStart(2, '0')}m`;
+}
+
 export function formatRelativeTime(
 	input: string | number | Date | null | undefined,
 	options: RelativeTimeOptions = {}

@@ -9,10 +9,13 @@ import {
 	Vote,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatRelativeTime } from '@/utils/time.utils';
+import { useRelativeTime } from '@/hooks/useRelativeTime';
 import { buildStellarExpertTxUrl, truncateTxHash } from '@/constants/stellar';
 import { env } from '@/utils/env.utils';
-import type { WalletActivityTrade, WalletActivityEventType } from '@/services/walletActivity.service';
+import type {
+	WalletActivityTrade,
+	WalletActivityEventType,
+} from '@/services/walletActivity.service';
 
 // ─── Icon + colour config per event type ──────────────────────────────────────
 
@@ -27,35 +30,54 @@ function getEventConfig(type: WalletActivityEventType): EventConfig {
 	switch (type) {
 		case 'buy':
 			return {
-				icon: <ArrowUpRight className="size-4 text-emerald-400" aria-hidden="true" />,
+				icon: (
+					<ArrowUpRight
+						className="size-4 text-emerald-400"
+						aria-hidden="true"
+					/>
+				),
 				iconBg: 'bg-emerald-500/10',
 				accentBorder: 'border-l-emerald-500',
 				label: 'Buy',
 			};
 		case 'sell':
 			return {
-				icon: <ArrowDownRight className="size-4 text-rose-400" aria-hidden="true" />,
+				icon: (
+					<ArrowDownRight
+						className="size-4 text-rose-400"
+						aria-hidden="true"
+					/>
+				),
 				iconBg: 'bg-rose-500/10',
 				accentBorder: 'border-l-rose-500',
 				label: 'Sell',
 			};
 		case 'stake':
 			return {
-				icon: <Coins className="size-4 text-amber-400" aria-hidden="true" />,
+				icon: (
+					<Coins className="size-4 text-amber-400" aria-hidden="true" />
+				),
 				iconBg: 'bg-amber-500/10',
 				accentBorder: 'border-l-amber-500',
 				label: 'Stake',
 			};
 		case 'unstake':
 			return {
-				icon: <TrendingDown className="size-4 text-orange-400" aria-hidden="true" />,
+				icon: (
+					<TrendingDown
+						className="size-4 text-orange-400"
+						aria-hidden="true"
+					/>
+				),
 				iconBg: 'bg-orange-500/10',
 				accentBorder: 'border-l-orange-500',
 				label: 'Unstake',
 			};
 		case 'claim':
 			return {
-				icon: <Gift className="size-4 text-violet-400" aria-hidden="true" />,
+				icon: (
+					<Gift className="size-4 text-violet-400" aria-hidden="true" />
+				),
 				iconBg: 'bg-violet-500/10',
 				accentBorder: 'border-l-violet-500',
 				label: 'Claim Reward',
@@ -78,12 +100,15 @@ function buildDetailParts(entry: WalletActivityTrade): string[] {
 	switch (entry.type) {
 		case 'buy':
 		case 'sell':
-			if (entry.amount != null) parts.push(`${entry.amount} key${entry.amount !== 1 ? 's' : ''}`);
-			if (entry.price != null) parts.push(`${entry.price.toFixed(4)} XLM / key`);
+			if (entry.amount != null)
+				parts.push(`${entry.amount} key${entry.amount !== 1 ? 's' : ''}`);
+			if (entry.price != null)
+				parts.push(`${entry.price.toFixed(4)} XLM / key`);
 			break;
 		case 'stake':
 		case 'unstake':
-			if (entry.amount != null) parts.push(`${entry.amount} key${entry.amount !== 1 ? 's' : ''}`);
+			if (entry.amount != null)
+				parts.push(`${entry.amount} key${entry.amount !== 1 ? 's' : ''}`);
 			break;
 		case 'claim':
 			if (entry.price != null) parts.push(`${entry.price.toFixed(4)} XLM`);
@@ -95,8 +120,8 @@ function buildDetailParts(entry: WalletActivityTrade): string[] {
 					entry.voteChoice === 'for'
 						? '✓ For'
 						: entry.voteChoice === 'against'
-						? '✗ Against'
-						: '— Abstain';
+							? '✗ Against'
+							: '— Abstain';
 				parts.push(choiceLabel);
 			}
 			break;
@@ -147,6 +172,7 @@ export interface ActivityItemProps {
 const ActivityItem: React.FC<ActivityItemProps> = ({ entry, className }) => {
 	const config = getEventConfig(entry.type);
 	const details = buildDetailParts(entry);
+	const relativeTime = useRelativeTime(entry.timestamp);
 
 	return (
 		<div
@@ -209,7 +235,7 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ entry, className }) => {
 					className="text-xs text-white/50"
 					title={new Date(entry.timestamp).toLocaleString()}
 				>
-					{formatRelativeTime(entry.timestamp)}
+					{relativeTime}
 				</span>
 				<ExplorerLink txHash={entry.txHash} />
 			</div>

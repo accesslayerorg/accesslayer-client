@@ -4,6 +4,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import HomePage from '@/pages/HomePage';
 import ProfilePage from '@/pages/ProfilePage';
 
+vi.mock('wagmi', () => ({
+	useAccount: () => ({ address: undefined, isConnected: false }),
+}));
 vi.mock('@/components/home/Header', () => ({
 	default: () => <header>Header</header>,
 }));
@@ -37,11 +40,29 @@ vi.mock('@/components/common/ReferralLinkPanel', () => ({
 vi.mock('@/components/common/TradeHistoryTable', () => ({
 	default: () => <div>Trade History Table</div>,
 }));
+vi.mock('@/components/common/PortfolioSummaryHeader', () => ({
+	default: () => <div>Portfolio Summary</div>,
+}));
+vi.mock('@/components/common/HeldKeysGrid', () => ({
+	default: () => <div>Held Keys Grid</div>,
+}));
+vi.mock('@/components/common/StakingPositionsList', () => ({
+	default: () => <div>Staking Positions</div>,
+}));
 vi.mock('@/hooks/useNavigationTiming', () => ({
 	useNavigationTiming: vi.fn(),
 }));
 vi.mock('@/hooks/useProfileStore', () => ({
 	useProfileStore: () => ({ firstName: 'Alex', lastName: 'Rivers' }),
+}));
+vi.mock('@/hooks/useWallet', () => ({
+	useWalletHoldings: () => ({ data: [], isLoading: false }),
+}));
+vi.mock('@/hooks/useCreatorPrices', () => ({
+	useCreatorPrices: () => ({ data: [], isLoading: false }),
+}));
+vi.mock('@/hooks/useStakingPositions', () => ({
+	useStakingPositions: () => ({ data: { positions: [] }, isLoading: false }),
 }));
 
 describe('page document titles', () => {

@@ -1,13 +1,17 @@
 import Skeleton from '@/components/ui/skeleton';
 import { AccessibleInfoTrigger } from '@/components/common/AccessibleInfoTrigger';
 import { KEY_STAT_DEFINITIONS } from '@/components/common/keyStatDefinitions';
-import type { KeyStats } from '@/services/course.service';
+import UniqueTradersStat from '@/components/common/UniqueTradersStat';
+import type { KeyStats, KeyUniqueTraders } from '@/services/course.service';
 
 interface KeyStatsPanelProps {
 	stats?: KeyStats | null;
 	/** True only during the initial fetch (no data yet). */
 	isLoading?: boolean;
 	isError?: boolean;
+	/** Unique trader count, fetched separately on a 5-minute interval (#1020). */
+	uniqueTraders?: KeyUniqueTraders | null;
+	isUniqueTradersLoading?: boolean;
 }
 
 /**
@@ -21,6 +25,8 @@ const KeyStatsPanel: React.FC<KeyStatsPanelProps> = ({
 	stats,
 	isLoading = false,
 	isError = false,
+	uniqueTraders,
+	isUniqueTradersLoading = false,
 }) => {
 	const showSkeleton = isLoading && !stats;
 	const showError = isError && !stats && !isLoading;
@@ -38,7 +44,7 @@ const KeyStatsPanel: React.FC<KeyStatsPanelProps> = ({
 			>
 				Key Stats
 			</h2>
-			<dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+			<dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
 				{KEY_STAT_DEFINITIONS.map(stat => (
 					<div
 						key={stat.key}
@@ -66,6 +72,10 @@ const KeyStatsPanel: React.FC<KeyStatsPanelProps> = ({
 						</dd>
 					</div>
 				))}
+				<UniqueTradersStat
+					data={uniqueTraders}
+					isLoading={isUniqueTradersLoading}
+				/>
 			</dl>
 			{showSkeleton && (
 				<span role="status" className="sr-only">

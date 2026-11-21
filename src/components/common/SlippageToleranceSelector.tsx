@@ -14,12 +14,14 @@ export interface SlippageToleranceSelectorProps {
 	className?: string;
 	/** Preset options in percent (e.g. [0.5, 1, 2]). */
 	presets?: readonly number[];
+	/** Minimum valid custom slippage percentage (defaults to 0.1%). */
+	minCustomPercent?: number;
 }
 
 /**
  * Preset + custom slippage tolerance picker used by the buy/sell trade
- * dialogs (#872, #919). Presets are 0.5% / 1% / 2%; a custom input accepts any
- * value in [0, 50]. Selecting a preset clears any custom-input error state.
+ * dialogs (#872, #919, #1112). Presets are 0.5% / 1% / 2%; a custom input accepts
+ * values in [0.1, 50]. Selecting a preset clears any custom-input error state.
  */
 const SlippageToleranceSelector: React.FC<SlippageToleranceSelectorProps> = ({
 	value,
@@ -27,6 +29,7 @@ const SlippageToleranceSelector: React.FC<SlippageToleranceSelectorProps> = ({
 	disabled = false,
 	className,
 	presets = SLIPPAGE_TOLERANCE_PRESETS,
+	minCustomPercent = SLIPPAGE_TOLERANCE_BOUNDS.CUSTOM_MIN_PERCENT,
 }) => {
 	const isPresetSelected = presets.includes(value);
 	const [customText, setCustomText] = useState(
@@ -38,8 +41,11 @@ const SlippageToleranceSelector: React.FC<SlippageToleranceSelectorProps> = ({
 		if (!customActive) return null;
 		const normalized = customText.trim();
 		if (!normalized) return null;
-		return validateSlippageTolerancePercent(Number(normalized));
-	}, [customActive, customText]);
+		return validateSlippageTolerancePercent(
+			Number(normalized),
+			minCustomPercent
+		);
+	}, [customActive, customText, minCustomPercent]);
 
 	const handlePresetClick = (preset: number) => {
 		setCustomActive(false);
@@ -55,7 +61,7 @@ const SlippageToleranceSelector: React.FC<SlippageToleranceSelectorProps> = ({
 		if (!normalized) return;
 
 		const parsed = Number(normalized);
-		if (validateSlippageTolerancePercent(parsed) === null) {
+		if (validateSlippageTolerancePercent(parsed, minCustomPercent) === null) {
 			onChange(parsed);
 		}
 	};

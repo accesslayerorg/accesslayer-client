@@ -45,6 +45,15 @@ import type { SlippageBounds } from '@/utils/slippageTolerance.utils';
 import TradePanelErrorBoundary from '@/components/common/TradePanelErrorBoundary';
 import NetworkMismatchBanner from '@/components/common/NetworkMismatchBanner';
 import StellarConnectionQualityBadge from '@/components/common/StellarConnectionQualityBadge';
+import AdminPauseControl from '@/components/common/AdminPauseControl';
+import {
+	useContractPausedStore,
+	selectIsPaused,
+} from '@/hooks/useContractPausedStore';
+import KeyAnalyticsPanel from '@/components/common/KeyAnalyticsPanel';
+import TimelockAdminPanel from '@/components/common/TimelockAdminPanel';
+import MultiKeyStakingVault from '@/components/common/MultiKeyStakingVault';
+import { CreatorKeyDashboard } from '@/components/common/CreatorKeyDashboard';
 import { useAccount } from 'wagmi';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
 import {
@@ -53,8 +62,11 @@ import {
 	useWalletHoldings,
 	useReinvestDividendMutation,
 	useRedeemDeprecatedKeyMutation,
+	useBatchTransferMutation,
 	type SelfFreezeAction,
 } from '@/hooks/useWallet';
+
+import toast from 'react-hot-toast';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 import { formatCompactNumber, formatNumber } from '@/utils/numberFormat.utils';
@@ -67,16 +79,8 @@ import {
 	calculatePnLSummary,
 	formatPnLDisplay,
 	formatPnLPercentage,
-	getPnLToneClassName,
-	resolveAveragePurchasePriceStroops,
 	type HeldKeyPosition,
 } from '@/utils/portfolioValue.utils';
-import {
-	averagePurchasePriceFromCostBasis,
-	resolveCostBasisWalletKey,
-	useKeyCostBasis,
-	type KeyCostBasisEntry,
-} from '@/hooks/useKeyCostBasis';
 import PrecisionModeToggle, {
 	type PrecisionMode,
 } from '@/components/common/PrecisionModeToggle';
@@ -84,7 +88,6 @@ import ScrollToTop from '@/components/common/ScrollToTop';
 import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 import StaleDataWarning from '@/components/common/StaleDataWarning';
 import { useScrollPreservation } from '@/hooks/useScrollPreservation';
-import { useKeyConfig } from '@/hooks/useKeyConfig';
 import { useStaleData } from '@/hooks/useStaleData';
 import { useIdleRefreshPrompt } from '@/hooks/useIdleRefreshPrompt';
 import IdleRefreshPrompt from '@/components/common/IdleRefreshPrompt';
@@ -92,9 +95,7 @@ import {
 	CREATOR_CARD_ENTRY_CLASS,
 	creatorCardEntryStyle,
 } from '@/utils/cardEntryAnimation.utils';
-import {
-	resolveCreatorKeyPriceStroops,
-} from '@/utils/keyPriceDisplay.utils';
+import { resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
 import { estimateReinvest } from '@/utils/reinvestDividend.utils';
 import { useTradeKeyboardShortcuts } from '@/hooks/useTradeKeyboardShortcuts';
 import KeyboardShortcutsHelp from '@/components/common/KeyboardShortcutsHelp';
@@ -109,6 +110,10 @@ import ClearedFiltersEmptyState from '@/components/common/ClearedFiltersEmptySta
 import CreatorListPagination from '@/components/common/CreatorListPagination';
 import CreatorListGroupSeparator from '@/components/common/CreatorListGroupSeparator';
 import MarketplaceSidebar from '@/components/common/MarketplaceSidebar';
+import BatchBuyBasket from '@/components/common/BatchBuyBasket';
+import BatchBuyConfirmDialog from '@/components/common/BatchBuyConfirmDialog';
+import BatchBuyBasketTrigger from '@/components/common/BatchBuyBasketTrigger';
+import { useBatchBuyStore, selectItemCount } from '@/hooks/useBatchBuyStore';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
 import SelfFreezeDialog from '@/components/common/SelfFreezeDialog';
 import SharePortfolioModal from '@/components/common/SharePortfolioModal';
@@ -225,13 +230,6 @@ const PAGE_SIZE = 6;
 const FETCH_RETRY_ACTION_LABEL = 'Try again';
 const DEMO_HELD_KEY_QUANTITIES = [0, 2, 1] as const;
 const DEMO_WALLET_ADDRESS = 'demo-wallet-address';
-
-/**
- * Stable empty cost-basis map returned by the `useKeyCostBasis` selector for
- * wallets with no recorded positions. A shared reference keeps the selector
- * referentially stable so it does not re-render the holdings list.
- */
-const EMPTY_COST_BASIS_ENTRIES: Record<string, KeyCostBasisEntry> = {};
 const FINAL_FETCH_ERROR_COPY =
 	'Unable to load live creators right now. Showing fallback creators.';
 const CREATOR_REFRESH_SHORTCUT_LABEL = 'Ctrl/Cmd + Alt + R';
@@ -299,6 +297,54 @@ function LandingPage() {
 	} | null>(null);
 	const [stellarAddressCopied, setStellarAddressCopied] = useState(false);
 	const prefersReducedMotion = usePrefersReducedMotion();
+
+	// ── Batch buy basket (#954) ───────────────────────────────────────────
+	const [batchBasketOpen, setBatchBasketOpen] = useState(false);
+	const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
+	const [batchSubmitting, setBatchSubmitting] = useState(false);
+	const batchItemCount = useBatchBuyStore(selectItemCount);
+	const clearBasket = useBatchBuyStore(s => s.clearBasket);
+	const batchItems = useBatchBuyStore(s => s.items);
+
+	const handleBatchCheckout = () => {
+		setBatchBasketOpen(false);
+		setBatchConfirmOpen(true);
+	};
+
+	const handleBatchConfirm = async () => {
+		setBatchSubmitting(true);
+		try {
+			showToast.loading(
+				`Submitting batch purchase of ${batchItemCount} creator key${batchItemCount !== 1 ? 's' : ''}...`
+			);
+			// Simulated batch transaction — mirrors the existing stub pattern.
+			await new Promise<void>(resolve => window.setTimeout(resolve, 1800));
+			toast.remove();
+			const fakeTxHash =
+				'0xbatch' +
+				Math.random().toString(16).slice(2, 14).padEnd(12, '0') +
+				'deadbeef';
+			const creatorNames = batchItems
+				.map(i => i.creatorName)
+				.slice(0, 3)
+				.join(', ');
+			const extraCount =
+				batchItems.length > 3 ? ` +${batchItems.length - 3} more` : '';
+			showToast.transactionSuccess(
+				'Batch purchase confirmed!',
+				`Purchased keys for ${creatorNames}${extraCount}.`,
+				fakeTxHash,
+				`https://stellar.expert/explorer/testnet/tx/${fakeTxHash}`
+			);
+			clearBasket();
+			setBatchConfirmOpen(false);
+		} catch {
+			toast.remove();
+			showToast.error('Batch purchase failed. Please try again.');
+		} finally {
+			setBatchSubmitting(false);
+		}
+	};
 	const [sortOption, setSortOption] = useState<CourseSortOption>(() => {
 		const sort = searchParams.get('sort') as CourseSortOption | null;
 		if (
@@ -713,10 +759,6 @@ function LandingPage() {
 	// fall back to the demo featured creator. This keeps the profile panel
 	// reactive to backend updates (supply, price, etc.).
 	const featuredCreator = creators.length > 0 ? creators[0] : DEMO_CREATORS[0];
-	// Live key config powers the bid-ask spread in the quick-trade modal
-	// (#951) and refetches as the key configuration changes.
-	const { data: featuredKeyConfig, isLoading: isFeaturedKeyConfigLoading } =
-		useKeyConfig(featuredCreator?.id);
 
 	useEffect(() => {
 		if (pendingScrollRestoreRef.current == null) return;
@@ -792,19 +834,8 @@ function LandingPage() {
 	const selfFreezeMutation = useSelfFreezeMutation(activeWalletAddress);
 	const reinvestMutation = useReinvestDividendMutation(activeWalletAddress);
 	const redeemMutation = useRedeemDeprecatedKeyMutation(activeWalletAddress);
+	const batchTransferMutation = useBatchTransferMutation(activeWalletAddress);
 	const { data: cachedHoldings = [] } = useWalletHoldings(activeWalletAddress);
-
-	// #935 — the wallet's persisted per-key cost basis, used as the average
-	// purchase price each position's unrealised P&L is measured against. The
-	// selector returns a stable reference (either the stored map or a shared
-	// empty object) so it never re-renders on unrelated store writes.
-	// Keyed on `activeWalletAddress` so demo trades — which the mutation records
-	// under the demo address — resolve to the same bucket the trades were
-	// written to.
-	const costBasisWalletKey = resolveCostBasisWalletKey(activeWalletAddress);
-	const costBasisByCreatorId = useKeyCostBasis(
-		state => state.entriesByWallet[costBasisWalletKey] ?? EMPTY_COST_BASIS_ENTRIES
-	);
 
 	// Merged: keep total-value sorting (feature/holdings-sorting-tests) while
 	// also zeroing out the demo baseline quantities once a real wallet is
@@ -822,14 +853,11 @@ function LandingPage() {
 							? featuredHoldings
 							: (DEMO_HELD_KEY_QUANTITIES[index] ?? 0);
 					const baseQuantity = connectedAddress ? 0 : defaultBaseQuantity;
-					const basePosition = {
+					return {
 						creatorId: creator.id,
 						quantity: cached?.quantity ?? baseQuantity,
 						priceStroops: creator.priceStroops,
 						price: creator.price,
-						// #935 — live supply so the current value can be valued on
-						// the bonding curve rather than a cached snapshot.
-						currentSupply: creator.creatorShareSupply,
 						frozenQuantity: cached?.frozenQuantity ?? 0,
 						liquidQuantity:
 							cached?.liquidQuantity ?? cached?.quantity ?? baseQuantity,
@@ -837,24 +865,6 @@ function LandingPage() {
 						isPriceStale: creatorsAreStale,
 						pending: cached?.pending ?? false,
 						unclaimedDividend: cached?.unclaimedDividend ?? 0,
-						// #935 — cost basis reported by the backend, which wins over
-						// the locally tracked basis when both are available.
-						averagePurchasePriceStroops:
-							cached?.averagePurchasePriceStroops ?? null,
-					};
-
-					return {
-						...basePosition,
-						// #935 — average purchase price: server-provided cost basis
-						// first, then the locally tracked basis, then seeded from the
-						// current curve price so a position synced without cost
-						// history starts at break-even instead of hiding its P&L.
-						averagePurchasePriceStroops: resolveAveragePurchasePriceStroops(
-							basePosition,
-							averagePurchasePriceFromCostBasis(
-								costBasisByCreatorId[creator.id]
-							)
-						),
 					};
 				})
 			),
@@ -865,7 +875,6 @@ function LandingPage() {
 			isPriceRefreshing,
 			cachedHoldings,
 			connectedAddress,
-			costBasisByCreatorId,
 		]
 	);
 	const portfolioValue = useMemo(
@@ -890,6 +899,8 @@ function LandingPage() {
 		displayedPortfolioValue
 	);
 
+	const isPaused = useContractPausedStore(selectIsPaused);
+
 	const openTradeDialog = useCallback((side: TradeSide) => {
 		setTradeSide(side);
 		setTradeDialogOpen(true);
@@ -913,6 +924,17 @@ function LandingPage() {
 		if (!selfFreezeDialog) return;
 		const { action, position } = selfFreezeDialog;
 		try {
+			const actionVerb =
+				tradeSide === 'buy'
+					? 'buy'
+					: tradeSide === 'sell'
+						? 'sell'
+						: tradeSide === 'stake'
+							? 'stake'
+							: 'transfer';
+			showToast.loading(
+				`Submitting ${actionVerb} for ${amount} key${amount === 1 ? '' : 's'}...`
+			);
 			await selfFreezeMutation.mutateAsync({
 				creatorId: position.creatorId,
 				amount,
@@ -1004,9 +1026,6 @@ function LandingPage() {
 					price: featuredCreator?.price,
 					ref: urlRef,
 					maxPriceStroops: slippage?.maxPriceStroops ?? null,
-					// #935 — live supply so the buy's cost basis is recorded at the
-					// price the curve actually charges across the buy range.
-					currentSupply: featuredCreator?.creatorShareSupply ?? null,
 				});
 				setFeaturedHoldings(current => current + amount);
 				showToast.transactionSuccess(
@@ -1023,10 +1042,6 @@ function LandingPage() {
 					priceStroops: resolveCreatorKeyPriceStroops(featuredCreator),
 					price: featuredCreator?.price,
 					minPriceStroops: slippage?.minPriceStroops ?? null,
-					// #935 — the sell releases the sold keys' share of the position's
-					// cost basis; the average purchase price of the remaining keys is
-					// preserved.
-					currentSupply: featuredCreator?.creatorShareSupply ?? null,
 				});
 				setFeaturedHoldings(current => Math.max(0, current - amount));
 				showToast.transactionSuccess(
@@ -1108,8 +1123,9 @@ function LandingPage() {
 							<Button>Buy Access</Button>
 						</UnavailableAction>
 					</div>
-					<div className="mt-4 flex justify-center">
+					<div className="mt-4 flex flex-col items-center gap-3">
 						<StellarConnectionQualityBadge />
+						<AdminPauseControl className="w-full max-w-md mx-auto" />
 					</div>
 				</MarketplaceSection>
 
@@ -1614,10 +1630,7 @@ function LandingPage() {
 											<span className="text-white/45">
 												Total Invested
 											</span>
-											<span
-												className="ml-2 font-grotesque font-bold text-white"
-												data-testid="pnl-summary-invested"
-											>
+											<span className="ml-2 font-grotesque font-bold text-white">
 												{formatPnLDisplay(pnlSummary.totalInvested)}
 											</span>
 										</div>
@@ -1625,10 +1638,7 @@ function LandingPage() {
 											<span className="text-white/45">
 												Current Value
 											</span>
-											<span
-												className="ml-2 font-grotesque font-bold text-white"
-												data-testid="pnl-summary-current-value"
-											>
+											<span className="ml-2 font-grotesque font-bold text-white">
 												{formatPnLDisplay(pnlSummary.currentValue)}
 											</span>
 										</div>
@@ -1637,10 +1647,13 @@ function LandingPage() {
 												Unrealised PnL
 											</span>
 											<span
-												className={`ml-2 font-grotesque font-bold ${getPnLToneClassName(
-													pnlSummary.unrealisedPnL
-												)}`}
-												data-testid="pnl-summary-unrealised"
+												className={`ml-2 font-grotesque font-bold ${
+													pnlSummary.unrealisedPnL > 0
+														? 'text-emerald-400'
+														: pnlSummary.unrealisedPnL < 0
+															? 'text-red-400'
+															: 'text-white'
+												}`}
 											>
 												{formatPnLDisplay(pnlSummary.unrealisedPnL)}{' '}
 												(
@@ -1651,28 +1664,18 @@ function LandingPage() {
 											</span>
 										</div>
 									</div>
-									<div className="flex flex-col gap-1 sm:items-end">
-										<button
-											type="button"
-											data-testid="share-performance-btn"
-											onClick={() => setSharePortfolioOpen(true)}
-											className="inline-flex items-center gap-2 self-start rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-white/30 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/50 sm:self-auto cursor-pointer"
-										>
-											<Share2 className="size-3.5 text-amber-300" aria-hidden="true" />
-											<span>Share Performance</span>
-										</button>
-										<p
-											className="text-[0.65rem] leading-relaxed text-white/40 sm:text-right"
-											data-testid="pnl-summary-caption"
-										>
-											Valued at the current bonding curve sell price across{' '}
-											{pnlSummary.costBasisPositionCount}{' '}
-											{pnlSummary.costBasisPositionCount === 1
-												? 'position'
-												: 'positions'}{' '}
-											with a tracked average purchase price.
-										</p>
-									</div>
+									<button
+										type="button"
+										data-testid="share-performance-btn"
+										onClick={() => setSharePortfolioOpen(true)}
+										className="inline-flex items-center gap-2 self-start rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-white/30 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/50 sm:self-auto cursor-pointer"
+									>
+										<Share2
+											className="size-3.5 text-amber-300"
+											aria-hidden="true"
+										/>
+										<span>Share Performance</span>
+									</button>
 								</div>
 							)}
 						{isLoading ? (
@@ -1700,36 +1703,65 @@ function LandingPage() {
 												creator={creator}
 												onBuy={() => openTradeDialog('buy')}
 												onSell={() => openTradeDialog('sell')}
-														onReinvest={async creatorId => {
-															const heldPosition = heldKeyPositions.find(
-																item => item.creatorId === creatorId
-															);
-															const estimate = estimateReinvest(
-																heldPosition?.unclaimedDividend ?? 0,
-																resolveCreatorKeyPriceStroops(heldPosition ?? {})
-															);
-															if (!estimate) {
-																showToast.error(
-																	'Reinvest estimate unavailable. Please refresh prices and try again.'
-																);
-																return;
-															}
-															await reinvestMutation.mutateAsync({
-																keyId: creatorId,
-																amount: heldPosition?.unclaimedDividend ?? 0,
-																keys: estimate.wholeKeys,
-															});
-													}}
-													onRedeem={async creatorId => {
-													await redeemMutation.mutateAsync({
-															creatorId,
-															quantity:
-																heldKeyPositions.find(item => item.creatorId === creatorId)?.quantity ?? 0,
+												onReinvest={async creatorId => {
+													const heldPosition =
+														heldKeyPositions.find(
+															item =>
+																item.creatorId === creatorId
+														);
+													const estimate = estimateReinvest(
+														heldPosition?.unclaimedDividend ?? 0,
+														resolveCreatorKeyPriceStroops(
+															heldPosition ?? {}
+														)
+													);
+													if (!estimate) {
+														showToast.error(
+															'Reinvest estimate unavailable. Please refresh prices and try again.'
+														);
+														return;
+													}
+													await reinvestMutation.mutateAsync({
+														keyId: creatorId,
+														amount:
+															heldPosition?.unclaimedDividend ??
+															0,
+														keys: estimate.wholeKeys,
 													});
 												}}
-														onFreeze={position => openSelfFreezeDialog('freeze', position)}
-														onUnfreeze={position => openSelfFreezeDialog('unfreeze', position)}
-												isSubmitting={tradeSubmitting}
+												onRedeem={async creatorId => {
+													await redeemMutation.mutateAsync({
+														creatorId,
+														quantity:
+															heldKeyPositions.find(
+																item =>
+																	item.creatorId === creatorId
+															)?.quantity ?? 0,
+													});
+												}}
+												onFreeze={position =>
+													openSelfFreezeDialog('freeze', position)
+												}
+												onUnfreeze={position =>
+													openSelfFreezeDialog(
+														'unfreeze',
+														position
+													)
+												}
+												onBatchTransfer={() => {}}
+												onBatchTransferSubmit={async (
+													recipients,
+													creatorId
+												) => {
+													await batchTransferMutation.mutateAsync({
+														creatorId,
+														recipients,
+													});
+												}}
+												isSubmitting={
+													tradeSubmitting ||
+													batchTransferMutation.isPending
+												}
 												isReinvesting={reinvestMutation.isPending}
 												isRedeeming={redeemMutation.isPending}
 												isNetworkMismatch={isNetworkMismatch}
@@ -1743,13 +1775,14 @@ function LandingPage() {
 						open={selfFreezeDialog !== null}
 						action={selfFreezeDialog?.action ?? 'freeze'}
 						creatorName={
-							creators.find(item => item.id === selfFreezeDialog?.position.creatorId)?.title ??
-							'creator'
+							creators.find(
+								item => item.id === selfFreezeDialog?.position.creatorId
+							)?.title ?? 'creator'
 						}
 						availableQuantity={
 							selfFreezeDialog?.action === 'unfreeze'
-								? selfFreezeDialog.position.frozenQuantity ?? 0
-								: selfFreezeDialog?.position.liquidQuantity ?? 0
+								? (selfFreezeDialog.position.frozenQuantity ?? 0)
+								: (selfFreezeDialog?.position.liquidQuantity ?? 0)
 						}
 						isSubmitting={selfFreezeMutation.isPending}
 						onOpenChange={open => !open && setSelfFreezeDialog(null)}
@@ -1918,6 +1951,10 @@ function LandingPage() {
 													)} shares available`
 										}
 									/>
+									<KeyAnalyticsPanel
+										creatorId={featuredCreator?.id ?? 'alex-rivers'}
+										className="mt-2"
+									/>
 									{/* Issue 557: Stellar address with copy button */}
 									<div className="flex items-center justify-between gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
 										<div className="min-w-0 flex-1">
@@ -1968,7 +2005,14 @@ function LandingPage() {
 												className="rounded-xl"
 												onClick={() => openTradeDialog('buy')}
 												disabled={
-													isNetworkMismatch || tradeSubmitting
+													isNetworkMismatch ||
+													tradeSubmitting ||
+													isPaused
+												}
+												title={
+													isPaused
+														? 'Trading suspended: contract is paused'
+														: undefined
 												}
 											>
 												Buy
@@ -1978,10 +2022,51 @@ function LandingPage() {
 												variant="outline"
 												onClick={() => openTradeDialog('sell')}
 												disabled={
-													isNetworkMismatch || tradeSubmitting
+													isNetworkMismatch ||
+													tradeSubmitting ||
+													isPaused
+												}
+												title={
+													isPaused
+														? 'Trading suspended: contract is paused'
+														: undefined
 												}
 											>
 												Sell
+											</Button>
+											<Button
+												className="rounded-xl"
+												variant="outline"
+												onClick={() => openTradeDialog('stake')}
+												disabled={
+													isNetworkMismatch ||
+													tradeSubmitting ||
+													isPaused
+												}
+												title={
+													isPaused
+														? 'Trading suspended: contract is paused'
+														: undefined
+												}
+											>
+												Stake
+											</Button>
+											<Button
+												className="rounded-xl"
+												variant="outline"
+												onClick={() => openTradeDialog('transfer')}
+												disabled={
+													isNetworkMismatch ||
+													tradeSubmitting ||
+													isPaused
+												}
+												title={
+													isPaused
+														? 'Trading suspended: contract is paused'
+														: undefined
+												}
+											>
+												Transfer
 											</Button>
 										</div>
 										{tradeSubmitting && (
@@ -1997,6 +2082,24 @@ function LandingPage() {
 							</MarketplaceSection>
 						)}
 					</SectionErrorBoundary>
+
+					<SectionDivider
+						title="Staking Vault & Governance"
+						spacing="relaxed"
+					/>
+
+					<MultiKeyStakingVault className="mt-6" />
+
+					<TimelockAdminPanel className="mt-6" />
+
+					<SectionDivider
+						title="Creator Key Management"
+						spacing="relaxed"
+					/>
+
+					<div className="mt-6">
+						<CreatorKeyDashboard />
+					</div>
 
 					<div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/85 backdrop-blur-md md:hidden">
 						<div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-6 py-3">
@@ -2047,7 +2150,16 @@ function LandingPage() {
 											className="rounded-xl"
 											size="sm"
 											onClick={() => openTradeDialog('buy')}
-											disabled={isNetworkMismatch || tradeSubmitting}
+											disabled={
+												isNetworkMismatch ||
+												tradeSubmitting ||
+												isPaused
+											}
+											title={
+												isPaused
+													? 'Trading suspended: contract is paused'
+													: undefined
+											}
 										>
 											Buy
 										</Button>
@@ -2056,9 +2168,54 @@ function LandingPage() {
 											size="sm"
 											variant="outline"
 											onClick={() => openTradeDialog('sell')}
-											disabled={isNetworkMismatch || tradeSubmitting}
+											disabled={
+												isNetworkMismatch ||
+												tradeSubmitting ||
+												isPaused
+											}
+											title={
+												isPaused
+													? 'Trading suspended: contract is paused'
+													: undefined
+											}
 										>
 											Sell
+										</Button>
+										<Button
+											className="rounded-xl"
+											size="sm"
+											variant="outline"
+											onClick={() => openTradeDialog('stake')}
+											disabled={
+												isNetworkMismatch ||
+												tradeSubmitting ||
+												isPaused
+											}
+											title={
+												isPaused
+													? 'Trading suspended: contract is paused'
+													: undefined
+											}
+										>
+											Stake
+										</Button>
+										<Button
+											className="rounded-xl"
+											size="sm"
+											variant="outline"
+											onClick={() => openTradeDialog('transfer')}
+											disabled={
+												isNetworkMismatch ||
+												tradeSubmitting ||
+												isPaused
+											}
+											title={
+												isPaused
+													? 'Trading suspended: contract is paused'
+													: undefined
+											}
+										>
+											Transfer
 										</Button>
 									</div>
 									{tradeSubmitting && (
@@ -2098,14 +2255,14 @@ function LandingPage() {
 					currentLedger={featuredCreator?.currentLedger}
 					launchPenaltyBps={featuredCreator?.launchPenaltyBps}
 					maxBuyQuantity={featuredCreator?.maxBuyQuantity ?? null}
-					keyConfig={featuredKeyConfig}
-					isKeyConfigLoading={isFeaturedKeyConfigLoading}
 					isSubmitting={tradeSubmitting}
 					onOpenChange={setTradeDialogOpen}
 					onConfirm={handleConfirmTrade}
 				/>
 			</TradePanelErrorBoundary>
-			<TradeShortcutHints open={tradeDialogOpen} side={tradeSide} />
+			{(tradeSide === 'buy' || tradeSide === 'sell') && (
+				<TradeShortcutHints open={tradeDialogOpen} side={tradeSide} />
+			)}
 			<KeyboardShortcutsHelp
 				open={shortcutsHelpOpen}
 				onOpenChange={setShortcutsHelpOpen}
@@ -2118,6 +2275,23 @@ function LandingPage() {
 				heldPositions={heldKeyPositions}
 				creators={holdingsCreators.length > 0 ? holdingsCreators : creators}
 			/>
+
+			{/* Batch buy basket (#954) */}
+			<BatchBuyBasketTrigger onClick={() => setBatchBasketOpen(true)} />
+			<BatchBuyBasket
+				open={batchBasketOpen}
+				onClose={() => setBatchBasketOpen(false)}
+				onCheckout={handleBatchCheckout}
+			/>
+			<BatchBuyConfirmDialog
+				open={batchConfirmOpen}
+				onOpenChange={open => {
+					if (!batchSubmitting) setBatchConfirmOpen(open);
+				}}
+				onConfirm={handleBatchConfirm}
+				isSubmitting={batchSubmitting}
+			/>
+
 			<ScrollToTop />
 			<IdleRefreshPrompt
 				visible={isIdlePromptVisible}

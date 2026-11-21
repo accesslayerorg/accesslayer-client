@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	calculatePositionUnrealisedPnL,
 	calculatePnLSummary,
 	calculatePositionPnL,
 	formatPnLDisplay,
@@ -390,6 +391,51 @@ describe('calculatePnLSummary', () => {
 		expect(result.currentValue).toBe(0);
 		expect(result.unrealisedPnL).toBe(0);
 		expect(result.costBasisPositionCount).toBe(0);
+	});
+
+	it('uses the supplied cost basis for unrealised PnL', () => {
+		const positions = [
+			createPosition('creator1', 10, 1_000_000, {
+				costBasisStroops: 5_000_000,
+			}),
+		];
+
+		const result = calculatePnLSummary(positions);
+
+		expect(result.status).toBe('ready');
+		expect(result.currentValue).toBe(10_000_000);
+		expect(result.totalInvested).toBe(5_000_000);
+		expect(result.unrealisedPnL).toBe(5_000_000);
+		expect(result.pnlPercentage).toBe(100);
+	});
+});
+
+describe('calculatePositionUnrealisedPnL', () => {
+	it('returns the gain against the supplied cost basis', () => {
+		const position = createPosition('creator1', 10, 1_000_000, {
+			costBasisStroops: 4_000_000,
+		});
+
+		expect(calculatePositionUnrealisedPnL(position)).toBe(6_000_000);
+	});
+
+	it('returns zero when no cost basis is available', () => {
+		expect(
+			calculatePositionUnrealisedPnL(
+				createPosition('creator1', 10, 1_000_000)
+			)
+		).toBe(0);
+	});
+
+	it('returns null when the position has no price', () => {
+		expect(
+			calculatePositionUnrealisedPnL(
+				createPosition('creator1', 10, 0, {
+					priceStroops: null,
+					price: null,
+				})
+			)
+		).toBeNull();
 	});
 });
 

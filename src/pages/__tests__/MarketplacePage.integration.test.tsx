@@ -15,6 +15,9 @@ import type { Course } from '@/services/course.service';
 
 vi.mock('@/hooks/useInfiniteCreatorMarketplace');
 vi.mock('@/hooks/useInfiniteScroll');
+vi.mock('@/hooks/useSpotlightAuction', () => ({
+	useActiveSpotlight: () => ({ data: null }),
+}));
 
 vi.mock('@/components/common/CreatorCard', async () => {
 	const React = await import('react');

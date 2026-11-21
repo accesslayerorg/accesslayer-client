@@ -138,10 +138,26 @@ describe('KeyStatsPanel', () => {
 		expect(grid).toHaveClass(
 			'grid',
 			'grid-cols-2',
-			'sm:grid-cols-3',
-			'lg:grid-cols-6'
+			'sm:grid-cols-4',
+			'xl:grid-cols-7'
 		);
-		expect(within(grid as HTMLElement).getAllByRole('term')).toHaveLength(6);
+		// Six aggregated stats plus the unique traders cell (#1020).
+		expect(within(grid as HTMLElement).getAllByRole('term')).toHaveLength(7);
+	});
+
+	it('renders the unique traders stat alongside holders and total volume', () => {
+		render(
+			<KeyStatsPanel
+				stats={stats}
+				uniqueTraders={{ uniqueTraders: 312, uniqueTraders24hAgo: 300 }}
+			/>
+		);
+		expect(
+			screen.getByTestId('key-stat-uniqueTraders-value')
+		).toHaveTextContent('312');
+		expect(
+			screen.getByTestId('key-stat-uniqueTraders-trend')
+		).toHaveAttribute('data-direction', 'up');
 	});
 
 	it('shows an error message when the initial fetch fails', () => {

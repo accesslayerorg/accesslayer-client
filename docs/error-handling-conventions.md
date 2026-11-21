@@ -35,6 +35,14 @@ to be able to do.
 | --- | ------------------ | ----------------------------- | ----------------- | -------------------------------------------------- |
 | 6   | **Network banner** | Connected wallet, wrong chain | Persistent notice | `NetworkMismatchBanner` from `@/components/common` |
 
+For route-level runtime failures, wrap major routes with `RouteErrorBoundary`;
+for independent widgets within a page, use `SectionErrorBoundary`. Both provide
+a contextual fallback, retry by remounting the failed subtree, and a support
+link. Caught exception details and diagnostics are development-only and are
+not rendered or logged in production builds. These boundaries handle React
+render/lifecycle errors; query and mutation failures should continue to use
+the inline and toast patterns below.
+
 ---
 
 ## Decision Flowchart

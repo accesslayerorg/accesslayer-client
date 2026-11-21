@@ -33,7 +33,35 @@ class AlertService extends BaseApiService {
 		}
 	}
 
-	/** Mark alert as triggered on backend — PATCH /alerts/:alertId/triggered */
+	/** Mark alert as triggered on backend — PATCH /alerts/:alertId/triggered */        /** Create a new price alert - POST /alerts */
+        async createAlert(input: { keyId: string; keyName?: string; targetPrice: number; direction: AlertDirection }): Promise<PriceAlert> {
+                try {
+                        const response = await this.api.post<APIResponse<PriceAlert>>('/alerts', input);
+                        return response.data.data;
+                } catch (error) {
+                        throw this.handleError(error);
+                }
+        }
+
+        /** Update an existing alert - PATCH /alerts/:alertId */
+        async updateAlert(alertId: string, input: { targetPrice: number; direction: AlertDirection }): Promise<PriceAlert> {
+                try {
+                        const response = await this.api.patch<APIResponse<PriceAlert>>('/alerts/' + alertId, input);
+                        return response.data.data;
+                } catch (error) {
+                        throw this.handleError(error);
+                }
+        }
+
+        /** Delete an alert - DELETE /alerts/:alertId */
+        async deleteAlert(alertId: string): Promise<void> {
+                try {
+                        await this.api.delete('/alerts/' + alertId);
+                } catch (error) {
+                        throw this.handleError(error);
+                }
+        }
+
 	async markAlertTriggered(alertId: string): Promise<void> {
 		try {
 			await this.api.patch(`/alerts/${alertId}/triggered`);

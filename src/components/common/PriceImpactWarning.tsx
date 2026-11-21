@@ -51,7 +51,7 @@ export const PriceImpactWarning: React.FC<PriceImpactWarningProps> = ({
 			/>
 			<div className="space-y-0.5">
 				<p className="font-semibold">
-					High Price Impact Warning:{' '}
+					Estimated Price Impact:{' '}
 					<span
 						className="font-mono font-bold"
 						data-testid="price-impact-value"
@@ -62,9 +62,9 @@ export const PriceImpactWarning: React.FC<PriceImpactWarningProps> = ({
 					</span>
 				</p>
 				<p className="text-white/70">
-					This trade has a price impact exceeding {threshold}%. Your order
-					will execute at a significantly different price from the current
-					spot price.
+					This trade has a price impact exceeding {threshold}%. Your
+					estimated execution price differs from the current spot price by
+					the amount shown above.
 				</p>
 			</div>
 		</div>

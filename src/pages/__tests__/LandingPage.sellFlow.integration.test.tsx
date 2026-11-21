@@ -25,6 +25,13 @@ vi.mock('@/services/course.service', () => ({
 	courseService: { getCourses: vi.fn() },
 }));
 
+// No backend serves wallet holdings in tests, so stub the service the real
+// `useWalletHoldings` query calls (#921). Server-side holdings resolve empty
+// and the demo quantities still come from LandingPage's local demo state.
+vi.mock('@/services/wallet.service', () => ({
+	fetchWalletHoldings: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock('@/utils/toast.util', () => ({
 	default: {
 		message: vi.fn(),

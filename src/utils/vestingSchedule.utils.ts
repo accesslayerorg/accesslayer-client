@@ -250,3 +250,46 @@ export function formatVestingDate(
 		timeZone: 'UTC',
 	}).format(new Date(ms));
 }
+
+export interface CliffCountdownOptions {
+	/** Reference "now" in ms. Defaults to `Date.now()`. */
+	now?: number;
+}
+
+/**
+ * Seconds remaining until the vesting cliff, accurate to the second (#1018).
+ * Returns `0` once the cliff has passed or when the timestamp is missing or
+ * unparseable, so callers can treat `0` as "cliff reached / unknown".
+ */
+export function computeCliffCountdownSeconds(
+	cliffAt: string | number | null | undefined,
+	options: CliffCountdownOptions = {}
+): number {
+	const ms = toTimestampMs(cliffAt);
+	if (ms == null) return 0;
+	const now = options.now ?? Date.now();
+	return Math.max(0, Math.floor((ms - now) / 1000));
+}
+
+/**
+ * Formats a countdown as `DDd HH:MM:SS` (days only once non-zero),
+ * mirroring the `HH:MM:SS` style used by the buy-lockup countdown so
+ * both surfaces read the same way (#1018).
+ */
+export function formatCliffCountdown(totalSeconds: number): string {
+	const clamped = totalSeconds > 0 ? Math.floor(totalSeconds) : 0;
+
+	const days = Math.floor(clamped / 86400);
+	const hours = Math.floor((clamped % 86400) / 3600);
+	const minutes = Math.floor((clamped % 3600) / 60);
+	const seconds = clamped % 60;
+
+	const hh = String(hours).padStart(2, '0');
+	const mm = String(minutes).padStart(2, '0');
+	const ss = String(seconds).padStart(2, '0');
+
+	if (days > 0) {
+		return `${days}d ${hh}:${mm}:${ss}`;
+	}
+	return `${hh}:${mm}:${ss}`;
+}

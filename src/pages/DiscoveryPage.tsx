@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ArrowRight, RefreshCw, Flame, Sparkles } from 'lucide-react';
+import { ArrowRight, RefreshCw, Flame, Sparkles, Layers, Trophy } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useKeyDiscovery } from '@/hooks/useKeyDiscovery';
@@ -8,6 +8,11 @@ import { DiscoveryCardGridSkeleton } from '@/components/common/DiscoveryKeyCardS
 import EmptyState from '@/components/common/EmptyState';
 import MarketplaceSection from '@/components/common/MarketplaceSection';
 import SectionDivider from '@/components/common/SectionDivider';
+import SpotlightBanner from '@/components/marketplace/SpotlightBanner';
+import CampaignsSection from '@/components/marketplace/CampaignsSection';
+import BundleDiscoverySection from '@/components/common/BundleDiscoverySection';
+import { Button } from '@/components/ui/button';
+import { useBatchTradeStore, selectBatchItemCount } from '@/hooks/useBatchTradeStore';
 
 /**
  * Key Discovery Page (#937).
@@ -18,6 +23,8 @@ import SectionDivider from '@/components/common/SectionDivider';
  * 3. Each key card displays avatar, name, price, and 24h change.
  * 4. "View all" links leading to the marketplace with pre-applied filters (sort=volume_desc and sort=newest).
  * 5. Automatic background refresh every 60 seconds without full page reload.
+ * 6. Spotlight banner for the paid placement above the key grids (#1219).
+ * 7. Seasonal campaigns with wallet eligibility below the spotlight (#1226).
  */
 export default function DiscoveryPage() {
 	useNavigationTiming('discovery');
@@ -31,6 +38,9 @@ export default function DiscoveryPage() {
 		error,
 		refetch,
 	} = useKeyDiscovery({ pollIntervalMs: 60_000 });
+
+	const batchItemCount = useBatchTradeStore(selectBatchItemCount);
+	const openBatchDrawer = useBatchTradeStore(state => state.openDrawer);
 
 	const hasError = Boolean(error && trendingKeys.length === 0 && newListings.length === 0);
 
@@ -60,8 +70,8 @@ export default function DiscoveryPage() {
 						listings on Access Layer, updated live every 60 seconds without page reloads.
 					</p>
 
-					{/* 60s Live Auto-Refresh Status */}
-					<div className="flex justify-center">
+					{/* 60s Live Auto-Refresh Status & Batch Trade Trigger */}
+					<div className="flex flex-wrap items-center justify-center gap-3">
 						<span
 							role="status"
 							aria-live="polite"
@@ -82,10 +92,44 @@ export default function DiscoveryPage() {
 							)}
 							{isRefreshing ? 'Refreshing live data…' : 'Data refreshes every 60s'}
 						</span>
+
+						<Button
+							variant="outline"
+							size="xs"
+							onClick={openBatchDrawer}
+							data-testid="discovery-batch-trade-button"
+							className="h-7 rounded-full border-amber-400/30 bg-amber-400/10 px-3 text-[0.72rem] font-bold text-amber-300 hover:bg-amber-400/20 hover:border-amber-400/50"
+						>
+							<Layers className="mr-1.5 size-3.5" aria-hidden="true" />
+							Batch Trade
+							{batchItemCount > 0 && (
+								<span
+									className="ml-1.5 rounded-full bg-amber-400 px-1.5 py-0.2 font-mono text-[0.65rem] font-bold text-slate-950"
+									data-testid="discovery-batch-count"
+								>
+									{batchItemCount}
+								</span>
+							)}
+						</Button>
+
+						<Link
+							to="/discovery/leaderboard"
+							data-testid="discovery-leaderboard-link"
+							className="inline-flex h-7 items-center rounded-full border border-amber-400/30 bg-amber-400/10 px-3 text-[0.72rem] font-bold text-amber-300 transition-colors hover:border-amber-400/50 hover:bg-amber-400/20"
+						>
+							<Trophy className="mr-1.5 size-3.5" aria-hidden="true" />
+							Leaderboard
+						</Link>
 					</div>
 				</MarketplaceSection>
 
 				<main id="discovery-main" aria-label="Creator key discovery">
+					<SpotlightBanner className="mt-8" />
+					<CampaignsSection />
+					<div className="mt-8 rounded-3xl border border-white/10 bg-slate-900/40 p-6 backdrop-blur-md">
+						<BundleDiscoverySection heading="Creator bundles" />
+					</div>
+
 					{hasError ? (
 						<EmptyState
 							title="Couldn't load discovery opportunities"

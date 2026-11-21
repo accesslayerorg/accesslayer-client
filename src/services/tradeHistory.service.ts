@@ -28,6 +28,8 @@ export interface Trade {
 	 * trade history row.
 	 */
 	transactionHash: string | null;
+	/** Fee paid (buy) or deducted (sell) for this trade, in XLM, when reported. */
+	feeXlm?: number | null;
 }
 
 /** Cursor-paginated response envelope for the trade history endpoint. */

@@ -95,6 +95,18 @@ export const GraduatedCurveMilestoneChart: React.FC<GraduatedCurveMilestoneChart
 			exponentChange,
 		};
 	}).sort((a, b) => a.supplyThreshold - b.supplyThreshold);
+	const finalMilestone = normalizedMilestones[normalizedMilestones.length - 1];
+	const nextMilestone =
+		currentSupply === undefined
+			? finalMilestone
+			: normalizedMilestones.find(m => m.supplyThreshold > currentSupply);
+	const progressPercent =
+		currentSupply === undefined || finalMilestone.supplyThreshold <= 0
+			? 0
+			: Math.min(100, Math.max(0, (currentSupply / finalMilestone.supplyThreshold) * 100));
+	const remainingSupply = nextMilestone
+		? Math.max(0, nextMilestone.supplyThreshold - (currentSupply ?? 0))
+		: 0;
 
 	// Ensure milestone step points for Recharts step chart rendering
 	const chartData = [...normalizedMilestones];
@@ -124,6 +136,40 @@ export const GraduatedCurveMilestoneChart: React.FC<GraduatedCurveMilestoneChart
 						</span>
 					</div>
 				)}
+			</div>
+			<div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4" data-testid="milestone-progress-panel">
+				<div className="flex items-start justify-between gap-4 text-sm">
+					<div>
+						<p className="font-semibold text-white">Graduation progress</p>
+						<p className="mt-1 text-xs text-white/55">
+							{currentSupply === undefined
+								? 'Connect live supply data to see your position.'
+								: nextMilestone
+									? `${remainingSupply.toLocaleString()} keys until the ${nextMilestone.supplyThreshold.toLocaleString()}-key milestone`
+									: 'Final milestone reached — the key is graduated.'}
+						</p>
+					</div>
+					<span className="font-semibold text-emerald-400" data-testid="milestone-progress-value">
+						{Math.round(progressPercent)}%
+					</span>
+				</div>
+				<div
+					className="mt-3 h-2 overflow-hidden rounded-full bg-white/10"
+					role="progressbar"
+					aria-label="Graduated curve progress"
+					aria-valuemin={0}
+					aria-valuemax={100}
+					aria-valuenow={Math.round(progressPercent)}
+				>
+					<div className="h-full rounded-full bg-emerald-400 transition-[width]" style={{ width: `${progressPercent}%` }} />
+				</div>
+				<div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/50">
+					{normalizedMilestones.map(milestone => (
+						<span key={milestone.supplyThreshold}>
+							{milestone.supplyThreshold.toLocaleString()} keys · {milestone.simulatedPrice} XLM
+						</span>
+					))}
+				</div>
 			</div>
 
 			<div

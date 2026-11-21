@@ -1,4 +1,9 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+	useInfiniteQuery,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 import type { HeldKeyPosition } from '@/utils/portfolioValue.utils';
 import { resolveBondingCurveParams } from '@/utils/portfolioValue.utils';
@@ -7,13 +12,49 @@ import { useKeyCostBasis } from '@/hooks/useKeyCostBasis';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 import { fetchWalletActivityPage } from '@/services/walletActivity.service';
+import {
+	fetchWalletBadgeMetrics,
+	fetchWalletBadges,
+	fetchWalletHoldings,
+} from '@/services/wallet.service';
+import type {
+	WalletBadge,
+	WalletBadgeMetrics,
+} from '@/utils/walletBadges.utils';
 import { fetchTradeHistoryPage } from '@/services/tradeHistory.service';
+import { usePendingTxStore } from '@/hooks/usePendingTxStore';
 
 export function useWalletHoldings(address: string) {
 	return useQuery<HeldKeyPosition[]>({
 		queryKey: queryKeys.wallet.holdings(address),
-		queryFn: async () => [],
+		queryFn: () => fetchWalletHoldings(address),
 		enabled: !!address,
+	});
+}
+
+// Badges are polled so a newly earned badge reaches the showcase — and the
+// achievement listener — even when the realtime feed is unavailable (#1222).
+const BADGE_POLL_INTERVAL_MS = 30_000;
+
+export function useWalletBadges(address: string) {
+	return useQuery<WalletBadge[]>({
+		queryKey: queryKeys.wallet.badges(address),
+		queryFn: () => fetchWalletBadges(address),
+		enabled: !!address,
+		refetchInterval: BADGE_POLL_INTERVAL_MS,
+	});
+}
+
+// Badge progress moves with every trade, so poll it like other live portfolio
+// figures rather than waiting for a window refocus (#1225).
+const BADGE_METRICS_POLL_INTERVAL_MS = 30_000;
+
+export function useWalletBadgeMetrics(address: string) {
+	return useQuery<Partial<WalletBadgeMetrics>>({
+		queryKey: queryKeys.wallet.badgeMetrics(address),
+		queryFn: () => fetchWalletBadgeMetrics(address),
+		enabled: !!address,
+		refetchInterval: BADGE_METRICS_POLL_INTERVAL_MS,
 	});
 }
 
@@ -89,9 +130,7 @@ export interface TradeVariables {
  * whole buy range) and falls back to spot price x quantity when the curve
  * cannot be evaluated from the supplied variables.
  */
-export function resolveBuyCostStroops(
-	trade: TradeVariables
-): number | null {
+export function resolveBuyCostStroops(trade: TradeVariables): number | null {
 	const quantity = Math.abs(trade.amount);
 
 	if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -193,11 +232,30 @@ export function recordTradeCostBasis(
 		return;
 	}
 
-	useKeyCostBasis.getState().recordSell(address, trade.creatorId, { quantity });
+	useKeyCostBasis
+		.getState()
+		.recordSell(address, trade.creatorId, { quantity });
+}
+
+/**
+ * Placeholder transaction hash for the stubbed trade submission. The on-chain
+ * call that replaces the simulation populates this from
+ * `sendTransactionResponse.hash`; until then the pending-transaction tracker
+ * needs a 32-byte hash to display and poll.
+ */
+function createSubmittedTradeHash(): string {
+	let hash = '';
+	for (let index = 0; index < 64; index += 1) {
+		hash += Math.floor(Math.random() * 16).toString(16);
+	}
+	return hash;
 }
 
 export function useTradeMutation(address: string) {
 	const queryClient = useQueryClient();
+	const addPendingTransaction = usePendingTxStore(
+		state => state.addPendingTransaction
+	);
 
 	const mutation = useMutation({
 		mutationKey: ['trade', address],
@@ -210,7 +268,7 @@ export function useTradeMutation(address: string) {
 			// accepted and can be used by instrumentation or contract calls.
 			void variables;
 			await new Promise<void>(resolve => window.setTimeout(resolve, 900));
-			return { success: true as const };
+			return { success: true as const, txHash: createSubmittedTradeHash() };
 		},
 		onMutate: async ({
 			creatorId,
@@ -284,7 +342,12 @@ export function useTradeMutation(address: string) {
 						// price this buy actually paid.
 						averagePurchasePriceStroops:
 							isBuy && buyCostStroops != null
-								? applyBuyToAveragePurchasePrice(null, 0, amount, buyCostStroops)
+								? applyBuyToAveragePurchasePrice(
+										null,
+										0,
+										amount,
+										buyCostStroops
+									)
 								: null,
 					},
 				];
@@ -345,7 +408,15 @@ export function useTradeMutation(address: string) {
 				});
 			}
 		},
-		onSuccess: (_data, variables) => {
+		onSuccess: (data, variables) => {
+			// #1286 — surface the submission in the pending-transactions drawer
+			// so it can be tracked after the user leaves the swap screen.
+			addPendingTransaction({
+				hash: data.txHash,
+				type: variables.amount > 0 ? 'buy' : 'sell',
+				keyId: variables.creatorId,
+			});
+
 			queryClient.setQueryData<HeldKeyPosition[]>(
 				queryKeys.wallet.holdings(address),
 				(old = []) =>
@@ -401,8 +472,14 @@ export interface SelfFreezeVariables {
 }
 
 async function submitWalletContractCall(
-	functionName: 'self_freeze' | 'self_unfreeze',
-	args: { creatorId: string; quantity: number }
+	functionName: 'self_freeze' | 'self_unfreeze' | 'batch_transfer',
+	args:
+		| {
+				creatorId: string;
+				quantity?: number;
+				recipients?: BatchTransferRecipient[];
+		  }
+		| unknown
 ) {
 	void functionName;
 	void args;
@@ -415,8 +492,13 @@ export function useSelfFreezeMutation(address: string) {
 
 	return useMutation({
 		mutationKey: ['contract', 'self_freeze', address],
-		mutationFn: async ({ creatorId, amount, action }: SelfFreezeVariables) => {
-			const contractFunction = action === 'freeze' ? 'self_freeze' : 'self_unfreeze';
+		mutationFn: async ({
+			creatorId,
+			amount,
+			action,
+		}: SelfFreezeVariables) => {
+			const contractFunction =
+				action === 'freeze' ? 'self_freeze' : 'self_unfreeze';
 			return submitWalletContractCall(contractFunction, {
 				creatorId,
 				quantity: amount,
@@ -479,6 +561,14 @@ export interface BatchOrder {
 	ref?: string | null;
 }
 
+export interface BatchTradeOrder {
+	creatorId: string;
+	side: 'buy' | 'sell';
+	quantity: number;
+	slippageBps: number;
+	priceStroops: number;
+}
+
 export interface ReinvestDividendVariables {
 	/** The creator key whose dividends are being reinvested. */
 	keyId: string;
@@ -501,11 +591,7 @@ export function useReinvestDividendMutation(address: string) {
 			await new Promise<void>(resolve => window.setTimeout(resolve, 900));
 			return { success: true as const };
 		},
-		onMutate: async ({
-			keyId,
-			keys,
-			amount,
-		}: ReinvestDividendVariables) => {
+		onMutate: async ({ keyId, keys, amount }: ReinvestDividendVariables) => {
 			const queryKey = queryKeys.wallet.holdings(address);
 
 			await queryClient.cancelQueries({ queryKey });
@@ -553,9 +639,7 @@ export function useReinvestDividendMutation(address: string) {
 				queryKeys.wallet.holdings(address),
 				(old = []) =>
 					old.map(h =>
-						h.creatorId === variables.keyId
-							? { ...h, pending: false }
-							: h
+						h.creatorId === variables.keyId ? { ...h, pending: false } : h
 					)
 			);
 		},
@@ -568,9 +652,9 @@ export function useReinvestDividendMutation(address: string) {
 
 			if (process.env.NODE_ENV !== 'test') {
 				console.debug('[cache-invalidation]', {
-					invalidated_keys: [JSON.stringify(
-						queryKeys.wallet.holdings(address)
-					)],
+					invalidated_keys: [
+						JSON.stringify(queryKeys.wallet.holdings(address)),
+					],
 					trigger: 'reinvest_dividend',
 					creator_id: variables.keyId,
 					invalidated_at: new Date().toISOString(),
@@ -611,6 +695,9 @@ export function useClaimStakeMutation(address: string) {
 		onSuccess: () => {
 			queryClient.invalidateQueries({
 				queryKey: queryKeys.wallet.holdings(address),
+			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.wallet.stakingPositions(address),
 			});
 			showToast.success('Stake claimed');
 		},
@@ -676,8 +763,7 @@ export function useRedeemDeprecatedKeyMutation(address: string) {
 			// Redemption removes the position entirely.
 			queryClient.setQueryData<HeldKeyPosition[]>(
 				queryKeys.wallet.holdings(address),
-				(old = []) =>
-					old.filter(h => h.creatorId !== variables.creatorId)
+				(old = []) => old.filter(h => h.creatorId !== variables.creatorId)
 			);
 		},
 		onSettled: () => {
@@ -696,17 +782,16 @@ export function useBatchBuyMutation(address?: string) {
 	const mutation = useMutation({
 		mutationKey: ['batch-buy', address],
 		mutationFn: async ({ orders }: { orders: BatchOrder[] }) => {
-			// In a real app this would call the on-chain `batch_buy` contract
-			// function. Here we simulate latency and accept the orders payload.
+			// Existing recipient batch buy flow (separate from key trading).
 			void orders;
 			await new Promise<void>(resolve => window.setTimeout(resolve, 1200));
 			return { success: true as const };
 		},
-	    onMutate: async () => {
+		onMutate: async () => {
 			// Optionally optimistic updates to holdings could be applied here.
 			return {};
 		},
-		onError: (error) => {
+		onError: error => {
 			if (process.env.NODE_ENV !== 'test') {
 				console.debug('[batch-buy-failed]', { error });
 			}
@@ -720,4 +805,119 @@ export function useBatchBuyMutation(address?: string) {
 	});
 
 	return mutation;
+}
+
+export function useBatchTradeMutation(address?: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationKey: ['batch-trade', address],
+		mutationFn: async ({ orders }: { orders: BatchTradeOrder[] }) => {
+			await new Promise<void>(resolve => window.setTimeout(resolve, 1200));
+			const transactionHash = `batch-${Date.now().toString(16)}`;
+			return {
+				success: true as const,
+				transactionHash,
+				results: orders.map(order => ({
+					creatorId: order.creatorId,
+					side: order.side,
+					quantity: order.quantity,
+					success: true as const,
+					transactionHash,
+					error: undefined as string | undefined,
+				})),
+			};
+		},
+		onSuccess: () => {
+			void queryClient.invalidateQueries({ queryKey: ['creators'] });
+			void queryClient.invalidateQueries({
+				queryKey: ['wallet', 'holdings'],
+			});
+		},
+	});
+}
+
+export interface BatchTransferRecipient {
+	address: string;
+	quantity: number;
+}
+
+export interface BatchTransferVariables {
+	creatorId: string;
+	recipients: BatchTransferRecipient[];
+}
+
+export function useBatchTransferMutation(address?: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'batch_transfer', address],
+		mutationFn: async ({ creatorId, recipients }: BatchTransferVariables) => {
+			return submitWalletContractCall('batch_transfer', {
+				creatorId,
+				recipients,
+			});
+		},
+		onMutate: async ({ creatorId, recipients }) => {
+			if (!address) return {};
+			const totalQuantity = recipients.reduce(
+				(sum, r) => sum + r.quantity,
+				0
+			);
+			const queryKey = queryKeys.wallet.holdings(address);
+			await queryClient.cancelQueries({ queryKey });
+			const previousHoldings =
+				queryClient.getQueryData<HeldKeyPosition[]>(queryKey) ?? [];
+
+			queryClient.setQueryData<HeldKeyPosition[]>(
+				queryKey,
+				(holdings = []) =>
+					holdings.map(holding => {
+						if (holding.creatorId !== creatorId) return holding;
+						const currentLiquid =
+							holding.liquidQuantity ?? holding.quantity ?? 0;
+						const newLiquid = Math.max(0, currentLiquid - totalQuantity);
+						const currentTotal = holding.quantity ?? 0;
+						const newTotal = Math.max(0, currentTotal - totalQuantity);
+						return {
+							...holding,
+							liquidQuantity: newLiquid,
+							quantity: newTotal,
+							pending: true,
+						};
+					})
+			);
+
+			return { previousHoldings };
+		},
+		onError: (error, _variables, context) => {
+			if (address && context?.previousHoldings) {
+				queryClient.setQueryData(
+					queryKeys.wallet.holdings(address),
+					context.previousHoldings
+				);
+			}
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: (_data, variables) => {
+			if (address) {
+				queryClient.setQueryData<HeldKeyPosition[]>(
+					queryKeys.wallet.holdings(address),
+					(holdings = []) =>
+						holdings.map(holding =>
+							holding.creatorId === variables.creatorId
+								? { ...holding, pending: false }
+								: holding
+						)
+				);
+			}
+		},
+		onSettled: () => {
+			if (address) {
+				queryClient.invalidateQueries({
+					queryKey: queryKeys.wallet.holdings(address),
+				});
+			}
+			queryClient.invalidateQueries({ queryKey: ['creators'] });
+		},
+	});
 }

@@ -19,7 +19,7 @@ A curve migration changes the price every holder buys and sells at, so it is
 governed rather than applied directly. Two **independent** gates must both be
 satisfied before the creator can execute one:
 
-1. **Vote approval** — quorum reached *and* more weight `for` than `against`.
+1. **Vote approval** — quorum reached _and_ more weight `for` than `against`.
 2. **Timelock elapsed** — the post-vote delay has passed, giving holders a
    window to exit before the new pricing goes live.
 
@@ -28,15 +28,15 @@ still blocking.
 
 ## What the panel renders
 
-| Region | Test id | Contents |
-| --- | --- | --- |
-| Pending list | `curve-migration-pending-section` | One card per `pending` migration, soonest timelock first |
-| Proposed params | `curve-migration-params-{id}` | `from → to` diff of base price, growth factor, and graduated curve tiers; unchanged params carry `data-changed="false"` |
-| Timelock | `curve-migration-timelock-{id}` | Live `HH:MM:SS` countdown, or `Ready` once elapsed |
-| Vote approval | `curve-migration-vote-approval-{id}` | Share of cast weight that voted `for` |
-| Vote status | `curve-migration-vote-status-{id}` | `Approved` / `Not approved`, with quorum and participation below |
-| Execute | `curve-migration-execute-{id}` | Enabled only when both gates pass |
-| History | `curve-migration-history-section` | Executed migrations with applied params and execution date |
+| Region          | Test id                              | Contents                                                                                                                |
+| --------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Pending list    | `curve-migration-pending-section`    | One card per `pending` migration, soonest timelock first                                                                |
+| Proposed params | `curve-migration-params-{id}`        | `from → to` diff of base price, growth factor, and graduated curve tiers; unchanged params carry `data-changed="false"` |
+| Timelock        | `curve-migration-timelock-{id}`      | Live `HH:MM:SS` countdown, or `Ready` once elapsed                                                                      |
+| Vote approval   | `curve-migration-vote-approval-{id}` | Share of cast weight that voted `for`                                                                                   |
+| Vote status     | `curve-migration-vote-status-{id}`   | `Approved` / `Not approved`, with quorum and participation below                                                        |
+| Execute         | `curve-migration-execute-{id}`       | Enabled only when both gates pass                                                                                       |
+| History         | `curve-migration-history-section`    | Executed migrations with applied params and execution date                                                              |
 
 The countdown only re-renders while a timelock is actually running.
 

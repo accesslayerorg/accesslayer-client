@@ -1,8 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TradeDialog from '@/components/common/TradeDialog';
 
 describe('TradeDialog slippage tolerance (#872)', () => {
+	beforeEach(() => {
+		window.localStorage.clear();
+	});
+
 	function renderBuyDialog(
 		overrides: Partial<React.ComponentProps<typeof TradeDialog>> = {}
 	) {

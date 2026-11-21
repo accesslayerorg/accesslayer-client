@@ -1,5 +1,5 @@
 import React from 'react';
-import { BondingCurveChart } from '@/components/common/BondingCurveChart';
+import BondingCurveChart from '@/components/common/BondingCurveChart';
 import { formatXlmPrice } from '@/utils/numberFormat.utils';
 import {
 	buildCurvePreviewPoints,

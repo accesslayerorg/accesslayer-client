@@ -152,6 +152,10 @@ describe('GraduatedCurveMilestoneChart', () => {
 			{ supplyThreshold: 50, exponent: 1.5, simulatedPrice: 5.0, exponentChange: '+0.3' },
 			{ supplyThreshold: 100, exponent: 2.0, simulatedPrice: 10.0, exponentChange: '+0.5' },
 		]);
+		expect(screen.getByTestId('milestone-progress-panel')).toBeInTheDocument();
+		expect(screen.getByTestId('milestone-progress-value')).toHaveTextContent('45%');
+		expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '45');
+		expect(screen.getByText('5 keys until the 50-key milestone')).toBeInTheDocument();
 	});
 
 	it('marks each milestone threshold with vertical dashed lines and labels showing exponent change', () => {

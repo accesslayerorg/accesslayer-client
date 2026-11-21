@@ -23,3 +23,31 @@ export const TRADE_FEE_ESTIMATE = {
 	BUY_GAS_LIMIT: 180_000n,
 	SELL_GAS_LIMIT: 150_000n,
 } as const;
+
+/**
+ * Batch buy constraints (#954).
+ *
+ * MAX_BASKET_ITEMS  — maximum number of distinct creators in one batch.
+ *                     Mirrors the contract-defined batch cap.
+ * DEFAULT_SLIPPAGE_BPS — per-key slippage tolerance expressed in basis points
+ *                        (100 bps = 1%).  Used to compute max_price per key
+ *                        before the transaction is submitted.
+ * MAX_SLIPPAGE_BPS  — upper bound surfaced in the slippage settings UI.
+ */
+export const BATCH_BUY = {
+	MAX_BASKET_ITEMS: 20,
+	DEFAULT_SLIPPAGE_BPS: 100, // 1%
+	MAX_SLIPPAGE_BPS: 500, // 5%
+	MIN_SLIPPAGE_BPS: 0,
+} as const;
+
+/**
+ * Bundle buy constraints (#1118).
+ *
+ * A bundle cart queues several creator keys so they can be submitted as one
+ * atomic `bundle_buy` transaction. The cap mirrors the contract-defined batch
+ * cap so both flows hit the same on-chain limit.
+ */
+export const BUNDLE_BUY = {
+	MAX_BUNDLE_ITEMS: 20,
+} as const;

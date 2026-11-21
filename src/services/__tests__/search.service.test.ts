@@ -29,7 +29,7 @@ describe('searchService', () => {
 
 	it('returns empty results when query is whitespace without calling API', async () => {
 		const result = await searchService.search('   ');
-		expect(result).toEqual({ keys: [], creators: [], proposals: [] });
+		expect(result).toEqual({ keys: [], creators: [], transactions: [] });
 		expect(mockGet).not.toHaveBeenCalled();
 	});
 
@@ -41,8 +41,8 @@ describe('searchService', () => {
 			creators: [
 				{ id: 'c1', name: 'Creator One', socialHandle: 'c_one' },
 			],
-			proposals: [
-				{ id: 'p1', title: 'Proposal One', status: 'active' as const },
+			transactions: [
+				{ id: 't1', hash: 'abc123', type: 'Buy' },
 			],
 		};
 
@@ -54,7 +54,7 @@ describe('searchService', () => {
 		expect(mockGet).toHaveBeenCalledWith('/search', { params: { q: 'One' } });
 		expect(result.keys).toHaveLength(1);
 		expect(result.creators).toHaveLength(1);
-		expect(result.proposals).toHaveLength(1);
+		expect(result.transactions).toHaveLength(1);
 	});
 
 	it('handles results wrapped in nested results object', async () => {
@@ -62,7 +62,7 @@ describe('searchService', () => {
 			results: {
 				keys: [{ id: 'k1', title: 'Key One' }],
 				creators: [],
-				proposals: [],
+				transactions: [],
 			},
 		};
 

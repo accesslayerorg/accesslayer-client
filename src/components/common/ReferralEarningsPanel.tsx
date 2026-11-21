@@ -67,7 +67,18 @@ export const ReferralEarningsPanel: React.FC<ReferralEarningsPanelProps> = ({
 				</AsyncButton>
 			</div>
 
-			<dl className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+			<dl className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+				<div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+					<dt className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-white/40">
+						Referees
+					</dt>
+					<dd
+						className="mt-1 font-mono text-lg font-bold text-white"
+						data-testid="referral-referees"
+					>
+						{earnings.referredCount}
+					</dd>
+				</div>
 				<div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
 					<dt className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-white/40">
 						Total earned
