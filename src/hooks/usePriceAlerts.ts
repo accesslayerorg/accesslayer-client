@@ -42,7 +42,8 @@ export const usePriceAlerts = create<PriceAlertsState>(() => ({
 // ---------------------------------------------------------------------------
 
 /** Returns all alerts for the current user from local storage. */
-export function useActivePriceAlerts() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function useActivePriceAlerts(userId?: string) {
   const alerts = usePriceAlerts(state => state.alerts);
   // Map to the ServicePriceAlert shape expected by existing dev components.
   const data: ServicePriceAlert[] = alerts.map(a => ({
@@ -55,7 +56,12 @@ export function useActivePriceAlerts() {
     triggered: a.lastTriggeredAt !== null,
     createdAt: a.createdAt,
   }));
-  return { data, isLoading: false, isError: false };
+  return {
+    data,
+    isLoading: false,
+    isError: false,
+    refetch: () => Promise.resolve(),
+  };
 }
 
 interface CreateAlertVars {
@@ -66,7 +72,8 @@ interface CreateAlertVars {
 }
 
 /** Returns a mutation-compatible object for creating a new alert. */
-export function useCreatePriceAlert() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function useCreatePriceAlert(userId?: string) {
   const { addAlert } = usePriceAlerts.getState();
   return {
     mutate(vars: CreateAlertVars) {
@@ -88,43 +95,46 @@ export function useCreatePriceAlert() {
     },
     isPending: false,
     isError: false,
-    error: null,
+    error: null as Error | null,
     reset() {},
   };
 }
 
 interface UpdateAlertVars {
-  id: string;
+  /** Alert ID — matches the `alertId` field used by existing components. */
+  alertId: string;
   targetPrice?: number;
   direction?: 'above' | 'below';
 }
 
 /** Returns a mutation-compatible object for updating an existing alert. */
-export function useUpdatePriceAlert() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function useUpdatePriceAlert(userId?: string) {
   const { updateAlert } = usePriceAlerts.getState();
   return {
     mutate(vars: UpdateAlertVars) {
       const patch: Partial<PriceAlert> = {};
       if (vars.targetPrice !== undefined) patch.thresholdStroops = vars.targetPrice;
       if (vars.direction !== undefined) patch.direction = vars.direction;
-      updateAlert(vars.id, patch);
+      updateAlert(vars.alertId, patch);
     },
     mutateAsync(vars: UpdateAlertVars) {
       const patch: Partial<PriceAlert> = {};
       if (vars.targetPrice !== undefined) patch.thresholdStroops = vars.targetPrice;
       if (vars.direction !== undefined) patch.direction = vars.direction;
-      updateAlert(vars.id, patch);
+      updateAlert(vars.alertId, patch);
       return Promise.resolve();
     },
     isPending: false,
     isError: false,
-    error: null,
+    error: null as Error | null,
     reset() {},
   };
 }
 
 /** Returns a mutation-compatible object for deleting an alert. */
-export function useDeletePriceAlert() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function useDeletePriceAlert(userId?: string) {
   const { removeAlert } = usePriceAlerts.getState();
   return {
     mutate(alertId: string) {
@@ -136,7 +146,7 @@ export function useDeletePriceAlert() {
     },
     isPending: false,
     isError: false,
-    error: null,
+    error: null as Error | null,
     reset() {},
   };
 }
