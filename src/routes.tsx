@@ -39,6 +39,7 @@ import CampaignsPage from './pages/CampaignsPage';
 import AutoInvestDashboardPage from './pages/AutoInvestDashboardPage';
 import AirdropClaimsPage from './pages/AirdropClaimsPage';
 import ProtocolAnalyticsPage from './pages/ProtocolAnalyticsPage';
+import EscapeRedeemPage from './pages/EscapeRedeemPage';
 import LpPositionsPage from './pages/LpPositionsPage';
 import ProposalCreatePage from './pages/ProposalCreatePage';
 import ApiKeysPage from './pages/ApiKeysPage';
@@ -320,6 +321,14 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<ProtocolAnalyticsPage />,
 					'Protocol analytics'
+				),
+			},
+			{
+				// Emergency redemption page for escape hatch withdrawals (#1320).
+				path: '/escape',
+				element: withRouteErrorBoundary(
+					<EscapeRedeemPage />,
+					'Emergency redemption'
 				),
 			},
 			{
