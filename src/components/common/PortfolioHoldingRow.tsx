@@ -124,8 +124,13 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 		position.creatorId,
 		connectedWalletAddress
 	);
-	const lockupRemainingSeconds = useRemainingUnlockSeconds(keyLockup?.unlockAt);
-	const isPositionLocked = isKeyLockupActive(keyLockup, lockupRemainingSeconds);
+	const lockupRemainingSeconds = useRemainingUnlockSeconds(
+		keyLockup?.unlockAt
+	);
+	const isPositionLocked = isKeyLockupActive(
+		keyLockup,
+		lockupRemainingSeconds
+	);
 
 	// #935 — unrealised P&L for this position: what the keys would fetch if sold
 	// at the current bonding-curve sell price, less what was paid for them.
@@ -179,7 +184,7 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 				<ExitNoticeBanner
 					creator={creator}
 					holdingsCount={liquidQuantity}
-					onSellNow={() => onSell?.(position.creatorId)}
+					onSellNow={onSell ? () => onSell(position.creatorId) : undefined}
 					className="mb-3"
 				/>
 			)}

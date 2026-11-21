@@ -43,6 +43,7 @@ import EscapeRedeemPage from './pages/EscapeRedeemPage';
 import LpPositionsPage from './pages/LpPositionsPage';
 import ProposalCreatePage from './pages/ProposalCreatePage';
 import ApiKeysPage from './pages/ApiKeysPage';
+import RetirementBuybackConfirmedPage from './pages/RetirementBuybackConfirmedPage';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 
 function withRouteErrorBoundary(element: ReactNode, routeName: string) {
@@ -118,6 +119,13 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<CreatorDetailPage />,
 					'Key detail'
+				),
+			},
+			{
+				path: '/keys/:id/retirement/confirmed',
+				element: withRouteErrorBoundary(
+					<RetirementBuybackConfirmedPage />,
+					'Retirement buyback confirmation'
 				),
 			},
 			{
