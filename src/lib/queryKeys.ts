@@ -36,6 +36,8 @@ export const queryKeys = {
 			['creators', creatorId, 'holders'] as const,
 		comments: (creatorId: string) =>
 			['creators', creatorId, 'comments'] as const,
+		socialFeed: (creatorId: string) =>
+			['creators', creatorId, 'social-feed'] as const,
 		holderConcentration: (creatorId: string) =>
 			['creators', creatorId, 'holder-concentration'] as const,
 		holderSnapshots: (creatorId: string, range: string) =>

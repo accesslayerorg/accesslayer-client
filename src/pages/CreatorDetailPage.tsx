@@ -32,6 +32,7 @@ import KeySimulationTool from '@/components/common/KeySimulationTool';
 import BuyCooldownCountdown from '@/components/common/BuyCooldownCountdown';
 import KeyHolderList from '@/components/common/KeyHolderList';
 import CommentSection from '@/components/common/CommentSection';
+import KeySocialFeed from '@/components/common/KeySocialFeed';
 import KeyHolderLeaderboard from '@/components/common/KeyHolderLeaderboard';
 import HolderConcentrationChart from '@/components/common/HolderConcentrationChart';
 import HolderConcentrationHeatmap from '@/components/common/HolderConcentrationHeatmap';
@@ -1449,6 +1450,14 @@ function CreatorDetailPageContent() {
 					<CommentSection
 						keyId={creator.id}
 						creatorAddress={creator.instructorId}
+					/>
+				</SectionErrorBoundary>
+
+				<SectionErrorBoundary sectionName="key social feed">
+					<KeySocialFeed
+						keyId={creator.id}
+						creatorAddress={creator.instructorId}
+						userHolding={holdingsCount}
 					/>
 				</SectionErrorBoundary>
 
