@@ -152,6 +152,39 @@ If you find yourself copying more than two of these into a new file, that is
 the signal to promote them into `src/test/` as shared utilities — do it in
 the same PR.
 
+## Test ids for actions
+
+Add a `data-testid` only when a test needs a deterministic handle on an
+**interactive control** or a meaningful async state. Prefer `getByRole` when
+an accessible name is stable; add a test id when the label changes with state
+(e.g. `Buy Key` → `Retry Purchase`), when several identical controls share a
+page, or when copy is likely to change. Static text, decorative wrappers and
+one-off headings do not get test ids.
+
+Format: lowercase `kebab-case`, shaped as `<area>-<action-or-element>[-<role>]`:
+
+- `<area>` is the feature or component that owns the control (`marketplace`,
+  `creator-card`, `key-factory`).
+- `<action-or-element>` describes what it does (`buy`, `load-more`,
+  `sort-select`), never its current label or state.
+- `<role>` (`button`, `link`, `select`, `input`) is added when the element type
+  is not already in the name. Pagination controls historically omit it
+  (`trade-history-load-more`, `marketplace-load-more`) — keep that pattern for
+  load-more buttons.
+
+Ids stay stable across copy changes, pending/success states and re-renders;
+never interpolate dynamic values (creator names, prices, indices) into an
+action's id. Shared components accept an optional `'data-testid'` prop from
+the caller (see `WatchlistButton`) instead of hard-coding a caller-specific id.
+
+Current marketplace action ids:
+
+| Test id | Element |
+| --- | --- |
+| `marketplace-load-more` | Load more creators button on the listing page |
+| `creator-card-buy-button` | Buy Key / Retry Purchase button on a creator card |
+| `creator-card-watchlist-button` | Bookmark toggle on a creator card |
+
 ## What good assertions look like here
 
 - Assert **user-visible outcomes** (rendered text, toast calls, holdings

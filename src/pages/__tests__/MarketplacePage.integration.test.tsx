@@ -302,7 +302,9 @@ describe('MarketplacePage (#918)', () => {
 
 		expect(screen.getByTestId('marketplace-sentinel')).toBeInTheDocument();
 
-		fireEvent.click(screen.getByRole('button', { name: /load more creators/i }));
+		const loadMore = screen.getByTestId('marketplace-load-more');
+		expect(loadMore).toHaveTextContent('Load more creators');
+		fireEvent.click(loadMore);
 		expect(fetchNextPage).toHaveBeenCalledTimes(1);
 
 		// The scroll hook is wired to call fetchNextPage when the sentinel
