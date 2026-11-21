@@ -77,6 +77,8 @@ export const queryKeys = {
 			['creators', creatorId, 'vesting', 'claims', wallet] as const,
 		oraclePrice: (creatorId: string) =>
 			['creators', creatorId, 'oracle-price'] as const,
+		related: (keyId: string, limit: number) =>
+			['creators', keyId, 'related', limit] as const,
 		performanceBond: (creatorId: string) =>
 			['creators', creatorId, 'performance-bond'] as const,
 		snapshotHistory: (creatorId: string, range: string) =>
