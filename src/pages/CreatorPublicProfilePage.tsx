@@ -20,6 +20,10 @@ import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import { formatCompactNumber } from '@/utils/numberFormat.utils';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
 import showToast from '@/utils/toast.util';
+import { useAccount } from 'wagmi';
+import { QrCode } from 'lucide-react';
+import ShareQrModal from '@/components/common/ShareQrModal';
+import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
 
 const SHARE_COPIED_RESET_MS = 2000;
 
@@ -95,6 +99,8 @@ function CreatorPublicProfilePageContent() {
 	const unfollow = useCreatorFollows(state => state.unfollow);
 
 	const [isShareCopied, setIsShareCopied] = useState(false);
+	const [qrOpen, setQrOpen] = useState(false);
+	const { address: walletAddress } = useAccount();
 
 	/** Copies the canonical profile URL to the clipboard (#1120). */
 	const handleShareProfile = async () => {
@@ -191,6 +197,16 @@ function CreatorPublicProfilePageContent() {
 										'border-amber-400 bg-amber-400 text-slate-950 hover:bg-amber-300'
 								)}
 							/>
+							<button
+								type="button"
+								onClick={() => setQrOpen(true)}
+								data-testid="creator-profile-qr-button"
+								aria-label="QR code"
+								className="h-11 inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-5 font-bold text-white/85 transition-colors hover:border-amber-400/50 hover:text-amber-300"
+							>
+								<QrCode className="size-4" aria-hidden="true" />
+								QR code
+							</button>
 						</>
 					}
 				/>
@@ -239,6 +255,16 @@ function CreatorPublicProfilePageContent() {
 						</div>
 					)}
 				</section>
+
+				<ShareQrModal
+					open={qrOpen}
+					onOpenChange={setQrOpen}
+					url={buildCreatorProfileReferralLink({
+						handle: profile.keys[0]?.handle ?? address,
+						wallet: walletAddress,
+					})}
+					handle={profile.keys[0]?.handle ?? address}
+				/>
 			</div>
 		</main>
 	);
