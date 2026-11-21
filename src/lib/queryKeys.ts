@@ -315,4 +315,8 @@ export const queryKeys = {
 	supportTickets: {
 		mine: () => ['support-tickets', 'mine'] as const,
 	},
+	apiKeys: {
+		all: () => ['api-keys'] as const,
+		list: () => ['api-keys', 'list'] as const,
+	},
 } as const;
