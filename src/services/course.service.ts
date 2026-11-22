@@ -82,6 +82,20 @@ export interface Course {
 	auctionAllocation?: number;
 	/** Whether the auction has been settled on-chain (#1164). */
 	auctionSettled?: boolean;
+	/** First ledger where commit/reveal launch participation is available. */
+	launchStartLedger?: number;
+	/** Ledger where the commit phase ends and reveal begins. */
+	launchCommitEndLedger?: number;
+	/** Ledger where the reveal phase ends and results are settled. */
+	launchRevealEndLedger?: number;
+	/** Whether launch orders have been settled. */
+	launchSettled?: boolean;
+	/** Fill amount reported for the connected wallet after settlement. */
+	launchFillAmount?: number;
+	/** Refund amount reported for the connected wallet after settlement. */
+	launchRefundAmount?: number;
+	/** Clearing price reported after settlement. */
+	launchClearingPrice?: number;
 	/**
 	 * Early-sell penalty in basis points (0–2000 = 0%–20%).
 	 * Applied to sells within the first 7 days after key creation.
