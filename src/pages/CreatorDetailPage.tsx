@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreatorDetail, usePriceHistory } from '@/hooks/useCreators';
 import { useKeyFreeze } from '@/hooks/useKeyFreeze';
@@ -144,6 +144,16 @@ import ReportKeyModal from '@/components/common/ReportKeyModal';
 import ShareQrModal from '@/components/common/ShareQrModal';
 import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
 import { QrCode } from 'lucide-react';
+import { ExportDateRangeSelector } from '@/components/common/ExportDateRangeSelector';
+import { KeyAnalyticsExportButton } from '@/components/common/KeyAnalyticsExportButton';
+import { fetchRevenueShareDistributions } from '@/services/revenueShare.service';
+import { fetchProtocolRevenuePage } from '@/services/stakerRevenue.service';
+import { fetchAllTrades } from '@/hooks/useAllTradeHistory';
+import type { Trade } from '@/services/tradeHistory.service';
+import type { RevenueShareDistribution } from '@/types/revenueShare';
+import type { ProtocolRevenueDistribution } from '@/services/stakerRevenue.service';
+import type { ExportDateRangePreset, CustomDateRange } from '@/components/common/ExportDateRange.types';
+import { generateTradeHistoryCsv, generateDistributionsCsv } from '@/utils/portfolioExport.utils';
 
 /** Series shown in the key detail price panel (#1220 adds the depth tab). */
 type PriceChartTab = 'primary' | 'secondary' | 'depth' | 'revenue';
@@ -181,6 +191,40 @@ function CreatorDetailPageContent() {
 	const [secondaryRange, setSecondaryRange] =
 		useState<SecondaryPriceRange>('7d');
 	const [qrModalOpen, setQrModalOpen] = useState(false);
+
+// Key Analytics Export state
+const [analyticsExportPreset, setAnalyticsExportPreset] = useState<ExportDateRangePreset | 'custom'>('30d');
+const [analyticsExportCustomRange, setAnalyticsExportCustomRange] = useState<CustomDateRange>({
+	start: '',
+	end: '',
+});
+const resolvedAnalyticsExportRange = useMemo(
+	() => {
+		const now = Date.now();
+		const DAY_MS = 24 * 60 * 60 * 1000;
+		switch (analyticsExportPreset) {
+			case '30d':
+				return { preset: '30d' as const, from: now - 30 * DAY_MS, to: now };
+			case '90d':
+				return { preset: '90d' as const, from: now - 90 * DAY_MS, to: now };
+			case '1y':
+				return { preset: '1y' as const, from: now - 365 * DAY_MS, to: now };
+			case 'all':
+				return { preset: 'all' as const };
+			case 'custom': {
+				if (!analyticsExportCustomRange.start || !analyticsExportCustomRange.end) {
+					return { preset: 'all' as const };
+				}
+				const start = new Date(analyticsExportCustomRange.start);
+				const end = new Date(analyticsExportCustomRange.end);
+				start.setHours(0, 0, 0, 0);
+				end.setHours(23, 59, 59, 999);
+				return { preset: 'custom' as const, from: start.getTime(), to: end.getTime() };
+			}
+		}
+	},
+	[analyticsExportPreset, analyticsExportCustomRange]
+);
 
 	const {
 		data: creator,
@@ -1328,13 +1372,125 @@ function CreatorDetailPageContent() {
 					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
 					data-testid="key-analytics-history-container"
 				>
-					<h2 className="mb-6 font-grotesque text-xl font-black tracking-tight text-white">
-						Analytics History
-					</h2>
+					<div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+						<h2 className="font-grotesque text-xl font-black tracking-tight text-white">
+							Analytics History
+						</h2>
+						<ExportDateRangeSelector
+							preset={analyticsExportPreset}
+							customRange={analyticsExportCustomRange}
+							onPresetChange={setAnalyticsExportPreset}
+							onCustomRangeChange={setAnalyticsExportCustomRange}
+						/>
+					</div>
 
 					<SectionErrorBoundary sectionName="key analytics history">
 						<KeyAnalyticsHistoryChart keyId={creator.id} />
 					</SectionErrorBoundary>
+
+					{/* Key Analytics Export Controls */}
+					<div className="mt-6 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+						<div className="mb-3">
+							<h3 className="font-semibold text-white">Export Key Analytics Data</h3>
+							<p className="mt-0.5 text-sm text-white/60">
+								Download trade history, distributions, or analytics summary for this key.
+							</p>
+						</div>
+						<div className="flex flex-wrap gap-3">
+							<KeyAnalyticsExportButton
+								creatorId={creator.id}
+								walletAddress={userAddress ?? ''}
+								exportType="trade-history"
+								dateRange={resolvedAnalyticsExportRange}
+								fetchData={async () => {
+									// Fetch all trades for this wallet
+									const trades = await fetchAllTrades(userAddress ?? '');
+									// Filter by creatorId
+									return trades.filter(t => t.keyName.toLowerCase().includes(creator.title?.toLowerCase() ?? ''));
+								}}
+								generateCsv={trades => generateTradeHistoryCsv(trades as Trade[])}
+								data-testid="analytics-export-trade-history"
+							/>
+							<KeyAnalyticsExportButton
+								creatorId={creator.id}
+								walletAddress={userAddress ?? ''}
+								exportType="distributions"
+								dateRange={resolvedAnalyticsExportRange}
+								fetchData={async () => {
+									const results: Array<{
+										type: 'revenue_share';
+										record: RevenueShareDistribution;
+									} | {
+										type: 'protocol_revenue';
+										record: ProtocolRevenueDistribution;
+									}> = [];
+
+									// Fetch revenue share distributions for this key
+									try {
+										const dists = await fetchRevenueShareDistributions(creator.id, userAddress ?? '');
+										results.push(...dists.map(d => ({ type: 'revenue_share' as const, record: d })));
+									} catch {
+										// Ignore
+									}
+
+									// Fetch protocol revenue distributions
+									try {
+										let cursor: string | null = null;
+										do {
+											const page = await fetchProtocolRevenuePage(userAddress ?? '', cursor);
+											results.push(...page.distributions.map(d => ({ type: 'protocol_revenue' as const, record: d })));
+											cursor = page.nextCursor;
+										} while (cursor);
+									} catch {
+										// Ignore
+									}
+
+									return results;
+								}}
+								generateCsv={dists => generateDistributionsCsv(dists as Array<{
+										type: 'revenue_share';
+										record: RevenueShareDistribution;
+									} | {
+										type: 'protocol_revenue';
+										record: ProtocolRevenueDistribution;
+									}>)}
+								data-testid="analytics-export-distributions"
+							/>
+							<KeyAnalyticsExportButton
+								creatorId={creator.id}
+								walletAddress={userAddress ?? ''}
+								exportType="analytics-summary"
+								dateRange={resolvedAnalyticsExportRange}
+								fetchData={async () => {
+									// Return the key analytics data for CSV
+									const { data } = await import('@/hooks/useKeyAnalyticsStore').then(m => m.useKeyAnalyticsStore.getState());
+									return data ? [data] : [];
+								}}
+								generateCsv={analyticsData => {
+									if (!analyticsData.length) return 'No data';
+									const d = analyticsData[0] as {
+										uniqueTraderCount: number;
+										totalTradeCount: number;
+										cumulativeVolumeXlm: number;
+										cumulativeVolumeUsd: number;
+										xlmPriceUsd: number;
+										lastUpdated: string;
+									};
+									const headers = ['Metric', 'Value'];
+									const rows = [
+										['Unique Traders', String(d.uniqueTraderCount)],
+										['Total Trades', String(d.totalTradeCount)],
+										['Cumulative Volume (XLM)', String(d.cumulativeVolumeXlm)],
+										['Cumulative Volume (USD)', String(d.cumulativeVolumeUsd)],
+										['XLM Price (USD)', String(d.xlmPriceUsd)],
+										['Last Updated', d.lastUpdated],
+									];
+									return [headers, ...rows].map(r => r.join(',')).join('\r\n');
+								}}
+								data-testid="analytics-export-summary"
+							/>
+						</div>
+					</div>
 				</div>
 
 				<div
@@ -1485,6 +1641,8 @@ function CreatorDetailPageContent() {
 					<SectionErrorBoundary sectionName="secondary market">
 						<div className="space-y-4">
 							<SecondaryMarketSellPanel
+								wallet={userAddress ?? ''}
+								keyId={creator.id}
 								availableFractions={holdingsCount}
 								onCreateAuction={async () => {
 									/* create_auction contract call wired by the parent */

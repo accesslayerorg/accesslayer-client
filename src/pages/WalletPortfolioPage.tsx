@@ -14,6 +14,9 @@ import Skeleton from '@/components/ui/skeleton';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useWalletHoldings } from '@/hooks/useWallet';
 import { useCreatorPrices } from '@/hooks/useCreatorPrices';
+import { useTradeHistory } from '@/hooks/useWallet';
+import { fetchRevenueShareDistributions } from '@/services/revenueShare.service';
+import { fetchProtocolRevenuePage } from '@/services/stakerRevenue.service';
 import { cn } from '@/lib/utils';
 import {
 	formatDisplayKeyPrice,
@@ -41,6 +44,23 @@ import {
 	type PortfolioTableSortKey,
 } from '@/utils/portfolioTable.utils';
 import GainsReport from '@/components/common/GainsReport';
+import { ExportDateRangeSelector } from '@/components/common/ExportDateRangeSelector';
+import { PortfolioExportButton } from '@/components/common/PortfolioExportButton';
+import {
+	generateHoldingsSnapshotCsv,
+	generateDistributionsCsv,
+	generateTradeHistoryCsv,
+} from '@/utils/portfolioExport.utils';
+import {
+	type ExportDateRangePreset,
+	type CustomDateRange,
+	resolveExportDateRange,
+} from '@/components/common/ExportDateRange.types';
+import type { Trade } from '@/services/tradeHistory.service';
+import type { RevenueDistributionRecord } from '@/types/creatorRevenue';
+import type { RevenueShareDistribution } from '@/types/revenueShare';
+import type { ProtocolRevenueDistribution } from '@/services/stakerRevenue.service';
+import type { HeldKeyPosition } from '@/utils/portfolioValue.utils';
 
 const SKELETON_ROW_COUNT = 4;
 
@@ -96,8 +116,26 @@ export default function WalletPortfolioPage() {
 			defaultDirectionForSortKey('current_value')
 		);
 
-	const batchItemCount = useBatchTradeStore(selectBatchItemCount);
-	const openBatchDrawer = useBatchTradeStore(state => state.openDrawer);
+const batchItemCount = useBatchTradeStore(selectBatchItemCount);
+const openBatchDrawer = useBatchTradeStore(state => state.openDrawer);
+
+// Export state
+const [exportPreset, setExportPreset] = useState<ExportDateRangePreset | 'custom'>('30d');
+const [exportCustomRange, setExportCustomRange] = useState<CustomDateRange>({
+	start: '',
+	end: '',
+});
+const resolvedExportRange = useMemo(
+	() =>
+		resolveExportDateRange(
+			exportPreset,
+			exportCustomRange
+		) ?? { preset: exportPreset },
+	[exportPreset, exportCustomRange]
+);
+
+// Fetch trade history for export (all trades, no pagination)
+const { data: allTrades = [] } = useTradeHistory(address ?? '');
 
 	const heldPositions = useMemo(
 		() =>
@@ -239,6 +277,108 @@ export default function WalletPortfolioPage() {
 							</span>
 						)}
 					</Button>
+				</div>
+
+				{/* Export Controls */}
+				<div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+					<div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+						<div>
+							<h3 className="font-semibold text-white">Export Portfolio Data</h3>
+							<p className="mt-0.5 text-sm text-white/60">
+								Download your trade history, holdings snapshot, or distributions as CSV.
+							</p>
+						</div>
+						<ExportDateRangeSelector
+							preset={exportPreset}
+							customRange={exportCustomRange}
+							onPresetChange={setExportPreset}
+							onCustomRangeChange={setExportCustomRange}
+						/>
+					</div>
+					<div className="flex flex-wrap gap-3">
+						<PortfolioExportButton
+							walletAddress={address}
+							exportType="trade-history"
+							dateRange={resolvedExportRange}
+							fetchData={async () => {
+								// Use the already fetched trades from useTradeHistory
+								return allTrades as Trade[];
+							}}
+							generateCsv={trades => generateTradeHistoryCsv(trades as Trade[])}
+							data-testid="portfolio-export-trade-history"
+						/>
+						<PortfolioExportButton
+							walletAddress={address}
+							exportType="holdings-snapshot"
+							dateRange={resolvedExportRange}
+							fetchData={async () => heldPositions as HeldKeyPosition[]}
+							generateCsv={positions => generateHoldingsSnapshotCsv(positions as HeldKeyPosition[], keyNames)}
+							data-testid="portfolio-export-holdings"
+						/>
+						<PortfolioExportButton
+							walletAddress={address}
+							exportType="distributions"
+							dateRange={resolvedExportRange}
+							fetchData={async () => {
+								// Fetch all distribution types
+								const results: Array<{
+									type: 'creator_revenue';
+									record: RevenueDistributionRecord;
+									userShare?: number;
+									claimed?: boolean;
+									receivedAmount?: number;
+									claimedAt?: number;
+									txHash?: string;
+								} | {
+									type: 'revenue_share';
+									record: RevenueShareDistribution;
+								} | {
+									type: 'protocol_revenue';
+									record: ProtocolRevenueDistribution;
+								}> = [];
+
+								// Fetch creator revenue distributions for each held key
+								for (const position of heldPositions) {
+									try {
+										const dists = await fetchRevenueShareDistributions(position.creatorId, address);
+										results.push(...dists.map(d => ({ type: 'revenue_share' as const, record: d })));
+									} catch {
+										// Ignore individual failures
+									}
+								}
+
+								// Fetch protocol revenue distributions
+								try {
+									let cursor: string | null = null;
+									do {
+										const page = await fetchProtocolRevenuePage(address, cursor);
+										results.push(...page.distributions.map(d => ({ type: 'protocol_revenue' as const, record: d })));
+										cursor = page.nextCursor;
+									} while (cursor);
+								} catch {
+									// Ignore
+								}
+
+								return results;
+							}}
+							generateCsv={dists => generateDistributionsCsv(dists as Array<{
+								type: 'creator_revenue';
+								record: RevenueDistributionRecord;
+								userShare?: number;
+								claimed?: boolean;
+								receivedAmount?: number;
+								claimedAt?: number;
+								txHash?: string;
+							} | {
+								type: 'revenue_share';
+								record: RevenueShareDistribution;
+							} | {
+								type: 'protocol_revenue';
+								record: ProtocolRevenueDistribution;
+							}>)}
+							data-testid="portfolio-export-distributions"
+						/>
+					</div>
 				</div>
 
 				{splitHolding && (

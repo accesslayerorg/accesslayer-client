@@ -152,6 +152,8 @@ export const queryKeys = {
 			['wallet', address, 'xlmBalance'] as const,
 		feeDiscount: (address: string) =>
 			['wallet', address, 'fee-discount'] as const,
+		sellableNow: (address: string, keyId: string) =>
+			['wallet', address, 'sellableNow', keyId] as const,
 	},
 	lp: {
 		all: () => ['lp'] as const,
