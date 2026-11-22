@@ -50,6 +50,10 @@ import ProposalCreatePage from './pages/ProposalCreatePage';
 import ApiKeysPage from './pages/ApiKeysPage';
 import RetirementBuybackConfirmedPage from './pages/RetirementBuybackConfirmedPage';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
+import AdminLoginPage from './pages/AdminLoginPage';
+import AdminTwoFactorSetupPage from './pages/AdminTwoFactorSetupPage';
+import AdminTwoFactorChallengePage from './pages/AdminTwoFactorChallengePage';
+import AdminTwoFactorGuard from './components/admin/AdminTwoFactorGuard';
 
 function withRouteErrorBoundary(element: ReactNode, routeName: string) {
 	return (
@@ -338,10 +342,26 @@ export const routes = [
 			},
 			{
 				path: '/admin/dashboard',
-				element: withRouteErrorBoundary(
-					<AdminDashboardPage />,
-					'Admin dashboard'
+				element: (
+					<AdminTwoFactorGuard>
+						{withRouteErrorBoundary(
+							<AdminDashboardPage />,
+							'Admin dashboard'
+						)}
+					</AdminTwoFactorGuard>
 				),
+			},
+			{
+				path: '/admin/login',
+				element: <AdminLoginPage />,
+			},
+			{
+				path: '/admin/2fa/setup',
+				element: <AdminTwoFactorSetupPage />,
+			},
+			{
+				path: '/admin/2fa/challenge',
+				element: <AdminTwoFactorChallengePage />,
 			},
 			{
 				path: '/revenue-distribution',
