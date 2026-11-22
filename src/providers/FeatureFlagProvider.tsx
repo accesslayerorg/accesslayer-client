@@ -1,15 +1,10 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import {
 	isFeatureEnabled,
 	parseFeatureFlags,
 	type FeatureFlags,
 } from './featureFlags';
-
-interface FeatureFlagContextValue {
-	isEnabled: (name: string) => boolean;
-}
-
-const FeatureFlagContext = createContext<FeatureFlagContextValue | null>(null);
+import { FeatureFlagContext } from './featureFlagContext';
 
 function defaultSubjectId(): string {
 	if (typeof window === 'undefined') return 'anonymous';
@@ -30,7 +25,7 @@ interface FeatureFlagProviderProps {
 export function FeatureFlagProvider({ children, flags, subjectId }: FeatureFlagProviderProps) {
 	const configuredFlags = flags ?? parseFeatureFlags(import.meta.env.VITE_FEATURE_FLAGS);
 	const stableSubjectId = subjectId ?? defaultSubjectId();
-	const value = useMemo<FeatureFlagContextValue>(
+	const value = useMemo(
 		() => ({
 			isEnabled: (name: string) => isFeatureEnabled(configuredFlags, name, stableSubjectId),
 		}),
@@ -38,10 +33,4 @@ export function FeatureFlagProvider({ children, flags, subjectId }: FeatureFlagP
 	);
 
 	return <FeatureFlagContext.Provider value={value}>{children}</FeatureFlagContext.Provider>;
-}
-
-export function useFeatureFlag(name: string): boolean {
-	const context = useContext(FeatureFlagContext);
-	if (!context) throw new Error('useFeatureFlag must be used within FeatureFlagProvider');
-	return context.isEnabled(name);
 }
