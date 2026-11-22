@@ -8,6 +8,7 @@ interface Props {
 
 interface State {
 	hasError: boolean;
+	resetKey: number;
 }
 
 /**
@@ -16,25 +17,30 @@ interface State {
  * CreatorPageErrorBoundary, etc). This is the last line of defense before
  * React would otherwise unmount the whole tree to a blank screen.
  *
- * A full reload is used for recovery rather than resetting local state:
- * an error this high up means the app-level state that produced it is
- * suspect, so a fresh mount is safer than trying to resume it.
+ * The retry action remounts the complete app subtree so the app can recover
+ * without requiring a browser reload.
  */
 class AppErrorBoundary extends Component<Props, State> {
 	public state: State = {
 		hasError: false,
+		resetKey: 0,
 	};
 
-	public static getDerivedStateFromError(): State {
+	public static getDerivedStateFromError(): Partial<State> {
 		return { hasError: true };
 	}
 
 	public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-		console.error('Uncaught error at app root:', error, errorInfo);
+		if (import.meta.env.DEV) {
+			console.error('Uncaught error at app root:', error, errorInfo);
+		}
 	}
 
-	private handleReload = () => {
-		window.location.reload();
+	private handleRetry = () => {
+		this.setState(state => ({
+			hasError: false,
+			resetKey: state.resetKey + 1,
+		}));
 	};
 
 	public render() {
@@ -54,23 +60,35 @@ class AppErrorBoundary extends Component<Props, State> {
 							Something went wrong
 						</h1>
 						<p className="max-w-md font-jakarta text-base leading-7 text-white/70">
-							The app hit an unexpected error and couldn't continue.
-							Reloading the page usually fixes this.
+							The app hit an unexpected error and couldn't continue. Try
+							again, or contact support if the issue persists.
 						</p>
 					</div>
 					<Button
 						type="button"
-						onClick={this.handleReload}
+						onClick={this.handleRetry}
 						className="h-12 rounded-xl bg-amber-400 px-5 font-jakarta font-black text-slate-950 hover:bg-amber-300"
 					>
 						<RefreshCw className="size-4" aria-hidden="true" />
-						Reload page
+						Retry
 					</Button>
+					<a
+						href="https://github.com/accesslayerorg/accesslayer-client/issues"
+						target="_blank"
+						rel="noreferrer"
+						className="text-sm font-semibold text-white/70 underline underline-offset-4 hover:text-white"
+					>
+						Contact support
+					</a>
 				</main>
 			);
 		}
 
-		return this.props.children;
+		return (
+			<div key={this.state.resetKey} className="contents">
+				{this.props.children}
+			</div>
+		);
 	}
 }
 

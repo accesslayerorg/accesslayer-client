@@ -69,3 +69,45 @@ describe('rankKeyHolders', () => {
 		expect(input).toEqual(inputCopy);
 	});
 });
+
+describe('rankKeyHolders staking split (#814)', () => {
+	it('defaults stakedQuantity to 0 and liquidQuantity to keyCount when absent', () => {
+		const [entry] = rankKeyHolders([holder('a', 12)]);
+		expect(entry!.stakedQuantity).toBe(0);
+		expect(entry!.liquidQuantity).toBe(12);
+	});
+
+	it('splits keyCount into staked and liquid portions', () => {
+		const [entry] = rankKeyHolders([
+			{ id: 'a', displayName: 'A', keyCount: 20, stakedQuantity: 8 },
+		]);
+		expect(entry!.stakedQuantity).toBe(8);
+		expect(entry!.liquidQuantity).toBe(12);
+	});
+
+	it('ranks a fully staked holder by total quantity, not liquid quantity', () => {
+		const ranked = rankKeyHolders([
+			{ id: 'liquid', displayName: 'Liquid', keyCount: 15, stakedQuantity: 0 },
+			{ id: 'staked', displayName: 'Staked', keyCount: 30, stakedQuantity: 30 },
+		]);
+		expect(ranked.map(h => h.id)).toEqual(['staked', 'liquid']);
+		expect(ranked[0]!.rank).toBe(1);
+		expect(ranked[0]!.liquidQuantity).toBe(0);
+	});
+
+	it('clamps a staked value larger than keyCount and never yields negative liquid', () => {
+		const [entry] = rankKeyHolders([
+			{ id: 'a', displayName: 'A', keyCount: 10, stakedQuantity: 999 },
+		]);
+		expect(entry!.stakedQuantity).toBe(10);
+		expect(entry!.liquidQuantity).toBe(0);
+	});
+
+	it('treats a negative or non-finite staked value as 0', () => {
+		const [neg] = rankKeyHolders([
+			{ id: 'a', displayName: 'A', keyCount: 10, stakedQuantity: -4 },
+		]);
+		expect(neg!.stakedQuantity).toBe(0);
+		expect(neg!.liquidQuantity).toBe(10);
+	});
+});

@@ -47,7 +47,7 @@ describe('BuyFeeBreakdown', () => {
 			).toBeInTheDocument();
 		});
 
-		it('displays correct fee percentages', () => {
+		it('displays correct fee percentages and tooltip', () => {
 			const onRetry = vi.fn();
 
 			render(
@@ -62,12 +62,15 @@ describe('BuyFeeBreakdown', () => {
 			// Check protocol fee percentage
 			expect(
 				screen.getByTestId('buy-fee-breakdown-protocol')
-			).toHaveTextContent('Protocol fee (2.50%)');
+			).toHaveTextContent('Protocol Fee (2.50%)');
 
-			// Check creator fee percentage
+			// Check protocol fee tooltip
+			expect(screen.getByTestId('protocol-fee-tooltip')).toBeInTheDocument();
+
+			// Check creator royalty percentage
 			expect(
 				screen.getByTestId('buy-fee-breakdown-creator')
-			).toHaveTextContent('Creator fee (2.50%)');
+			).toHaveTextContent('Creator Royalty (2.50%)');
 		});
 
 		it('hides protocol fee row when protocol fee is zero', () => {
@@ -311,10 +314,10 @@ describe('BuyFeeBreakdown', () => {
 
 			expect(
 				screen.getByTestId('buy-fee-breakdown-protocol')
-			).toHaveTextContent('Protocol fee (1.50%)');
+			).toHaveTextContent('Protocol Fee (1.50%)');
 			expect(
 				screen.getByTestId('buy-fee-breakdown-creator')
-			).toHaveTextContent('Creator fee (1.00%)');
+			).toHaveTextContent('Creator Royalty (1.00%)');
 		});
 	});
 });

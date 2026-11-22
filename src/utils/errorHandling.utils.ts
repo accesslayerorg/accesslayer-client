@@ -9,7 +9,16 @@ export const WALLET_ERROR_COPY = {
 	SIGNATURE_REJECTED: "Signature request was declined. Please try again when you're ready to confirm.",
 	SIGNATURE_FAILED: "The signature request failed. Please ensure your wallet is unlocked and try again.",
 	GENERIC_TRANSACTION_FAILED: "Transaction failed. Please check your balance or connection and try again.",
+	MaxSupplyReached: "Maximum supply reached. No more keys can be minted.",
 };
+
+export const ERROR_CODE_TO_COPY: Record<string, string> = {
+	...WALLET_ERROR_COPY,
+};
+
+export function getErrorMessage(code: string): string {
+	return ERROR_CODE_TO_COPY[code] ?? code;
+}
 
 interface WalletError {
 	message?: string;

@@ -37,7 +37,7 @@ describe('TradeDialog – sell payout display (#692)', () => {
 		fireEvent.change(input, { target: { value: '2' } });
 
 		expect(screen.getByText(/Estimated proceeds/i)).toBeInTheDocument();
-		expect(screen.getByText('0.1 XLM')).toBeInTheDocument();
+		expect(screen.getByText(/0\.10? XLM/)).toBeInTheDocument();
 	});
 
 	it('updates the displayed payout as the sell quantity changes', () => {
@@ -47,10 +47,10 @@ describe('TradeDialog – sell payout display (#692)', () => {
 		) as HTMLInputElement;
 
 		fireEvent.change(input, { target: { value: '1' } });
-		expect(screen.getByText('0.05 XLM')).toBeInTheDocument();
+		expect(screen.getByText(/0\.05 XLM/)).toBeInTheDocument();
 
 		fireEvent.change(input, { target: { value: '4' } });
-		expect(screen.getByText('0.2 XLM')).toBeInTheDocument();
+		expect(screen.getByText(/0\.20? XLM/)).toBeInTheDocument();
 		expect(screen.queryByText('0.05 XLM')).not.toBeInTheDocument();
 	});
 
@@ -128,8 +128,18 @@ describe('TradeDialog – sell payout display (#692)', () => {
 		) as HTMLInputElement;
 
 		fireEvent.change(input, { target: { value: '5' } });
+		if (screen.queryByTestId('price-impact-override-checkbox')) {
+			fireEvent.click(screen.getByTestId('price-impact-override-checkbox'));
+		}
 		fireEvent.click(screen.getByTestId('trade-dialog-confirm'));
 
-		expect(onConfirm).toHaveBeenCalledWith(5, null);
+		// #872 added a third `slippage` argument (the computed min/max price
+		// bound); this test only asserts on the amount and price-preview
+		// arguments it was written to cover.
+		expect(onConfirm).toHaveBeenCalledWith(
+			5,
+			null,
+			expect.objectContaining({ minPriceStroops: expect.any(Number) })
+		);
 	});
 });

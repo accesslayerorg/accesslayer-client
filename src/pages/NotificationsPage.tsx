@@ -1,5 +1,5 @@
 import { Bell } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { cn } from '@/lib/utils';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useProfileStore } from '@/hooks/useProfileStore';
@@ -36,6 +36,12 @@ export default function NotificationsPage() {
 						{unreadCount} unread
 					</span>
 				)}
+				<Link
+					to="/settings/notifications"
+					className="ml-auto text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+				>
+					Preferences
+				</Link>
 			</div>
 
 			{isLoading && (

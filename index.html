@@ -46,6 +46,26 @@
 		<!-- Preconnect -->
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+		<!--
+			#1284: Applies the resolved theme class to <html> before the first
+			paint so there is no flash of the wrong theme on load.
+			Reads localStorage['al:theme'] ('light' | 'dark' | 'system');
+			'system' and missing values follow prefers-color-scheme.
+		-->
+		<script>
+			(function () {
+				var stored = null;
+				try {
+					stored = localStorage.getItem('al:theme');
+				} catch (error) {
+					/* localStorage can be unavailable; fall back to the OS. */
+				}
+				var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+				var useDark = stored === 'dark' || (stored !== 'light' && prefersDark);
+				document.documentElement.classList.toggle('dark', useDark);
+			})();
+		</script>
 	</head>
 	<body>
 		<!--

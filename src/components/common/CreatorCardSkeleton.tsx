@@ -12,13 +12,13 @@ interface CreatorCardSkeletonProps {
 }
 
 const skeletonBlockClass =
-	'rounded-md bg-white/12 skeleton-shimmer motion-reduce:bg-white/18 motion-reduce:ring-1 motion-reduce:ring-white/15';
+	'rounded-md bg-white/12 skeleton-shimmer animate-pulse motion-reduce:bg-white/18 motion-reduce:ring-1 motion-reduce:ring-white/15 motion-reduce:animate-none';
 const skeletonStaticBlockClass =
 	'rounded-md bg-white/16 ring-1 ring-white/15';
 const dividerClass = 'h-px w-full bg-white/10';
 
 /**
- * Loading skeleton for a single creator card (#421).
+ * Loading skeleton for a single creator card (#421, #545).
  *
  * Block dimensions mirror `CreatorCard`'s populated layout so replacing
  * skeletons with real cards does not produce visible layout shift:
@@ -32,7 +32,7 @@ const dividerClass = 'h-px w-full bg-white/10';
  *   - Sparkline: h-10 w-full rounded-lg (matches CreatorCard's price
  *     chart sparkline placeholder)
  *   - Mini stat chips: 3 placeholders (Price / Category / Level)
- *   - Meta rows: 3 label+value rows (Join Date / Handle / Key Price)
+ *   - Meta rows: 4 label+value rows (Join Date / Handle / Key Price / Holders)
  *     separated by `CreatorListRowDivider` equivalents
  *   - Social links: row of icon placeholders matching
  *     `CreatorSocialLinksList` height
@@ -122,7 +122,7 @@ const CreatorCardSkeleton: React.FC<CreatorCardSkeletonProps> = ({
 			{/* Divider (CreatorListRowDivider equivalent) */}
 			<div className={cn('my-4', dividerClass)} />
 
-			{/* Meta rows: Join Date / Handle / Key Price */}
+			{/* Meta rows: Join Date / Handle / Key Price / Holders */}
 			<div className="mt-3 space-y-2">
 				<div className="flex items-center justify-between gap-3">
 					<div className={cn('h-3 w-20', blockClass)} />
@@ -135,6 +135,10 @@ const CreatorCardSkeleton: React.FC<CreatorCardSkeletonProps> = ({
 				<div className="flex items-center justify-between gap-3">
 					<div className={cn('h-3 w-16', blockClass)} />
 					<div className={cn('h-6 w-24', blockClass)} />
+				</div>
+				<div className="flex items-center justify-between gap-3">
+					<div className={cn('h-3 w-16', blockClass)} />
+					<div className={cn('h-3 w-20', blockClass)} />
 				</div>
 			</div>
 

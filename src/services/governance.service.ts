@@ -1,0 +1,227 @@
+import { BaseApiService, type APIResponse } from './api.service';
+import { cacheManager } from '@/utils/cache.utils';
+import { normalizeProposal } from '@/utils/governance.utils';
+import {
+	normalizeGovernanceAdminState,
+	normalizeGovernanceEventsPage,
+} from '@/utils/governanceAudit.utils';
+import type {
+	CreateProposalPayload,
+	GovernanceAdminState,
+	GovernanceEventsPage,
+	GovernanceEventType,
+	Proposal,
+	ProposalVotesPage,
+} from '@/types/governance';
+
+/** How long fetched proposal data stays fresh (15 seconds — proposals change faster than profiles). */
+const PROPOSAL_CACHE_TTL = 15_000;
+export const PROPOSAL_VOTES_PAGE_SIZE = 20;
+/** Page size for the public governance audit feed (#1351). */
+export const GOVERNANCE_EVENTS_PAGE_SIZE = 20;
+
+export interface GetGovernanceEventsParams {
+	type?: GovernanceEventType;
+	cursor?: string | null;
+	limit?: number;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+	return value !== null && typeof value === 'object' && !Array.isArray(value)
+		? (value as Record<string, unknown>)
+		: {};
+}
+
+class GovernanceService extends BaseApiService {
+	private cacheKeys = new Set<string>();
+
+	/**
+	 * Fetch all proposals, optionally filtered by creator.
+	 * GET /governance/proposals?creatorId=:id
+	 */
+	async getProposals(creatorId?: string): Promise<Proposal[]> {
+		const cacheKey = `proposals_${creatorId ?? 'all'}`;
+		const cached = cacheManager.get<Proposal[]>(cacheKey);
+		if (cached) return cached;
+
+		try {
+			const params: Record<string, string> = {};
+			if (creatorId) params.creatorId = creatorId;
+
+			const response = await this.api.get<APIResponse<unknown>>(
+				'/governance/proposals',
+				{ params }
+			);
+			const payload = asRecord(response.data.data);
+			const rawProposals = Array.isArray(response.data.data)
+				? response.data.data
+				: Array.isArray(payload.proposals)
+					? payload.proposals
+					: Array.isArray(payload.items)
+						? payload.items
+						: Array.isArray(payload.data)
+							? payload.data
+							: [];
+			const proposals = rawProposals.map(normalizeProposal);
+			this.cacheKeys.add(cacheKey);
+			cacheManager.set(cacheKey, proposals, PROPOSAL_CACHE_TTL);
+			return proposals;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/**
+	 * Fetch a single proposal by ID.
+	 * GET /governance/proposals/:id
+	 */
+	async getProposal(proposalId: string): Promise<Proposal> {
+		const cacheKey = `proposal_${proposalId}`;
+		const cached = cacheManager.get<Proposal>(cacheKey);
+		if (cached) return cached;
+
+		try {
+			const response = await this.api.get<APIResponse<unknown>>(
+				`/governance/proposals/${encodeURIComponent(proposalId)}`
+			);
+			const payload = asRecord(response.data.data);
+			const rawProposal =
+				payload.proposal ??
+				payload.data ??
+				(Array.isArray(payload.items) ? payload.items[0] : undefined) ??
+				response.data.data;
+			const proposal = normalizeProposal(rawProposal);
+			this.cacheKeys.add(cacheKey);
+			cacheManager.set(cacheKey, proposal, PROPOSAL_CACHE_TTL);
+			return proposal;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	async createProposal(
+		creatorId: string,
+		payload: CreateProposalPayload
+	): Promise<Proposal> {
+		try {
+			const response = await this.api.post<APIResponse<unknown>>(
+				'/governance/proposals',
+				{
+					creatorId,
+					title: payload.title,
+					description: payload.description,
+					endDate: payload.endDate,
+				}
+			);
+			const responseData = response.data?.data;
+			const envelope = asRecord(responseData);
+			const rawProposal = Array.isArray(responseData)
+				? responseData[0]
+				: envelope.proposal ??
+					envelope.data ??
+					(Array.isArray(envelope.items) ? envelope.items[0] : undefined) ??
+					responseData;
+			const proposal = normalizeProposal(rawProposal);
+			this.invalidateProposalListCache(creatorId);
+			return proposal;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	async getProposalVotes(
+		proposalId: string,
+		cursor?: string | null,
+		limit = PROPOSAL_VOTES_PAGE_SIZE
+	): Promise<ProposalVotesPage> {
+		const cacheKey = `proposal_votes_${proposalId}_${cursor ?? 'first'}_${limit}`;
+		const cached = cacheManager.get<ProposalVotesPage>(cacheKey);
+		if (cached) return cached;
+
+		try {
+			const response = await this.api.get<APIResponse<ProposalVotesPage>>(
+				`/governance/proposals/${encodeURIComponent(proposalId)}/votes`,
+				{
+					params: {
+						...(cursor ? { cursor } : {}),
+						limit,
+					},
+				}
+			);
+
+			const data = response.data.data;
+			cacheManager.set(cacheKey, data, PROPOSAL_CACHE_TTL);
+			return data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/**
+	 * Fetch one cursor page of privileged governance events (#1351).
+	 * GET /governance/events?type=:type&cursor=:cursor&limit=:limit
+	 *
+	 * Public endpoint — no wallet or session is required.
+	 */
+	async getGovernanceEvents({
+		type,
+		cursor,
+		limit = GOVERNANCE_EVENTS_PAGE_SIZE,
+	}: GetGovernanceEventsParams = {}): Promise<GovernanceEventsPage> {
+		try {
+			const response = await this.api.get<APIResponse<unknown>>(
+				'/governance/events',
+				{
+					params: {
+						...(type ? { type } : {}),
+						...(cursor ? { cursor } : {}),
+						limit,
+					},
+				}
+			);
+			return normalizeGovernanceEventsPage(response.data.data);
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/**
+	 * Fetch the current protocol admin and any pending admin transfer (#1351).
+	 * GET /governance/admin
+	 */
+	async getGovernanceAdmin(): Promise<GovernanceAdminState> {
+		try {
+			const response =
+				await this.api.get<APIResponse<unknown>>('/governance/admin');
+			return normalizeGovernanceAdminState(response.data.data);
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	private invalidateProposalListCache(creatorId?: string): void {
+		for (const cacheKey of [
+			`proposals_${creatorId ?? 'all'}`,
+			'proposals_all',
+		]) {
+			cacheManager.invalidate(cacheKey);
+			this.cacheKeys.delete(cacheKey);
+		}
+	}
+
+	clearCache(): void {
+		for (const cacheKey of this.cacheKeys) {
+			cacheManager.invalidate(cacheKey);
+		}
+		this.cacheKeys.clear();
+	}
+}
+
+export const governanceService = new GovernanceService();
+
+export function fetchProposalVotesPage(
+	proposalId: string,
+	cursor: string | null | undefined
+): Promise<ProposalVotesPage> {
+	return governanceService.getProposalVotes(proposalId, cursor);
+}

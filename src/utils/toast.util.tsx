@@ -31,6 +31,8 @@ const showToast = {
 		toast.custom(
 			t => (
 				<div
+					role="status"
+					aria-live="polite"
 					className={`${
 						t.visible ? 'animate-enter' : 'animate-leave'
 					} pointer-events-auto flex w-full max-w-sm rounded-xl border border-amber-500/20 bg-slate-900 shadow-xl shadow-amber-500/10`}
@@ -71,6 +73,20 @@ const showToast = {
 			{ duration: TRANSACTION_TOAST_DURATION_MS }
 		);
 	},
+	curveUpdateProposed: (
+		message: string = 'CurveUpdateProposed',
+		options?: ToastOptions
+	) => {
+		toast.remove();
+		toast.success(message, options);
+	},
 };
+
+export function showCurveUpdateProposedToast(
+	message: string = 'CurveUpdateProposed',
+	options?: ToastOptions
+) {
+	showToast.curveUpdateProposed(message, options);
+}
 
 export default showToast;

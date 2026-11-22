@@ -25,25 +25,37 @@ interface Props {
 interface State {
 	hasError: boolean;
 	error: Error | null;
+	resetKey: number;
 }
 
 class SectionErrorBoundary extends Component<Props, State> {
 	public state: State = {
 		hasError: false,
 		error: null,
+		resetKey: 0,
 	};
 
-	public static getDerivedStateFromError(error: Error): State {
+	public static getDerivedStateFromError(error: Error): Partial<State> {
 		return { hasError: true, error };
 	}
 
 	public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
 		markErrorAsCaught(error);
-		console.error(`Uncaught error in section ${this.props.sectionName || 'Unknown'}:`, error, errorInfo);
+		if (import.meta.env.DEV) {
+			console.error(
+				`Uncaught error in section ${this.props.sectionName || 'Unknown'}:`,
+				error,
+				errorInfo
+			);
+		}
 	}
 
 	private handleRetry = () => {
-		this.setState({ hasError: false, error: null });
+		this.setState(state => ({
+			hasError: false,
+			error: null,
+			resetKey: state.resetKey + 1,
+		}));
 	};
 
 	public render() {
@@ -61,7 +73,8 @@ class SectionErrorBoundary extends Component<Props, State> {
 					<div className="flex flex-col items-center gap-2">
 						<AlertCircle className="h-10 w-10 text-destructive" />
 						<h3 className="text-lg font-semibold">
-							{this.props.title ?? 'Something went wrong in this section'}
+							{this.props.title ??
+								'Something went wrong in this section'}
 						</h3>
 						{this.props.description !== '' && (
 							<p className="max-w-md text-sm text-muted-foreground">
@@ -81,11 +94,23 @@ class SectionErrorBoundary extends Component<Props, State> {
 						<RefreshCw className="h-4 w-4" />
 						Retry
 					</Button>
+					<a
+						href="https://github.com/accesslayerorg/accesslayer-client/issues"
+						target="_blank"
+						rel="noreferrer"
+						className="text-sm font-semibold text-muted-foreground underline underline-offset-4 hover:text-foreground"
+					>
+						Contact support
+					</a>
 				</div>
 			);
 		}
 
-		return this.props.children;
+		return (
+			<div key={this.state.resetKey} className="contents">
+				{this.props.children}
+			</div>
+		);
 	}
 }
 

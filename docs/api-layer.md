@@ -156,6 +156,38 @@ function HoldingsList({ address }: { address: string }) {
 
 ---
 
+## Retirement status data
+
+The existing `GET /courses/:id` response can include the following key-level
+retirement fields:
+
+- `isRetiring`, `retirementBuybackPriceStroops`,
+  `retirementNoticeStartedAt`, and `retirementNoticeExpiresAt` while a notice
+  period is active.
+- `retirementExecutedAt` and `retirementTransactionHash` after
+  `execute_retirement`.
+
+The notice-period progress bar is displayed only when both notice timestamps
+are valid. Do not infer the notice start from the expiry or a client-side
+default; the API must provide both for an accurate percentage.
+
+The holder-specific Buyback Confirmed route (`/keys/:id/retirement/confirmed`)
+expects the executing flow to navigate with a receipt in router state:
+
+```ts
+{
+	holderPayoutStroops: number;
+	executedAt: string;
+	transactionHash?: string | null;
+}
+```
+
+Keep the payout on the execution receipt rather than adding it to the cached,
+key-wide course response: payouts are holder-specific. The current client has
+no `execute_retirement` action; when one is added, it should navigate to this
+route with the confirmed holder receipt and invalidate the key detail and
+wallet holdings queries.
+
 ## Worked example — full GET call
 
 The following shows a complete end-to-end flow for a `GET /wallets/:address/holdings` endpoint.

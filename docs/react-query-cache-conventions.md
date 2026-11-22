@@ -67,8 +67,8 @@ same patterns:
 import type { GetCoursesParams } from '@/services/course.service';
 
 export const queryKeys = {
-	creators: { /* … */ },
-	wallet: { /* … */ },
+	creators: {/* … */},
+	wallet: {/* … */},
 	courses: {
 		all: ['courses'] as const,
 		list: (params?: GetCoursesParams) =>
@@ -101,9 +101,7 @@ shapes and shared prefixes:
 
 ```ts
 it('courses.detail shares the courses prefix with courses.all', () => {
-	expect(queryKeys.courses.detail('x')[0]).toBe(
-		queryKeys.courses.all[0],
-	);
+	expect(queryKeys.courses.detail('x')[0]).toBe(queryKeys.courses.all[0]);
 });
 
 it('courses.detail embeds the id at index 2', () => {
@@ -157,15 +155,12 @@ export function useUpdateCourseTitle() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({
-			courseId,
-			title,
-		}: { courseId: string; title: string }) =>
+		mutationFn: ({ courseId, title }: { courseId: string; title: string }) =>
 			courseService.updateTitle(courseId, title),
 		onSuccess: (updatedCourse, { courseId }) => {
 			queryClient.setQueryData(
 				queryKeys.courses.detail(courseId),
-				updatedCourse,
+				updatedCourse
 			);
 		},
 	});
@@ -180,13 +175,13 @@ Use `setQueryData` when:
 
 ### Decision Table
 
-| Situation | Approach |
-|---|---|
-| Mutation changes server state, response is minimal | `invalidateQueries` |
-| Mutation response includes full updated object | `setQueryData` |
-| Optimistic update with rollback | `setQueryData` + `onError` rollback |
-| Multiple entities affected by one mutation | `invalidateQueries` on shared prefix |
-| User clicks "Refresh" button | `refetch()` on the specific query |
+| Situation                                          | Approach                             |
+| -------------------------------------------------- | ------------------------------------ |
+| Mutation changes server state, response is minimal | `invalidateQueries`                  |
+| Mutation response includes full updated object     | `setQueryData`                       |
+| Optimistic update with rollback                    | `setQueryData` + `onError` rollback  |
+| Multiple entities affected by one mutation         | `invalidateQueries` on shared prefix |
+| User clicks "Refresh" button                       | `refetch()` on the specific query    |
 
 See [docs/state-management.md](./state-management.md) for the general rule on
 when data belongs in React Query vs local state.
@@ -199,10 +194,10 @@ when data belongs in React Query vs local state.
 
 The client does not set global overrides, so React Query v5 defaults apply:
 
-| Option | Default | Meaning |
-|---|---|---|
-| `staleTime` | `0` | Data is stale immediately. Queries refetch on mount, window focus, and reconnect. |
-| `gcTime` | `5 * 60 * 1000` (5 minutes) | Unused/inactive data stays in the cache for 5 minutes before garbage collection. |
+| Option      | Default                     | Meaning                                                                           |
+| ----------- | --------------------------- | --------------------------------------------------------------------------------- |
+| `staleTime` | `0`                         | Data is stale immediately. Queries refetch on mount, window focus, and reconnect. |
+| `gcTime`    | `5 * 60 * 1000` (5 minutes) | Unused/inactive data stays in the cache for 5 minutes before garbage collection.  |
 
 ### When to Override
 
@@ -218,12 +213,12 @@ useQuery({
 });
 ```
 
-| Scenario | Recommended `staleTime` | Rationale |
-|---|---|---|
-| Real-time or live data (prices, balances) | `0` (default) | Always show the latest value. |
-| Semi-static data (profile details, course metadata) | `30_000` – `60_000` (30–60 s) | Balances freshness against unnecessary refetches. |
-| Rarely-changing data (creator list, static config) | `5 * 60_000` (5 min) or longer | Reduce bandwidth for data that barely changes. |
-| Data that never changes during a session | `Infinity` | Fetch once; never refetch until the page reloads. |
+| Scenario                                            | Recommended `staleTime`        | Rationale                                         |
+| --------------------------------------------------- | ------------------------------ | ------------------------------------------------- |
+| Real-time or live data (prices, balances)           | `0` (default)                  | Always show the latest value.                     |
+| Semi-static data (profile details, course metadata) | `30_000` – `60_000` (30–60 s)  | Balances freshness against unnecessary refetches. |
+| Rarely-changing data (creator list, static config)  | `5 * 60_000` (5 min) or longer | Reduce bandwidth for data that barely changes.    |
+| Data that never changes during a session            | `Infinity`                     | Fetch once; never refetch until the page reloads. |
 
 Override `gcTime` only when you want to keep data in the cache longer (or
 shorter) than the 5 minute default — for example, to preserve form draft data

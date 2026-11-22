@@ -107,4 +107,51 @@ describe('CreatorActivityFeed', () => {
 		expect(screen.getByTestId('creator-activity-item-a')).toHaveTextContent('Buy');
 		expect(screen.getByTestId('creator-activity-item-b')).toHaveTextContent('Sell');
 	});
+
+	it('attributes royalty claims and revenue distributions to the acting co-creator (#1224)', () => {
+		mockUseCreatorActivityFeed.mockReturnValue({
+			trades: [
+				makeTrade('r', {
+					type: 'royalty_claim',
+					amount: 42,
+					actor: { wallet: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI', role: 'Revenue' },
+				}),
+				makeTrade('d', {
+					type: 'revenue_distribution',
+					amount: 100,
+					actor: { wallet: 'GCREATORWALLET0000000000000000000000000000000000000ABCD', role: 'creator' },
+				}),
+			],
+			isLoading: false,
+			isError: false,
+		});
+
+		render(<CreatorActivityFeed creatorId="creator-1" />);
+
+		const claim = screen.getByTestId('creator-activity-item-r');
+		expect(claim).toHaveTextContent('Royalty claim');
+		expect(claim).toHaveTextContent('42 XLM');
+		expect(claim).toHaveTextContent('GBZX…MADI');
+		expect(claim.querySelector('[data-testid="action-attribution-role"]')).toHaveTextContent(
+			'Revenue'
+		);
+
+		const distribution = screen.getByTestId('creator-activity-item-d');
+		expect(distribution).toHaveTextContent('Revenue distribution');
+		expect(
+			distribution.querySelector('[data-testid="action-attribution-role"]')
+		).toHaveTextContent('Creator');
+	});
+
+	it('omits attribution for entries without an acting wallet', () => {
+		mockUseCreatorActivityFeed.mockReturnValue({
+			trades: [makeTrade('a')],
+			isLoading: false,
+			isError: false,
+		});
+
+		render(<CreatorActivityFeed creatorId="creator-1" />);
+
+		expect(screen.queryByTestId('action-attribution')).not.toBeInTheDocument();
+	});
 });

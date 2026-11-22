@@ -1,0 +1,438 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/queryKeys';
+import { cacheManager } from '@/utils/cache.utils';
+import showToast from '@/utils/toast.util';
+import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
+import { curveMigrationCacheKey } from '@/services/curveMigration.service';
+import { buildCurveMigrationExecuteCall } from '@/utils/curveMigration.utils';
+import type { CreatorMetadataChange } from '@/utils/creatorMetadata.utils';
+import type { GraduatedCurveMilestone } from '@/components/common/GraduatedCurvePanel';
+import {
+	announcementService,
+	type AnnouncementCategory,
+} from '@/services/announcement.service';
+
+/**
+ * Creator-facing contract calls issued from the dashboard tabs
+ * (`update_metadata` — #818, `configure_auction` / `cancel_auction` — #816,
+ * `set_launch_penalty`, `set_max_buy_quantity`, `set_quorum_bps` — #828,
+ * `set_buy_cooldown` — #889, `execute_curve_migration`).
+ *
+ * Each mutation simulates signing latency and resolves. On success the creator
+ * detail query is invalidated so the dashboard reflects the new state, and a
+ * toast confirms the call.
+ */
+
+const SIGN_LATENCY_MS = 1200;
+
+/**
+ * Signs and submits a creator contract call.
+ *
+ * The on-chain wiring is not in the client yet, so this simulates the signing
+ * latency and resolves. Exported so creator-facing mutations that live in their
+ * own hooks (e.g. key bundles) submit calls the same way.
+ */
+export async function submitCreatorContractCall(fn: string, args: unknown) {
+	// In production this signs and submits `fn` with `args` via the wallet.
+	void fn;
+	void args;
+	await new Promise<void>(resolve =>
+		window.setTimeout(resolve, SIGN_LATENCY_MS)
+	);
+	return { success: true as const };
+}
+
+const submitContractCall = submitCreatorContractCall;
+
+export interface AuctionConfigInput {
+	price: number;
+	supply: number;
+}
+
+export type GraduatedCurveConfigInput = GraduatedCurveMilestone[];
+
+export function useUpdateMetadataMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'update_metadata', creatorId],
+		mutationFn: (change: CreatorMetadataChange) =>
+			submitContractCall('update_metadata', { creatorId, ...change }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.onChainMetadata(creatorId),
+			});
+			showToast.success('Profile metadata updated');
+		},
+	});
+}
+
+export function useConfigureAuctionMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'configure_auction', creatorId],
+		mutationFn: (input: AuctionConfigInput) =>
+			submitContractCall('configure_auction', { creatorId, ...input }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Auction configured');
+		},
+	});
+}
+
+export function useCancelAuctionMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'cancel_auction', creatorId],
+		mutationFn: () => submitContractCall('cancel_auction', { creatorId }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Auction cancelled');
+		},
+	});
+}
+
+/**
+ * Places a bid during the pre-launch auction window (#924) via the contract's
+ * `place_bid` function (`{ creatorId, amount }`). On success the creator
+ * detail (auction price/sold) and the live bid history caches are invalidated
+ * so the panel and leaderboard reflect the new bid.
+ */
+export function usePlaceAuctionBidMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'place_bid', creatorId],
+		mutationFn: (amount: number) =>
+			submitContractCall('place_bid', { creatorId, amount }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.auctionBids(creatorId),
+			});
+			showToast.success('Bid placed');
+		},
+	});
+}
+
+export interface PlaceSpotlightBidInput {
+	slotId: string;
+	amount: number;
+}
+
+/**
+ * Places a spotlight discovery bid (#1147). The success toast is rendered by
+ * the caller so this hook stays free of JSX.
+ */
+export function usePlaceSpotlightBidMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'place_spotlight_bid', creatorId],
+		mutationFn: ({ slotId, amount }: PlaceSpotlightBidInput) =>
+			submitContractCall('place_spotlight_bid', { creatorId, slotId, amount }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.spotlightAuction(creatorId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.spotlightBids(creatorId),
+			});
+		},
+	});
+}
+
+export interface PostAnnouncementInput {
+	title: string;
+	category: AnnouncementCategory;
+	content: string;
+}
+
+/**
+ * Posts a creator announcement (#1159). The body is pinned to IPFS first so the
+ * contract call receives the content hash, not the raw text.
+ */
+export function usePostAnnouncementMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'post_announcement', creatorId],
+		mutationFn: async ({ title, category, content }: PostAnnouncementInput) => {
+			const contentHash =
+				await announcementService.uploadAnnouncementContent(content);
+			return submitContractCall('post_announcement', {
+				creatorId,
+				title,
+				contentHash,
+				category,
+			});
+		},
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.announcements(creatorId),
+			});
+			showToast.success('Announcement published');
+		},
+	});
+}
+
+export function useSetLaunchPenaltyMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'set_launch_penalty', creatorId],
+		mutationFn: (penaltyBps: number) =>
+			submitContractCall('set_launch_penalty', { creatorId, penaltyBps }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Launch penalty updated');
+		},
+	});
+}
+
+export function useSetMaxBuyQuantityMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'set_max_buy_quantity', creatorId],
+		mutationFn: (maxBuyQuantity: number) =>
+			submitContractCall('set_max_buy_quantity', {
+				creatorId,
+				maxBuyQuantity,
+			}),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Max buy quantity updated');
+		},
+	});
+}
+
+export function useSetBuyCooldownMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'set_buy_cooldown', creatorId],
+		mutationFn: (cooldownLedgers: number) =>
+			submitContractCall('set_buy_cooldown', { creatorId, cooldownLedgers }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			// Drop the 30s course cache entry so the refetch below returns the
+			// freshly committed cooldown and the panel reflects it immediately.
+			cacheManager.invalidate(`course_${creatorId}`);
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Buy cooldown updated');
+		},
+	});
+}
+
+export function useSetQuorumBpsMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'set_quorum_bps', creatorId],
+		mutationFn: (quorumBps: number) =>
+			submitContractCall('set_quorum_bps', { creatorId, quorumBps }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			// Drop the 30s course cache entry so the refetch below returns the
+			// freshly committed quorum and the slider reflects it immediately.
+			cacheManager.invalidate(`course_${creatorId}`);
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Quorum threshold updated');
+		},
+	});
+}
+
+export function useConfigureGraduatedCurveMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'configure_graduated_curve', creatorId],
+		mutationFn: (milestones: GraduatedCurveConfigInput) =>
+			submitContractCall('configure_graduated_curve', {
+				creatorId,
+				milestones,
+			}),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Graduated curve configured');
+		},
+	});
+}
+
+export interface DeprecateKeyInput {
+	buybackPrice: number;
+	totalEscrow: number;
+}
+
+export function useDeprecateKeyMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'deprecate_key', creatorId],
+		mutationFn: (input: DeprecateKeyInput) =>
+			submitContractCall('deprecate_key', { creatorId, ...input }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			cacheManager.invalidate(`course_${creatorId}`);
+			queryClient.setQueryData(
+				queryKeys.creators.detail(creatorId),
+				(old: Record<string, unknown> | undefined) =>
+					old ? { ...old, deprecated: true } : old
+			);
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Key deprecated successfully');
+		},
+	});
+}
+
+/**
+ * Executes an approved curve migration on a creator key.
+ *
+ * The button that triggers this is only enabled once the governance vote
+ * carried the migration *and* its timelock has elapsed; the contract re-checks
+ * both before applying {@link proposedParams}. On success the migration cache
+ * and query are invalidated together so the migration moves from the pending
+ * list into the executed history with its new params and execution date.
+ */
+export function useExecuteCurveMigrationMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'execute_curve_migration', creatorId],
+		mutationFn: (migrationId: string) => {
+			const call = buildCurveMigrationExecuteCall({ creatorId, migrationId });
+			return submitContractCall(call.functionName, call.args);
+		},
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			// Drop both cache layers so the refetch returns the migration in
+			// its executed state with the params it actually applied.
+			cacheManager.invalidate(curveMigrationCacheKey(creatorId));
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.curveMigrations(creatorId),
+			});
+			showToast.success('Curve migration executed');
+		},
+	});
+}
+
+/**
+ * Claims the creator's vested allocation for a key (#960).
+ *
+ * On success the whole `vesting` query family is invalidated so the panel's
+ * claimable amount, progress bar, and claim history all reflect the new state
+ * without a manual refresh.
+ */
+export function useClaimVestedTokensMutation(
+	creatorId: string,
+	wallet: string
+) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'claim_vested_tokens', creatorId, wallet],
+		mutationFn: (amountXlm: number) =>
+			submitContractCall('claim_vested_tokens', {
+				creatorId,
+				wallet,
+				amountXlm,
+			}),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.vesting(creatorId),
+			});
+			showToast.success('Vested tokens claimed');
+		},
+	});
+}
+
+/**
+ * Tops up a creator performance bond through the creator contract-call
+ * abstraction and refreshes the bond status shown on the dashboard.
+ */
+export function useTopUpPerformanceBondMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'deposit_performance_bond', creatorId],
+		mutationFn: (amountXlm: number) =>
+			submitContractCall('deposit_performance_bond', {
+				creatorId,
+				amountXlm,
+			}),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.performanceBond(creatorId),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Performance bond topped up');
+		},
+	});
+}

@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+	act,
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
@@ -89,7 +95,9 @@ describe('ConnectWalletButton wallet address popover', () => {
 			session_duration_ms: 4_500,
 			disconnected_at: '2026-07-27T10:00:04.500Z',
 		});
-		expect(JSON.stringify(debugSpy.mock.calls[0][1])).not.toContain(FULL_ADDRESS);
+		expect(JSON.stringify(debugSpy.mock.calls[0][1])).not.toContain(
+			FULL_ADDRESS
+		);
 
 		debugSpy.mockRestore();
 		process.env.NODE_ENV = originalEnv;
@@ -253,7 +261,9 @@ describe('ConnectWalletButton copy wallet address', () => {
 		fireEvent.click(openAndFindCopyButton());
 
 		await waitFor(() => {
-			expect(navigator.clipboard.writeText).toHaveBeenCalledWith(FULL_ADDRESS);
+			expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+				FULL_ADDRESS
+			);
 		});
 	});
 
@@ -285,5 +295,195 @@ describe('ConnectWalletButton copy wallet address', () => {
 		expect(screen.queryByText('Copied')).not.toBeInTheDocument();
 
 		vi.useRealTimers();
+	});
+});
+
+describe('ConnectWalletButton connection states', () => {
+	describe('Idle state', () => {
+		beforeEach(() => {
+			mockUseAccount.mockReturnValue({
+				address: undefined,
+				isConnected: false,
+			} as ReturnType<typeof useAccount>);
+		});
+
+		it('renders Connect Wallet label in idle state', () => {
+			mockUseConnect.mockReturnValue({
+				connect: vi.fn(),
+				connectors: [{ id: 'test-connector' }] as unknown[],
+				error: null,
+				isPending: false,
+			} as unknown as ReturnType<typeof useConnect>);
+			mockUseDisconnect.mockReturnValue({
+				disconnect: vi.fn(),
+			} as unknown as ReturnType<typeof useDisconnect>);
+
+			render(<ConnectWalletButton />);
+
+			const connectButton = screen.getByRole('button', {
+				name: /Connect Wallet/i,
+			});
+			expect(connectButton).toBeInTheDocument();
+		});
+
+		it('Connect Wallet button is enabled in idle state', () => {
+			mockUseConnect.mockReturnValue({
+				connect: vi.fn(),
+				connectors: [{ id: 'test-connector' }] as unknown[],
+				error: null,
+				isPending: false,
+			} as unknown as ReturnType<typeof useConnect>);
+			mockUseDisconnect.mockReturnValue({
+				disconnect: vi.fn(),
+			} as unknown as ReturnType<typeof useDisconnect>);
+
+			render(<ConnectWalletButton />);
+
+			const connectButton = screen.getByRole('button', {
+				name: /Connect Wallet/i,
+			});
+			expect(connectButton).not.toBeDisabled();
+		});
+
+		it('disables Connect Wallet button when no connector is available', () => {
+			mockUseConnect.mockReturnValue({
+				connect: vi.fn(),
+				connectors: [],
+				error: null,
+				isPending: false,
+			} as unknown as ReturnType<typeof useConnect>);
+			mockUseDisconnect.mockReturnValue({
+				disconnect: vi.fn(),
+			} as unknown as ReturnType<typeof useDisconnect>);
+
+			render(<ConnectWalletButton />);
+
+			const connectButton = screen.getByRole('button', {
+				name: /Connect Wallet/i,
+			});
+			expect(connectButton).toBeDisabled();
+		});
+	});
+
+	describe('Connecting state', () => {
+		beforeEach(() => {
+			mockUseAccount.mockReturnValue({
+				address: undefined,
+				isConnected: false,
+			} as ReturnType<typeof useAccount>);
+		});
+
+		it('renders Connecting... label when isPending is true', () => {
+			mockUseConnect.mockReturnValue({
+				connect: vi.fn(),
+				connectors: [{ id: 'test-connector' }] as unknown[],
+				error: null,
+				isPending: true,
+			} as unknown as ReturnType<typeof useConnect>);
+			mockUseDisconnect.mockReturnValue({
+				disconnect: vi.fn(),
+			} as unknown as ReturnType<typeof useDisconnect>);
+
+			render(<ConnectWalletButton />);
+
+			expect(screen.getByText(/Connecting\.\.\./)).toBeInTheDocument();
+		});
+
+		it('button is disabled when connecting', () => {
+			mockUseConnect.mockReturnValue({
+				connect: vi.fn(),
+				connectors: [{ id: 'test-connector' }] as unknown[],
+				error: null,
+				isPending: true,
+			} as unknown as ReturnType<typeof useConnect>);
+			mockUseDisconnect.mockReturnValue({
+				disconnect: vi.fn(),
+			} as unknown as ReturnType<typeof useDisconnect>);
+
+			render(<ConnectWalletButton />);
+
+			const connectButton = screen.getByRole('button', {
+				name: /Connecting/i,
+			});
+			expect(connectButton).toBeDisabled();
+		});
+	});
+
+	describe('Connected state', () => {
+		it('renders truncated wallet address when connected', () => {
+			mockUseAccount.mockReturnValue({
+				address: FULL_ADDRESS,
+				isConnected: true,
+			} as ReturnType<typeof useAccount>);
+			mockUseConnect.mockReturnValue({
+				connect: vi.fn(),
+				connectors: [],
+				error: null,
+				isPending: false,
+			} as unknown as ReturnType<typeof useConnect>);
+			mockUseDisconnect.mockReturnValue({
+				disconnect: vi.fn(),
+			} as unknown as ReturnType<typeof useDisconnect>);
+
+			render(<ConnectWalletButton />);
+
+			// Should show truncated address button
+			expect(
+				screen.getByRole('button', { name: TRUNCATED_ADDRESS_PATTERN })
+			).toBeInTheDocument();
+
+			// Should NOT show "Connect Wallet" button
+			expect(
+				screen.queryByRole('button', { name: /Connect Wallet/i })
+			).not.toBeInTheDocument();
+		});
+	});
+
+	describe('Error state', () => {
+		beforeEach(() => {
+			mockUseAccount.mockReturnValue({
+				address: undefined,
+				isConnected: false,
+			} as ReturnType<typeof useAccount>);
+		});
+
+		it('displays error message when connection fails', () => {
+			const errorMessage = 'User rejected the request';
+			mockUseConnect.mockReturnValue({
+				connect: vi.fn(),
+				connectors: [{ id: 'test-connector' }] as unknown[],
+				error: { message: errorMessage } as unknown,
+				isPending: false,
+			} as unknown as ReturnType<typeof useConnect>);
+			mockUseDisconnect.mockReturnValue({
+				disconnect: vi.fn(),
+			} as unknown as ReturnType<typeof useDisconnect>);
+
+			render(<ConnectWalletButton />);
+
+			expect(screen.getByText(errorMessage)).toBeInTheDocument();
+		});
+
+		it('calls connect handler when retry button is clicked', () => {
+			const mockConnect = vi.fn();
+			mockUseConnect.mockReturnValue({
+				connect: mockConnect,
+				connectors: [{ id: 'test-connector' }] as unknown[],
+				error: null,
+				isPending: false,
+			} as unknown as ReturnType<typeof useConnect>);
+			mockUseDisconnect.mockReturnValue({
+				disconnect: vi.fn(),
+			} as unknown as ReturnType<typeof useDisconnect>);
+
+			render(<ConnectWalletButton />);
+
+			// Click the Connect button (acts as retry)
+			fireEvent.click(
+				screen.getByRole('button', { name: /Connect Wallet/i })
+			);
+
+			expect(mockConnect).toHaveBeenCalled();
+		});
 	});
 });
