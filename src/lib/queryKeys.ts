@@ -50,6 +50,8 @@ export const queryKeys = {
 			['creators', creatorId, 'oracle-price'] as const,
 		performanceBond: (creatorId: string) =>
 			['creators', creatorId, 'performance-bond'] as const,
+		keyFlags: (creatorId: string) =>
+			['creators', creatorId, 'flags'] as const,
 		tradeCooldown: (creatorId: string) =>
 			['creators', creatorId, 'trade-cooldown'] as const,
 		whitelist: (creatorId: string) =>

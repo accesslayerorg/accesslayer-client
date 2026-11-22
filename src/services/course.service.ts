@@ -272,6 +272,64 @@ export interface PerformanceBond {
 	reason?: string | null;
 }
 
+/** Stake-weighted community flagging (#1386). */
+export type KeyFlagReasonCode =
+	| 'spam'
+	| 'fraud'
+	| 'impersonation'
+	| 'abuse'
+	| 'other';
+
+export type KeyFlagResolutionStatus = 'returned' | 'forfeited';
+
+/** Outcome of the review triggered by a flag. */
+export interface KeyFlagResolution {
+	/** Whether the flagger's stake was returned or forfeited. */
+	status: KeyFlagResolutionStatus;
+	/** ISO timestamp the review resolved this flag. */
+	resolvedAt: string;
+	/** Optional reviewer note explaining the outcome. */
+	note?: string | null;
+}
+
+/** A single wallet's flag against a key. */
+export interface KeyFlag {
+	id?: string;
+	keyId?: string;
+	walletAddress: string;
+	reasonCode: KeyFlagReasonCode | string;
+	/** Stake locked by this flag, in stroops. */
+	stakeStroops: number;
+	createdAt: string;
+	resolution?: KeyFlagResolution | null;
+}
+
+/** Aggregate flag state for a key, including the auto-freeze threshold. */
+export interface KeyFlagsStatus {
+	keyId?: string;
+	flagCount: number;
+	/** Number of flags that auto-freezes trading. */
+	threshold: number;
+	autoFrozen: boolean;
+	/** Review lifecycle once frozen: 'pending' | 'in_review' | 'resolved'. */
+	reviewStatus?: 'pending' | 'in_review' | 'resolved' | string | null;
+	frozenAt?: string | null;
+	/** Stake required to submit a new flag, in stroops. */
+	requiredStakeStroops?: number | null;
+	/** The authenticated wallet's flag, when it already flagged this key. */
+	userFlag?: KeyFlag | null;
+}
+
+/** Receipt returned after a flag locks its stake on-chain. */
+export interface KeyFlagReceipt {
+	txHash: string;
+	keyId: string;
+	walletAddress: string;
+	reasonCode: KeyFlagReasonCode | string;
+	stakeStroops: number;
+	createdAt: string;
+}
+
 export type CourseSortOption =
 	'volume_desc' | 'price_asc' | 'price_desc' | 'newest';
 
@@ -738,6 +796,56 @@ class CourseService extends BaseApiService {
 				// "no cooldown data" so buttons stay enabled.
 				return null;
 			}
+			throw this.handleError(error);
+		}
+	}
+
+	// Get stake-weighted community flags - GET /keys/:keyId/flags (#1386)
+	async getKeyFlags(
+		keyId: string,
+		wallet?: string
+	): Promise<KeyFlagsStatus | null> {
+		try {
+			const response = await this.api.get<APIResponse<KeyFlagsStatus>>(
+				`/keys/${keyId}/flags`,
+				{ params: wallet ? { wallet } : undefined }
+			);
+			return response.data.data;
+		} catch (error: unknown) {
+			if (error instanceof ApiError && error.status === 404) {
+				return null;
+			}
+			throw this.handleError(error);
+		}
+	}
+
+	// Lock a stake and flag a key - POST /keys/:keyId/flags (#1386)
+	async flagKey(
+		keyId: string,
+		input: {
+			reasonCode: KeyFlagReasonCode;
+			stakeStroops: number;
+			walletAddress: string;
+		}
+	): Promise<KeyFlagReceipt> {
+		try {
+			const response = await this.api.post<APIResponse<KeyFlagReceipt>>(
+				`/keys/${keyId}/flags`,
+				{
+					reasonCode: input.reasonCode,
+					stakeStroops: input.stakeStroops,
+					walletAddress: input.walletAddress,
+				}
+			);
+			const data = response.data.data;
+			return {
+				...data,
+				keyId: data?.keyId ?? keyId,
+				walletAddress: data?.walletAddress ?? input.walletAddress,
+				reasonCode: data?.reasonCode ?? input.reasonCode,
+				stakeStroops: data?.stakeStroops ?? input.stakeStroops,
+			};
+		} catch (error) {
 			throw this.handleError(error);
 		}
 	}
