@@ -56,6 +56,12 @@ import { cn } from '@/lib/utils';
 import { useGlobalPause } from '@/hooks/useGlobalPause';
 import { UnavailableAction } from '@/components/ui/unavailable-action';
 import { useAccount } from 'wagmi';
+import RentalEscrowNotice from '@/components/rentals/RentalEscrowNotice';
+import { useWalletRentals } from '@/hooks/useKeyRentals';
+import {
+	getEscrowedKeyQuantity,
+	RENTAL_ESCROW_REASON,
+} from '@/utils/keyRental.utils';
 
 export interface PortfolioHoldingRowProps {
 	position: HeldKeyPosition;
@@ -108,9 +114,23 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	const [batchTransferOpen, setBatchTransferOpen] = useState(false);
 	const [giftOpen, setGiftOpen] = useState(false);
 	const [isExpanded, setIsExpanded] = useState(false);
+	const { address: connectedWalletAddress } = useAccount();
+	// #1360 — keys listed for rent stay escrowed by the rental contract, so
+	// they are not part of the sellable or transferable balance.
+	const { data: walletRentals } = useWalletRentals(connectedWalletAddress);
+	const rentalEscrowedQuantity = getEscrowedKeyQuantity(
+		walletRentals ?? [],
+		connectedWalletAddress,
+		position.creatorId
+	);
 	const frozenQuantity = position.frozenQuantity ?? 0;
-	const liquidQuantity = position.liquidQuantity ?? position.quantity ?? 0;
+	const liquidQuantity = Math.max(
+		0,
+		(position.liquidQuantity ?? position.quantity ?? 0) -
+			rentalEscrowedQuantity
+	);
 	const isLiquidEmpty = liquidQuantity <= 0;
+	const isBlockedByRentalEscrow = rentalEscrowedQuantity > 0 && isLiquidEmpty;
 	const hasDividends = hasUnclaimedDividend(position.unclaimedDividend);
 	const keyPriceStroops = resolveCreatorKeyPriceStroops(position);
 	const deprecated = isKeyDeprecated(creator);
@@ -119,7 +139,6 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	// #1163 — server-side lock-up status for this wallet and key. While a
 	// lock-up is in effect the Sell button stays disabled and the badge
 	// shows the unlock countdown; both drop automatically at expiry.
-	const { address: connectedWalletAddress } = useAccount();
 	const { data: keyLockup } = useKeyLockup(
 		position.creatorId,
 		connectedWalletAddress
@@ -373,11 +392,17 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 								)}
 								{onSell && (
 									<UnavailableAction
-										disabled={paused || isPositionLocked}
+										disabled={
+											paused ||
+											isPositionLocked ||
+											isBlockedByRentalEscrow
+										}
 										reason={
 											paused
 												? 'Trading is currently paused'
-												: `LockupActive: Selling is disabled while this position is under lock-up. Unlocks in ${formatUnlockCountdown(lockupRemainingSeconds)}.`
+												: isPositionLocked
+													? `LockupActive: Selling is disabled while this position is under lock-up. Unlocks in ${formatUnlockCountdown(lockupRemainingSeconds)}.`
+													: RENTAL_ESCROW_REASON
 										}
 									>
 										<Button
@@ -595,6 +620,11 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 					</div>
 				)}
 			</div>
+
+			<RentalEscrowNotice
+				escrowedQuantity={rentalEscrowedQuantity}
+				className="mt-2"
+			/>
 
 			{onBatchTransfer && (
 				<BatchTransferModal
