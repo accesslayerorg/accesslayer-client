@@ -324,6 +324,7 @@ const resolvedAnalyticsExportRange = useMemo(
 					rating.walletAddress.toLowerCase() === userAddress.toLowerCase()
 			) ?? null,
 		[ratings, userAddress]
+	);
 	const retirementPending =
 		creator?.isRetiring === true && !creator.retirementExecutedAt;
 
