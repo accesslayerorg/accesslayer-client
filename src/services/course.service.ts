@@ -174,6 +174,8 @@ export interface Course {
 	isRetiring?: boolean;
 	/** Guaranteed per-key buyback price in stroops during the retirement notice window. */
 	retirementBuybackPriceStroops?: number | null;
+	/** ISO timestamp when the retirement notice period began. */
+	retirementNoticeStartedAt?: string | null;
 	/**
 	 * ISO timestamp when the retirement notice window closes; null/absent
 	 * means no fixed deadline has been set yet. The exit-notice banner's
@@ -181,6 +183,10 @@ export interface Course {
 	 * `freezeExpiresAt` drives the freeze banner above.
 	 */
 	retirementNoticeExpiresAt?: string | null;
+	/** ISO timestamp set after `execute_retirement` has completed. */
+	retirementExecutedAt?: string | null;
+	/** Transaction hash produced by `execute_retirement`, when available. */
+	retirementTransactionHash?: string | null;
 
 	/** Whether purchases are restricted to the early-access whitelist. */
 	earlyAccessEnabled?: boolean;

@@ -144,9 +144,10 @@ describe('HeldKeysGrid (#921)', () => {
 	it('shows the empty state when there are no holdings', () => {
 		renderGrid({ positions: [] });
 
+		expect(screen.getByTestId('holdings-empty-state')).toBeInTheDocument();
 		expect(
-			screen.getByRole('status', { name: 'No holdings' })
-		).toBeInTheDocument();
+			screen.getByRole('link', { name: 'Discover creators' })
+		).toHaveAttribute('href', '/discovery?source=empty-holdings');
 	});
 
 	it('shows a loading skeleton while holdings load', () => {

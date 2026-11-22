@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { cn } from '@/lib/utils';
 import { useGraduatedCurveConfig } from '@/hooks/useGraduatedCurveConfig';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type { GraduatedCurveConfig, CurveMilestone } from '@/services/course.service';
 
 export interface GraduatedCurveMilestoneChartProps {
@@ -33,6 +34,8 @@ export const GraduatedCurveMilestoneChart: React.FC<GraduatedCurveMilestoneChart
 	const { data: fetchedConfig, isLoading: fetchLoading } = useGraduatedCurveConfig(
 		overrideConfig ? undefined : keyId
 	);
+
+	const reducedMotion = useReducedMotion();
 
 	const isLoading = overrideLoading ?? fetchLoading;
 	const config = overrideConfig ?? fetchedConfig;
@@ -215,6 +218,7 @@ export const GraduatedCurveMilestoneChart: React.FC<GraduatedCurveMilestoneChart
 							strokeWidth={2.5}
 							dot={{ r: 4, fill: '#10b981', stroke: '#047857' }}
 							activeDot={{ r: 7, fill: '#34d399' }}
+							isAnimationActive={!reducedMotion}
 						/>
 						{/* Render milestone threshold vertical lines and exponent labels */}
 						{normalizedMilestones.map((m, idx) => {

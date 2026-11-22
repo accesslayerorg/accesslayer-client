@@ -14,14 +14,19 @@
  * the notice window closes.
  */
 
-import { isKeyDeprecated, type DeprecationFields } from '@/utils/keyDeprecation.utils';
+import {
+	isKeyDeprecated,
+	type DeprecationFields,
+} from '@/utils/keyDeprecation.utils';
 
 export type ExitNoticeActionType = 'deprecation' | 'retirement';
 
 export interface ExitNoticeFields extends DeprecationFields {
 	isRetiring?: boolean;
 	retirementBuybackPriceStroops?: number | null;
+	retirementNoticeStartedAt?: string | null;
 	retirementNoticeExpiresAt?: string | null;
+	retirementExecutedAt?: string | null;
 }
 
 export interface ExitNotice {
@@ -30,6 +35,8 @@ export interface ExitNotice {
 	buybackPriceStroops: number | null;
 	/** ISO expiry of the notice window; null means no fixed deadline. */
 	noticeExpiresAt: string | null;
+	/** ISO start of the notice window; null means progress cannot be measured. */
+	noticeStartedAt: string | null;
 }
 
 /**
@@ -40,11 +47,14 @@ export interface ExitNotice {
 export function resolveExitNotice(
 	key: ExitNoticeFields | null | undefined
 ): ExitNotice | null {
-	if (key?.isRetiring === true) {
+	if (key?.retirementExecutedAt) return null;
+
+	if (key?.isRetiring === true && !key.retirementExecutedAt) {
 		return {
 			actionType: 'retirement',
 			buybackPriceStroops: key.retirementBuybackPriceStroops ?? null,
 			noticeExpiresAt: key.retirementNoticeExpiresAt ?? null,
+			noticeStartedAt: key.retirementNoticeStartedAt ?? null,
 		};
 	}
 
@@ -53,6 +63,7 @@ export function resolveExitNotice(
 			actionType: 'deprecation',
 			buybackPriceStroops: null,
 			noticeExpiresAt: null,
+			noticeStartedAt: null,
 		};
 	}
 

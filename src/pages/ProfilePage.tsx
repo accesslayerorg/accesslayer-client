@@ -353,7 +353,7 @@ export default function ProfilePage() {
 								isLoading={
 									holdingsQuery.isLoading || areCreatorsLoading
 								}
-								emptyBrowseHref="/creators"
+								emptyBrowseHref="/discovery?source=profile-holdings-empty"
 							/>
 						</SectionErrorBoundary>
 

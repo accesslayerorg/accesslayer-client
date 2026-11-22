@@ -4,6 +4,9 @@ import { useProfileStore } from '@/hooks/useProfileStore';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import type { ContentGateType } from '@/types/contentGate';
+import RentedBadge from '@/components/rentals/RentedBadge';
+import { useIsActiveRenter, useWalletRentals } from '@/hooks/useKeyRentals';
+import { getRentalRemainingSeconds } from '@/utils/keyRental.utils';
 
 /**
  * The gate types the holder-facing gate can enforce. The creator-facing
@@ -33,8 +36,13 @@ export default function SubscriptionAccessGate({
     const profile = useProfileStore(state => state.profile);
     const userAddress = profile?.id;
     const [durationDays, setDurationDays] = useState(30);
-    const { data: holdings = [], isLoading } = useWalletHoldings(
-        userAddress ?? ''
+    const { data: holdings = [], isLoading: isHoldingsLoading } =
+        useWalletHoldings(userAddress ?? '');
+    // #1360 — an active key rental grants the same access as holding keys.
+    const { data: isActiveRenter = false, isLoading: isRenterLoading } =
+        useIsActiveRenter(creatorId, userAddress);
+    const { data: walletRentals = [] } = useWalletRentals(
+        isActiveRenter ? userAddress : null
     );
 
     if (!hasGate) {
@@ -43,7 +51,19 @@ export default function SubscriptionAccessGate({
 
     const userPosition = holdings.find(h => h.creatorId === creatorId);
     const quantity = userPosition?.quantity ?? 0;
-    const isUnlocked = quantity >= minimumHolding;
+    const isUnlockedByHolding = quantity >= minimumHolding;
+    const isUnlockedByRental = !isUnlockedByHolding && isActiveRenter;
+    const isUnlocked = isUnlockedByHolding || isUnlockedByRental;
+    const isLoading =
+        isHoldingsLoading || (!isUnlockedByHolding && isRenterLoading);
+    const activeRental = isUnlockedByRental
+        ? walletRentals.find(
+              rental =>
+                  rental.keyId === creatorId &&
+                  rental.status === 'rented' &&
+                  rental.renter?.toLowerCase() === userAddress?.toLowerCase()
+          )
+        : undefined;
 
     const requirementLabel =
         gateType === 'subscriber'
@@ -132,6 +152,35 @@ export default function SubscriptionAccessGate({
                         </Button>
                     </>
                 )}
+            </div>
+        );
+    }
+
+    if (isUnlockedByRental) {
+        return (
+            <div className="space-y-6" data-testid="subscription-gate-unlocked">
+                <div
+                    className="flex items-center justify-between gap-3 rounded-xl border border-sky-400/20 bg-sky-400/10 px-5 py-3"
+                    data-testid="subscription-gate-rental-access"
+                >
+                    <div>
+                        <h4 className="font-bold text-sky-300">Rental Access</h4>
+                        <p className="text-xs text-sky-300/80">
+                            You are renting this creator&apos;s keys.
+                        </p>
+                    </div>
+                    <RentedBadge
+                        remainingSeconds={
+                            activeRental
+                                ? getRentalRemainingSeconds(
+                                      activeRental.expiresAtMs,
+                                      Date.now()
+                                  )
+                                : null
+                        }
+                    />
+                </div>
+                {children}
             </div>
         );
     }

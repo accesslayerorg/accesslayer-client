@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -16,7 +16,21 @@ vi.mock('@/services/course.service', () => ({
 		getCourse: vi.fn(),
 		getHoldersPage: vi.fn(),
 		getKeyBuyback: vi.fn(),
+		getDynamicFeeRate: vi.fn().mockResolvedValue({}),
 	},
+}));
+
+vi.mock('wagmi', () => ({
+	useAccount: () => ({ address: undefined, isConnected: false }),
+	useConnect: () => ({
+		connect: vi.fn(),
+		connectAsync: vi.fn(),
+		connectors: [],
+		isPending: false,
+		error: null,
+	}),
+	useDisconnect: () => ({ disconnect: vi.fn() }),
+	useChainId: () => 0,
 }));
 
 vi.mock('framer-motion', async () => {
@@ -113,6 +127,70 @@ describe('CreatorDetailPage - Key Deprecation & Buyback Flow Integration (#923)'
 		expect(
 			screen.queryByTestId('key-deprecation-banner')
 		).not.toBeInTheDocument();
+	});
+
+	it('shows retirement status, holder notice, and prefilled market sell flow', async () => {
+		const user = userEvent.setup();
+		const creatorId = 'retiring-creator-1246';
+		const noticeStartedAt = new Date(Date.now() - 3_600_000).toISOString();
+		const noticeExpiresAt = new Date(Date.now() + 3_600_000).toISOString();
+
+		mockGetCourse.mockResolvedValue({
+			id: creatorId,
+			title: 'Retiring Creator',
+			description: 'Creator key in its notice period',
+			price: 0.25,
+			priceStroops: 2_500_000,
+			creatorShareSupply: 150,
+			instructorId: 'retiring-creator',
+			category: 'Art',
+			level: 'ADVANCED',
+			isRetiring: true,
+			retirementBuybackPriceStroops: 1_500_000,
+			retirementNoticeStartedAt: noticeStartedAt,
+			retirementNoticeExpiresAt: noticeExpiresAt,
+		});
+		queryClient.setQueryData<HeldKeyPosition[]>(
+			queryKeys.wallet.holdings(userAddress),
+			[
+				{
+					creatorId,
+					quantity: 4,
+					priceStroops: 2_500_000,
+					price: 0.25,
+				},
+			]
+		);
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={[`/creators/${creatorId}`]}>
+					<Routes>
+						<Route path="/creators/:id" element={<CreatorDetailPage />} />
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		expect(
+			await screen.findByTestId('exit-notice-banner')
+		).toBeInTheDocument();
+		expect(screen.getByTestId('exit-notice-buyback-price')).toHaveTextContent(
+			'0.15 XLM'
+		);
+		expect(screen.getByTestId('exit-notice-progress')).toHaveAttribute(
+			'aria-valuenow',
+			'50'
+		);
+		expect(
+			screen.getByTestId('retirement-holder-notification')
+		).toBeInTheDocument();
+
+		fireEvent.change(screen.getByTestId('retirement-sell-quantity'), {
+			target: { value: '2' },
+		});
+		await user.click(screen.getByTestId('retirement-review-sell-button'));
+		expect(await screen.findByTestId('trade-dialog-amount')).toHaveValue('2');
 	});
 
 	it('renders deprecation banner and executes complete holder buyback flow with settlement confirmation and position clearing', async () => {
