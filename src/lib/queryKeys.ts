@@ -243,6 +243,9 @@ export const queryKeys = {
 		all: () => ['staking'] as const,
 		dashboard: (wallet: string) => ['staking', wallet, 'dashboard'] as const,
 	},
+	publicPortfolio: {
+		byHandle: (handle: string) => ['publicPortfolio', handle] as const,
+	},
 	airdropClaims: {
 		all: () => ['airdropClaims'] as const,
 		list: (wallet: string) => ['airdropClaims', wallet, 'list'] as const,
