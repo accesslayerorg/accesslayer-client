@@ -5,18 +5,18 @@ import { cn } from '@/lib/utils';
 
 export interface HoldingsEmptyStateProps {
 	className?: string;
-	/** Creator discovery path — defaults to marketplace creators route. */
+	/** Creator discovery path, including optional navigation context. */
 	browseHref?: string;
 }
 
 /**
  * Shown when the holdings query has settled with zero creator keys (#545).
  * Standardised on top of the unified EmptyState component.
- * Links the CTA to the creator discovery page.
+ * Links the CTA to creator discovery with context.
  */
 const HoldingsEmptyState: React.FC<HoldingsEmptyStateProps> = ({
 	className,
-	browseHref = '/creators',
+	browseHref = '/discovery?source=empty-holdings',
 }) => (
 	<EmptyState
 		data-testid="holdings-empty-state"
@@ -30,9 +30,9 @@ const HoldingsEmptyState: React.FC<HoldingsEmptyStateProps> = ({
 			</span>
 		}
 		title="No creator keys yet"
-		message="This wallet doesn't hold any creator keys right now. Browse creators and secure your first key."
+		message="You don't hold any creator keys yet. Discover creators to get started."
 		cta={{
-			label: 'Browse creators',
+			label: 'Discover creators',
 			href: browseHref,
 		}}
 	/>
