@@ -163,7 +163,6 @@ import { MarketMakerChip, MMBadge } from '@/components/common/MarketMakerChip';
 import ReportKeyModal from '@/components/common/ReportKeyModal';
 import ShareQrModal from '@/components/common/ShareQrModal';
 import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
-import { QrCode } from 'lucide-react';
 import RetirementExitPanel from '@/components/common/RetirementExitPanel';
 import RetirementNoticeEmailCard from '@/components/common/RetirementNoticeEmailCard';
 import { QrCode, Bell } from 'lucide-react';
@@ -287,6 +286,8 @@ function CreatorDetailPageContent() {
 					rating.walletAddress.toLowerCase() === userAddress.toLowerCase()
 			) ?? null,
 		[ratings, userAddress]
+	);
+
 	const retirementPending =
 		creator?.isRetiring === true && !creator.retirementExecutedAt;
 
@@ -712,11 +713,6 @@ function CreatorDetailPageContent() {
 	return (
 		<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
 			<div className="mx-auto max-w-7xl space-y-8">
-				<CreatorBreadcrumb
-					parentLabel="Marketplace"
-					parentHref="/"
-					currentLabel={`${creator.title} Profile`}
-				/>
 				{/* Auto-freeze from stake-weighted community flags (#1386) */}
 				<FrozenForReviewBanner
 					autoFrozen={autoFrozen}
@@ -726,8 +722,6 @@ function CreatorDetailPageContent() {
 					frozenAt={frozenAt}
 				/>
 				{/* Key deprecation notice & guaranteed buyback flow (#923) */}
-				{isKeyDeprecated(creator) && (
-					<KeyDeprecationBanner
 				{creator.deprecation && !deprecationDismissed && (
 					<DeprecationBanner
 						deprecation={creator.deprecation}
@@ -1057,71 +1051,6 @@ function CreatorDetailPageContent() {
 						<DeprecationNotice reason={creator.deprecationReason} />
 					</div>
 				)}
-				<div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4">
-					<div>
-						<div className="flex items-center gap-2">
-							<p className="text-xs font-semibold uppercase tracking-wider text-white/55">
-								Key Purchase
-							</p>
-							{isLockedOut && <WhitelistStatusBadge />}
-						</div>
-						<p className="mt-0.5 text-sm text-white/80">
-							{autoFrozen
-								? 'Trading is disabled while community flags on this key are reviewed.'
-								: isKeyDeprecated(creator)
-								? 'Key is deprecated. New buys are disabled.'
-								: isLockedOut
-								? 'Early access is restricted to approved whitelisted wallets.'
-								: 'Purchase keys for this creator.'}
-						</p>
-						{/* Configurable bid-ask spread between buy and sell price (#951) */}
-						<SpreadIndicator
-							className="mt-2"
-							buyPriceStroops={keyConfig?.buyPriceStroops}
-							sellPriceStroops={keyConfig?.sellPriceStroops}
-							spreadStroops={keyConfig?.spreadStroops}
-							spreadBps={keyConfig?.spreadBps}
-							isLoading={isKeyConfigLoading}
-						/>
-						{/* Oracle reference price next to the curve spot price (#967) */}
-						<OraclePriceIndicator
-							className="mt-2"
-							comparison={oracleComparison}
-							freshness={oracleFreshness}
-							source={oracleSource}
-							isLoading={isOracleLoading}
-						/>
-					</div>
-					{autoFrozen ? (
-						<Button
-							disabled
-							data-testid="key-detail-buy-button"
-							variant="outline"
-							className="rounded-xl font-bold"
-							title="Trading is frozen while this key is reviewed"
-						>
-							Trading Frozen
-						</Button>
-					) : isKeyDeprecated(creator) ? (
-						<Button
-							disabled
-							data-testid="key-detail-buy-button"
-							variant="outline"
-							className="rounded-xl font-bold"
-						>
-							Buy Disabled (Deprecated)
-						</Button>
-					) : (
-						<TradeCooldownButton
-							cooldown={tradeCooldown}
-							label="Buy Key"
-							className="rounded-xl font-bold"
-							onClick={() => setBuyDialogOpen(true)}
-							buttonProps={{
-								'data-testid': 'key-detail-buy-button',
-							}}
-						/>
-					)}
 
 				<div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
 					<Tabs defaultValue="buy" className="w-full">
@@ -1149,7 +1078,9 @@ function CreatorDetailPageContent() {
 									</div>
 
 									<p className="mt-0.5 text-sm text-white/80">
-										{isKeyDeprecated(creator)
+										{autoFrozen
+											? 'Trading is disabled while community flags on this key are reviewed.'
+											: isKeyDeprecated(creator)
 											? 'Key is deprecated. New buys are disabled.'
 											: keyFreeze
 												? keyFreeze.reason
@@ -1253,7 +1184,17 @@ function CreatorDetailPageContent() {
 										Liquidity Positions
 									</Link>
 
-									{isKeyDeprecated(creator) ? (
+									{autoFrozen ? (
+										<Button
+											disabled
+											data-testid="key-detail-buy-button"
+											variant="outline"
+											className="min-h-11 w-full rounded-xl font-bold sm:h-10 sm:min-h-0 sm:w-auto"
+											title="Trading is frozen while this key is reviewed"
+										>
+											Trading Frozen
+										</Button>
+									) : isKeyDeprecated(creator) ? (
 										<Button
 											disabled
 											data-testid="key-detail-buy-button"
