@@ -4,6 +4,7 @@ import './index.css';
 import App from './App.tsx';
 import Web3Provider from './providers/Web3Provider.tsx';
 import { ThemeProvider } from './providers/ThemeProvider.tsx';
+import { FeatureFlagProvider } from './providers/FeatureFlagProvider.tsx';
 import { PendingTransactionProvider } from './contexts/PendingTransactionContext';
 import { registerUnhandledRejectionLogger } from './utils/unhandledRejectionLogger';
 import { queryClient } from './providers/web3Utils';
@@ -34,9 +35,11 @@ createRoot(document.getElementById('root')!).render(
 	<StrictMode>
 		<Web3Provider>
 			<ThemeProvider>
-				<PendingTransactionProvider>
-					<App />
-				</PendingTransactionProvider>
+				<FeatureFlagProvider>
+					<PendingTransactionProvider>
+						<App />
+					</PendingTransactionProvider>
+				</FeatureFlagProvider>
 			</ThemeProvider>
 		</Web3Provider>
 	</StrictMode>
