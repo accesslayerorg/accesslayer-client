@@ -23,32 +23,31 @@ export default function MergeProposalCountdown({
 	className,
 }: MergeProposalCountdownProps) {
 	const [remainingMs, setRemainingMs] = useState(() =>
-		getRemainingMs(votingDeadline)
-	);
+        getRemainingMs(votingDeadline)
+    );
 
 	useEffect(() => {
-		const initial = getRemainingMs(votingDeadline);
-		setRemainingMs(initial);
+        const initial = getRemainingMs(votingDeadline);
+        setRemainingMs(initial);
 
-		if (initial <= 0) {
-			onExpire?.();
-			return;
-		}
+        if (initial <= 0) {
+            onExpire?.();
+            return;
+        }
 
-		const intervalId = setInterval(() => {
-			const remaining = getRemainingMs(votingDeadline);
-			setRemainingMs(remaining);
-			if (remaining <= 0) {
-				clearInterval(intervalId);
-				onExpire?.();
-			}
-		}, 1000);
+        const intervalId = setInterval(() => {
+            const remaining = getRemainingMs(votingDeadline);
+            setRemainingMs(remaining);
+            if (remaining <= 0) {
+                clearInterval(intervalId);
+                onExpire?.();
+            }
+        }, 1000);
 
-		return () => clearInterval(intervalId);
-	}, [votingDeadline, onExpire]);
+        return () => clearInterval(intervalId);
+    }, [votingDeadline, onExpire]);
 
 	if (remainingMs <= 0) return null;
-
 	const formatted = formatCountdownDuration(remainingMs);
 
 	return (
@@ -64,7 +63,7 @@ export default function MergeProposalCountdown({
 		>
 			<Clock className="size-3.5 shrink-0 text-amber-300" aria-hidden="true" />
 			<span data-testid="merge-proposal-countdown-text">
-				Voting closes in{' '}
+				Voting closes in&#32;{' '}
 				<span className="font-mono tabular-nums">{formatted}</span>
 			</span>
 		</div>

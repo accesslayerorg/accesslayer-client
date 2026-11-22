@@ -74,11 +74,32 @@ export function resolveCreatorKeyStatus(
 }
 
 /**
+ * Market cap for a key in stroops (price × circulating supply).
+ * `null` when either figure is missing so the aggregate can exclude the key
+ * from the average instead of counting it as zero.
+ */
+export function resolveCreatorKeyMarketCapStroops(
+	course: Course
+): number | null {
+	const priceStroops = resolveCreatorKeyPriceStroops(course);
+	const supply = course.creatorShareSupply;
+
+	if (priceStroops == null || priceStroops <= 0) return null;
+	if (typeof supply !== 'number' || !Number.isFinite(supply) || supply <= 0) {
+		return null;
+	}
+
+	return priceStroops * supply;
+}
+
+/**
  * Aggregates a creator's keys into the profile stats row.
  *
  * Volume and holder counts are summed; the rating is the mean of the ratings
  * of the keys that actually carry one (keys without a rating are excluded
  * rather than counted as zero). A creator with no rated key gets `null`.
+ * The average market cap averages price × supply across the keys that report
+ * both figures, falling back to `0` when none does.
  */
 export function aggregateCreatorProfileStats(
 	keys: Course[],
@@ -88,6 +109,8 @@ export function aggregateCreatorProfileStats(
 	let totalHolders = 0;
 	let ratingSum = 0;
 	let ratedKeyCount = 0;
+	let marketCapSum = 0;
+	let marketCapKeyCount = 0;
 
 	for (const key of keys) {
 		totalVolumeStroops += resolveCreatorKeyVolumeStroops(key);
@@ -98,12 +121,20 @@ export function aggregateCreatorProfileStats(
 			ratingSum += rating;
 			ratedKeyCount += 1;
 		}
+
+		const marketCapStroops = resolveCreatorKeyMarketCapStroops(key);
+		if (marketCapStroops != null) {
+			marketCapSum += marketCapStroops;
+			marketCapKeyCount += 1;
+		}
 	}
 
 	return {
 		keyCount: keys.length,
 		totalVolumeStroops,
 		totalHolders,
+		avgMarketCapStroops:
+			marketCapKeyCount > 0 ? Math.round(marketCapSum / marketCapKeyCount) : 0,
 		averageRating:
 			ratedKeyCount > 0
 				? Math.round((ratingSum / ratedKeyCount) * 10) / 10

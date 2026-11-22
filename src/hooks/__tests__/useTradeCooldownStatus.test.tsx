@@ -47,7 +47,7 @@ describe('useTradeCooldownStatus (#998)', () => {
 		});
 
 		const { result } = renderHook(
-			() => useTradeCooldownStatus('creator-1'),
+			() => useTradeCooldownStatus('creator-1', 'GWALLET1'),
 			{ wrapper }
 		);
 
@@ -58,16 +58,70 @@ describe('useTradeCooldownStatus (#998)', () => {
 	});
 
 	it('is disabled for an empty key id', () => {
-		renderHook(() => useTradeCooldownStatus(''), { wrapper });
+		renderHook(() => useTradeCooldownStatus('', 'GWALLET1'), { wrapper });
 
 		expect(mockGetTradeCooldownStatus).not.toHaveBeenCalled();
+	});
+
+	it('does not fetch when no wallet is connected (#915)', () => {
+		renderHook(() => useTradeCooldownStatus('creator-1', undefined), {
+			wrapper,
+		});
+
+		expect(mockGetTradeCooldownStatus).not.toHaveBeenCalled();
+	});
+
+	it('fetches when a wallet connects after page load (#915)', async () => {
+		mockGetTradeCooldownStatus.mockResolvedValue({
+			keyId: 'creator-1',
+			nextBuyAllowedAt: Math.floor(Date.now() / 1000) + 60,
+		});
+
+		const { result, rerender } = renderHook(
+			({ wallet }: { wallet?: string }) =>
+				useTradeCooldownStatus('creator-1', wallet),
+			{ wrapper, initialProps: { wallet: undefined } as { wallet?: string } }
+		);
+
+		expect(mockGetTradeCooldownStatus).not.toHaveBeenCalled();
+
+		rerender({ wallet: 'GWALLET1' });
+
+		await waitFor(() => expect(result.current.isSuccess).toBe(true));
+		expect(mockGetTradeCooldownStatus).toHaveBeenCalledTimes(1);
+	});
+
+	it('refetches for a new wallet and never shows the previous wallet cooldown (#915)', async () => {
+		const future = Math.floor(Date.now() / 1000) + 120;
+		mockGetTradeCooldownStatus
+			.mockResolvedValueOnce({ keyId: 'creator-1', nextBuyAllowedAt: future })
+			.mockResolvedValueOnce({ keyId: 'creator-1', nextBuyAllowedAt: null });
+
+		const { result, rerender } = renderHook(
+			({ wallet }: { wallet: string }) =>
+				useTradeCooldownStatus('creator-1', wallet),
+			{ wrapper, initialProps: { wallet: 'GWALLET1' } }
+		);
+
+		await waitFor(() =>
+			expect(result.current.data?.nextBuyAllowedAt).toBe(future)
+		);
+
+		rerender({ wallet: 'GWALLET2' });
+
+		// Wallet 1's cooldown must not leak into wallet 2 while it loads.
+		expect(result.current.data).toBeUndefined();
+
+		await waitFor(() => expect(result.current.isSuccess).toBe(true));
+		expect(result.current.data?.nextBuyAllowedAt).toBeNull();
+		expect(mockGetTradeCooldownStatus).toHaveBeenCalledTimes(2);
 	});
 
 	it('treats a 404 (no cooldown endpoint) as null rather than an error', async () => {
 		mockGetTradeCooldownStatus.mockResolvedValue(null);
 
 		const { result } = renderHook(
-			() => useTradeCooldownStatus('creator-1'),
+			() => useTradeCooldownStatus('creator-1', 'GWALLET1'),
 			{ wrapper }
 		);
 
@@ -82,7 +136,7 @@ describe('useTradeCooldownStatus (#998)', () => {
 		});
 
 		const { result } = renderHook(
-			() => useTradeCooldownStatus('creator-1'),
+			() => useTradeCooldownStatus('creator-1', 'GWALLET1'),
 			{ wrapper }
 		);
 

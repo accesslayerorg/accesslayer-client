@@ -6,6 +6,7 @@ import {
   createAtomicSwapProposal,
   fetchAtomicSwapProposal,
   acceptAtomicSwapProposal,
+  cancelAtomicSwapProposal,
   fetchUserAtomicSwapProposals,
   fetchAtomicSwapHistory,
 } from '@/services/atomicSwap.service';
@@ -53,10 +54,29 @@ export function useAcceptAtomicSwapProposal(address: string) {
       queryClient.invalidateQueries({ queryKey: ['atomic-swap', 'history', address] });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet.holdings(address) });
       queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
-      showToast.transactionSuccess('Swap completed', 'Atomic swap executed successfully');
+      showToast.transactionSuccess('SwapExecuted', 'Atomic swap executed successfully');
     },
     onError: (error) => {
       showToast.error(error instanceof Error ? error.message : 'Failed to accept proposal');
+    },
+  });
+}
+
+export function useCancelAtomicSwapProposal(address: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ['atomic-swap', 'cancel', address],
+    mutationFn: async (params: Parameters<typeof cancelAtomicSwapProposal>[0]) => {
+      return cancelAtomicSwapProposal(params);
+    },
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData(['atomic-swap', 'proposal', variables.proposalId], data.proposal);
+      queryClient.invalidateQueries({ queryKey: ['atomic-swap', 'proposals', address] });
+      showToast.transactionSuccess('SwapCancelled', 'Atomic swap proposal cancelled');
+    },
+    onError: (error) => {
+      showToast.error(error instanceof Error ? error.message : 'Failed to cancel proposal');
     },
   });
 }

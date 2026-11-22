@@ -17,26 +17,31 @@ import { isActiveCooldown } from '@/utils/tradeCooldown.utils';
 export type { TradeCooldownInfo };
 
 /**
- * Fetches the trade cooldown status for a creator key (#998).
+ * Fetches the trade cooldown status for a creator key and the connected
+ * wallet (#998, #915).
  *
- * The status is fetched on page load (React Query's default fetch-on-mount)
- * and refreshed after every completed transaction: `invalidateTradeCooldownStatus`
+ * The cache is scoped per wallet, so the status is fetched on page load and
+ * again whenever a wallet connects or switches — a previous wallet's cooldown
+ * is never shown for the new one. With no wallet connected there is no
+ * per-wallet cooldown, so nothing is fetched. It is refreshed after every
+ * completed transaction: `invalidateTradeCooldownStatus`
  * is exported so trade mutations can drop the cached cooldown and force a
  * refetch, which is how buttons re-enable as soon as the backend reports the
  * cooldown has lifted.
  */
 export function useTradeCooldownStatus(
-	keyId: string
+	keyId: string,
+	walletAddress?: string | null
 ): UseQueryResult<TradeCooldownStatus | null> {
 	return useQuery<TradeCooldownStatus | null>({
-		queryKey: queryKeys.creators.tradeCooldown(keyId),
+		queryKey: queryKeys.creators.tradeCooldown(keyId, walletAddress ?? ''),
 		queryFn: async () => {
 			// The endpoint has no per-wallet identity in the payload — the
 			// creatorId is the key we asked about.
 			const info = await courseService.getTradeCooldownStatus(keyId);
 			return info ? { ...info, creatorId: keyId } : null;
 		},
-		enabled: Boolean(keyId),
+		enabled: Boolean(keyId) && Boolean(walletAddress),
 		staleTime: 15_000,
 		retry: false,
 	});

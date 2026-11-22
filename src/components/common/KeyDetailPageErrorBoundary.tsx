@@ -12,25 +12,29 @@ interface ErrorBoundaryProps {
 interface State {
 	hasError: boolean;
 	error: Error | null;
+	resetKey: number;
 }
 
 class KeyDetailPageErrorBoundary extends Component<ErrorBoundaryProps, State> {
 	public state: State = {
 		hasError: false,
 		error: null,
+		resetKey: 0,
 	};
 
-	public static getDerivedStateFromError(error: Error): State {
+	public static getDerivedStateFromError(error: Error): Partial<State> {
 		return { hasError: true, error };
 	}
 
 	public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
 		markErrorAsCaught(error);
-		console.error(
-			'Error rendering key detail page:',
-			error,
-			errorInfo.componentStack
-		);
+		if (import.meta.env.DEV) {
+			console.error(
+				'Error rendering key detail page:',
+				error,
+				errorInfo.componentStack
+			);
+		}
 	}
 
 	public componentDidUpdate(prevProps: ErrorBoundaryProps) {
@@ -38,14 +42,20 @@ class KeyDetailPageErrorBoundary extends Component<ErrorBoundaryProps, State> {
 			this.state.hasError &&
 			prevProps.locationKey !== this.props.locationKey
 		) {
-			this.setState({ hasError: false, error: null });
+			this.setState(state => ({
+				hasError: false,
+				error: null,
+				resetKey: state.resetKey + 1,
+			}));
 		}
 	}
 
-	private handleReload = () => {
-		this.setState({ hasError: false, error: null }, () => {
-			window.location.reload();
-		});
+	private handleRetry = () => {
+		this.setState(state => ({
+			hasError: false,
+			error: null,
+			resetKey: state.resetKey + 1,
+		}));
 	};
 
 	public render() {
@@ -65,10 +75,10 @@ class KeyDetailPageErrorBoundary extends Component<ErrorBoundaryProps, State> {
 							Something went wrong loading this key
 						</h1>
 						<p className="max-w-md font-jakarta text-base leading-7 text-white/70">
-							An unexpected error occurred. You can reload the page or return
-							to the marketplace to continue browsing.
+							An unexpected error occurred. You can reload the page or
+							return to the marketplace to continue browsing.
 						</p>
-						{this.state.error && (
+						{import.meta.env.DEV && this.state.error && (
 							<p className="max-w-md font-jakarta text-xs leading-5 text-white/50 break-words">
 								{this.state.error.message}
 							</p>
@@ -77,11 +87,11 @@ class KeyDetailPageErrorBoundary extends Component<ErrorBoundaryProps, State> {
 					<div className="flex flex-col sm:flex-row gap-3">
 						<Button
 							type="button"
-							onClick={this.handleReload}
+							onClick={this.handleRetry}
 							className="h-12 rounded-xl bg-amber-400 px-5 font-jakarta font-black text-slate-950 hover:bg-amber-300"
 						>
 							<RefreshCw className="size-4" aria-hidden="true" />
-							Reload page
+							Retry
 						</Button>
 						<Button
 							asChild
@@ -93,12 +103,24 @@ class KeyDetailPageErrorBoundary extends Component<ErrorBoundaryProps, State> {
 								Back to marketplace
 							</Link>
 						</Button>
+						<a
+							href="https://github.com/accesslayerorg/accesslayer-client/issues"
+							target="_blank"
+							rel="noreferrer"
+							className="inline-flex h-12 items-center rounded-xl border border-white/20 px-5 text-sm font-bold text-white hover:bg-white/10"
+						>
+							Contact support
+						</a>
 					</div>
 				</main>
 			);
 		}
 
-		return this.props.children;
+		return (
+			<div key={this.state.resetKey} className="contents">
+				{this.props.children}
+			</div>
+		);
 	}
 }
 

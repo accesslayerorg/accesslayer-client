@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { Coins, Star, TrendingUp, Users } from 'lucide-react';
 import CreatorInitialsAvatar from '@/components/common/CreatorInitialsAvatar';
+import AddToBundleButton from '@/components/common/AddToBundleButton';
 import { cn } from '@/lib/utils';
 import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import { formatCompactNumber } from '@/utils/numberFormat.utils';
@@ -138,14 +139,23 @@ const DeployedCreatorKeyCard: React.FC<DeployedCreatorKeyCardProps> = ({
 				</dl>
 			</div>
 
-			<Link
-				to={`/creator/${id}`}
-				data-testid="deployed-key-invest-cta"
-				aria-label={`Invest in ${title}`}
-				className="mt-5 inline-flex items-center justify-center rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition-colors hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#06111f]"
-			>
-				Invest
-			</Link>
+			<div className="mt-5 flex items-center gap-2">
+				<AddToBundleButton
+					keyId={id}
+					keyName={title}
+					priceStroops={priceStroops ?? 0}
+					thumbnail={avatarUrl ?? undefined}
+					className="flex-1"
+				/>
+				<Link
+					to={`/creator/${id}`}
+					data-testid="deployed-key-invest-cta"
+					aria-label={`Invest in ${title}`}
+					className="flex-1 inline-flex items-center justify-center rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition-colors hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#06111f]"
+				>
+					Invest
+				</Link>
+			</div>
 		</article>
 	);
 };

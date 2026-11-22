@@ -8,7 +8,13 @@
 
 /** Current status of a governance proposal. */
 export type ProposalStatus =
-	'active' | 'closed' | 'passed' | 'rejected' | 'executed' | 'cancelled';
+	| 'active'
+	| 'closed'
+	| 'passed'
+	| 'rejected'
+	| 'failed'
+	| 'executed'
+	| 'cancelled';
 
 export type ProposalOutcome = 'passed' | 'failed' | 'quorum_not_met';
 
@@ -75,6 +81,14 @@ export interface Proposal {
 	againstVotes: number;
 	/** Aggregate abstain weight. */
 	abstainVotes: number;
+	/** Optional protocol parameter name targeted by this proposal (#1126). */
+	paramName?: string;
+	/** Previous protocol parameter value before execution (#1126). */
+	oldValue?: string | number;
+	/** Proposed or executed new protocol parameter value (#1126). */
+	newValue?: string | number;
+	/** ISO timestamp (or ms epoch) when the timelock expires and the proposal can be executed (#1243). */
+	timelockExpiresAt?: string;
 }
 
 /** Props accepted by the QuorumIndicator component. */
@@ -87,4 +101,54 @@ export interface QuorumIndicatorProps {
 	totalCirculatingSupply: number;
 	/** Optional extra class names. */
 	className?: string;
+}
+
+export interface CreateProposalPayload {
+	title: string;
+	description: string;
+	endDate: string;
+}
+
+export type CreateProposalInput = CreateProposalPayload;
+
+// ── Governance audit feed (#1351) ─────────────────────────────────────────
+
+/** Privileged protocol actions surfaced in the public governance audit feed. */
+export type GovernanceEventType =
+	| 'admin_transfer_proposed'
+	| 'admin_transfer_accepted'
+	| 'admin_transfer_cancelled'
+	| 'config_change'
+	| 'pause'
+	| 'unpause'
+	| 'upgrade';
+
+/** A single privileged change recorded on-chain. */
+export interface GovernanceEvent {
+	id: string;
+	type: GovernanceEventType;
+	/** Account that performed the action. */
+	actor: string;
+	/** Account or setting the action applied to, when there is one. */
+	target: string | null;
+	/** ISO timestamp of the ledger close. */
+	timestamp: string;
+	/** Transaction hash, used for the explorer link and copy action. */
+	txHash: string | null;
+	/** Optional human-readable detail, e.g. `fee_bps: 100 → 150`. */
+	details: string | null;
+}
+
+/** One cursor page of governance events. */
+export interface GovernanceEventsPage {
+	items: GovernanceEvent[];
+	nextCursor: string | null;
+}
+
+/** Current protocol admin and any admin transfer awaiting acceptance. */
+export interface GovernanceAdminState {
+	currentAdmin: string;
+	pendingAdmin: string | null;
+	/** ISO timestamp after which the pending transfer can no longer be accepted. */
+	pendingExpiresAt: string | null;
 }

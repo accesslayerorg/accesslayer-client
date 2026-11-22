@@ -34,3 +34,49 @@ export function formatCountdownTime(totalSeconds: number): string {
 
 	return `${hh}:${mm}:${ss}`;
 }
+
+/**
+ * Seconds remaining until an absolute unlock timestamp (#1163).
+ *
+ * Accepts seconds epoch, milliseconds epoch, or an ISO string — the same
+ * shapes the backend reports elsewhere. Returns 0 when the timestamp is
+ * missing, unparseable, or already in the past.
+ */
+export function computeRemainingUnlockSeconds(
+	unlockAt?: number | string | null
+): number {
+	if (!unlockAt) return 0;
+
+	let unlockMs = 0;
+	if (typeof unlockAt === 'number') {
+		unlockMs = unlockAt > 1e11 ? unlockAt : unlockAt * 1000;
+	} else {
+		const parsed = new Date(unlockAt).getTime();
+		if (isNaN(parsed)) return 0;
+		unlockMs = parsed;
+	}
+
+	const remainingMs = unlockMs - Date.now();
+	return remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0;
+}
+
+/**
+ * Human-readable lock-up countdown in days, hours, and minutes (#1163),
+ * e.g. "2d 13h 45m". Zero-valued leading units are omitted; minutes are
+ * always shown so the label never reads as a fully elapsed countdown while
+ * seconds remain.
+ */
+export function formatUnlockCountdown(totalSeconds: number): string {
+	if (totalSeconds <= 0) return '0m';
+
+	const days = Math.floor(totalSeconds / 86400);
+	const hours = Math.floor((totalSeconds % 86400) / 3600);
+	const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+	const parts: string[] = [];
+	if (days > 0) parts.push(`${days}d`);
+	if (hours > 0) parts.push(`${hours}h`);
+	if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
+
+	return parts.join(' ');
+}

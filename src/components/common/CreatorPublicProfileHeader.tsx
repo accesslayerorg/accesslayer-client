@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
+import IssuerVerificationBadge from '@/components/common/IssuerVerificationBadge';
 import CreatorInitialsAvatar from '@/components/common/CreatorInitialsAvatar';
 import CreatorProfileSocialLinks from '@/components/common/CreatorProfileSocialLinks';
+import CreatorBio from '@/components/common/CreatorBio';
 import { formatCreatorHandle } from '@/utils/handleDisplay.utils';
 import type { CreatorSocialLink } from '@/types/creatorProfile';
 
@@ -15,10 +17,12 @@ interface CreatorPublicProfileHeaderProps {
 	isVerified?: boolean;
 	/** Pre-formatted membership date, e.g. `Mar 2024`. */
 	memberSince?: string | null;
+	/** Creator-written bio; hidden when missing (#1120). */
+	bio?: string | null;
 	/** Total keys the creator has deployed. */
 	keyCount: number;
 	socialLinks: CreatorSocialLink[];
-	/** Rendered on the right of the header (e.g. the follow button). */
+	/** Rendered on the right of the header (e.g. follow/share buttons). */
 	actions?: ReactNode;
 	className?: string;
 }
@@ -34,6 +38,7 @@ const CreatorPublicProfileHeader: React.FC<CreatorPublicProfileHeaderProps> = ({
 	avatarUrl,
 	isVerified = false,
 	memberSince,
+	bio,
 	keyCount,
 	socialLinks,
 	actions,
@@ -77,6 +82,10 @@ const CreatorPublicProfileHeader: React.FC<CreatorPublicProfileHeaderProps> = ({
 								{displayName}
 							</h1>
 							{isVerified && <VerifiedBadge verified={true} />}
+							<IssuerVerificationBadge
+								wallet={creatorId}
+								showExpiryTooltip
+							/>
 						</div>
 
 						{displayHandle && (
@@ -105,6 +114,14 @@ const CreatorPublicProfileHeader: React.FC<CreatorPublicProfileHeaderProps> = ({
 								))}
 							</p>
 						)}
+
+						{/* Only renders when the creator has published a bio (#1120). */}
+						<CreatorBio
+							bio={bio}
+							variant="profile"
+							allowEmpty
+							className="max-w-xl pt-1"
+						/>
 
 						{/* Only renders when the creator has published links. */}
 						<CreatorProfileSocialLinks

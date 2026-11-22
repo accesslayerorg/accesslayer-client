@@ -60,4 +60,29 @@ describe('formatRelativeTimeLabel', () => {
 		const veryRecentDate = new Date(Date.now() - 5000);
 		expect(formatRelativeTimeLabel(veryRecentDate)).toBe('just now');
 	});
+
+	// #749's exact scope: a few specific inputs the boundary tests above don't
+	// happen to cover by value, plus the future-timestamp case.
+	it('returns "just now" for a timestamp 30 seconds ago', () => {
+		expect(formatRelativeTimeLabel(makeDate(30, now), now)).toBe('just now');
+	});
+
+	it('returns "5 minutes ago" for a timestamp 5 minutes ago', () => {
+		expect(formatRelativeTimeLabel(makeDate(5 * 60, now), now)).toBe('5 minutes ago');
+	});
+
+	it('returns "2 hours ago" for a timestamp 2 hours ago', () => {
+		expect(formatRelativeTimeLabel(makeDate(2 * 3600, now), now)).toBe('2 hours ago');
+	});
+
+	it('returns "3 days ago" for a timestamp 3 days ago', () => {
+		expect(formatRelativeTimeLabel(makeDate(3 * 24 * 3600, now), now)).toBe('3 days ago');
+	});
+
+	it('returns "just now" for a future timestamp, never a negative value', () => {
+		const future = new Date(now.getTime() + 5 * 60 * 1000);
+		const result = formatRelativeTimeLabel(future, now);
+		expect(result).toBe('just now');
+		expect(result).not.toMatch(/-/);
+	});
 });

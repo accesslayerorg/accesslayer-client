@@ -156,6 +156,20 @@
 	}
 }
 
+/*
+ * Utility: hide the scrollbar while keeping the element scrollable (#1055).
+ * Used by horizontally scrolling mobile tab/filter rails so the overflow is
+ * reachable with a native swipe gesture but no visual scrollbar chrome is
+ * clipped off-screen.
+ */
+@utility no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
 @layer components {
 	.marketplace-section {
 		margin-top: var(--spacing-section-default);
@@ -303,13 +317,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.header-animate {
+	:root:not(.motion-normal) .header-animate {
 		animation: none;
 	}
-	.scroll-reveal {
+	:root:not(.motion-normal) .scroll-reveal {
 		opacity: 1;
 	}
-	.scroll-reveal.is-visible {
+	:root:not(.motion-normal) .scroll-reveal.is-visible {
 		animation: none;
 	}
 }
@@ -345,10 +359,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.hero-animate {
+	:root:not(.motion-normal) .hero-animate {
 		animation: none;
 	}
-	.hero-bg-animate {
+	:root:not(.motion-normal) .hero-bg-animate {
 		animation: none;
 	}
 }
@@ -367,7 +381,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.animate-marquee {
+	:root:not(.motion-normal) .animate-marquee {
 		animation: none;
 	}
 }
@@ -409,9 +423,74 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.creator-card-entry {
+	:root:not(.motion-normal) .creator-card-entry {
 		animation: none;
 	}
+}
+
+/*
+ * Badge achievement reveal animation (#1222).
+ *
+ * The achievement toast plays this on the badge icon so the mint reads as a
+ * celebration rather than a static notification. With reduced motion the
+ * animation is suppressed and the icon is simply shown.
+ */
+@keyframes badge-reveal {
+	0% {
+		opacity: 0;
+		transform: scale(0.4) rotate(-12deg);
+	}
+	60% {
+		opacity: 1;
+		transform: scale(1.15) rotate(6deg);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1) rotate(0deg);
+	}
+}
+
+.badge-reveal {
+	animation: badge-reveal 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:root:not(.motion-normal) .badge-reveal {
+		animation: none;
+	}
+}
+
+/*
+ * Global reduced-motion handling.
+ *
+ * Non-essential transitions and animations are collapsed to (almost) zero
+ * duration so elements settle in their final state instantly. Focus rings and
+ * other non-transitioned feedback are unaffected because only duration and
+ * iteration are overridden.
+ *
+ * The OS preference is honoured by the media query; the `.motion-reduce`
+ * class lets the in-app settings toggle force the same behaviour when the OS
+ * preference is off. `.motion-normal` opts back into motion when the OS asks
+ * for reduced motion.
+ */
+@media (prefers-reduced-motion: reduce) {
+	:root:not(.motion-normal) *,
+	:root:not(.motion-normal) *::before,
+	:root:not(.motion-normal) *::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+:root.motion-reduce *,
+:root.motion-reduce *::before,
+:root.motion-reduce *::after {
+	animation-duration: 0.001ms !important;
+	animation-iteration-count: 1 !important;
+	transition-duration: 0.001ms !important;
+	scroll-behavior: auto !important;
 }
 
 /*

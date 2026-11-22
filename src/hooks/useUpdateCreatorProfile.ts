@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { courseService, type Course } from '@/services/course.service';
 import { queryKeys } from '@/lib/queryKeys';
+import { cacheManager } from '@/utils/cache.utils';
 import showToast from '@/utils/toast.util';
 
 interface UpdateCreatorProfileVariables {
@@ -12,7 +13,7 @@ interface UpdateCreatorProfileVariables {
  * Mutation hook for updating a creator's profile information.
  *
  * On success:
- * - Invalidates the creator profile query to refetch fresh data
+ * - Replaces the creator profile cache with the saved course
  * - Shows success toast: "Profile updated successfully"
  * - Toast auto-dismisses after 4 seconds
  *
@@ -30,19 +31,25 @@ export function useUpdateCreatorProfile() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async ({ creatorId, data }: UpdateCreatorProfileVariables) => {
+		mutationFn: async ({
+			creatorId,
+			data,
+		}: UpdateCreatorProfileVariables) => {
 			return courseService.updateCourse(creatorId, data);
 		},
-		onError: (error) => {
+		onError: error => {
 			const errorMessage =
 				error instanceof Error ? error.message : 'Failed to update profile';
 			showToast.error(errorMessage);
 		},
-		onSuccess: (_, variables) => {
-			// Invalidate the creator profile query to refetch fresh data
-			queryClient.invalidateQueries({
-				queryKey: queryKeys.creators.detail(variables.creatorId),
-			});
+		onSuccess: (updatedCourse, variables) => {
+			cacheManager.invalidate(`course_${variables.creatorId}`);
+			if (updatedCourse) {
+				queryClient.setQueryData(
+					queryKeys.creators.detail(variables.creatorId),
+					updatedCourse
+				);
+			}
 
 			// Show success toast that auto-dismisses after 4 seconds
 			showToast.success('Profile updated successfully');

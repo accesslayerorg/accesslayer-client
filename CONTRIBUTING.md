@@ -52,6 +52,7 @@ Validation lives in [`src/utils/env.utils.ts`](./src/utils/env.utils.ts).
 | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `VITE_SEPOLIA_RPC_URL`                                                                         | RPC URL for the Ethereum Sepolia testnet (chain `11155111`). Only needed when testing on Sepolia. |
 | `VITE_MAINNET_RPC_URL`                                                                         | RPC URL for Ethereum mainnet (chain `1`). Only needed when testing against mainnet.               |
+| `VITE_KEY_RENTAL_CONTRACT_ID`                                                                  | Key rental contract (#1360). Leave unset until deployed; rental pages then show as not live.      |
 | `VITE_UTM_SOURCE`, `VITE_UTM_MEDIUM`, `VITE_UTM_CAMPAIGN`, `VITE_UTM_TERM`, `VITE_UTM_CONTENT` | UTM parameters appended to shared profile links. Leave blank to disable UTM tracking.             |
 
 ### Where to get testnet RPC URLs
@@ -145,3 +146,4 @@ Issues labeled `good first issue` should:
 ## Questions
 
 If something is unclear, open a documentation issue or ask in the repo before starting implementation.
+..

@@ -73,7 +73,8 @@ export function calculatePriceAtSupply(
 
 		if (supply >= current.supply && supply <= next.supply) {
 			// Linear interpolation
-			const progress = (supply - current.supply) / (next.supply - current.supply);
+			const progress =
+				(supply - current.supply) / (next.supply - current.supply);
 			const priceDiff = next.priceStroops - current.priceStroops;
 			return Math.round(current.priceStroops + priceDiff * progress);
 		}
@@ -90,10 +91,12 @@ export function generateBondingCurveData(
 	currentPriceStroops: number,
 	customMilestones?: Omit<BondingCurveMilestone, 'priceXLM'>[]
 ): BondingCurveData {
-	const milestones = (customMilestones || DEFAULT_MILESTONES).map(milestone => ({
-		...milestone,
-		priceXLM: stroopsToXLM(milestone.priceStroops),
-	}));
+	const milestones = (customMilestones || DEFAULT_MILESTONES).map(
+		milestone => ({
+			...milestone,
+			priceXLM: stroopsToXLM(milestone.priceStroops),
+		})
+	);
 
 	return {
 		milestones,
@@ -110,12 +113,18 @@ export function calculatePriceImpact(
 	currentSupply: number,
 	buyQuantity: number,
 	milestones: Omit<BondingCurveMilestone, 'priceXLM'>[] = DEFAULT_MILESTONES
-): { currentPrice: number; newPrice: number; priceIncrease: number; priceIncreasePercent: number } {
+): {
+	currentPrice: number;
+	newPrice: number;
+	priceIncrease: number;
+	priceIncreasePercent: number;
+} {
 	const currentPrice = calculatePriceAtSupply(currentSupply, milestones);
 	const newSupply = currentSupply + buyQuantity;
 	const newPrice = calculatePriceAtSupply(newSupply, milestones);
 	const priceIncrease = newPrice - currentPrice;
-	const priceIncreasePercent = currentPrice > 0 ? (priceIncrease / currentPrice) * 100 : 0;
+	const priceIncreasePercent =
+		currentPrice > 0 ? (priceIncrease / currentPrice) * 100 : 0;
 
 	return {
 		currentPrice,
@@ -133,7 +142,11 @@ export function generateChartDataPoints(
 	milestones: BondingCurveMilestone[],
 	pointsPerSegment: number = 10
 ): Array<{ supply: number; priceStroops: number; priceXLM: number }> {
-	const dataPoints: Array<{ supply: number; priceStroops: number; priceXLM: number }> = [];
+	const dataPoints: Array<{
+		supply: number;
+		priceStroops: number;
+		priceXLM: number;
+	}> = [];
 
 	for (let i = 0; i < milestones.length - 1; i++) {
 		const current = milestones[i];
@@ -149,8 +162,12 @@ export function generateChartDataPoints(
 		// Add intermediate points for smooth curve
 		for (let j = 1; j < pointsPerSegment; j++) {
 			const progress = j / pointsPerSegment;
-			const supply = current.supply + (next.supply - current.supply) * progress;
-			const priceStroops = Math.round(current.priceStroops + (next.priceStroops - current.priceStroops) * progress);
+			const supply =
+				current.supply + (next.supply - current.supply) * progress;
+			const priceStroops = Math.round(
+				current.priceStroops +
+					(next.priceStroops - current.priceStroops) * progress
+			);
 			const priceXLM = stroopsToXLM(priceStroops);
 
 			dataPoints.push({ supply, priceStroops, priceXLM });
@@ -215,17 +232,17 @@ export interface BondingCurveParams {
 /**
  * Computes the bonding curve price at a given supply step.
  * Uses an exponential bonding curve formula: price = base_price * (growth_factor ^ supply)
- * 
+ *
  * This is a pure computation function that does not mutate contract state.
  * It's useful for:
  * - Previewing prices before transactions
  * - Displaying price charts
  * - Calculating expected costs
- * 
+ *
  * @param supply - The current supply (number of keys minted)
  * @param params - Bonding curve parameters
  * @returns Price in stroops at the given supply step
- * 
+ *
  * @example
  * ```ts
  * const params = { basePriceStroops: 10000000, growthFactor: 1.01 }; // 1 XLM base, 1% growth
@@ -257,7 +274,7 @@ export function computeBondingCurvePrice(
 /**
  * Computes the bonding curve price in XLM (decimal) at a given supply step.
  * Convenience wrapper around computeBondingCurvePrice that converts stroops to XLM.
- * 
+ *
  * @param supply - The current supply (number of keys minted)
  * @param params - Bonding curve parameters
  * @returns Price in XLM at the given supply step
@@ -273,10 +290,10 @@ export function computeBondingCurvePriceXLM(
 /**
  * Computes the total cost to buy a quantity of keys from a given supply.
  * This calculates the area under the bonding curve from `supply` to `supply + quantity`.
- * 
+ *
  * For a linear bonding curve, this is the integral:
  * total_cost = base_price * quantity * (1 + (growth_factor - 1) * (supply + quantity/2))
- * 
+ *
  * @param currentSupply - Current supply before purchase
  * @param quantity - Number of keys to buy
  * @param params - Bonding curve parameters
@@ -296,7 +313,7 @@ export function computeBuyCost(
 
 	const startPrice = computeBondingCurvePrice(currentSupply, params);
 	const endPrice = computeBondingCurvePrice(currentSupply + quantity, params);
-	
+
 	// Average price for linear bonding curve
 	const avgPrice = (startPrice + endPrice) / 2;
 	return avgPrice * quantity;
@@ -306,7 +323,7 @@ export function computeBuyCost(
  * Computes the total revenue from selling a quantity of keys at a given supply.
  * This is the reverse of computeBuyCost - calculates the area under the curve
  * from `supply - quantity` to `supply`.
- * 
+ *
  * @param currentSupply - Current supply before sale
  * @param quantity - Number of keys to sell
  * @param params - Bonding curve parameters
@@ -327,7 +344,7 @@ export function computeSellRevenue(
 	const newSupply = currentSupply - quantity;
 	const startPrice = computeBondingCurvePrice(newSupply, params);
 	const endPrice = computeBondingCurvePrice(currentSupply, params);
-	
+
 	// Average price for linear bonding curve
 	const avgPrice = (startPrice + endPrice) / 2;
 	return avgPrice * quantity;
@@ -341,3 +358,224 @@ export const DEFAULT_BONDING_CURVE_PARAMS: BondingCurveParams = {
 	basePriceStroops: 10_000_000, // 1 XLM
 	growthFactor: 1.01, // 1% growth per key
 };
+
+// ============================================================================
+// BIGINT CURVE ENGINE (price impact preview, #755)
+// ============================================================================
+
+/** Basis-point scale (10_000 bps = 100%). */
+const BPS_SCALE = 10_000n;
+
+/**
+ * Fixed-point growth factor used by the bigint curve engine, scaled by
+ * `GROWTH_SCALE`. Mirrors `DEFAULT_BONDING_CURVE_PARAMS.growthFactor` (1.01)
+ * as an integer so every step of the preview is deterministic bigint math,
+ * matching the contract's own fixed-point arithmetic rather than floats.
+ */
+const GROWTH_SCALE = 1_000_000n;
+const DEFAULT_GROWTH_FACTOR_SCALED = 1_010_000n; // 1.01 * GROWTH_SCALE
+
+const DEFAULT_BASE_PRICE_STROOPS_BIGINT = BigInt(
+	DEFAULT_BONDING_CURVE_PARAMS.basePriceStroops
+);
+
+/** Price at `supply` under the same linear curve as {@link computeBondingCurvePrice}, in stroops, as a bigint. */
+function priceAtSupplyBigint(
+	supply: bigint,
+	basePriceStroops: bigint = DEFAULT_BASE_PRICE_STROOPS_BIGINT,
+	growthFactorScaled: bigint = DEFAULT_GROWTH_FACTOR_SCALED
+): bigint {
+	// price = basePrice * (1 + (growthFactor - 1) * supply)
+	//       = basePrice * (GROWTH_SCALE + (growthFactorScaled - GROWTH_SCALE) * supply) / GROWTH_SCALE
+	const multiplierScaled =
+		GROWTH_SCALE + (growthFactorScaled - GROWTH_SCALE) * supply;
+	return (basePriceStroops * multiplierScaled) / GROWTH_SCALE;
+}
+
+/** Result of a buy-cost preview: gross cost, fee, net cost, and resulting price — all in stroops. */
+export interface CurveBuyPreview {
+	grossCost: bigint;
+	fee: bigint;
+	netCost: bigint;
+	newPrice: bigint;
+}
+
+/** Result of a sell-payout preview: gross payout, fee, net payout, and resulting price — all in stroops. */
+export interface CurveSellPreview {
+	grossPayout: bigint;
+	fee: bigint;
+	netPayout: bigint;
+	newPrice: bigint;
+}
+
+/**
+ * Computes the cost to buy `amount` keys starting from `currentSupply`,
+ * using bigint arithmetic throughout so the preview never drifts from the
+ * contract's own integer math via floating-point rounding.
+ *
+ * Gross cost is the average of the price before and after the purchase,
+ * multiplied by the quantity — the same trapezoidal approximation the
+ * float `computeBuyCost` above uses, just in bigint. `fee` is `feeBps`
+ * basis points of the gross cost; `netCost` is what the trader actually
+ * pays. Named distinctly from the float `computeBuyCost`/`computeSellRevenue`
+ * above (which several existing call sites already depend on with a
+ * `(supply, quantity, params)` float signature) to avoid colliding with them.
+ */
+export function computeBuyCostPreview(
+	currentSupply: bigint,
+	amount: bigint,
+	feeBps: bigint
+): CurveBuyPreview {
+	if (amount < 0n) throw new Error('Amount cannot be negative');
+	if (currentSupply < 0n) throw new Error('Current supply cannot be negative');
+
+	const startPrice = priceAtSupplyBigint(currentSupply);
+	const newSupply = currentSupply + amount;
+	const newPrice = priceAtSupplyBigint(newSupply);
+
+	const grossCost = ((startPrice + newPrice) * amount) / 2n;
+	const fee = (grossCost * feeBps) / BPS_SCALE;
+	const netCost = grossCost + fee;
+
+	return { grossCost, fee, netCost, newPrice };
+}
+
+/**
+ * Computes the payout for selling `amount` keys from `currentSupply`, using
+ * bigint arithmetic throughout. Mirrors the float `computeSellRevenue`
+ * above in bigint form; `fee` is deducted from the gross payout to produce
+ * `netPayout`.
+ */
+export function computeSellPayoutPreview(
+	currentSupply: bigint,
+	amount: bigint,
+	feeBps: bigint
+): CurveSellPreview {
+	if (amount < 0n) throw new Error('Amount cannot be negative');
+	if (currentSupply < 0n) throw new Error('Current supply cannot be negative');
+	if (amount > currentSupply) {
+		throw new Error('Cannot sell more keys than current supply');
+	}
+
+	const newSupply = currentSupply - amount;
+	const startPrice = priceAtSupplyBigint(newSupply);
+	const endPrice = priceAtSupplyBigint(currentSupply);
+
+	const grossPayout = ((startPrice + endPrice) * amount) / 2n;
+	const fee = (grossPayout * feeBps) / BPS_SCALE;
+	const netPayout = grossPayout - fee;
+
+	return { grossPayout, fee, netPayout, newPrice: startPrice };
+}
+
+/** Slippage color band for the price-impact badge. */
+export type SlippageSeverity = 'low' | 'medium' | 'high';
+
+/**
+ * Classifies a slippage percentage into the badge's green/yellow/red bands:
+ * green (`low`) under 1%, yellow (`medium`) 1-5%, red (`high`) over 5%.
+ */
+export function classifySlippageSeverity(
+	slippagePercent: number
+): SlippageSeverity {
+	const magnitude = Math.abs(slippagePercent);
+	if (magnitude > 5) return 'high';
+	if (magnitude >= 1) return 'medium';
+	return 'low';
+}
+
+/**
+ * Computes the slippage percentage between the pre-trade and post-trade
+ * price: `(newPrice - currentPrice) / currentPrice * 100`. Returns 0 when
+ * the current price is zero (nothing to compare against) rather than
+ * dividing by zero.
+ */
+export function computeSlippagePercent(
+	currentPrice: bigint,
+	newPrice: bigint
+): number {
+	if (currentPrice === 0n) return 0;
+	// Scale by 10_000 before converting to Number so sub-percent slippage
+	// on small bigint values survives the bigint division's truncation.
+	const scaled = ((newPrice - currentPrice) * 1_000_000n) / currentPrice;
+	return Number(scaled) / 10_000;
+}
+
+/**
+ * Applies a worst-case buffer (in basis points) on top of a computed cost,
+ * matching the `max_price` tolerance submitted to the contract so the user
+ * sees the true worst-case XLM figure, not just the expected one.
+ */
+export function applyWorstCaseBuffer(
+	costStroops: bigint,
+	bufferBps: bigint
+): bigint {
+	return costStroops + (costStroops * bufferBps) / BPS_SCALE;
+}
+
+// ============================================================================
+// LINEAR BONDING CURVE PARAMETERS & PROPOSAL PREVIEW
+// ============================================================================
+
+export interface LinearCurveParams {
+	slope: number;
+	intercept: number;
+}
+
+export interface CurveImpactPreview {
+	currentPrice: number;
+	newPrice: number;
+	priceChange: number;
+	percentChange: number;
+}
+
+/**
+ * Computes linear bonding curve price: intercept + slope * supply.
+ * All units are in XLM.
+ */
+export function computeLinearCurvePrice(
+	supply: number,
+	slope: number,
+	intercept: number
+): number {
+	if (supply < 0) {
+		throw new Error('Supply cannot be negative');
+	}
+	if (slope < 0) {
+		throw new Error('Slope cannot be negative');
+	}
+	if (intercept < 0) {
+		throw new Error('Intercept cannot be negative');
+	}
+	return intercept + slope * supply;
+}
+
+/**
+ * Computes price impact preview between current and proposed linear curve parameters.
+ */
+export function computeCurveImpactPreview(
+	supply: number,
+	current: LinearCurveParams,
+	proposed: LinearCurveParams
+): CurveImpactPreview {
+	const currentPrice = computeLinearCurvePrice(
+		supply,
+		current.slope,
+		current.intercept
+	);
+	const newPrice = computeLinearCurvePrice(
+		supply,
+		proposed.slope,
+		proposed.intercept
+	);
+	const priceChange = newPrice - currentPrice;
+	const percentChange =
+		currentPrice > 0 ? (priceChange / currentPrice) * 100 : 0;
+
+	return {
+		currentPrice,
+		newPrice,
+		priceChange,
+		percentChange,
+	};
+}

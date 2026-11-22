@@ -3,6 +3,9 @@ import { Link } from 'react-router';
 import { useAccount } from 'wagmi';
 import ReferralLinkGenerator from '@/components/common/ReferralLinkGenerator';
 import ReferralEarningsPanel from '@/components/common/ReferralEarningsPanel';
+import ReferralShareButtons from '@/components/common/ReferralShareButtons';
+import ReferralTierBreakdown from '@/components/common/ReferralTierBreakdown';
+import ReferralEarningsTable from '@/components/common/ReferralEarningsTable';
 import ReferredWalletsTable from '@/components/common/ReferredWalletsTable';
 import ReferralProgrammeTerms from '@/components/common/ReferralProgrammeTerms';
 import ConnectWalletButton from '@/components/common/ConnectWalletButton';
@@ -11,7 +14,11 @@ import {
 	useReferredWallets,
 	useReferralSummary,
 } from '@/hooks/useReferrals';
-import { sumReferralRewards } from '@/utils/referral.utils';
+import {
+	buildReferralEarningsRows,
+	countReferralTiers,
+	sumReferralRewards,
+} from '@/utils/referral.utils';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 const CARD_CLASS =
@@ -49,6 +56,18 @@ export default function ReferralDashboardPage() {
 		[pages]
 	);
 
+	// Tier 1/2/3 depth breakdown derived from the referred-wallet list (#1119).
+	const tierCounts = useMemo(
+		() => countReferralTiers(referredWallets),
+		[referredWallets]
+	);
+
+	// Earnings ledger (date, source wallet, tier, amount), newest first (#1119).
+	const earningsRows = useMemo(
+		() => buildReferralEarningsRows(referredWallets),
+		[referredWallets]
+	);
+
 	// Per-wallet rewards are the source of truth for the rows; the API
 	// aggregate is shown as the headline figure. Surfacing both makes any
 	// disagreement between them visible rather than silently hidden.
@@ -81,6 +100,9 @@ export default function ReferralDashboardPage() {
 
 				<section className={CARD_CLASS} data-testid="referral-link-section">
 					<ReferralLinkGenerator link={referralLink} />
+					{isConnected && (
+						<ReferralShareButtons link={referralLink} className="mt-4" />
+					)}
 				</section>
 
 				<section className={CARD_CLASS} data-testid="referral-earnings-section">
@@ -99,6 +121,20 @@ export default function ReferralDashboardPage() {
 							referred wallet{referredWallets.length === 1 ? '' : 's'}.
 						</p>
 					)}
+				</section>
+
+				<section className={CARD_CLASS} data-testid="referral-tier-section">
+					<ReferralTierBreakdown
+						counts={tierCounts}
+						isLoading={isWalletsLoading}
+					/>
+				</section>
+
+				<section className={CARD_CLASS} data-testid="referral-earnings-table-section">
+					<ReferralEarningsTable
+						rows={earningsRows}
+						isLoading={isWalletsLoading}
+					/>
 				</section>
 
 				<section className={CARD_CLASS} data-testid="referred-wallets-section">

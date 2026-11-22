@@ -43,6 +43,7 @@ export const ReferralLinkGenerator: React.FC<ReferralLinkGeneratorProps> = ({
 		try {
 			await copyTextToClipboard(link);
 			setCopied(true);
+			showToast.success('Referral link copied to clipboard');
 			if (timeoutRef.current) clearTimeout(timeoutRef.current);
 			timeoutRef.current = setTimeout(() => {
 				setCopied(false);

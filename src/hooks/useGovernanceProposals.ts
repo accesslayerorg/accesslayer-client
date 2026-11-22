@@ -16,7 +16,7 @@ import {
 } from '@/services/governanceContract.service';
 import { queryKeys } from '@/lib/queryKeys';
 import type { Signer } from '@/lib/signing/types';
-import type { Proposal } from '@/types/governance';
+import type { CreateProposalPayload, Proposal } from '@/types/governance';
 import { buildStellarExpertTxUrl } from '@/constants/stellar';
 import { env } from '@/utils/env.utils';
 import {
@@ -131,6 +131,29 @@ export function useCastProposalVote({
 					? 'Vote cancelled.'
 					: getSignatureErrorMessage(error)
 			);
+		},
+	});
+}
+
+export interface CreateProposalMutationInput extends CreateProposalPayload {
+	creatorId?: string;
+}
+
+export function useCreateProposalMutation(creatorId?: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation<Proposal, Error, CreateProposalMutationInput>({
+		mutationKey: [...queryKeys.governance.all(), 'create', creatorId ?? null],
+		mutationFn: ({ creatorId: inputCreatorId, ...payload }) =>
+			governanceService.createProposal(
+				inputCreatorId ?? creatorId ?? '',
+				payload
+			),
+		onSuccess: async () => {
+			governanceService.clearCache();
+			await queryClient.invalidateQueries({
+				queryKey: queryKeys.governance.all(),
+			});
 		},
 	});
 }

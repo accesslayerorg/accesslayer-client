@@ -9,6 +9,7 @@ import showToast from '@/utils/toast.util';
 vi.mock('@/hooks/useCreators', () => ({
 	useCreatorDetail: vi.fn(),
 	useSetCoCreator: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+	usePriceHistory: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 
 vi.mock('@/hooks/useCreatorProfileStaleIndicator', () => ({

@@ -7,10 +7,26 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import showToast from '@/utils/toast.util';
 
-vi.mock('@/hooks/useCreators', () => ({
-	useCreatorDetail: vi.fn(),
-	useSetCoCreator: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
-}));
+vi.mock('@/hooks/useCreators', async importOriginal => {
+	const actual = await importOriginal<typeof import('@/hooks/useCreators')>();
+	return {
+		...actual,
+		useCreatorDetail: vi.fn(),
+		useSetCoCreator: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+	};
+});
+
+// A connected wallet: the cooldown is fetched per connected wallet (#915).
+vi.mock('wagmi', async importOriginal => {
+	const actual = await importOriginal<typeof import('wagmi')>();
+	return {
+		...actual,
+		useAccount: vi.fn(() => ({
+			address: 'GBUYERWALLET',
+			isConnected: true,
+		})),
+	};
+});
 
 vi.mock('@/hooks/useCreatorProfileStaleIndicator', () => ({
 	useCreatorProfileStaleIndicator: () => ({

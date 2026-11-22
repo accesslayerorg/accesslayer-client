@@ -4,12 +4,12 @@ import { StableButtonContent } from '@/components/ui/stable-button-content';
 import { AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router';
 import { useAccount } from 'wagmi';
-import { useAtomicSwapProposal, useAcceptAtomicSwapProposal } from '@/hooks/useAtomicSwap';
+import { useAtomicSwapProposal, useAcceptAtomicSwapProposal, useCancelAtomicSwapProposal } from '@/hooks/useAtomicSwap';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
 import showToast from '@/utils/toast.util';
 import { formatRelativeTime } from '@/utils/time.utils';
 import { formatNumber } from '@/utils/numberFormat.utils';
-import { isProposalExpired, canAcceptProposal } from '@/types/atomicSwap';
+import { isProposalExpired, canAcceptProposal, canCancelProposal, formatSwapExpiryCountdown } from '@/types/atomicSwap';
 import { cn } from '@/lib/utils';
 
 export const AtomicSwapProposalReview: React.FC = () => {
@@ -20,6 +20,7 @@ export const AtomicSwapProposalReview: React.FC = () => {
 
   const { data: proposal, isLoading, isError } = useAtomicSwapProposal(proposalId ?? '');
   const acceptMutation = useAcceptAtomicSwapProposal(connectedAddress ?? '');
+  const cancelMutation = useCancelAtomicSwapProposal(connectedAddress ?? '');
 
   const handleAccept = async () => {
     if (!proposal || !connectedAddress) return;
@@ -28,6 +29,15 @@ export const AtomicSwapProposalReview: React.FC = () => {
       return;
     }
     await acceptMutation.mutateAsync({ proposalId: proposal.id, counterpartyAddress: connectedAddress });
+  };
+
+  const handleCancel = async () => {
+    if (!proposal || !connectedAddress) return;
+    if (!canCancelProposal(proposal, connectedAddress)) {
+      showToast.error('Cannot cancel');
+      return;
+    }
+    await cancelMutation.mutateAsync({ proposalId: proposal.id, proposerAddress: connectedAddress });
   };
 
   const handleCopyLink = async () => {
@@ -256,9 +266,25 @@ export const AtomicSwapProposalReview: React.FC = () => {
         )}
 
         {isProposer && isPending && !isExpired && (
-          <div className="text-center text-white/60">
+          <div className="space-y-3 text-center text-white/60">
             <p>You created this proposal. Share the link above with your counterparty.</p>
-            <p className="text-xs mt-1">Expires {formatRelativeTime(proposal.expiresAt)}</p>
+            <p className="text-xs mt-1" data-testid="review-swap-countdown">
+              Expires in {formatSwapExpiryCountdown(proposal.expiresAt)}
+            </p>
+            <Button
+              variant="outline"
+              data-testid="cancel-proposal-button"
+              onClick={handleCancel}
+              disabled={cancelMutation.isPending}
+              className="rounded-xl border-rose-500/30 text-rose-300 hover:bg-rose-500/10"
+            >
+              <StableButtonContent
+                isLoading={cancelMutation.isPending}
+                loadingLabel="Cancelling…"
+              >
+                Cancel Proposal
+              </StableButtonContent>
+            </Button>
           </div>
         )}
 

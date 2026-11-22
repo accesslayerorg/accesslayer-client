@@ -41,7 +41,8 @@ export const AtomicSwapProposalForm: React.FC<AtomicSwapProposalFormProps> = ({
   const [offeredAmount, setOfferedAmount] = useState('1');
   const [desiredKeyId, setDesiredKeyId] = useState('');
   const [desiredAmount, setDesiredAmount] = useState('1');
-  const [expiryHours, setExpiryHours] = useState(24);
+  const [counterpartyAddress, setCounterpartyAddress] = useState('');
+  const [expiryHours, setExpiryHours] = useState(1);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [generatedLink, setGeneratedLink] = useState('');
   const [showLinkDialog, setShowLinkDialog] = useState(false);
@@ -78,15 +79,23 @@ export const AtomicSwapProposalForm: React.FC<AtomicSwapProposalFormProps> = ({
     if (touched.expiryHours && (!expiryHours || expiryHours < 1 || expiryHours > MAX_EXPIRY_HOURS)) {
       errors.expiryHours = `Expiry must be between 1 and ${MAX_EXPIRY_HOURS} hours`;
     }
+    if (
+      touched.counterpartyAddress &&
+      counterpartyAddress.trim() &&
+      counterpartyAddress.trim().toLowerCase() === walletAddress.toLowerCase()
+    ) {
+      errors.counterpartyAddress = 'Counterparty cannot be your own wallet address';
+    }
 
     return errors;
-  }, [touched, offeredKeyId, desiredKeyId, offeredAmount, desiredAmount, parsedOfferedAmount, parsedDesiredAmount, offeredHolding, offeredKey?.title, expiryHours]);
+  }, [touched, offeredKeyId, desiredKeyId, offeredAmount, desiredAmount, parsedOfferedAmount, parsedDesiredAmount, offeredHolding, offeredKey?.title, expiryHours, counterpartyAddress, walletAddress]);
 
   const isFormValid = offeredKeyId && desiredKeyId && offeredAmount.trim() && desiredAmount.trim() &&
     Number.isFinite(parsedOfferedAmount) && Number.isFinite(parsedDesiredAmount) &&
     parsedOfferedAmount > 0 && parsedDesiredAmount > 0 &&
     parsedOfferedAmount <= offeredHolding &&
     offeredKeyId !== desiredKeyId &&
+    (!counterpartyAddress.trim() || counterpartyAddress.trim().toLowerCase() !== walletAddress.toLowerCase()) &&
     expiryHours >= 1 && expiryHours <= MAX_EXPIRY_HOURS;
 
   const handleBlur = (field: string) => {
@@ -99,6 +108,7 @@ export const AtomicSwapProposalForm: React.FC<AtomicSwapProposalFormProps> = ({
       desiredKey: true,
       offeredAmount: true,
       desiredAmount: true,
+      counterpartyAddress: true,
       expiryHours: true,
     });
 
@@ -112,6 +122,9 @@ export const AtomicSwapProposalForm: React.FC<AtomicSwapProposalFormProps> = ({
       desiredKeyId,
       desiredKeyName: desiredKey?.title ?? 'Unknown',
       desiredAmount: parsedDesiredAmount,
+      ...(counterpartyAddress.trim()
+        ? { counterpartyAddress: counterpartyAddress.trim() }
+        : {}),
       expiryHours,
     });
 
@@ -123,7 +136,8 @@ export const AtomicSwapProposalForm: React.FC<AtomicSwapProposalFormProps> = ({
       setOfferedAmount('1');
       setDesiredKeyId('');
       setDesiredAmount('1');
-      setExpiryHours(24);
+      setCounterpartyAddress('');
+      setExpiryHours(1);
       setTouched({});
     }
   };
@@ -153,7 +167,8 @@ export const AtomicSwapProposalForm: React.FC<AtomicSwapProposalFormProps> = ({
       setOfferedAmount('1');
       setDesiredKeyId('');
       setDesiredAmount('1');
-      setExpiryHours(24);
+      setCounterpartyAddress('');
+      setExpiryHours(1);
       setTouched({});
       setGeneratedLink('');
       setShowLinkDialog(false);
@@ -321,6 +336,36 @@ export const AtomicSwapProposalForm: React.FC<AtomicSwapProposalFormProps> = ({
                 </div>
               </div>
             </fieldset>
+
+            {/* Counterparty Address */}
+            <div className="space-y-2">
+              <label htmlFor="counterparty-address" className="block text-xs font-medium text-white/70 mb-1.5">
+                Counterparty wallet address
+              </label>
+              <input
+                id="counterparty-address"
+                data-testid="swap-counterparty-address"
+                type="text"
+                value={counterpartyAddress}
+                onChange={e => setCounterpartyAddress(e.target.value)}
+                onBlur={() => handleBlur('counterpartyAddress')}
+                disabled={isSubmitting || createProposalMutation.isPending}
+                placeholder="GABC... (target counterparty wallet)"
+                className={cn(
+                  'w-full rounded-xl border bg-white/[0.04] px-3 py-2 font-mono text-xs text-white outline-none transition-colors',
+                  validationErrors.counterpartyAddress
+                    ? 'border-red-500/60'
+                    : 'border-white/10 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/15'
+                )}
+                aria-invalid={!!validationErrors.counterpartyAddress}
+                aria-describedby={validationErrors.counterpartyAddress ? 'counterparty-address-error' : undefined}
+              />
+              {validationErrors.counterpartyAddress && (
+                <p id="counterparty-address-error" className="mt-1 text-xs text-red-300" role="alert">
+                  {validationErrors.counterpartyAddress}
+                </p>
+              )}
+            </div>
 
             {/* Expiry */}
             <div className="space-y-2">

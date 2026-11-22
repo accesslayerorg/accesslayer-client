@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Coins, Clock, CheckCircle, Loader2, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatNumber } from '@/utils/numberFormat.utils';
+import HolderSnapshotHistory from '@/components/common/HolderSnapshotHistory';
 
 interface DividendDistribution {
   id: string;
@@ -161,6 +162,15 @@ export default function DividendPoolSection({
                 </Button>
               )}
             </div>
+
+            <details className='mt-4 border-t border-white/5 pt-3'>
+              <summary className='cursor-pointer text-xs font-semibold text-white/50'>
+                Holder snapshot history
+              </summary>
+              <div className='mt-4'>
+                <HolderSnapshotHistory keyId={dividend.keyId} chartHeight={180} />
+              </div>
+            </details>
 
             {/* Distribution History */}
             {dividend.distributions.length > 0 && (

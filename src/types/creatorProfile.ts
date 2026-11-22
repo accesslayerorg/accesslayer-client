@@ -42,6 +42,11 @@ export interface CreatorProfileStats {
 	totalVolumeStroops: number;
 	/** Distinct key holders summed across every key. */
 	totalHolders: number;
+	/**
+	 * Mean market cap (price × supply) across keys that report both figures,
+	 * in stroops. `0` when no key carries enough data to derive one.
+	 */
+	avgMarketCapStroops: number;
 	/** Mean holder rating across rated keys; `null` when nothing is rated. */
 	averageRating: number | null;
 	/** How many keys carry a rating (the denominator for `averageRating`). */
@@ -72,6 +77,8 @@ export interface CreatorPublicProfile {
 	isVerified: boolean;
 	/** ISO timestamp the creator joined; `null` when unknown. */
 	joinedAt: string | null;
+	/** Creator-written bio; `null` when the creator has not published one. */
+	bio: string | null;
 	socialLinks: CreatorSocialLink[];
 	stats: CreatorProfileStats;
 	keys: CreatorKeySummary[];

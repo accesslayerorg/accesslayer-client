@@ -26,6 +26,7 @@ export interface CreateProposalInput {
   desiredKeyId: string;
   desiredKeyName: string;
   desiredAmount: number;
+  counterpartyAddress?: string;
   expiryHours?: number;
 }
 
@@ -52,7 +53,7 @@ export interface SwapHistoryEntry {
   status: 'completed' | 'failed';
 }
 
-export const PROPOSAL_EXPIRY_HOURS = 24;
+export const PROPOSAL_EXPIRY_HOURS = 1;
 export const PROPOSAL_ID_PREFIX = 'swap_';
 
 export function generateProposalId(): string {
@@ -63,13 +64,54 @@ export function calculateExpiryTimestamp(hours: number = PROPOSAL_EXPIRY_HOURS):
   return Date.now() + hours * 60 * 60 * 1000;
 }
 
-export function isProposalExpired(proposal: AtomicSwapProposal): boolean {
-  return Date.now() > proposal.expiresAt;
+export function isProposalExpired(
+  proposal: Pick<AtomicSwapProposal, 'expiresAt' | 'status'>,
+  now: number = Date.now()
+): boolean {
+  return proposal.status === 'expired' || now >= proposal.expiresAt;
 }
 
-export function canAcceptProposal(proposal: AtomicSwapProposal, userAddress: string): boolean {
+export function formatSwapExpiryCountdown(
+  expiresAt: number,
+  now: number = Date.now()
+): string {
+  const remainingMs = expiresAt - now;
+  if (remainingMs <= 0) return 'Expired';
+  const totalSeconds = Math.floor(remainingMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`;
+  }
+  return `${minutes}m ${seconds}s`;
+}
+
+export function canAcceptProposal(
+  proposal: AtomicSwapProposal,
+  userAddress: string,
+  now: number = Date.now()
+): boolean {
+  if (!userAddress) return false;
   if (proposal.status !== 'pending') return false;
-  if (isProposalExpired(proposal)) return false;
-  if (proposal.proposerAddress === userAddress) return false;
+  if (isProposalExpired(proposal, now)) return false;
+  if (proposal.proposerAddress.toLowerCase() === userAddress.toLowerCase()) {
+    return false;
+  }
+  if (
+    proposal.counterpartyAddress &&
+    proposal.counterpartyAddress.toLowerCase() !== userAddress.toLowerCase()
+  ) {
+    return false;
+  }
   return true;
+}
+
+export function canCancelProposal(
+  proposal: AtomicSwapProposal,
+  userAddress: string
+): boolean {
+  if (!userAddress) return false;
+  if (proposal.status !== 'pending') return false;
+  return proposal.proposerAddress.toLowerCase() === userAddress.toLowerCase();
 }

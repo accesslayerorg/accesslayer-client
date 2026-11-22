@@ -7,7 +7,7 @@ interface CreatorSkeletonProps {
 }
 
 const skeletonBlockClass =
-	'rounded-md bg-white/12 skeleton-shimmer motion-reduce:bg-white/18 motion-reduce:ring-1 motion-reduce:ring-white/15';
+	'rounded-md bg-white/12 skeleton-shimmer animate-pulse motion-reduce:bg-white/18 motion-reduce:ring-1 motion-reduce:ring-white/15 motion-reduce:animate-none';
 const skeletonStaticBlockClass =
 	'rounded-md bg-white/16 ring-1 ring-white/15';
 

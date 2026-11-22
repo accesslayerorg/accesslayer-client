@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AsyncButton } from '@/components/ui/async-button';
+import { UnavailableAction } from '@/components/ui/unavailable-action';
+import { useGlobalPause } from '@/hooks/useGlobalPause';
 import { cn } from '@/lib/utils';
 import { formatXlmPrice, formatPercent } from '@/utils/numberFormat.utils';
 import type { BundleLineItem, CreateBundleRequest } from '@/services/bundle.service';
@@ -44,6 +46,8 @@ const BundleCreateForm: React.FC<BundleCreateFormProps> = ({
 	resetSignal = 0,
 	isSubmitting = false,
 }) => {
+	// Bundle creation is blocked during a platform-wide emergency pause (#1157).
+	const { paused: globalPaused } = useGlobalPause();
 	const [lines, setLines] = useState<BundleLineItem[]>([]);
 	const [pendingKeyId, setPendingKeyId] = useState('');
 	const [priceInput, setPriceInput] = useState('');
@@ -315,14 +319,20 @@ const BundleCreateForm: React.FC<BundleCreateFormProps> = ({
 				</div>
 			</div>
 
-			<AsyncButton
-				type="submit"
-				isPending={isSubmitting}
-				pendingText="Creating bundle…"
-				data-testid="bundle-submit"
+			<UnavailableAction
+				disabled={globalPaused}
+				reason="Platform Paused"
 			>
-				Create bundle
-			</AsyncButton>
+				<AsyncButton
+					type="submit"
+					isPending={isSubmitting}
+					disabled={globalPaused}
+					pendingText="Creating bundle…"
+					data-testid="bundle-submit"
+				>
+					Create bundle
+				</AsyncButton>
+			</UnavailableAction>
 		</form>
 	);
 };

@@ -11,6 +11,19 @@ export interface CreatorWhitelistConfig {
 	entries: WhitelistEntry[];
 }
 
+export interface AllowlistImportInvalidRow {
+	rowNumber: number;
+	reason: string;
+}
+
+export interface AllowlistImportReport {
+	created: number;
+	updated: number;
+	skipped: number;
+	fatalErrors: number;
+	invalidRows: AllowlistImportInvalidRow[];
+}
+
 const WHITELIST_CACHE_TTL = 30_000;
 
 export function whitelistCacheKey(keyId: string): string {
@@ -103,6 +116,25 @@ class CreatorWhitelistService extends BaseApiService {
 		}
 	}
 
+	async importCsv(
+		keyId: string,
+		file: File,
+		dryRun: boolean
+	): Promise<AllowlistImportReport> {
+		try {
+			const formData = new FormData();
+			formData.append('file', file);
+			const response = await this.api.post<
+				APIResponse<AllowlistImportReport>
+			>(`/keys/${keyId}/whitelist/import`, formData, {
+				params: { dryRun },
+			});
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
 	/**
 	 * Removes a wallet address from the creator's early access whitelist.
 	 * DELETE /keys/:keyId/whitelist/:address
@@ -139,11 +171,24 @@ class CreatorWhitelistService extends BaseApiService {
 	 * POST /keys/:keyId/whitelist/disable
 	 */
 	async disableWhitelist(keyId: string): Promise<CreatorWhitelistConfig> {
+		return this.setWhitelistMode(keyId, false);
+	}
+
+	/**
+	 * Sets the whitelist mode (`set_whitelist_mode`) for a creator key (#1128).
+	 */
+	async setWhitelistMode(
+		keyId: string,
+		enabled: boolean
+	): Promise<CreatorWhitelistConfig> {
 		const cacheKey = whitelistCacheKey(keyId);
 		try {
+			const endpoint = enabled
+				? `/keys/${keyId}/whitelist/enable`
+				: `/keys/${keyId}/whitelist/disable`;
 			const response = await this.api.post<
 				APIResponse<CreatorWhitelistConfig>
-			>(`/keys/${keyId}/whitelist/disable`);
+			>(endpoint, { enabled });
 			const data = response.data.data;
 			cacheManager.set(cacheKey, data, WHITELIST_CACHE_TTL);
 			this.localStore.set(keyId, data);
@@ -152,12 +197,36 @@ class CreatorWhitelistService extends BaseApiService {
 			const current = await this.getWhitelist(keyId);
 			const updated: CreatorWhitelistConfig = {
 				...current,
-				isWhitelistEnabled: false,
+				isWhitelistEnabled: enabled,
 			};
 			this.localStore.set(keyId, updated);
 			cacheManager.set(cacheKey, updated, WHITELIST_CACHE_TTL);
 			return updated;
 		}
+	}
+
+	async set_whitelist_mode(
+		keyId: string,
+		enabled: boolean
+	): Promise<CreatorWhitelistConfig> {
+		return this.setWhitelistMode(keyId, enabled);
+	}
+
+	async add_to_whitelist(
+		keyId: string,
+		addressOrAddresses: string | string[]
+	): Promise<CreatorWhitelistConfig> {
+		const list = Array.isArray(addressOrAddresses)
+			? addressOrAddresses
+			: [addressOrAddresses];
+		return this.addAddresses(keyId, list);
+	}
+
+	async remove_from_whitelist(
+		keyId: string,
+		address: string
+	): Promise<CreatorWhitelistConfig> {
+		return this.removeAddress(keyId, address);
 	}
 
 	/** Clears local cache and store (useful in test teardown). */

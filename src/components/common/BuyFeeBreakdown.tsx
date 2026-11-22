@@ -1,6 +1,7 @@
 /**
  * Buy fee breakdown display component.
- * Shows gross cost, protocol fee, creator fee, and total before purchase confirmation.
+ * Shows gross cost, protocol fee, creator fee, loyalty discount (#1173),
+ * and total before purchase confirmation.
  */
 
 import React from 'react';
@@ -9,6 +10,12 @@ import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import type { FeeBreakdown } from '@/utils/pricePreview.utils';
+import FeeDiscountChip from '@/components/common/FeeDiscountChip';
+import {
+	buildFeeDiscountBreakdown,
+	hasActiveDiscount,
+	type FeeDiscount,
+} from '@/utils/feeDiscount.utils';
 
 export interface BuyFeeBreakdownProps {
 	/** Fee breakdown data from price preview */
@@ -19,6 +26,12 @@ export interface BuyFeeBreakdownProps {
 	error: string | null;
 	/** Callback when user clicks retry button */
 	onRetry: () => void;
+	/**
+	 * Active loyalty fee discount (#1173). When present, a base-fee /
+	 * discount-chip / final-fee row is rendered and the total reflects the
+	 * discounted amount. When absent, no chip is shown.
+	 */
+	feeDiscount?: FeeDiscount | null;
 }
 
 /**
@@ -31,6 +44,7 @@ const BuyFeeBreakdown: React.FC<BuyFeeBreakdownProps> = ({
 	isLoading,
 	error,
 	onRetry,
+	feeDiscount = null,
 }) => {
 	if (error) {
 		return (
@@ -84,6 +98,13 @@ const BuyFeeBreakdown: React.FC<BuyFeeBreakdownProps> = ({
 
 	const protocolFeePercentage = (breakdown.protocolFeeBps / 100).toFixed(2);
 	const creatorFeePercentage = (breakdown.creatorFeeBps / 100).toFixed(2);
+
+	// Loyalty fee discount (#1173). `baseFee` is the protocol + creator fee the
+	// user would pay without the tier; the chip sits between base and final.
+	const baseFeeStroops = breakdown.protocolFeeStroops + breakdown.creatorFeeStroops;
+	const feeRows = buildFeeDiscountBreakdown(baseFeeStroops, feeDiscount);
+	const discountedTotalStroops =
+		breakdown.grossCostStroops + feeRows.finalFee;
 
 	return (
 		<div
@@ -140,6 +161,49 @@ const BuyFeeBreakdown: React.FC<BuyFeeBreakdownProps> = ({
 				</div>
 			)}
 
+			{/* Loyalty discount row (#1173): base fee → discount chip → final fee */}
+			<div
+				className="flex justify-between items-center text-xs"
+				data-testid="buy-fee-breakdown-fee-discount"
+			>
+				<span className="text-white/70">Base fee</span>
+				<span className="flex items-center gap-2">
+					{hasActiveDiscount(feeRows.discount) && (
+						<FeeDiscountChip discount={feeRows.discount} />
+					)}
+					<span
+						className="font-mono text-white/90"
+						data-testid="buy-fee-breakdown-base-fee"
+					>
+						{formatDisplayKeyPrice(feeRows.baseFee)}
+					</span>
+				</span>
+			</div>
+
+			{hasActiveDiscount(feeRows.discount) && (
+				<div
+					className="flex justify-between items-center text-xs"
+					data-testid="buy-fee-breakdown-discount"
+				>
+					<span className="text-white/70">
+						Loyalty discount (−{feeRows.discount.discountPercent}%)
+					</span>
+					<span className="font-mono text-emerald-300/90">
+						−{formatDisplayKeyPrice(feeRows.discountAmount)}
+					</span>
+				</div>
+			)}
+
+			<div
+				className="flex justify-between items-center text-xs"
+				data-testid="buy-fee-breakdown-final-fee"
+			>
+				<span className="text-white/70">Final fee</span>
+				<span className="font-mono text-white/90">
+					{formatDisplayKeyPrice(feeRows.finalFee)}
+				</span>
+			</div>
+
 			{/* Total row */}
 			<div
 				className="flex justify-between items-center text-xs pt-2 border-t border-white/10"
@@ -147,7 +211,7 @@ const BuyFeeBreakdown: React.FC<BuyFeeBreakdownProps> = ({
 			>
 				<span className="font-semibold text-white">Total</span>
 				<span className="font-mono font-semibold text-amber-300/90">
-					{formatDisplayKeyPrice(breakdown.totalCostStroops)}
+					{formatDisplayKeyPrice(discountedTotalStroops)}
 				</span>
 			</div>
 		</div>

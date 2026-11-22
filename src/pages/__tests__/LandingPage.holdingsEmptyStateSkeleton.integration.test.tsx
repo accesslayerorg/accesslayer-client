@@ -10,15 +10,21 @@
  */
 import type { ComponentProps, ReactNode } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LandingPage from '@/pages/LandingPage';
 import { courseService } from '@/services/course.service';
 
-vi.mock('@/hooks/useWallet', () => ({
-	useTradeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-	useWalletHoldings: () => ({ data: [] }),
-}));
+vi.mock('@/hooks/useWallet', async importOriginal => {
+	const actual = await importOriginal<typeof import('@/hooks/useWallet')>();
+
+	return {
+		...actual,
+		useTradeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+		useWalletHoldings: () => ({ data: [] }),
+	};
+});
 
 vi.mock('@/services/course.service', () => ({
 	courseService: { getCourses: vi.fn() },
@@ -161,11 +167,16 @@ describe('LandingPage holdings empty state loading skeleton (#646)', () => {
 					resolveCourses = resolve;
 				})
 		);
+		const queryClient = new QueryClient({
+			defaultOptions: { queries: { retry: false } },
+		});
 
 		render(
-			<MemoryRouter>
-				<LandingPage />
-			</MemoryRouter>
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter>
+					<LandingPage />
+				</MemoryRouter>
+			</QueryClientProvider>
 		);
 
 		// While loading: empty state absent, skeleton placeholders present
@@ -201,11 +212,16 @@ describe('LandingPage holdings empty state loading skeleton (#646)', () => {
 				isVerified: true,
 			},
 		]);
+		const queryClient = new QueryClient({
+			defaultOptions: { queries: { retry: false } },
+		});
 
 		render(
-			<MemoryRouter>
-				<LandingPage />
-			</MemoryRouter>
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter>
+					<LandingPage />
+				</MemoryRouter>
+			</QueryClientProvider>
 		);
 
 		await waitFor(() => expect(mockGetCourses).toHaveBeenCalled());

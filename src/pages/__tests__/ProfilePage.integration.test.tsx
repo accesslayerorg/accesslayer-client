@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import ProfilePage from '@/pages/ProfilePage';
 import type { HeldKeyPosition } from '@/utils/portfolioValue.utils';
@@ -9,12 +9,14 @@ import type { Trade } from '@/services/tradeHistory.service';
 const {
 	mockUseWalletHoldings,
 	mockUseTradeHistory,
+	mockUseAllTradeHistory,
 	mockUseCreatorPrices,
 	mockUseStakingPositions,
 	mockUseAccount,
 } = vi.hoisted(() => ({
 	mockUseWalletHoldings: vi.fn(),
 	mockUseTradeHistory: vi.fn(),
+	mockUseAllTradeHistory: vi.fn(),
 	mockUseCreatorPrices: vi.fn(),
 	mockUseStakingPositions: vi.fn(),
 	mockUseAccount: vi.fn(),
@@ -23,11 +25,21 @@ const {
 vi.mock('@/hooks/useWallet', () => ({
 	useWalletHoldings: (...args: unknown[]) => mockUseWalletHoldings(...args),
 	useTradeHistory: (...args: unknown[]) => mockUseTradeHistory(...args),
+	useWalletBadges: () => ({
+		data: [],
+		isLoading: false,
+		isError: false,
+	}),
 	useClaimStakeMutation: () => ({
 		mutate: vi.fn(),
 		isPending: false,
 		variables: null,
 	}),
+}));
+
+vi.mock('@/hooks/useAllTradeHistory', () => ({
+	useAllTradeHistory: (...args: unknown[]) => mockUseAllTradeHistory(...args),
+	fetchAllTrades: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@/hooks/useCreatorPrices', () => ({
@@ -151,15 +163,10 @@ function seedOwnerView(connectedAddress?: string) {
 		isLoading: false,
 		isError: false,
 	});
-}
-
-function simulateIntersection(isIntersecting: boolean) {
-	const obs = observers[observers.length - 1];
-	act(() => {
-		obs.callback(
-			[{ isIntersecting } as IntersectionObserverEntry],
-			{} as IntersectionObserver
-		);
+	mockUseAllTradeHistory.mockReturnValue({
+		data: [trade],
+		isLoading: false,
+		isError: false,
 	});
 }
 
@@ -187,6 +194,7 @@ describe('ProfilePage — user profile page (#921)', () => {
 
 		mockUseWalletHoldings.mockReset();
 		mockUseTradeHistory.mockReset();
+		mockUseAllTradeHistory.mockReset();
 		mockUseCreatorPrices.mockReset();
 		mockUseStakingPositions.mockReset();
 		mockUseAccount.mockReset();
@@ -270,26 +278,46 @@ describe('ProfilePage — user profile page (#921)', () => {
 		});
 	});
 
-	it('loads more trade history via infinite scroll on the trade tab', async () => {
+	it('shows the paginated trade history table with CSV export on the trade tab (#1114, #857)', () => {
 		seedOwnerView();
-		mockUseTradeHistory.mockReturnValue({
-			data: { pages: [{ trades: [trade], nextCursor: 'cursor-2' }] },
-			fetchNextPage: vi.fn(),
-			hasNextPage: true,
-			isFetchingNextPage: false,
+
+		renderProfile('/profile?tab=trade-history');
+
+		expect(mockUseAllTradeHistory).toHaveBeenCalledWith(DEMO_WALLET);
+		expect(screen.getByTestId('trade-ledger-table')).toBeInTheDocument();
+		expect(screen.getByText('Alpha Key')).toBeInTheDocument();
+		expect(screen.getByTestId('trade-ledger-export')).toBeInTheDocument();
+		expect(
+			screen.getByTestId('export-trade-history-button')
+		).toBeInTheDocument();
+	});
+
+	it('hides the header CSV export button when unauthenticated (#857)', () => {
+		mockUseAccount.mockReturnValue({
+			address: undefined,
+			isConnected: false,
+		});
+		mockUseWalletHoldings.mockReturnValue({
+			data: [],
+			isLoading: false,
+			isError: false,
+		});
+		mockUseCreatorPrices.mockReturnValue({ data: [], isLoading: false });
+		mockUseStakingPositions.mockReturnValue({
+			data: { positions: [] },
+			isLoading: false,
+		});
+		mockUseAllTradeHistory.mockReturnValue({
+			data: [],
 			isLoading: false,
 			isError: false,
 		});
 
-		renderProfile('/profile?tab=trade-history');
-		const { fetchNextPage } = mockUseTradeHistory.mock.results[0].value;
+		renderProfile(`/profile/${DEMO_WALLET}?tab=trade-history`);
 
 		expect(
-			screen.getByTestId('trade-history-load-more-sentinel')
-		).toBeInTheDocument();
-
-		simulateIntersection(true);
-		expect(fetchNextPage).toHaveBeenCalledTimes(1);
+			screen.queryByTestId('export-trade-history-button')
+		).not.toBeInTheDocument();
 	});
 
 	it('renders staking positions with lock status and claimable rewards on the staking tab', () => {

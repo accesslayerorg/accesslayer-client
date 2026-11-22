@@ -5,6 +5,7 @@ import {
 	filterKeysByCreator,
 	formatMemberSince,
 	isSameCreatorAddress,
+	resolveCreatorKeyMarketCapStroops,
 	resolveCreatorKeyStatus,
 	resolveCreatorSocialLinks,
 	toCreatorKeySummary,
@@ -110,14 +111,72 @@ describe('creatorProfile.utils – aggregateCreatorProfileStats (#1054)', () => 
 		expect(stats.ratedKeyCount).toBe(0);
 	});
 
+	it('averages the market cap across keys that report price and supply (#1120)', () => {
+		const stats = aggregateCreatorProfileStats([
+			// 5M stroops × 100 keys = 500M stroops.
+			makeKey({ id: 'a', priceStroops: 5_000_000, creatorShareSupply: 100 }),
+			// 10M stroops × 50 keys = 500M stroops.
+			makeKey({ id: 'b', priceStroops: 10_000_000, creatorShareSupply: 50 }),
+		]);
+
+		expect(stats.avgMarketCapStroops).toBe(500_000_000);
+	});
+
+	it('excludes keys without supply data from the market cap average (#1120)', () => {
+		const stats = aggregateCreatorProfileStats([
+			makeKey({ id: 'a', priceStroops: 5_000_000, creatorShareSupply: 100 }),
+			// Missing supply — must not drag the average toward zero.
+			makeKey({ id: 'b', priceStroops: 9_000_000 }),
+		]);
+
+		expect(stats.avgMarketCapStroops).toBe(500_000_000);
+	});
+
 	it('returns neutral stats for a creator with no keys', () => {
 		expect(aggregateCreatorProfileStats([])).toEqual({
 			keyCount: 0,
 			totalVolumeStroops: 0,
 			totalHolders: 0,
+			avgMarketCapStroops: 0,
 			averageRating: null,
 			ratedKeyCount: 0,
 		});
+	});
+});
+
+describe('creatorProfile.utils – resolveCreatorKeyMarketCapStroops (#1120)', () => {
+	it('multiplies price by circulating supply', () => {
+		expect(
+			resolveCreatorKeyMarketCapStroops(
+				makeKey({ priceStroops: 2_000_000, creatorShareSupply: 25 })
+			)
+		).toBe(50_000_000);
+	});
+
+	it('falls back to the legacy price field', () => {
+		expect(
+			resolveCreatorKeyMarketCapStroops(
+				makeKey({ priceStroops: undefined, price: 1, creatorShareSupply: 10 })
+			)
+		).toBe(100_000_000);
+	});
+
+	it('returns null when price or supply is missing', () => {
+		expect(
+			resolveCreatorKeyMarketCapStroops(
+				makeKey({ priceStroops: undefined, price: 0, creatorShareSupply: 10 })
+			)
+		).toBeNull();
+		expect(
+			resolveCreatorKeyMarketCapStroops(
+				makeKey({ creatorShareSupply: undefined })
+			)
+		).toBeNull();
+		expect(
+			resolveCreatorKeyMarketCapStroops(
+				makeKey({ creatorShareSupply: -1 })
+			)
+		).toBeNull();
 	});
 });
 

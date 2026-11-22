@@ -19,6 +19,22 @@ vi.mock('@/services/leaderboard.service', () => ({
 	leaderboardService: { getRatingsLeaderboard: vi.fn() },
 }));
 
+vi.mock('@/utils/clipboard.utils', () => ({
+	copyTextToClipboard: vi.fn(),
+}));
+
+vi.mock('@/utils/toast.util', () => ({
+	default: {
+		success: vi.fn(),
+		error: vi.fn(),
+		loading: vi.fn(),
+		message: vi.fn(),
+	},
+}));
+
+import { copyTextToClipboard as mockCopyTextToClipboard } from '@/utils/clipboard.utils';
+import showToast from '@/utils/toast.util';
+
 const CREATOR_ADDRESS = 'GARIVERS';
 
 function makeKey(overrides: Partial<Course> = {}): Course {
@@ -41,6 +57,7 @@ const alphaKey = makeKey({
 	name: 'Alex Rivers',
 	totalVolume: 2_000_000,
 	holderCount: 10,
+	creatorShareSupply: 100,
 });
 
 const betaKey = makeKey({
@@ -51,6 +68,7 @@ const betaKey = makeKey({
 	priceStroops: 10_000_000,
 	totalVolume: 6_000_000,
 	holderCount: 20,
+	creatorShareSupply: 50,
 	deprecated: true,
 });
 
@@ -84,6 +102,8 @@ function renderPage(address: string = CREATOR_ADDRESS) {
 
 describe('CreatorPublicProfilePage (#1054)', () => {
 	beforeEach(() => {
+		vi.clearAllMocks();
+		mockCopyTextToClipboard.mockResolvedValue();
 		window.localStorage.clear();
 		useCreatorFollows.setState({ followedCreators: {} });
 		mockGetCourses.mockReset();
@@ -124,14 +144,15 @@ describe('CreatorPublicProfilePage (#1054)', () => {
 
 		// Volume and holders are summed across the creator's two keys only.
 		expect(
-			screen.getByLabelText('Total Volume Traded: 0.8 XLM')
+			screen.getByLabelText('Total Volume: 0.8 XLM')
 		).toBeInTheDocument();
 		expect(screen.getByLabelText('Total Holders: 30')).toBeInTheDocument();
-		// Mean of the two rated keys (4 and 5).
+		// Mean market cap (price × supply) across the two keys:
+		// 5M×100 = 500M stroops and 10M×50 = 500M stroops → 50 XLM each.
 		expect(
-			screen.getByLabelText('Avg Key Rating: 4.5 ★')
+			screen.getByLabelText('Avg Market Cap: 50 XLM')
 		).toBeInTheDocument();
-		expect(screen.getByLabelText('Keys Deployed: 2')).toBeInTheDocument();
+		expect(screen.getByLabelText('Keys Issued: 2')).toBeInTheDocument();
 	});
 
 	it('shows the correct status and price for each deployed key', async () => {
@@ -208,6 +229,59 @@ describe('CreatorPublicProfilePage (#1054)', () => {
 			'href',
 			'https://discord.gg/invite-code'
 		);
+	});
+
+	it('renders the creator bio in the header (#1120)', async () => {
+		mockGetCourses.mockResolvedValue([
+			makeKey({ bio: 'Digital artist and illustrator from Lagos.' }),
+		]);
+
+		renderPage();
+
+		await waitFor(() =>
+			expect(
+				screen.getByText('Digital artist and illustrator from Lagos.')
+			).toBeInTheDocument()
+		);
+	});
+
+	it('hides the bio entirely when the creator published none (#1120)', async () => {
+		mockGetCourses.mockResolvedValue([makeKey({ description: '' })]);
+
+		renderPage();
+
+		await waitFor(() =>
+			expect(
+				screen.getByTestId('creator-public-profile-header')
+			).toBeInTheDocument()
+		);
+
+		expect(screen.queryByText(/shared a bio/i)).not.toBeInTheDocument();
+	});
+
+	it('copies the profile URL to the clipboard with a toast confirmation (#1120)', async () => {
+		const user = userEvent.setup();
+		mockGetCourses.mockResolvedValue([alphaKey]);
+
+		renderPage();
+
+		const shareButton = await screen.findByTestId(
+			'creator-profile-share-button'
+		);
+		expect(shareButton).toHaveTextContent('Share');
+
+		await user.click(shareButton);
+
+		expect(mockCopyTextToClipboard).toHaveBeenCalledWith(
+			`${window.location.origin}/creator/${CREATOR_ADDRESS}/profile`
+		);
+		await waitFor(() =>
+			expect(showToast.success).toHaveBeenCalledWith(
+				'Profile link copied to clipboard',
+				expect.objectContaining({ duration: 2000 })
+			)
+		);
+		expect(shareButton).toHaveTextContent('Copied!');
 	});
 
 	it('keeps the follow state across a page refresh', async () => {

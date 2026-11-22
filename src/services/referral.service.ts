@@ -26,6 +26,11 @@ export interface ReferredWallet {
 	rewardXlm?: number | null;
 	/** Whether this referral's fee has already been claimed. */
 	rewardClaimed?: boolean;
+	/**
+	 * Referral-network depth of this wallet (1 = referred directly, 2 = a
+	 * referral's referral, …). Defaults to Tier 1 when the backend omits it.
+	 */
+	tier?: number | null;
 }
 
 /** Cursor-paginated envelope for the referred-wallet list. */

@@ -3,6 +3,7 @@ import { useAccount } from 'wagmi';
 import { courseService, type Course } from '@/services/course.service';
 import { useWalletHoldings } from '@/hooks/useWallet';
 import { AtomicSwapProposalForm } from '@/components/common/AtomicSwapProposalForm';
+import { PendingSwapsList } from '@/components/common/PendingSwapsList';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import showToast from '@/utils/toast.util';
@@ -15,6 +16,8 @@ import PortfolioHoldingRow from '@/components/common/PortfolioHoldingRow';
 import HoldingsEmptyState from '@/components/common/HoldingsEmptyState';
 import CreatorSkeleton from '@/components/common/CreatorSkeleton';
 import { useNetworkMismatch } from '@/hooks/useNetworkMismatch';
+import { useGlobalPause } from '@/hooks/useGlobalPause';
+import { UnavailableAction } from '@/components/ui/unavailable-action';
 
 const DEMO_WALLET_ADDRESS = 'demo-wallet-address';
 
@@ -26,6 +29,7 @@ export default function AtomicSwapCreatePage() {
   const [creators, setCreators] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const { paused } = useGlobalPause();
 
   const { data: cachedHoldings = [] } = useWalletHoldings(activeWalletAddress);
 
@@ -159,29 +163,34 @@ export default function AtomicSwapCreatePage() {
               </div>
             ) : (
               <div className="space-y-4">
-                <AtomicSwapProposalForm
-                  open={formOpen}
-                  onOpenChange={setFormOpen}
-                  creators={creators}
-                  walletAddress={activeWalletAddress}
-                  isSubmitting={isNetworkMismatch}
-                />
-                <Button
-                  onClick={handleOpenForm}
-                  disabled={isNetworkMismatch || !hasHoldings}
-                  className="w-full sm:w-auto rounded-xl"
-                  size="lg"
-                >
-                  <svg className="size-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                  Create Swap Proposal
-                </Button>
+                <UnavailableAction disabled={paused} reason="Platform is currently paused">
+                  <Button
+                    onClick={handleOpenForm}
+                    disabled={isNetworkMismatch || !hasHoldings || paused}
+                    className="w-full sm:w-auto rounded-xl"
+                    size="lg"
+                  >
+                    <svg className="size-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    Create Swap Proposal
+                  </Button>
+                </UnavailableAction>
                 <p className="text-xs text-white/50 text-center sm:text-left">
                   The counterparty will need to connect their wallet and accept the proposal to execute the atomic swap.
                 </p>
               </div>
             )}
+          </MarketplaceSection>
+
+          <SectionDivider title="Pending Swaps" spacing="relaxed" />
+          <MarketplaceSection spacing="default" className="marketplace-card-surface rounded-[2rem] border p-6 md:p-8">
+            <SectionHeading
+              title="Pending swap proposals"
+              supportingText="Manage your outgoing and incoming peer-to-peer creator key exchange proposals."
+              className="mb-6"
+            />
+            <PendingSwapsList walletAddress={activeWalletAddress} />
           </MarketplaceSection>
         </main>
       </div>

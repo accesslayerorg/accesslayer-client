@@ -33,7 +33,16 @@ export function parseBatchWhitelist(input: string): WhitelistParseResult {
 		return { valid: [], invalid: [], duplicates: [] };
 	}
 
-	const lines = input.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+	const lines = input
+		.split(/\r?\n/)
+		.map(l => l.split(',')[0].trim())
+		.filter(
+			l =>
+				Boolean(l) &&
+				l.toLowerCase() !== 'address' &&
+				l.toLowerCase() !== 'wallet' &&
+				l.toLowerCase() !== 'wallet_address'
+		);
 	const seen = new Set<string>();
 	const valid: string[] = [];
 	const invalid: string[] = [];

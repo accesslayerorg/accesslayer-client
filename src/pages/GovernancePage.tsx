@@ -1,8 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router';
+import { useAccount } from 'wagmi';
 import { useGovernanceProposals } from '@/hooks/useGovernanceProposals';
+import { useWalletHoldings } from '@/hooks/useWallet';
 import ProposalCard from '@/components/common/ProposalCard';
-import type { ProposalStatus } from '@/types/governance';
+import ProposalVoteModal from '@/components/common/ProposalVoteModal';
+import CreateProposalDialog from '@/components/common/CreateProposalDialog';
+import { Button } from '@/components/ui/button';
+import type { Proposal, ProposalStatus } from '@/types/governance';
 import { cn } from '@/lib/utils';
 import { ArrowLeft, Filter } from 'lucide-react';
 
@@ -10,18 +15,34 @@ const STATUS_FILTERS: Array<{ label: string; value: ProposalStatus | 'all' }> =
 	[
 		{ label: 'All', value: 'all' },
 		{ label: 'Active', value: 'active' },
-		{ label: 'Closed', value: 'closed' },
 		{ label: 'Passed', value: 'passed' },
-		{ label: 'Rejected', value: 'rejected' },
+		{ label: 'Failed', value: 'failed' },
+		{ label: 'Executed', value: 'executed' },
 	];
 
 function GovernancePageContent() {
 	const { data: proposals, isLoading, error } = useGovernanceProposals();
+	const { address } = useAccount();
+	const { data: holdings = [] } = useWalletHoldings(address ?? '');
 	const [statusFilter, setStatusFilter] = useState<ProposalStatus | 'all'>(
 		'all'
 	);
+	const [votingProposal, setVotingProposal] = useState<Proposal | null>(null);
 	const [searchParams] = useSearchParams();
 	const targetProposalId = searchParams.get('proposal');
+
+	const totalHoldingsWeight = useMemo(
+		() => holdings.reduce((sum, h) => sum + (h.quantity ?? 0), 0),
+		[holdings]
+	);
+
+	const activeProposalVoteWeight = useMemo(() => {
+		if (!votingProposal) return totalHoldingsWeight;
+		const matchingHolding = holdings.find(
+			h => h.creatorId === votingProposal.creatorId
+		);
+		return matchingHolding?.quantity ?? totalHoldingsWeight;
+	}, [votingProposal, holdings, totalHoldingsWeight]);
 
 	useEffect(() => {
 		if (targetProposalId && !isLoading) {
@@ -32,9 +53,13 @@ function GovernancePageContent() {
 		}
 	}, [targetProposalId, isLoading]);
 
-	const filtered = proposals?.filter(
-		p => statusFilter === 'all' || p.status === statusFilter
-	);
+	const filtered = proposals?.filter(p => {
+		if (statusFilter === 'all') return true;
+		if (statusFilter === 'failed') {
+			return p.status === 'failed' || p.status === 'rejected';
+		}
+		return p.status === statusFilter;
+	});
 
 	const activeCount =
 		proposals?.filter(p => p.status === 'active').length ?? 0;
@@ -52,27 +77,48 @@ function GovernancePageContent() {
 				</Link>
 
 				{/* Header */}
-				<div className="mb-8">
-					<p className="font-mono text-[10px] uppercase tracking-[0.22em] text-amber-400/80">
-						Governance
-					</p>
-					<h1 className="mt-1 font-jakarta text-3xl font-black tracking-tight sm:text-4xl">
-						Proposals
-					</h1>
-					<p className="mt-2 max-w-lg text-sm text-white/50">
-						{activeCount > 0
-							? `${activeCount} active proposal${activeCount === 1 ? '' : 's'} require${activeCount === 1 ? 's' : ''} your vote.`
-							: 'No active proposals at the moment.'}
-					</p>
+				<div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+					<div>
+						<p className="font-mono text-[10px] uppercase tracking-[0.22em] text-amber-400/80">
+							Governance
+						</p>
+						<h1 className="mt-1 font-jakarta text-3xl font-black tracking-tight sm:text-4xl">
+							Proposals
+						</h1>
+						<p className="mt-2 max-w-lg text-sm text-white/50">
+							{activeCount > 0
+								? `${activeCount} active proposal${activeCount === 1 ? '' : 's'} require${activeCount === 1 ? 's' : ''} your vote.`
+								: 'No active proposals at the moment.'}
+						</p>
+						<Link
+							to="/governance/activity"
+							className="mt-2 inline-block text-xs font-semibold text-amber-300/80 hover:text-amber-200 hover:underline"
+						>
+							View admin & privileged change activity
+						</Link>
+					</div>
+					<CreateProposalDialog
+						trigger={
+							<Button
+								type="button"
+								size="sm"
+								data-testid="governance-create-proposal"
+								className="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 font-bold text-amber-300 hover:bg-amber-400/20"
+							>
+								Create Proposal
+							</Button>
+						}
+					/>
 				</div>
 
 				{/* Filters */}
-				<div className="mb-6 flex items-center gap-2">
+				<div className="mb-6 flex flex-wrap items-center gap-2">
 					<Filter className="size-3.5 text-white/30" aria-hidden="true" />
 					{STATUS_FILTERS.map(f => (
 						<button
 							key={f.value}
 							type="button"
+							data-testid={`status-filter-${f.value}`}
 							onClick={() => setStatusFilter(f.value)}
 							className={cn(
 								'rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
@@ -109,7 +155,10 @@ function GovernancePageContent() {
 
 				{/* Empty state */}
 				{!isLoading && !error && filtered && filtered.length === 0 && (
-					<div className="rounded-2xl border border-dashed border-white/10 p-8 text-center">
+					<div
+						data-testid="governance-empty-state"
+						className="rounded-2xl border border-dashed border-white/10 p-8 text-center"
+					>
 						<p className="text-sm text-white/40">
 							{statusFilter === 'all'
 								? 'No proposals yet.'
@@ -120,7 +169,7 @@ function GovernancePageContent() {
 
 				{/* Proposal cards */}
 				{!isLoading && !error && filtered && filtered.length > 0 && (
-					<div className="space-y-4">
+					<div className="space-y-4" data-testid="governance-proposal-list">
 						{filtered.map(proposal => (
 							<div
 								key={proposal.id}
@@ -131,11 +180,22 @@ function GovernancePageContent() {
 										'ring-2 ring-amber-400/80 shadow-[0_0_20px_rgba(251,191,36,0.15)]'
 								)}
 							>
-								<ProposalCard proposal={proposal} />
+								<ProposalCard
+									proposal={proposal}
+									onVoteClick={p => setVotingProposal(p)}
+								/>
 							</div>
 						))}
 					</div>
 				)}
+
+				<ProposalVoteModal
+					open={Boolean(votingProposal)}
+					onOpenChange={open => !open && setVotingProposal(null)}
+					proposal={votingProposal}
+					voterAddress={address}
+					voteWeight={activeProposalVoteWeight}
+				/>
 			</div>
 		</main>
 	);

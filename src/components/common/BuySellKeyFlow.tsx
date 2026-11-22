@@ -18,6 +18,8 @@ import {
 	calculateTradePriceImpact,
 	isHighPriceImpact,
 } from '@/utils/priceImpact.utils';
+import CircuitBreakerStatusIndicator from '@/components/common/CircuitBreakerStatusIndicator';
+import { evaluateCircuitBreakerStatus } from '@/utils/circuitBreaker.utils';
 import { calculateLaunchPenalty } from '@/utils/launchPenalty.utils';
 import {
 	calculateFeeBreakdown,
@@ -32,7 +34,15 @@ import HoldingCapIndicator from '@/components/common/HoldingCapIndicator';
 import { cn } from '@/lib/utils';
 import { ArrowRight } from 'lucide-react';
 import { useSlippageTolerancePreference } from '@/hooks/useSlippageTolerancePreference';
-
+import { useGlobalPause } from '@/hooks/useGlobalPause';
+import { useKeyTradeLimits } from '@/hooks/useKeyTradeLimits';
+import {
+	clampTradeAmountInput,
+	formatTradeLimit,
+	hasTradeLimit,
+	isTradeLimitReached,
+} from '@/utils/tradeLimit.utils';
+import { UnavailableAction } from '@/components/ui/unavailable-action';
 export interface BuySellTradeParams {
 	creatorId?: string;
 	side: 'buy' | 'sell';
@@ -64,10 +74,20 @@ export interface BuySellKeyFlowProps {
 	keyConfig?: KeyConfig | null;
 	/** Whether the key config query is still loading. */
 	isKeyConfigLoading?: boolean;
+	/** Key-level circuit breaker threshold in percent (defaults to keyConfig or 15%) (#1034). */
+	circuitBreakerThresholdPercent?: number | null;
+	/** Key-level circuit breaker threshold in basis points (defaults to keyConfig or 1500) (#1034). */
+	circuitBreakerThresholdBps?: number | null;
 	onSubmitTrade?: (params: BuySellTradeParams) => Promise<void> | void;
 	onSuccess?: (params: BuySellTradeParams) => void;
 	onError?: (error: unknown) => void;
 	isSubmitting?: boolean;
+	/** True when an admin has paused trading for this specific key (#777). */
+	tradingPaused?: boolean;
+	/** Configured price floor in stroops (#1152). */
+	priceFloorStroops?: number | null;
+	/** Whether the price floor is active (spot <= floor) (#1152). */
+	priceFloorActive?: boolean;
 	className?: string;
 }
 
@@ -97,10 +117,15 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 	currentLedger,
 	keyConfig,
 	isKeyConfigLoading = false,
+	circuitBreakerThresholdPercent,
+	circuitBreakerThresholdBps,
 	onSubmitTrade,
 	onSuccess,
 	onError,
 	isSubmitting: externalIsSubmitting = false,
+	tradingPaused = false,
+	priceFloorStroops = null,
+	priceFloorActive,
 	className,
 }) => {
 	const effectiveHoldingCap = useMemo(
@@ -122,12 +147,27 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 	>(null);
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
 	const [internalSubmitting, setInternalSubmitting] = useState(false);
+	const { paused: globalPaused } = useGlobalPause();
+	// Trading is blocked by a platform-wide pause OR a pause on this key (#777).
+	const paused = globalPaused || tradingPaused;
+	// Price floor active (#1152) blocks sell trades when spot price <= floor price.
+	const isFloorActive =
+		priceFloorActive ??
+		(keyPriceStroops != null &&
+		priceFloorStroops != null &&
+		priceFloorStroops > 0
+			? keyPriceStroops <= priceFloorStroops
+			: false);
 
 	const isSubmitting = externalIsSubmitting || internalSubmitting;
 
+	// Per-swap size limits for this key; only the active side's limit applies (#1160).
+	const { limits: tradeLimits } = useKeyTradeLimits(creatorId);
+	const activeTradeLimit = side === 'buy' ? tradeLimits.maxBuy : tradeLimits.maxSell;
+
 	const parsedAmount = useMemo(() => {
 		const trimmed = amountText.trim();
-		if (!trimmed) return NaN;
+		if (!trimmed) return Number.NaN;
 		return Number(trimmed);
 	}, [amountText]);
 
@@ -139,6 +179,8 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 		if (parsedAmount <= 0) return 'Amount must be greater than zero.';
 		if (!Number.isInteger(parsedAmount))
 			return 'Amount must be a whole number.';
+		if (side === 'sell' && isFloorActive)
+			return 'PriceFloorActive: Selling is disabled while current price is at or below the floor price.';
 
 		if (
 			side === 'buy' &&
@@ -177,6 +219,7 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 		maxBuyQuantity,
 		availableHoldings,
 		effectiveHoldingCap,
+		isFloorActive,
 	]);
 
 	const isCapLimitReached = useMemo(
@@ -201,8 +244,6 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 		[side, effectiveHoldingCap, availableHoldings, parsedAmount]
 	);
 
-	const isCapExceeded = isCapLimitReached || isCapBreached;
-
 	const isValid = validationError === null;
 	const showError = touched && validationError !== null;
 
@@ -212,10 +253,7 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 		if (side === 'sell') {
 			setAmountText(String(Math.max(0, availableHoldings)));
 		} else {
-			let maxVal =
-				maxBuyQuantity != null
-					? maxBuyQuantity
-					: BUY_QUANTITY_BOUNDS.MAX_QTY;
+			let maxVal = maxBuyQuantity ?? BUY_QUANTITY_BOUNDS.MAX_QTY;
 			if (
 				effectiveHoldingCap != null &&
 				Number.isFinite(effectiveHoldingCap) &&
@@ -290,6 +328,35 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 			currentSupply: currentSupply ?? 0,
 		});
 	}, [isValid, parsedAmount, side, currentSupply]);
+
+	const effectiveCircuitBreakerThresholdPercent =
+		circuitBreakerThresholdPercent ??
+		keyConfig?.circuitBreakerThresholdPercent ??
+		null;
+	const effectiveCircuitBreakerThresholdBps =
+		circuitBreakerThresholdBps ??
+		keyConfig?.circuitBreakerThresholdBps ??
+		null;
+
+	const circuitBreakerStatus = useMemo(() => {
+		if (side !== 'buy' || !isValid) return null;
+		return evaluateCircuitBreakerStatus({
+			impactPercent: priceImpactPercent,
+			thresholdPercent: effectiveCircuitBreakerThresholdPercent,
+			thresholdBps: effectiveCircuitBreakerThresholdBps,
+		});
+	}, [
+		side,
+		isValid,
+		priceImpactPercent,
+		effectiveCircuitBreakerThresholdPercent,
+		effectiveCircuitBreakerThresholdBps,
+	]);
+
+	const isCircuitBreakerBreached = Boolean(
+		side === 'buy' && circuitBreakerStatus?.isBreached
+	);
+
 	const impactWarningActive =
 		isValid &&
 		isHighPriceImpact(priceImpactPercent, slippageTolerancePercent);
@@ -315,13 +382,28 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 	// Open confirmation modal
 	const handleReviewOrder = () => {
 		setTouched(true);
-		if (!isValid || (impactWarningActive && !impactAcknowledged)) return;
+		if (
+			!isValid ||
+			isCapLimitReached ||
+			isCapBreached ||
+			isCircuitBreakerBreached ||
+			(impactWarningActive && !impactAcknowledged)
+		) {
+			return;
+		}
 		setConfirmationOpen(true);
 	};
 
 	// Final submission
 	const handleConfirmSubmission = async () => {
-		if (impactWarningActive && !impactAcknowledged) return;
+		if (
+			isCapLimitReached ||
+			isCapBreached ||
+			isCircuitBreakerBreached ||
+			(impactWarningActive && !impactAcknowledged)
+		) {
+			return;
+		}
 		setInternalSubmitting(true);
 		const tradeParams: BuySellTradeParams = {
 			creatorId,
@@ -364,6 +446,19 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 			setInternalSubmitting(false);
 		}
 	};
+
+	let reviewButtonLabel = 'Review Sell Order';
+	if (side === 'buy') {
+		if (isCapLimitReached) {
+			reviewButtonLabel = 'Holding Cap Reached';
+		} else if (isCapBreached) {
+			reviewButtonLabel = 'Holding Cap Exceeded';
+		} else if (isCircuitBreakerBreached) {
+			reviewButtonLabel = 'Circuit Breaker Tripped';
+		} else {
+			reviewButtonLabel = 'Review Buy Order';
+		}
+	}
 
 	return (
 		<div
@@ -436,6 +531,22 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 				/>
 			)}
 
+			{/* Price floor active alert (#1152) */}
+			{side === 'sell' && isFloorActive && (
+				<div
+					role="alert"
+					data-testid="price-floor-alert"
+					className="flex items-start gap-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200"
+				>
+					<div>
+						<p className="font-semibold text-rose-300">Price Floor Active</p>
+						<p className="mt-0.5 text-rose-200/80" data-testid="price-floor-message">
+							PriceFloorActive: Selling is disabled because current price is at or below the configured floor price{priceFloorStroops != null ? ` (${formatDisplayKeyPrice(priceFloorStroops)})` : ''}.
+						</p>
+					</div>
+				</div>
+			)}
+
 			{/* Amount Input with MAX Button */}
 			<div className="space-y-1.5">
 				<div className="flex items-center justify-between text-xs">
@@ -461,10 +572,12 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 						inputMode="numeric"
 						value={amountText}
 						onChange={e => {
-							setAmountText(e.target.value);
+							setAmountText(
+								clampTradeAmountInput(e.target.value, activeTradeLimit)
+							);
 							setTouched(true);
 						}}
-						disabled={isSubmitting}
+						disabled={isSubmitting || (side === 'sell' && isFloorActive)}
 						placeholder="1"
 						className={cn(
 							'w-full rounded-xl border bg-white/[0.04] px-3 py-2.5 pr-16 text-sm font-mono text-white outline-none transition-colors',
@@ -478,7 +591,7 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 						data-testid="trade-max-button"
 						onClick={handleMaxClick}
 						disabled={
-							isSubmitting || (side === 'sell' && availableHoldings <= 0)
+							isSubmitting || (side === 'sell' && (availableHoldings <= 0 || isFloorActive))
 						}
 						className={cn(
 							'absolute right-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-xs font-bold text-amber-300 transition-colors',
@@ -497,6 +610,29 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 						{validationError}
 					</p>
 				)}
+				{/* Per-swap trade limit helper and inline limit error (#1160) */}
+				{hasTradeLimit(activeTradeLimit) && (
+					<div className="space-y-1">
+						<p
+							id="trade-limit-helper"
+							data-testid="trade-limit-helper"
+							className="text-[11px] text-white/50"
+						>
+							Max {side === 'buy' ? 'buy' : 'sell'} per swap:{' '}
+							{formatTradeLimit(activeTradeLimit)} keys
+						</p>
+						{isTradeLimitReached(parsedAmount, activeTradeLimit) && (
+							<p
+								role="alert"
+								data-testid="trade-limit-exceeded"
+								className="text-xs text-amber-300"
+							>
+								Trade limit reached: you can {side} up to{' '}
+								{formatTradeLimit(activeTradeLimit)} keys per swap.
+							</p>
+						)}
+					</div>
+				)}
 				{/* Holding cap indicator on buy form (#1015) */}
 				{side === 'buy' && effectiveHoldingCap != null && effectiveHoldingCap > 0 && (
 					<HoldingCapIndicator
@@ -509,6 +645,14 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 						}
 						creatorName={creatorName}
 						className="my-2.5"
+					/>
+				)}
+				{side === 'buy' && (
+					<CircuitBreakerStatusIndicator
+						impactPercent={priceImpactPercent}
+						thresholdPercent={effectiveCircuitBreakerThresholdPercent}
+						thresholdBps={effectiveCircuitBreakerThresholdBps}
+						isValid={isValid}
 					/>
 				)}
 			</div>
@@ -548,20 +692,24 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 			)}
 
 			{/* Slippage Tolerance Selector (0.5%, 1%, 2%, custom) */}
-			<div className="border-t border-white/10 pt-3">
-				<SlippageToleranceSelector
-					value={slippageTolerancePercent}
-					onChange={setSlippageTolerancePercent}
-					disabled={isSubmitting}
-					presets={[0.5, 1, 2]}
-				/>
-			</div>
+			{!confirmationOpen && (
+				<div className="border-t border-white/10 pt-3">
+					<SlippageToleranceSelector
+						value={slippageTolerancePercent}
+						onChange={setSlippageTolerancePercent}
+						disabled={isSubmitting}
+						presets={[0.5, 1, 2]}
+					/>
+				</div>
+			)}
 
 			{/* Price impact warning when impact exceeds the selected tolerance */}
-			<PriceImpactWarning
-				impactPercent={priceImpactPercent}
-				threshold={slippageTolerancePercent}
-			/>
+			{!confirmationOpen && (
+				<PriceImpactWarning
+					impactPercent={priceImpactPercent}
+					threshold={slippageTolerancePercent}
+				/>
+			)}
 			{impactWarningActive && (
 				<PriceImpactOverrideCheckbox
 					checked={impactAcknowledged}
@@ -574,34 +722,40 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 			)}
 
 			{/* Review / Proceed to Confirmation Button */}
-			<Button
-				type="button"
-				onClick={handleReviewOrder}
-				disabled={
-					!isValid ||
-					isSubmitting ||
-					isCapExceeded ||
-					(impactWarningActive && !impactAcknowledged)
+			<UnavailableAction
+				disabled={paused || (side === 'sell' && isFloorActive)}
+				reason={
+					globalPaused
+						? 'Platform Paused'
+						: side === 'sell' && isFloorActive
+							? 'PriceFloorActive: Selling is disabled while current price is at or below the floor price.'
+							: 'Trading is currently paused'
 				}
-				data-testid="trade-review-button"
-				className={cn(
-					'w-full rounded-xl py-3 font-bold text-sm shadow-md transition-all',
-					side === 'buy'
-						? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
-						: 'bg-rose-500 hover:bg-rose-400 text-white'
-				)}
 			>
-				<span className="flex items-center justify-center gap-1.5">
-					{side === 'buy'
-						? isCapLimitReached
-							? 'Holding Cap Reached'
-							: isCapBreached
-							? 'Holding Cap Exceeded'
-							: 'Review Buy Order'
-						: 'Review Sell Order'}
-					<ArrowRight className="h-4 w-4" />
-				</span>
-			</Button>
+				<Button
+					type="button"
+					onClick={handleReviewOrder}
+					disabled={
+						!isValid ||
+						isSubmitting ||
+						(impactWarningActive && !impactAcknowledged) ||
+						paused ||
+						(side === 'sell' && isFloorActive)
+					}
+					data-testid="trade-review-button"
+					className={cn(
+						'w-full rounded-xl py-3 font-bold text-sm shadow-md transition-all',
+						side === 'buy'
+							? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
+							: 'bg-rose-500 hover:bg-rose-400 text-white'
+					)}
+				>
+					<span className="flex items-center justify-center gap-1.5">
+						{reviewButtonLabel}
+						<ArrowRight className="h-4 w-4" />
+					</span>
+				</Button>
+			</UnavailableAction>
 
 			{/* Confirmation Modal */}
 			<TradeConfirmationModal
@@ -613,6 +767,7 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 				unitPriceStroops={keyPriceStroops}
 				totalStroops={totalStroops}
 				slippageTolerancePercent={slippageTolerancePercent}
+				onSlippageChange={setSlippageTolerancePercent}
 				maxPriceStroops={slippageBounds?.maxPriceStroops ?? null}
 				minPriceStroops={slippageBounds?.minPriceStroops ?? null}
 				priceImpactPercent={priceImpactPercent}

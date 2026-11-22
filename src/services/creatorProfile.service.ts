@@ -55,6 +55,7 @@ class CreatorProfileService extends BaseApiService {
 			avatarUrl: primary.avatarUri || primary.thumbnail || null,
 			isVerified: keys.some(key => Boolean(key.isVerified)),
 			joinedAt: primary.joinedAt || primary.createdAt || null,
+			bio: primary.bio?.trim() || primary.description?.trim() || null,
 			socialLinks: resolveCreatorSocialLinks(keys),
 			stats: aggregateCreatorProfileStats(keys, ratingsById),
 			keys: keys

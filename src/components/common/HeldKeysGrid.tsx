@@ -16,6 +16,9 @@ import {
 } from '@/utils/portfolioValue.utils';
 import { formatNumber } from '@/utils/numberFormat.utils';
 import { isKeyDeprecated } from '@/utils/keyDeprecation.utils';
+import { isSplitActive } from '@/utils/keySplit.utils';
+import { keySplitEventService } from '@/services/keySplitEvents.service';
+import SplitAppliedBadge from '@/components/common/SplitAppliedBadge';
 import type { Course } from '@/services/course.service';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +30,7 @@ export interface HeldKeysGridProps {
 	/** Whether the viewer owns this profile — hides trade actions when false. */
 	isOwnProfile?: boolean;
 	isLoading?: boolean;
-	/** Fallback browse destination for the empty state (defaults to /creators). */
+	/** Fallback browse destination for the empty state. */
 	emptyBrowseHref?: string;
 	className?: string;
 }
@@ -46,7 +49,7 @@ const HeldKeysGrid: React.FC<HeldKeysGridProps> = ({
 	creators = [],
 	isOwnProfile = true,
 	isLoading = false,
-	emptyBrowseHref = '/creators',
+	emptyBrowseHref = '/discovery?source=empty-holdings',
 	className,
 }) => {
 	if (isLoading) {
@@ -80,6 +83,11 @@ const HeldKeysGrid: React.FC<HeldKeysGridProps> = ({
 				const title = creator?.title ?? 'Creator key';
 				const quantity = position.quantity ?? 0;
 				const isDeprecated = isKeyDeprecated(creator);
+				const hasSplitApplied = Boolean(
+					isSplitActive(creator?.recentSplit) ||
+					isSplitActive(creator?.splitExecuted) ||
+					keySplitEventService.getActiveSplit(position.creatorId)
+				);
 				const creatorHref = `/creator/${position.creatorId}`;
 
 				return (
@@ -89,12 +97,17 @@ const HeldKeysGrid: React.FC<HeldKeysGridProps> = ({
 						className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition-colors hover:border-white/20"
 					>
 						<div className="mb-3 flex items-start justify-between gap-3">
-							<Link
-								to={creatorHref}
-								className="min-w-0 truncate font-grotesque text-base font-bold text-white transition-colors hover:text-amber-300"
-							>
-								{title}
-							</Link>
+							<div className="flex flex-wrap items-center gap-2 min-w-0">
+								<Link
+									to={creatorHref}
+									className="min-w-0 truncate font-grotesque text-base font-bold text-white transition-colors hover:text-amber-300"
+								>
+									{title}
+								</Link>
+								{hasSplitApplied && (
+									<SplitAppliedBadge />
+								)}
+							</div>
 							{position.pending && (
 								<span
 									role="status"

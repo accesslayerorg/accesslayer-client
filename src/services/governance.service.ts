@@ -1,11 +1,30 @@
 import { BaseApiService, type APIResponse } from './api.service';
 import { cacheManager } from '@/utils/cache.utils';
 import { normalizeProposal } from '@/utils/governance.utils';
-import type { Proposal, ProposalVotesPage } from '@/types/governance';
+import {
+	normalizeGovernanceAdminState,
+	normalizeGovernanceEventsPage,
+} from '@/utils/governanceAudit.utils';
+import type {
+	CreateProposalPayload,
+	GovernanceAdminState,
+	GovernanceEventsPage,
+	GovernanceEventType,
+	Proposal,
+	ProposalVotesPage,
+} from '@/types/governance';
 
 /** How long fetched proposal data stays fresh (15 seconds — proposals change faster than profiles). */
 const PROPOSAL_CACHE_TTL = 15_000;
 export const PROPOSAL_VOTES_PAGE_SIZE = 20;
+/** Page size for the public governance audit feed (#1351). */
+export const GOVERNANCE_EVENTS_PAGE_SIZE = 20;
+
+export interface GetGovernanceEventsParams {
+	type?: GovernanceEventType;
+	cursor?: string | null;
+	limit?: number;
+}
 
 function asRecord(value: unknown): Record<string, unknown> {
 	return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -80,6 +99,36 @@ class GovernanceService extends BaseApiService {
 		}
 	}
 
+	async createProposal(
+		creatorId: string,
+		payload: CreateProposalPayload
+	): Promise<Proposal> {
+		try {
+			const response = await this.api.post<APIResponse<unknown>>(
+				'/governance/proposals',
+				{
+					creatorId,
+					title: payload.title,
+					description: payload.description,
+					endDate: payload.endDate,
+				}
+			);
+			const responseData = response.data?.data;
+			const envelope = asRecord(responseData);
+			const rawProposal = Array.isArray(responseData)
+				? responseData[0]
+				: envelope.proposal ??
+					envelope.data ??
+					(Array.isArray(envelope.items) ? envelope.items[0] : undefined) ??
+					responseData;
+			const proposal = normalizeProposal(rawProposal);
+			this.invalidateProposalListCache(creatorId);
+			return proposal;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
 	async getProposalVotes(
 		proposalId: string,
 		cursor?: string | null,
@@ -105,6 +154,58 @@ class GovernanceService extends BaseApiService {
 			return data;
 		} catch (error) {
 			throw this.handleError(error);
+		}
+	}
+
+	/**
+	 * Fetch one cursor page of privileged governance events (#1351).
+	 * GET /governance/events?type=:type&cursor=:cursor&limit=:limit
+	 *
+	 * Public endpoint — no wallet or session is required.
+	 */
+	async getGovernanceEvents({
+		type,
+		cursor,
+		limit = GOVERNANCE_EVENTS_PAGE_SIZE,
+	}: GetGovernanceEventsParams = {}): Promise<GovernanceEventsPage> {
+		try {
+			const response = await this.api.get<APIResponse<unknown>>(
+				'/governance/events',
+				{
+					params: {
+						...(type ? { type } : {}),
+						...(cursor ? { cursor } : {}),
+						limit,
+					},
+				}
+			);
+			return normalizeGovernanceEventsPage(response.data.data);
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/**
+	 * Fetch the current protocol admin and any pending admin transfer (#1351).
+	 * GET /governance/admin
+	 */
+	async getGovernanceAdmin(): Promise<GovernanceAdminState> {
+		try {
+			const response =
+				await this.api.get<APIResponse<unknown>>('/governance/admin');
+			return normalizeGovernanceAdminState(response.data.data);
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	private invalidateProposalListCache(creatorId?: string): void {
+		for (const cacheKey of [
+			`proposals_${creatorId ?? 'all'}`,
+			'proposals_all',
+		]) {
+			cacheManager.invalidate(cacheKey);
+			this.cacheKeys.delete(cacheKey);
 		}
 	}
 

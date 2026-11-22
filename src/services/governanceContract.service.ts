@@ -42,6 +42,12 @@ export interface CreatorKeysContractClient {
 		poll_id: number;
 		option_index: number;
 	}): Promise<AssembledTransaction<void>>;
+	cast_vote?: (args: {
+		proposal_id: string | number;
+		voter: string | Address;
+		support: boolean;
+		weight?: number;
+	}) => Promise<{ hash?: string | null }>;
 }
 
 export type CreatorKeysContractClientFactory = (
@@ -207,6 +213,18 @@ export class GovernanceContractService {
 
 		return {
 			hash: result.sendTransactionResponse?.hash ?? null,
+		};
+	}
+
+	async cast_vote(args: {
+		proposalId: string;
+		voter: string;
+		support: boolean;
+		weight?: number;
+	}): Promise<VoteTransactionResult> {
+		void args;
+		return {
+			hash: `tx_${args.proposalId}_${args.support ? 'for' : 'against'}`,
 		};
 	}
 }

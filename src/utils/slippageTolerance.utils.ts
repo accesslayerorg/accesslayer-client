@@ -30,6 +30,7 @@ export const DEFAULT_SLIPPAGE_TOLERANCE_PERCENT = 1;
 
 export const SLIPPAGE_TOLERANCE_BOUNDS = {
 	MIN_PERCENT: 0,
+	CUSTOM_MIN_PERCENT: 0.1,
 	MAX_PERCENT: 50,
 } as const;
 
@@ -38,13 +39,17 @@ export const SLIPPAGE_TOLERANCE_BOUNDS = {
  * Returns an error message when invalid, or `null` when the value is usable.
  */
 export function validateSlippageTolerancePercent(
-	value: number | null | undefined
+	value: number | null | undefined,
+	minPercent: number = SLIPPAGE_TOLERANCE_BOUNDS.MIN_PERCENT
 ): string | null {
 	if (value == null || !Number.isFinite(value)) {
 		return 'Enter a valid slippage tolerance.';
 	}
-	if (value < SLIPPAGE_TOLERANCE_BOUNDS.MIN_PERCENT) {
+	if (value < 0) {
 		return 'Slippage tolerance cannot be negative.';
+	}
+	if (value < minPercent) {
+		return `Slippage tolerance must be at least ${minPercent}%.`;
 	}
 	if (value > SLIPPAGE_TOLERANCE_BOUNDS.MAX_PERCENT) {
 		return `Slippage tolerance cannot exceed ${SLIPPAGE_TOLERANCE_BOUNDS.MAX_PERCENT}%.`;
@@ -131,3 +136,18 @@ export function computeSlippageBounds(
 	};
 }
 
+export {
+	calculateSlippageBounds,
+	validateSlippageTolerance,
+	getSlippageWarning,
+	isHighSlippage,
+	isLowSlippage,
+	SLIPPAGE_PRESETS,
+	DEFAULT_SLIPPAGE,
+	MIN_SLIPPAGE,
+	MAX_SLIPPAGE,
+	HIGH_SLIPPAGE_THRESHOLD,
+	LOW_SLIPPAGE_THRESHOLD,
+	type SwapQuote,
+	type SwapSide,
+} from './slippage.utils';

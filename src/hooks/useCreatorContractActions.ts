@@ -7,6 +7,10 @@ import { curveMigrationCacheKey } from '@/services/curveMigration.service';
 import { buildCurveMigrationExecuteCall } from '@/utils/curveMigration.utils';
 import type { CreatorMetadataChange } from '@/utils/creatorMetadata.utils';
 import type { GraduatedCurveMilestone } from '@/components/common/GraduatedCurvePanel';
+import {
+	announcementService,
+	type AnnouncementCategory,
+} from '@/services/announcement.service';
 
 /**
  * Creator-facing contract calls issued from the dashboard tabs
@@ -61,6 +65,9 @@ export function useUpdateMetadataMutation(creatorId: string) {
 			queryClient.invalidateQueries({
 				queryKey: queryKeys.creators.detail(creatorId),
 			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.onChainMetadata(creatorId),
+			});
 			showToast.success('Profile metadata updated');
 		},
 	});
@@ -99,6 +106,101 @@ export function useCancelAuctionMutation(creatorId: string) {
 				queryKey: queryKeys.creators.detail(creatorId),
 			});
 			showToast.success('Auction cancelled');
+		},
+	});
+}
+
+/**
+ * Places a bid during the pre-launch auction window (#924) via the contract's
+ * `place_bid` function (`{ creatorId, amount }`). On success the creator
+ * detail (auction price/sold) and the live bid history caches are invalidated
+ * so the panel and leaderboard reflect the new bid.
+ */
+export function usePlaceAuctionBidMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'place_bid', creatorId],
+		mutationFn: (amount: number) =>
+			submitContractCall('place_bid', { creatorId, amount }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.auctionBids(creatorId),
+			});
+			showToast.success('Bid placed');
+		},
+	});
+}
+
+export interface PlaceSpotlightBidInput {
+	slotId: string;
+	amount: number;
+}
+
+/**
+ * Places a spotlight discovery bid (#1147). The success toast is rendered by
+ * the caller so this hook stays free of JSX.
+ */
+export function usePlaceSpotlightBidMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'place_spotlight_bid', creatorId],
+		mutationFn: ({ slotId, amount }: PlaceSpotlightBidInput) =>
+			submitContractCall('place_spotlight_bid', { creatorId, slotId, amount }),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.spotlightAuction(creatorId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.spotlightBids(creatorId),
+			});
+		},
+	});
+}
+
+export interface PostAnnouncementInput {
+	title: string;
+	category: AnnouncementCategory;
+	content: string;
+}
+
+/**
+ * Posts a creator announcement (#1159). The body is pinned to IPFS first so the
+ * contract call receives the content hash, not the raw text.
+ */
+export function usePostAnnouncementMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'post_announcement', creatorId],
+		mutationFn: async ({ title, category, content }: PostAnnouncementInput) => {
+			const contentHash =
+				await announcementService.uploadAnnouncementContent(content);
+			return submitContractCall('post_announcement', {
+				creatorId,
+				title,
+				contentHash,
+				category,
+			});
+		},
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.announcements(creatorId),
+			});
+			showToast.success('Announcement published');
 		},
 	});
 }
@@ -302,6 +404,35 @@ export function useClaimVestedTokensMutation(
 				queryKey: queryKeys.creators.vesting(creatorId),
 			});
 			showToast.success('Vested tokens claimed');
+		},
+	});
+}
+
+/**
+ * Tops up a creator performance bond through the creator contract-call
+ * abstraction and refreshes the bond status shown on the dashboard.
+ */
+export function useTopUpPerformanceBondMutation(creatorId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'deposit_performance_bond', creatorId],
+		mutationFn: (amountXlm: number) =>
+			submitContractCall('deposit_performance_bond', {
+				creatorId,
+				amountXlm,
+			}),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.performanceBond(creatorId),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(creatorId),
+			});
+			showToast.success('Performance bond topped up');
 		},
 	});
 }

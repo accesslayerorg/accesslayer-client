@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { ArrowLeft, SearchX } from 'lucide-react';
+import { ArrowLeft, SearchX, Share2 } from 'lucide-react';
 import CreatorPublicProfileHeader from '@/components/common/CreatorPublicProfileHeader';
 import CreatorProfileStatRow from '@/components/common/CreatorProfileStatRow';
 import DeployedCreatorKeyCard from '@/components/common/DeployedCreatorKeyCard';
@@ -17,30 +18,40 @@ import type { CreatorPublicProfile } from '@/types/creatorProfile';
 import { formatMemberSince } from '@/utils/creatorProfile.utils';
 import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import { formatCompactNumber } from '@/utils/numberFormat.utils';
+import { copyTextToClipboard } from '@/utils/clipboard.utils';
+import showToast from '@/utils/toast.util';
+import { useAccount } from 'wagmi';
+import { QrCode } from 'lucide-react';
+import ShareQrModal from '@/components/common/ShareQrModal';
+import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
+
+const SHARE_COPIED_RESET_MS = 2000;
+
+/** Builds the canonical public profile URL for an address (#1120). */
+function buildProfileShareUrl(address: string): string {
+	return `${window.location.origin}/creator/${encodeURIComponent(address)}/profile`;
+}
 
 /**
- * Reader-facing stats rendered above the deployed keys grid (#1054).
+ * Reader-facing stats rendered above the deployed keys grid (#1054, #1120).
  */
 function buildStatItems(profile: CreatorPublicProfile) {
 	return [
-		{
-			label: 'Total Volume Traded',
-			value: formatDisplayKeyPrice(profile.stats.totalVolumeStroops),
-		},
 		{
 			label: 'Total Holders',
 			value: formatCompactNumber(profile.stats.totalHolders),
 		},
 		{
-			label: 'Avg Key Rating',
-			value:
-				profile.stats.averageRating != null
-					? `${profile.stats.averageRating.toFixed(1)} ★`
-					: 'Unrated',
+			label: 'Total Volume',
+			value: formatDisplayKeyPrice(profile.stats.totalVolumeStroops),
 		},
 		{
-			label: 'Keys Deployed',
+			label: 'Keys Issued',
 			value: formatCompactNumber(profile.stats.keyCount),
+		},
+		{
+			label: 'Avg Market Cap',
+			value: formatDisplayKeyPrice(profile.stats.avgMarketCapStroops),
 		},
 	];
 }
@@ -87,6 +98,29 @@ function CreatorPublicProfilePageContent() {
 	const follow = useCreatorFollows(state => state.follow);
 	const unfollow = useCreatorFollows(state => state.unfollow);
 
+	const [isShareCopied, setIsShareCopied] = useState(false);
+	const [qrOpen, setQrOpen] = useState(false);
+	const { address: walletAddress } = useAccount();
+
+	/** Copies the canonical profile URL to the clipboard (#1120). */
+	const handleShareProfile = async () => {
+		try {
+			await copyTextToClipboard(buildProfileShareUrl(address));
+			setIsShareCopied(true);
+			showToast.success('Profile link copied to clipboard', {
+				duration: SHARE_COPIED_RESET_MS,
+			});
+			window.setTimeout(
+				() => setIsShareCopied(false),
+				SHARE_COPIED_RESET_MS
+			);
+		} catch {
+			showToast.error(
+				'Could not copy the profile link. Please copy it manually.'
+			);
+		}
+	};
+
 	if (isLoading) {
 		return (
 			<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
@@ -128,24 +162,52 @@ function CreatorPublicProfilePageContent() {
 					avatarUrl={profile.avatarUrl}
 					isVerified={profile.isVerified}
 					memberSince={memberSince}
+					bio={profile.bio}
 					keyCount={profile.stats.keyCount}
 					socialLinks={profile.socialLinks}
 					actions={
-						<FollowButton
-							creatorAddress={address}
-							isFollowing={isFollowing}
-							onFollow={async target => {
-								follow(target);
-							}}
-							onUnfollow={async target => {
-								unfollow(target);
-							}}
-							className={cn(
-								'h-11 rounded-xl border px-5 font-bold',
-								!isFollowing &&
-									'border-amber-400 bg-amber-400 text-slate-950 hover:bg-amber-300'
-							)}
-						/>
+						<>
+							<button
+								type="button"
+								onClick={handleShareProfile}
+								data-testid="creator-profile-share-button"
+								aria-label="Copy link to this creator profile"
+								className={cn(
+									'h-11 inline-flex items-center gap-2 rounded-xl border px-5 font-bold transition-colors',
+									'border-white/15 bg-white/[0.04] text-white/85 hover:border-amber-400/50 hover:text-amber-300',
+									isShareCopied &&
+										'border-emerald-400/40 bg-emerald-400/10 text-emerald-300'
+								)}
+							>
+								<Share2 className="size-4" aria-hidden="true" />
+								{isShareCopied ? 'Copied!' : 'Share'}
+							</button>
+							<FollowButton
+								creatorAddress={address}
+								isFollowing={isFollowing}
+								onFollow={async target => {
+									follow(target);
+								}}
+								onUnfollow={async target => {
+									unfollow(target);
+								}}
+								className={cn(
+									'h-11 rounded-xl border px-5 font-bold',
+									!isFollowing &&
+										'border-amber-400 bg-amber-400 text-slate-950 hover:bg-amber-300'
+								)}
+							/>
+							<button
+								type="button"
+								onClick={() => setQrOpen(true)}
+								data-testid="creator-profile-qr-button"
+								aria-label="QR code"
+								className="h-11 inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-5 font-bold text-white/85 transition-colors hover:border-amber-400/50 hover:text-amber-300"
+							>
+								<QrCode className="size-4" aria-hidden="true" />
+								QR code
+							</button>
+						</>
 					}
 				/>
 
@@ -193,6 +255,16 @@ function CreatorPublicProfilePageContent() {
 						</div>
 					)}
 				</section>
+
+				<ShareQrModal
+					open={qrOpen}
+					onOpenChange={setQrOpen}
+					url={buildCreatorProfileReferralLink({
+						handle: profile.keys[0]?.handle ?? address,
+						wallet: walletAddress,
+					})}
+					handle={profile.keys[0]?.handle ?? address}
+				/>
 			</div>
 		</main>
 	);

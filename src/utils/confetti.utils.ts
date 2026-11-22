@@ -46,6 +46,22 @@ export function playPurchaseConfetti(durationMs = 2500): void {
 }
 
 /**
+ * Fire a single celebratory confetti burst from the centre of the screen.
+ *
+ * Used for badge achievements (#1222), where a short burst reads better than
+ * the sustained purchase animation.
+ */
+export function playAchievementConfetti(): void {
+	confetti({
+		particleCount: 90,
+		spread: 70,
+		startVelocity: 32,
+		origin: { y: 0.6 },
+		colors: ['#34d399', '#fbbf24', '#f87171', '#e2e8f0'],
+	});
+}
+
+/**
  * Check whether the current user has already had a successful key purchase
  * recorded in localStorage.
  */

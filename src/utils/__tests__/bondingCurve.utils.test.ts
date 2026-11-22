@@ -13,6 +13,8 @@ import {
 	computeSellRevenue,
 	DEFAULT_BONDING_CURVE_PARAMS,
 	type BondingCurveParams,
+	computeLinearCurvePrice,
+	computeCurveImpactPreview,
 } from '../bondingCurve.utils';
 
 describe('bondingCurve.utils', () => {
@@ -443,6 +445,47 @@ describe('bondingCurve.utils', () => {
 				// price = 10_000_000 * (1 + 0.01 * 10000) = 10_000_000 * 101 = 1_010_000_000
 				expect(price).toBeCloseTo(1_010_000_000);
 			});
+		});
+	});
+
+	describe('linear bonding curve: slope and intercept', () => {
+		it('computes linear curve price as intercept + slope * supply', () => {
+			// slope: 0.05, intercept: 1.0, supply: 10
+			// expected: 1.0 + 0.05 * 10 = 1.5
+			const price = computeLinearCurvePrice(10, 0.05, 1.0);
+			expect(price).toBeCloseTo(1.5);
+		});
+
+		it('returns intercept when supply is 0', () => {
+			const price = computeLinearCurvePrice(0, 0.05, 2.5);
+			expect(price).toBe(2.5);
+		});
+
+		it('throws on negative parameters', () => {
+			expect(() => computeLinearCurvePrice(-1, 0.05, 1)).toThrow(
+				'Supply cannot be negative'
+			);
+			expect(() => computeLinearCurvePrice(10, -0.05, 1)).toThrow(
+				'Slope cannot be negative'
+			);
+			expect(() => computeLinearCurvePrice(10, 0.05, -1)).toThrow(
+				'Intercept cannot be negative'
+			);
+		});
+
+		it('computes impact preview accurately', () => {
+			const current = { slope: 0.01, intercept: 1.0 };
+			const proposed = { slope: 0.02, intercept: 1.5 };
+			const supply = 10;
+
+			// current price: 1.0 + 0.01 * 10 = 1.10
+			// new price: 1.5 + 0.02 * 10 = 1.70
+			// change: 0.60, percent: (0.60 / 1.10) * 100 = 54.545%
+			const preview = computeCurveImpactPreview(supply, current, proposed);
+			expect(preview.currentPrice).toBeCloseTo(1.1);
+			expect(preview.newPrice).toBeCloseTo(1.7);
+			expect(preview.priceChange).toBeCloseTo(0.6);
+			expect(preview.percentChange).toBeCloseTo(54.5454, 3);
 		});
 	});
 });

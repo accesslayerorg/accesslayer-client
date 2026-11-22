@@ -6,7 +6,13 @@ import type {
   ProposalValidationResult,
   SwapHistoryEntry,
 } from '@/types/atomicSwap';
-import { generateProposalId, calculateExpiryTimestamp, isProposalExpired } from '@/types/atomicSwap';
+import {
+  generateProposalId,
+  calculateExpiryTimestamp,
+  isProposalExpired,
+  canAcceptProposal,
+  canCancelProposal,
+} from '@/types/atomicSwap';
 
 const PROPOSAL_CACHE_PREFIX = 'atomic_swap_proposal_';
 const PROPOSALS_LIST_CACHE_PREFIX = 'atomic_swap_proposals_';
@@ -20,6 +26,7 @@ export interface CreateProposalParams {
   desiredKeyId: string;
   desiredKeyName: string;
   desiredAmount: number;
+  counterpartyAddress?: string;
   expiryHours?: number;
 }
 
@@ -30,6 +37,11 @@ export interface GetProposalParams {
 export interface AcceptProposalParams {
   proposalId: string;
   counterpartyAddress: string;
+}
+
+export interface CancelProposalParams {
+  proposalId: string;
+  proposerAddress: string;
 }
 
 export interface GetUserProposalsParams {
@@ -60,6 +72,12 @@ class AtomicSwapService extends BaseApiService {
       desiredKeyId: params.desiredKeyId,
       desiredKeyName: params.desiredKeyName,
       desiredAmount: params.desiredAmount,
+      ...(params.counterpartyAddress
+        ? {
+            counterpartyAddress: params.counterpartyAddress,
+            counterparty: params.counterpartyAddress,
+          }
+        : {}),
       status: 'pending',
       createdAt: Date.now(),
       expiresAt: calculateExpiryTimestamp(params.expiryHours),
@@ -70,13 +88,16 @@ class AtomicSwapService extends BaseApiService {
         '/atomic-swaps/proposals',
         proposal
       );
+      this.cacheProposal(response.data.data);
       return response.data.data;
     } catch {
-      // Mock implementation for development
-      // In production, this would call the actual backend
       this.cacheProposal(proposal);
       return proposal;
     }
+  }
+
+  async propose_swap(params: CreateProposalParams): Promise<AtomicSwapProposal> {
+    return this.createProposal(params);
   }
 
   async getProposal(params: GetProposalParams): Promise<AtomicSwapProposal | null> {
@@ -104,13 +125,16 @@ class AtomicSwapService extends BaseApiService {
         `/atomic-swaps/proposals/${params.proposalId}/accept`,
         { counterpartyAddress: params.counterpartyAddress }
       );
+      this.cacheProposal(response.data.data.proposal);
       return response.data.data;
     } catch {
       // Mock implementation
       const proposal = await this.getProposal({ proposalId: params.proposalId });
       if (!proposal) throw new Error('Proposal not found');
       if (isProposalExpired(proposal)) throw new Error('Proposal has expired');
-      if (proposal.status !== 'pending') throw new Error('Proposal is no longer actionable');
+      if (!canAcceptProposal(proposal, params.counterpartyAddress)) {
+        throw new Error('Only the designated counterparty wallet can accept this swap');
+      }
 
       const updatedProposal: AtomicSwapProposal = {
         ...proposal,
@@ -124,6 +148,38 @@ class AtomicSwapService extends BaseApiService {
       this.addToSwapHistory(updatedProposal);
       return { transactionHash: updatedProposal.transactionHash!, proposal: updatedProposal };
     }
+  }
+
+  async accept_swap(params: AcceptProposalParams): Promise<{ transactionHash: string; proposal: AtomicSwapProposal }> {
+    return this.acceptProposal(params);
+  }
+
+  async cancelProposal(params: CancelProposalParams): Promise<{ proposal: AtomicSwapProposal }> {
+    try {
+      const response = await this.api.post<APIResponse<{ proposal: AtomicSwapProposal }>>(
+        `/atomic-swaps/proposals/${params.proposalId}/cancel`,
+        { proposerAddress: params.proposerAddress }
+      );
+      this.cacheProposal(response.data.data.proposal);
+      return response.data.data;
+    } catch {
+      const proposal = await this.getProposal({ proposalId: params.proposalId });
+      if (!proposal) throw new Error('Proposal not found');
+      if (!canCancelProposal(proposal, params.proposerAddress)) {
+        throw new Error('Only the proposer wallet can cancel this swap');
+      }
+
+      const updatedProposal: AtomicSwapProposal = {
+        ...proposal,
+        status: 'cancelled',
+      };
+      this.cacheProposal(updatedProposal);
+      return { proposal: updatedProposal };
+    }
+  }
+
+  async cancel_swap(params: CancelProposalParams): Promise<{ proposal: AtomicSwapProposal }> {
+    return this.cancelProposal(params);
   }
 
   async getUserProposals(params: GetUserProposalsParams): Promise<AtomicSwapProposal[]> {
@@ -171,6 +227,13 @@ class AtomicSwapService extends BaseApiService {
   private cacheProposal(proposal: AtomicSwapProposal): void {
     const cacheKey = `${PROPOSAL_CACHE_PREFIX}${proposal.id}`;
     cacheManager.set(cacheKey, proposal, PROPOSAL_CACHE_TTL_MS);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`atomic_swap_proposal_${proposal.id}`, JSON.stringify(proposal));
+      } catch {
+        // Ignore storage errors
+      }
+    }
   }
 
   private getStoredProposal(proposalId: string): AtomicSwapProposal | null {
@@ -292,7 +355,7 @@ class AtomicSwapService extends BaseApiService {
 export const atomicSwapService = new AtomicSwapService();
 
 export async function createAtomicSwapProposal(params: CreateProposalParams): Promise<AtomicSwapProposal> {
-  return atomicSwapService.createProposal(params);
+  return atomicSwapService.propose_swap(params);
 }
 
 export async function fetchAtomicSwapProposal(params: GetProposalParams): Promise<AtomicSwapProposal | null> {
@@ -300,7 +363,11 @@ export async function fetchAtomicSwapProposal(params: GetProposalParams): Promis
 }
 
 export async function acceptAtomicSwapProposal(params: AcceptProposalParams): Promise<{ transactionHash: string; proposal: AtomicSwapProposal }> {
-  return atomicSwapService.acceptProposal(params);
+  return atomicSwapService.accept_swap(params);
+}
+
+export async function cancelAtomicSwapProposal(params: CancelProposalParams): Promise<{ proposal: AtomicSwapProposal }> {
+  return atomicSwapService.cancel_swap(params);
 }
 
 export async function fetchUserAtomicSwapProposals(params: GetUserProposalsParams): Promise<AtomicSwapProposal[]> {

@@ -7,6 +7,14 @@ import { useKeyDiscovery } from '@/hooks/useKeyDiscovery';
 import type { Course } from '@/services/course.service';
 
 vi.mock('@/hooks/useKeyDiscovery');
+// Spotlight (#1219) and campaigns (#1226) have their own component tests;
+// stub their queries so the page renders without a QueryClient.
+vi.mock('@/hooks/useSpotlightAuction', () => ({
+	useActiveSpotlight: () => ({ data: null }),
+}));
+vi.mock('@/hooks/useCampaigns', () => ({
+	useActiveCampaigns: () => ({ data: [] }),
+}));
 
 const mockUseKeyDiscovery = vi.mocked(useKeyDiscovery);
 

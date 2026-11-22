@@ -25,6 +25,8 @@ interface MultiSigAdminPanelProps {
 const PANEL_CLASS =
 	'rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8';
 
+type MultiSigTab = 'pending' | 'completed';
+
 function sameAddress(left: string, right: string): boolean {
 	return left.toLowerCase() === right.toLowerCase();
 }
@@ -41,6 +43,24 @@ function formatActionTime(timestamp: string): string {
 			dateStyle: 'medium',
 			timeStyle: 'short',
 		});
+}
+
+function formatParams(params: unknown): string {
+	if (params === null || params === undefined) return '—';
+	if (typeof params === 'string') return params || '—';
+	if (typeof params === 'object') {
+		const entries = Object.entries(params as Record<string, unknown>);
+		if (entries.length === 0) return '—';
+		const summary = entries
+			.slice(0, 3)
+			.map(
+				([key, value]) =>
+					`${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`
+			)
+			.join(' · ');
+		return entries.length > 3 ? `${summary} · …` : summary;
+	}
+	return String(params);
 }
 
 function ActionTypeLabel({ type }: { type: string }) {
@@ -92,6 +112,22 @@ function PendingAction({
 							{action.description}
 						</p>
 					)}
+					<div className="mt-3 rounded-xl border border-white/10 bg-white/[0.02] p-3 text-left">
+						{action.target && (
+							<p className="mb-1 text-xs font-semibold text-white/60">Target contract</p>
+						)}
+						<p className="mb-2 text-xs font-mono text-white/80 truncate max-w-md">
+							{action.target ?? '—'}
+						</p>
+						<p className="mb-1 text-xs font-semibold text-white/60">Function</p>
+						<p className="mb-2 text-xs font-mono text-white/80 truncate max-w-md">
+							{action.function ?? '—'}
+						</p>
+						<p className="mb-0 text-xs font-semibold text-white/60">Params</p>
+						<p className="text-xs font-mono text-white/80 break-all max-w-md">
+							{formatParams(action.params)}
+						</p>
+					</div>
 				</div>
 				<div className="shrink-0 text-left lg:text-right">
 					<p className="font-mono text-sm font-bold text-amber-200">
@@ -179,6 +215,7 @@ export default function MultiSigAdminPanel({ isAdmin }: MultiSigAdminPanelProps)
 	const { address, isConnected, activeSigner } = useStellarWallet();
 	const [signingId, setSigningId] = useState<string | null>(null);
 	const [executingId, setExecutingId] = useState<string | null>(null);
+	const [tab, setTab] = useState<MultiSigTab>('pending');
 	const { pending, history, sign, execute, enabled } = useMultiSigActions(
 		isAdmin,
 		address,
@@ -237,74 +274,113 @@ export default function MultiSigAdminPanel({ isAdmin }: MultiSigAdminPanelProps)
 				</div>
 			</div>
 
-			<div className="mt-8">
-				<div className="mb-4 flex items-center justify-between gap-4">
-					<div>
-						<h3 className="font-grotesque text-lg font-bold">Pending actions</h3>
-						<p className="mt-1 text-xs text-white/40">Operations waiting for the 2-of-3 threshold</p>
-					</div>
-					<Clock3 className="size-5 text-white/25" aria-hidden="true" />
-				</div>
-				{pending.isLoading && (
-					<div className="space-y-3" role="status" aria-label="Loading pending actions">
-						<div className="h-40 animate-pulse rounded-2xl bg-white/[0.04]" />
-						<div className="h-40 animate-pulse rounded-2xl bg-white/[0.04]" />
-					</div>
-				)}
-				{pending.isError && (
-					<div className="rounded-2xl border border-rose-300/20 bg-rose-300/5 p-5 text-sm text-rose-100" role="alert">
-						Pending actions could not be loaded. Retry from the dashboard refresh.
-					</div>
-				)}
-				{!pending.isLoading && !pending.isError && (pending.data?.length ?? 0) === 0 && (
-					<div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-5 py-10 text-center text-sm text-white/40">
-						No sensitive actions are waiting for confirmation.
-					</div>
-				)}
-				{!pending.isLoading && !pending.isError && (pending.data?.length ?? 0) > 0 && (
-					<ul className="space-y-4" data-testid="multisig-pending-list" aria-label="Pending multi-sig actions">
-						{pending.data?.map(action => (
-							<PendingAction
-								key={action.id}
-								action={action}
-								walletAddress={address}
-								isSigning={signingId === action.id || sign.isPending}
-								isExecuting={executingId === action.id || execute.isPending}
-								onSign={actionToSign => void handleSign(actionToSign)}
-								onExecute={handleExecute}
-								onReject={handleReject}
-							/>
-						))}
-					</ul>
-				)}
+			<div className="mt-6 flex gap-1 border border-white/10 rounded-xl bg-white/[0.02]">
+				<Button
+					type="button"
+					onClick={() => setTab('pending')}
+					className={cn(
+						'rounded-lg px-4 py-2 text-sm font-semibold transition-colors',
+						tab === 'pending'
+							? 'bg-amber-300/10 text-amber-200 border-amber-300/40'
+							: 'text-white/40 hover:text-white border-transparent hover:border-white/10'
+					)}
+				>
+					Pending Actions
+				</Button>
+				<Button
+					type="button"
+					onClick={() => setTab('completed')}
+					className={cn(
+						'rounded-lg px-4 py-2 text-sm font-semibold transition-colors',
+						tab === 'completed'
+							? 'bg-emerald-300/10 text-emerald-200 border-emerald-300/40'
+							: 'text-white/40 hover:text-white border-transparent hover:border-white/10'
+					)}
+				>
+					Completed Actions
+				</Button>
 			</div>
 
-			<div className="mt-10 border-t border-white/10 pt-8">
-				<div className="mb-4 flex items-center gap-2">
-					<History className="size-4 text-white/40" aria-hidden="true" />
-					<h3 className="font-grotesque text-lg font-bold">Completed actions</h3>
+			{tab === 'pending' ? (
+				<div className="mt-8">
+					<div className="mb-4 flex items-center justify-between gap-4">
+						<div>
+							<h3 className="font-grotesque text-lg font-bold">Pending actions</h3>
+							<p className="mt-1 text-xs text-white/40">Operations waiting for the M-of-N threshold</p>
+						</div>
+						<Clock3 className="size-5 text-white/25" aria-hidden="true" />
+					</div>
+					{pending.isLoading && (
+						<div className="space-y-3" role="status" aria-label="Loading pending actions">
+							<div className="h-40 animate-pulse rounded-2xl bg-white/[0.04]" />
+							<div className="h-40 animate-pulse rounded-2xl bg-white/[0.04]" />
+						</div>
+					)}
+					{pending.isError && (
+						<div className="rounded-2xl border border-rose-300/20 bg-rose-300/5 p-5 text-sm text-rose-100" role="alert">
+							Pending actions could not be loaded. Retry from the dashboard refresh.
+						</div>
+					)}
+					{!pending.isLoading && !pending.isError && (pending.data?.length ?? 0) === 0 && (
+						<div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-5 py-10 text-center text-sm text-white/40">
+							No sensitive actions are waiting for confirmation.
+						</div>
+					)}
+					{!pending.isLoading && !pending.isError && (pending.data?.length ?? 0) > 0 && (
+						<ul className="space-y-4" data-testid="multisig-pending-list" aria-label="Pending multi-sig actions">
+							{pending.data?.map(action => (
+								<PendingAction
+									key={action.id}
+									action={action}
+									walletAddress={address}
+									isSigning={signingId === action.id || sign.isPending}
+									isExecuting={executingId === action.id || execute.isPending}
+									onSign={actionToSign => void handleSign(actionToSign)}
+									onExecute={handleExecute}
+									onReject={handleReject}
+								/>
+							))}
+						</ul>
+					)}
 				</div>
-				{history.isLoading && <p className="text-sm text-white/40" role="status">Loading action history…</p>}
-				{history.isError && <p className="text-sm text-rose-200" role="alert">Action history could not be loaded.</p>}
-				{!history.isLoading && !history.isError && (history.data?.length ?? 0) === 0 && (
-					<p className="rounded-2xl border border-dashed border-white/10 px-5 py-8 text-center text-sm text-white/35">Completed multi-sig actions will appear here.</p>
-				)}
-				{!history.isLoading && !history.isError && (history.data?.length ?? 0) > 0 && (
-					<ul className="divide-y divide-white/10 rounded-2xl border border-white/10" data-testid="multisig-history-list" aria-label="Completed multi-sig actions">
-						{history.data?.map(action => (
-							<li key={action.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
-								<div className="min-w-0">
-									<p className="font-semibold text-white/85">{action.title}</p>
-									<p className="mt-1 text-xs text-white/40">{action.signatures.length} signatures · {action.id}</p>
-								</div>
-								<time className="shrink-0 text-xs text-emerald-200/75" dateTime={action.executedAt}>
-									{action.executedAt ? formatActionTime(action.executedAt) : 'Completed'}
-								</time>
-							</li>
-						))}
-					</ul>
-				)}
-			</div>
+			) : (
+				<div className="mt-8 border-t border-white/10 pt-8">
+					<div className="mb-4 flex items-center gap-2">
+						<History className="size-4 text-white/40" aria-hidden="true" />
+						<h3 className="font-grotesque text-lg font-bold">Completed actions</h3>
+					</div>
+					{history.isLoading && <p className="text-sm text-white/40" role="status">Loading action history…</p>}
+					{history.isError && <p className="text-sm text-rose-200" role="alert">Action history could not be loaded.</p>}
+					{!history.isLoading && !history.isError && (history.data?.length ?? 0) === 0 && (
+						<p className="rounded-2xl border border-dashed border-white/10 px-5 py-8 text-center text-sm text-white/35">Completed multi-sig actions will appear here.</p>
+					)}
+					{!history.isLoading && !history.isError && (history.data?.length ?? 0) > 0 && (
+						<ul className="divide-y divide-white/10 rounded-2xl border border-white/10" data-testid="multisig-history-list" aria-label="Completed multi-sig actions">
+							{history.data?.map(action => (
+								<li key={action.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+									<div className="min-w-0">
+										<p className="font-semibold text-white/85">{action.title}</p>
+										<p className="mt-1 text-xs text-white/40">{action.signatures.length} signatures · {action.id}</p>
+										{action.target && (
+											<p className="mt-1 text-xs text-white/50 truncate max-w-xs">
+												Target: {action.target}
+											</p>
+										)}
+										{action.function && (
+											<p className="mt-1 text-xs text-white/50 truncate max-w-xs">
+												Function: {action.function}
+											</p>
+										)}
+									</div>
+									<time className="shrink-0 text-xs text-emerald-200/75" dateTime={action.executedAt}>
+										{action.executedAt ? formatActionTime(action.executedAt) : 'Completed'}
+									</time>
+								</li>
+							))}
+						</ul>
+					)}
+				</div>
+			)}
 		</section>
 	);
 }
