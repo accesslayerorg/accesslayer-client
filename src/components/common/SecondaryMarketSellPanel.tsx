@@ -1,8 +1,9 @@
 /**
- * Secondary-market sell panel (#1174).
+ * Secondary-market sell panel (#1174, #1354).
  * Offers two listing modes side by side: Fixed Price and Auction.
  * The auction tab collects fraction amount, reserve price, and duration,
  * shows a summary preview, and submits `create_auction`.
+ * Displays same-ledger sell restriction notice and uses sellable balance.
  */
 
 import React, { useMemo, useState } from 'react';
@@ -15,11 +16,17 @@ import {
 	durationLabelToSeconds,
 	type AuctionDurationLabel,
 } from '@/utils/auction.utils';
+import { useSellableNow } from '@/hooks/useSellableNow';
+import SameLedgerNotice from '@/components/common/SameLedgerNotice';
 
 export type SellMode = 'fixed' | 'auction';
 
 export interface SecondaryMarketSellPanelProps {
-	/** Fraction balance the seller can list. */
+	/** Wallet address of the seller. */
+	wallet: string;
+	/** Creator key ID. */
+	keyId: string;
+	/** Total fraction balance the seller holds (for display fallback). */
 	availableFractions: number;
 	/** Submit a fixed-price listing. */
 	onCreateFixedPriceListing?: (input: {
@@ -47,11 +54,16 @@ const inputClass =
 	'w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-amber-300/50 focus:outline-none';
 
 const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
+	wallet,
+	keyId,
 	availableFractions,
 	onCreateFixedPriceListing,
 	onCreateAuction,
 	isSubmitting = false,
 }) => {
+	const { sellableNow, isFullySellable, isExempt, lockedBalance, totalBalance, nextLedgerCloseEstimate, isLoading } =
+		useSellableNow(wallet, keyId);
+
 	const [mode, setMode] = useState<SellMode>('fixed');
 	const [fractionAmount, setFractionAmount] = useState('1');
 	const [reservePrice, setReservePrice] = useState('');
@@ -62,6 +74,10 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 	const reserve = Number(reservePrice);
 	const price = Number(fixedPrice);
 	const durationSeconds = durationLabelToSeconds(duration);
+
+	// Use sellableNow for max amount, fall back to availableFractions if not loaded
+	const effectiveMaxAmount = isLoading ? availableFractions : sellableNow;
+	const isSellDisabled = isSubmitting || effectiveMaxAmount <= 0;
 
 	const auctionSummary = useMemo(() => {
 		if (
@@ -124,6 +140,15 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 
 	return (
 		<div className="rounded-xl border border-white/10 bg-white/[0.02] p-5" data-testid="secondary-market-sell-panel">
+			{/* Same-ledger restriction notice */}
+			{!isExempt && !isFullySellable && lockedBalance > 0 && (
+				<SameLedgerNotice
+					nextLedgerCloseEstimate={nextLedgerCloseEstimate}
+					lockedBalance={lockedBalance}
+					totalBalance={totalBalance}
+				/>
+			)}
+
 			{/* Tabs */}
 			<div
 				className="mb-5 flex gap-2 border-b border-white/10"
@@ -156,14 +181,16 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 				<input
 					type="number"
 					min={1}
-					max={availableFractions}
+					max={effectiveMaxAmount}
 					value={fractionAmount}
 					onChange={e => setFractionAmount(e.target.value)}
 					className={inputClass}
 					data-testid="auction-fraction-amount"
+					disabled={isSellDisabled}
 				/>
 				<span className="mt-1 block text-[11px] text-white/40">
-					{availableFractions} available
+					{effectiveMaxAmount} sellable
+					{isLoading ? ' (loading…)' : lockedBalance > 0 ? ` (${lockedBalance} locked)` : ''}
 				</span>
 			</label>
 
@@ -180,12 +207,13 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 							onChange={e => setFixedPrice(e.target.value)}
 							className={inputClass}
 							data-testid="fixed-price-input"
+							disabled={isSellDisabled}
 						/>
 					</label>
 					<Button
 						type="button"
 						onClick={submitFixedPrice}
-						disabled={isSubmitting}
+						disabled={isSellDisabled}
 						data-testid="submit-fixed-price"
 					>
 						{isSubmitting ? 'Submitting…' : 'Create listing'}
@@ -204,6 +232,7 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 							onChange={e => setReservePrice(e.target.value)}
 							className={inputClass}
 							data-testid="auction-reserve-price"
+							disabled={isSellDisabled}
 						/>
 					</label>
 
@@ -223,6 +252,7 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 									}`}
 									data-testid={`auction-duration-${d.label}`}
 									data-seconds={d.seconds}
+									disabled={isSellDisabled}
 								>
 									{d.label}
 								</button>
@@ -262,7 +292,7 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 					<Button
 						type="button"
 						onClick={submitAuction}
-						disabled={isSubmitting || !auctionSummary}
+						disabled={isSubmitting || !auctionSummary || isSellDisabled}
 						data-testid="submit-auction"
 					>
 						{isSubmitting ? 'Submitting…' : 'Create auction'}
