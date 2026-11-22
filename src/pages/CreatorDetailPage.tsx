@@ -143,7 +143,8 @@ import { MarketMakerChip, MMBadge } from '@/components/common/MarketMakerChip';
 import ReportKeyModal from '@/components/common/ReportKeyModal';
 import ShareQrModal from '@/components/common/ShareQrModal';
 import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
-import { QrCode } from 'lucide-react';
+import { QrCode, Bell } from 'lucide-react';
+import PriceAlertForm from '@/components/common/PriceAlertForm';
 
 /** Series shown in the key detail price panel (#1220 adds the depth tab). */
 type PriceChartTab = 'primary' | 'secondary' | 'depth' | 'revenue';
@@ -165,6 +166,7 @@ function CreatorDetailPageContent() {
 
 	const [hasMounted, setHasMounted] = useState(false);
 	const [buybackModalOpen, setBuybackModalOpen] = useState(false);
+	const [showAlertForm, setShowAlertForm] = useState(false);
 	const [recentSettlement, setRecentSettlement] =
 		useState<KeyBuybackReceipt | null>(null);
 	const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -765,7 +767,27 @@ function CreatorDetailPageContent() {
 						labelName={displayName}
 						className="mt-3 size-11 shrink-0 sm:size-9"
 					/>
+					<button
+						type="button"
+						onClick={() => setShowAlertForm(v => !v)}
+						aria-expanded={showAlertForm}
+						title="Set price alert"
+						className="mt-3 flex size-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30 sm:size-9"
+					>
+						<Bell className="size-4" aria-hidden="true" />
+					</button>
 				</div>
+
+				{showAlertForm && creator && (
+					<div className="mt-4">
+						<PriceAlertForm
+							creatorId={creator.id}
+							creatorTitle={creator.title}
+							currentPriceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
+							onClose={() => setShowAlertForm(false)}
+						/>
+					</div>
+				)}
 
 				{creator && (
 					<CreatorSocialSection
