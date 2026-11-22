@@ -18,6 +18,7 @@ import ProfilePage from './pages/ProfilePage';
 import FollowingPage from './pages/FollowingPage';
 import ComparePage from './pages/ComparePage';
 import GovernancePage from './pages/GovernancePage';
+import GovernanceFeedPage from './pages/GovernanceFeedPage';
 import ProposalDetailPage from './pages/ProposalDetailPage';
 import ReferralDashboardPage from './pages/ReferralDashboardPage';
 import CreateCreatorKeyPage from './pages/CreateCreatorKeyPage';
@@ -270,6 +271,13 @@ export const routes = [
 			{
 				path: '/governance',
 				element: <GovernancePage />,
+			},
+			{
+				path: '/governance/activity',
+				element: withRouteErrorBoundary(
+					<GovernanceFeedPage />,
+					'Governance Activity'
+				),
 			},
 			{
 				path: '/governance/create',
