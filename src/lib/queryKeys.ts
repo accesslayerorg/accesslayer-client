@@ -341,4 +341,21 @@ export const queryKeys = {
 		all: () => ['api-keys'] as const,
 		list: () => ['api-keys', 'list'] as const,
 	},
+	launches: {
+		all: () => ['launches'] as const,
+	},
+	verificationApplication: {
+		all: () => ['verification-application'] as const,
+		mine: () => ['verification-application', 'mine'] as const,
+	},
+	curveParams: {
+		all: () => ['curve-params'] as const,
+		byKey: (keyId: string) => ['curve-params', keyId] as const,
+	},
+	walletSession: {
+		all: () => ['wallet'] as const,
+		notifications: () => ['notifications'] as const,
+		sessions: () => ['sessions'] as const,
+		alerts: () => ['alerts'] as const,
+	},
 } as const;

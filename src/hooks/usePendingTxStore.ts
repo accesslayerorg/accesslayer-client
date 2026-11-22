@@ -62,6 +62,8 @@ interface PendingTxState {
 	) => void;
 	/** Drops a transaction from the tracker. */
 	removePendingTransaction: (hash: string) => void;
+	/** Clears all tracked transactions, e.g. after a wallet switch in another tab. */
+	clearAll: () => void;
 	/** Removes completed transactions older than {@link COMPLETED_TX_TTL_MS}. */
 	pruneCompletedTransactions: (now?: number) => void;
 }
@@ -162,6 +164,8 @@ export const usePendingTxStore = create<PendingTxState>()(
 				set(state => ({
 					transactions: state.transactions.filter(tx => tx.hash !== hash),
 				})),
+
+			clearAll: () => set({ transactions: [] }),
 
 			pruneCompletedTransactions: (now = Date.now()) =>
 				set(state => {
