@@ -25,6 +25,7 @@ import RevenueDistributionHistoryPage from './pages/RevenueDistributionHistoryPa
 import BundleManagementPage from './pages/BundleManagementPage';
 import CreatorRevenueDashboardPage from './pages/CreatorRevenueDashboardPage';
 import SpotlightAuctionPage from './pages/SpotlightAuctionPage';
+import DutchAuctionPage from './pages/SpotlightAuctionPage';
 import AtomicSwapCreatePage from './pages/AtomicSwapCreatePage';
 import AtomicSwapProposalPage from './pages/AtomicSwapProposalPage';
 import StatusPage from './pages/StatusPage';
@@ -126,6 +127,11 @@ export const routes = [
 					<CreatorDetailPage />,
 					'Key detail'
 				),
+			},
+			{
+				// Dutch auction buying page with live descending price (secondary sales).
+				path: '/auctions/:id',
+				element: withRouteErrorBoundary(<DutchAuctionPage />, 'Dutch auction'),
 			},
 			{
 				path: '/keys/:keyId/lp',

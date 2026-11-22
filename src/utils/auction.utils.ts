@@ -29,6 +29,47 @@ export function durationLabelToSeconds(label: AuctionDurationLabel): number {
 	return entry.seconds;
 }
 
+/**
+ * Price of a Dutch auction at a given time, linearly decaying from start
+ * price to floor price over the auction duration. Clamped to [floor, start].
+ */
+export function dutchAuctionPriceAt(
+	startPriceStroops: number,
+	floorPriceStroops: number,
+	startsAt: Date | number,
+	durationSeconds: number,
+	now: Date | number
+): number {
+	if (durationSeconds <= 0) return floorPriceStroops;
+	const startMs = typeof startsAt === 'number' ? startsAt : startsAt.getTime();
+	const nowMs = typeof now === 'number' ? now : now.getTime();
+	const elapsed = Math.min(Math.max((nowMs - startMs) / 1000, 0), durationSeconds);
+	const fraction = elapsed / durationSeconds;
+	const price = startPriceStroops - (startPriceStroops - floorPriceStroops) * fraction;
+	return Math.max(floorPriceStroops, Math.min(startPriceStroops, price));
+}
+
+/** Default max-price buffer for buy-now forms: current price plus 1%. */
+export function defaultMaxPriceStroops(currentPriceStroops: number): number {
+	return Math.ceil(currentPriceStroops * 1.01);
+}
+
+/**
+ * Total cost of a purchase including protocol fee and creator royalty.
+ * Fee and royalty are expressed in basis points of the gross amount.
+ */
+export function purchaseTotalStroops(
+	unitPriceStroops: number,
+	quantity: number,
+	protocolFeeBps: number,
+	royaltyBps: number
+): { gross: number; protocolFee: number; creatorRoyalty: number; total: number } {
+	const gross = unitPriceStroops * quantity;
+	const protocolFee = Math.floor((gross * protocolFeeBps) / 10_000);
+	const creatorRoyalty = Math.floor((gross * royaltyBps) / 10_000);
+	return { gross, protocolFee, creatorRoyalty, total: gross + protocolFee + creatorRoyalty };
+}
+
 /** When a newly created auction ends, given a start time and duration. */
 export function auctionEndTime(
 	startsAt: Date | number,
