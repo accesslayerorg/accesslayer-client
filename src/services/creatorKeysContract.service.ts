@@ -301,6 +301,54 @@ export class CreatorKeysContractService {
 	}): Promise<{ success: boolean; hash?: string }> {
 		return this.send_tip(args);
 	}
+
+	async submit_rating(args: {
+		keyId: string;
+		rating: number;
+		review?: string;
+	}): Promise<{ success: boolean; hash?: string }> {
+		if (!env.VITE_STELLAR_RPC_URL || !env.VITE_CREATOR_KEYS_CONTRACT_ID) {
+			return { success: true, hash: `sim_rating_${Date.now()}` };
+		}
+
+		let keyAddress: Address;
+		try {
+			keyAddress = Address.fromString(args.keyId);
+		} catch {
+			throw new Error('Invalid key ID address.');
+		}
+
+		const client = this.factory(
+			env.VITE_CREATOR_KEYS_CONTRACT_ID,
+			env.VITE_STELLAR_RPC_URL,
+			getNetworkPassphrase()
+		) as {
+			submit_rating?: (callArgs: {
+				key_id: Address;
+				rating: number;
+				review?: string;
+			}) => Promise<{ result?: unknown; hash?: string }>;
+		};
+
+		if (typeof client.submit_rating === 'function') {
+			const res = await client.submit_rating({
+				key_id: keyAddress,
+				rating: args.rating,
+				review: args.review,
+			});
+			return { success: true, hash: res?.hash };
+		}
+
+		return { success: true, hash: `sim_rating_${Date.now()}` };
+	}
+
+	async submitRating(args: {
+		keyId: string;
+		rating: number;
+		review?: string;
+	}): Promise<{ success: boolean; hash?: string }> {
+		return this.submit_rating(args);
+	}
 }
 
 export const creatorKeysContractService = new CreatorKeysContractService();

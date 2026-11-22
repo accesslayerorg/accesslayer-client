@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreatorDetail, usePriceHistory } from '@/hooks/useCreators';
 import { useKeyFreeze } from '@/hooks/useKeyFreeze';
@@ -34,6 +34,8 @@ import KeyHolderList from '@/components/common/KeyHolderList';
 import CommentSection from '@/components/common/CommentSection';
 import KeySocialFeed from '@/components/common/KeySocialFeed';
 import KeyHolderLeaderboard from '@/components/common/KeyHolderLeaderboard';
+import KeyRatingSummary from '@/components/common/KeyRatingSummary';
+import RatingForm from '@/components/common/RatingForm';
 import HolderConcentrationChart from '@/components/common/HolderConcentrationChart';
 import HolderConcentrationHeatmap from '@/components/common/HolderConcentrationHeatmap';
 import HolderSnapshotHistory from '@/components/common/HolderSnapshotHistory';
@@ -70,6 +72,7 @@ import AuctionPhaseSection from '@/components/common/AuctionPhaseSection';
 import { useAuctionPhase } from '@/hooks/useAuctionPhase';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useKeyHolders } from '@/hooks/useKeyHolders';
+import { useKeyRatings, useSubmitKeyRatingMutation } from '@/hooks/useKeyRatings';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import { useWalletHoldings, useTradeMutation } from '@/hooks/useWallet';
 import KeyMintProgressSection from '@/components/common/KeyMintProgressSection';
@@ -259,6 +262,25 @@ function CreatorDetailPageContent() {
 
 	const userPosition = holdings.find(h => h.creatorId === (id || ''));
 	const holdingsCount = userPosition?.quantity ?? 0;
+	const isHolder = holdingsCount > 0;
+
+	const {
+		ratings,
+		summary: ratingSummary,
+		isLoading: isRatingsLoading,
+	} = useKeyRatings(id || '');
+	const submitRatingMutation = useSubmitKeyRatingMutation(
+		id || '',
+		userAddress
+	);
+	const existingUserRating = useMemo(
+		() =>
+			ratings.find(
+				rating =>
+					userAddress &&
+					rating.walletAddress.toLowerCase() === userAddress.toLowerCase()
+			) ?? null,
+		[ratings, userAddress]
 	const retirementPending =
 		creator?.isRetiring === true && !creator.retirementExecutedAt;
 
@@ -1446,6 +1468,57 @@ function CreatorDetailPageContent() {
 
 					<SectionErrorBoundary sectionName="reputation breakdown">
 						<ReputationBreakdownPanel keyId={creator.id} />
+					</SectionErrorBoundary>
+				</div>
+
+				<div
+					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
+					data-testid="key-ratings-container"
+				>
+					<h2 className="mb-6 font-grotesque text-xl font-black tracking-tight text-white">
+						Ratings & Reviews
+					</h2>
+
+					<SectionErrorBoundary sectionName="key ratings">
+						<div className="space-y-4">
+							<KeyRatingSummary
+								summary={ratingSummary}
+								isLoading={isRatingsLoading}
+							/>
+							<RatingForm
+								existingRating={existingUserRating}
+								isHolder={isHolder}
+								isConnected={Boolean(userAddress)}
+								isSubmitting={submitRatingMutation.isPending}
+								onSubmit={async input => {
+									await submitRatingMutation.mutateAsync(input);
+								}}
+							/>
+							<div className="rounded-xl border border-white/10 bg-white/[0.03] p-4" data-testid="key-ratings-list">
+								<h3 className="mb-3 text-sm font-bold text-white">Recent reviews</h3>
+								{ratings.length === 0 ? (
+									<p className="text-sm text-white/50">No reviews yet.</p>
+								) : (
+									<ul className="space-y-3">
+										{ratings.slice(0, 5).map((rating) => (
+											<li key={rating.id} className="border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
+												<div className="flex items-center justify-between gap-3">
+													<span className="font-mono text-xs text-white/60">
+														{rating.walletAddress.slice(0, 4)}...{rating.walletAddress.slice(-4)}
+													</span>
+													<span className="text-xs font-semibold text-amber-300">{rating.rating}/5</span>
+												</div>
+												{rating.review ? (
+													<p className="mt-1 text-sm text-white/75 break-words">{rating.review}</p>
+												) : (
+													<p className="mt-1 text-sm text-white/40">No written review.</p>
+												)}
+											</li>
+										))}
+									</ul>
+								)}
+							</div>
+						</div>
 					</SectionErrorBoundary>
 				</div>
 
