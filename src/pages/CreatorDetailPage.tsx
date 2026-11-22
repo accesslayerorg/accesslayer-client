@@ -158,10 +158,9 @@ import { MarketMakerChip, MMBadge } from '@/components/common/MarketMakerChip';
 import ReportKeyModal from '@/components/common/ReportKeyModal';
 import ShareQrModal from '@/components/common/ShareQrModal';
 import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
-import { QrCode } from 'lucide-react';
+import { Bell, QrCode } from 'lucide-react';
 import RetirementExitPanel from '@/components/common/RetirementExitPanel';
 import RetirementNoticeEmailCard from '@/components/common/RetirementNoticeEmailCard';
-import { QrCode, Bell } from 'lucide-react';
 import PriceAlertForm from '@/components/common/PriceAlertForm';
 
 /** Series shown in the key detail price panel (#1220 adds the depth tab). */
@@ -281,6 +280,7 @@ function CreatorDetailPageContent() {
 					rating.walletAddress.toLowerCase() === userAddress.toLowerCase()
 			) ?? null,
 		[ratings, userAddress]
+	);
 	const retirementPending =
 		creator?.isRetiring === true && !creator.retirementExecutedAt;
 

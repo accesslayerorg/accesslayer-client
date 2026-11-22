@@ -8,7 +8,6 @@ import CreatorDetailPage from './pages/CreatorDetailPage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
 import CreatorPublicProfilePage from './pages/CreatorPublicProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
-feat/otc-trade-escrow
 import OtcTradePage from './pages/OtcTradePage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import NotificationPreferencesPage from './pages/NotificationPreferencesPage';
@@ -62,37 +61,9 @@ function withRouteErrorBoundary(element: ReactNode, routeName: string) {
 		<RouteErrorBoundary routeName={routeName}>{element}</RouteErrorBoundary>
 	);
 }
- dev
 
 export const routes = [
 	{
-		path: '/',
- feat/otc-trade-escrow
-		element: <HomePage />,
-	},
-	{
-		path: '/creators',
-		element: <HomePage />,
-	},
-	{
-		path: '/creator/:id',
-		element: <CreatorDetailPage />,
-	},
-	{
-		path: '/creators/:id',
-		element: <CreatorDetailPage />,
-	},
-	{
-		path: '/notifications',
-		element: <NotificationsPage />,
-	},
-	{
-		path: '/otc/:id',
-		element: <OtcTradePage />,
-	},
-	{
-		path: '*',
-		element: <NotFoundPage />
 		element: <RootLayout />,
 		children: [
 			{
@@ -135,6 +106,11 @@ export const routes = [
 					<RentalMarketPage />,
 					'Key rentals'
 				),
+			},
+			{
+				// OTC key trade escrow screen (#1383).
+				path: '/otc/:id',
+				element: withRouteErrorBoundary(<OtcTradePage />, 'OTC Trade'),
 			},
 			{
 				// Listed, rented out and rented in keys for the wallet (#1360).
@@ -444,6 +420,5 @@ export const routes = [
 				element: <NotFoundPage />,
 			},
 		],
-dev
 	},
 ];
