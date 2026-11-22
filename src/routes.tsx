@@ -2,6 +2,7 @@ import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
 import CreatorDetailPage from './pages/CreatorDetailPage';
 import NotificationsPage from './pages/NotificationsPage';
+import OtcTradePage from './pages/OtcTradePage';
 
 export const routes = [
 	{
@@ -23,6 +24,10 @@ export const routes = [
 	{
 		path: '/notifications',
 		element: <NotificationsPage />,
+	},
+	{
+		path: '/otc/:id',
+		element: <OtcTradePage />,
 	},
 	{
 		path: '*',
