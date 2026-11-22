@@ -23,6 +23,7 @@ import ProposalDetailPage from './pages/ProposalDetailPage';
 import ReferralDashboardPage from './pages/ReferralDashboardPage';
 import CreateCreatorKeyPage from './pages/CreateCreatorKeyPage';
 import StakingDashboardPage from './pages/StakingDashboardPage';
+import BorrowPage from './pages/BorrowPage';
 import RevenueDistributionHistoryPage from './pages/RevenueDistributionHistoryPage';
 import BundleManagementPage from './pages/BundleManagementPage';
 import CreatorRevenueDashboardPage from './pages/CreatorRevenueDashboardPage';
@@ -302,6 +303,10 @@ export const routes = [
 			{
 				path: '/staking',
 				element: <StakingDashboardPage />,
+			},
+			{
+				path: '/borrow',
+				element: withRouteErrorBoundary(<BorrowPage />, 'Borrow'),
 			},
 			{
 				path: '/auto-invest',
