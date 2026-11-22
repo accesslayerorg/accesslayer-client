@@ -10,6 +10,7 @@ import CreatorPublicProfilePage from './pages/CreatorPublicProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import NotificationPreferencesPage from './pages/NotificationPreferencesPage';
+import PriceAlertsSettingsPage from './pages/PriceAlertsSettingsPage';
 import TransactionHistoryPage from './pages/TransactionHistoryPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import DiscoveryPage from './pages/DiscoveryPage';
@@ -36,11 +37,16 @@ import KeyDiscoveryFeedPage from './pages/KeyDiscoveryFeedPage';
 import KeyDiscoveryLeaderboardPage from './pages/KeyDiscoveryLeaderboardPage';
 import WalletPortfolioPage from './pages/WalletPortfolioPage';
 import CampaignsPage from './pages/CampaignsPage';
+import RentalMarketPage from './pages/RentalMarketPage';
+import MyRentalsPage from './pages/MyRentalsPage';
 import AutoInvestDashboardPage from './pages/AutoInvestDashboardPage';
 import AirdropClaimsPage from './pages/AirdropClaimsPage';
 import ProtocolAnalyticsPage from './pages/ProtocolAnalyticsPage';
+import EscapeRedeemPage from './pages/EscapeRedeemPage';
 import LpPositionsPage from './pages/LpPositionsPage';
 import ProposalCreatePage from './pages/ProposalCreatePage';
+import ApiKeysPage from './pages/ApiKeysPage';
+import RetirementBuybackConfirmedPage from './pages/RetirementBuybackConfirmedPage';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 
 function withRouteErrorBoundary(element: ReactNode, routeName: string) {
@@ -88,6 +94,19 @@ export const routes = [
 				element: <KeyDiscoveryFeedPage />,
 			},
 			{
+				// Key rental market: listings with fee, max days and collateral (#1360).
+				path: '/rentals',
+				element: withRouteErrorBoundary(
+					<RentalMarketPage />,
+					'Key rentals'
+				),
+			},
+			{
+				// Listed, rented out and rented in keys for the wallet (#1360).
+				path: '/rentals/mine',
+				element: withRouteErrorBoundary(<MyRentalsPage />, 'My rentals'),
+			},
+			{
 				// Full list of seasonal campaigns linked from discovery (#1226).
 				path: '/campaigns',
 				element: <CampaignsPage />,
@@ -116,6 +135,13 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<CreatorDetailPage />,
 					'Key detail'
+				),
+			},
+			{
+				path: '/keys/:id/retirement/confirmed',
+				element: withRouteErrorBoundary(
+					<RetirementBuybackConfirmedPage />,
+					'Retirement buyback confirmation'
 				),
 			},
 			{
@@ -322,13 +348,30 @@ export const routes = [
 				),
 			},
 			{
+				// Emergency redemption page for escape hatch withdrawals (#1320).
+				path: '/escape',
+				element: withRouteErrorBoundary(
+					<EscapeRedeemPage />,
+					'Emergency redemption'
+				),
+			},
+			{
 				// Global search results page (#1053).
 				path: '/search',
 				element: <SearchResultsPage />,
 			},
 			{
+				// Developer API key management for integrators and creators (#1322).
+				path: '/settings/developer',
+				element: <ApiKeysPage />,
+			},
+			{
 				path: '/settings/notifications',
 				element: <NotificationPreferencesPage />,
+			},
+			{
+				path: '/settings/alerts',
+				element: <PriceAlertsSettingsPage />,
 			},
 			{
 				path: '/transactions',

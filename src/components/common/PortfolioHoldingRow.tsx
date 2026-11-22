@@ -8,6 +8,7 @@ import ReportIssueButton from '@/components/common/ReportIssueButton';
 import SocialShareButton from '@/components/common/SocialShareButton';
 import RedeemKeyDialog from '@/components/common/RedeemKeyDialog';
 import BatchTransferModal from '@/components/common/BatchTransferModal';
+import GiftKeyModal from '@/components/common/GiftKeyModal';
 import { computeRemainingLockupSeconds } from '@/utils/lockupCountdown.utils';
 import { formatNumber } from '@/utils/numberFormat.utils';
 import {
@@ -42,6 +43,7 @@ import {
 	Minus,
 	MoreVertical,
 	Users,
+	Gift,
 } from 'lucide-react';
 import {
 	DropdownMenu,
@@ -54,6 +56,12 @@ import { cn } from '@/lib/utils';
 import { useGlobalPause } from '@/hooks/useGlobalPause';
 import { UnavailableAction } from '@/components/ui/unavailable-action';
 import { useAccount } from 'wagmi';
+import RentalEscrowNotice from '@/components/rentals/RentalEscrowNotice';
+import { useWalletRentals } from '@/hooks/useKeyRentals';
+import {
+	getEscrowedKeyQuantity,
+	RENTAL_ESCROW_REASON,
+} from '@/utils/keyRental.utils';
 
 export interface PortfolioHoldingRowProps {
 	position: HeldKeyPosition;
@@ -70,6 +78,7 @@ export interface PortfolioHoldingRowProps {
 		recipients: BatchTransferRecipient[],
 		creatorId: string
 	) => Promise<void> | void;
+	onGift?: (position: HeldKeyPosition) => void;
 	onBurn?: (creatorId: string) => void;
 	isSubmitting?: boolean;
 	isReinvesting?: boolean;
@@ -89,6 +98,7 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	onTransfer,
 	onBatchTransfer,
 	onBatchTransferSubmit,
+	onGift,
 	onBurn,
 	isSubmitting = false,
 	isReinvesting = false,
@@ -102,10 +112,25 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	const [reinvestOpen, setReinvestOpen] = useState(false);
 	const [redeemOpen, setRedeemOpen] = useState(false);
 	const [batchTransferOpen, setBatchTransferOpen] = useState(false);
+	const [giftOpen, setGiftOpen] = useState(false);
 	const [isExpanded, setIsExpanded] = useState(false);
+	const { address: connectedWalletAddress } = useAccount();
+	// #1360 — keys listed for rent stay escrowed by the rental contract, so
+	// they are not part of the sellable or transferable balance.
+	const { data: walletRentals } = useWalletRentals(connectedWalletAddress);
+	const rentalEscrowedQuantity = getEscrowedKeyQuantity(
+		walletRentals ?? [],
+		connectedWalletAddress,
+		position.creatorId
+	);
 	const frozenQuantity = position.frozenQuantity ?? 0;
-	const liquidQuantity = position.liquidQuantity ?? position.quantity ?? 0;
+	const liquidQuantity = Math.max(
+		0,
+		(position.liquidQuantity ?? position.quantity ?? 0) -
+			rentalEscrowedQuantity
+	);
 	const isLiquidEmpty = liquidQuantity <= 0;
+	const isBlockedByRentalEscrow = rentalEscrowedQuantity > 0 && isLiquidEmpty;
 	const hasDividends = hasUnclaimedDividend(position.unclaimedDividend);
 	const keyPriceStroops = resolveCreatorKeyPriceStroops(position);
 	const deprecated = isKeyDeprecated(creator);
@@ -114,13 +139,17 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 	// #1163 — server-side lock-up status for this wallet and key. While a
 	// lock-up is in effect the Sell button stays disabled and the badge
 	// shows the unlock countdown; both drop automatically at expiry.
-	const { address: connectedWalletAddress } = useAccount();
 	const { data: keyLockup } = useKeyLockup(
 		position.creatorId,
 		connectedWalletAddress
 	);
-	const lockupRemainingSeconds = useRemainingUnlockSeconds(keyLockup?.unlockAt);
-	const isPositionLocked = isKeyLockupActive(keyLockup, lockupRemainingSeconds);
+	const lockupRemainingSeconds = useRemainingUnlockSeconds(
+		keyLockup?.unlockAt
+	);
+	const isPositionLocked = isKeyLockupActive(
+		keyLockup,
+		lockupRemainingSeconds
+	);
 
 	// #935 — unrealised P&L for this position: what the keys would fetch if sold
 	// at the current bonding-curve sell price, less what was paid for them.
@@ -163,13 +192,18 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 		onBatchTransfer?.(position);
 	};
 
+	const handleGiftClick = () => {
+		setGiftOpen(true);
+		onGift?.(position);
+	};
+
 	return (
 		<>
 			{creator?.isRetiring && (
 				<ExitNoticeBanner
 					creator={creator}
 					holdingsCount={liquidQuantity}
-					onSellNow={() => onSell?.(position.creatorId)}
+					onSellNow={onSell ? () => onSell(position.creatorId) : undefined}
 					className="mb-3"
 				/>
 			)}
@@ -358,11 +392,17 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 								)}
 								{onSell && (
 									<UnavailableAction
-										disabled={paused || isPositionLocked}
+										disabled={
+											paused ||
+											isPositionLocked ||
+											isBlockedByRentalEscrow
+										}
 										reason={
 											paused
 												? 'Trading is currently paused'
-												: `LockupActive: Selling is disabled while this position is under lock-up. Unlocks in ${formatUnlockCountdown(lockupRemainingSeconds)}.`
+												: isPositionLocked
+													? `LockupActive: Selling is disabled while this position is under lock-up. Unlocks in ${formatUnlockCountdown(lockupRemainingSeconds)}.`
+													: RENTAL_ESCROW_REASON
 										}
 									>
 										<Button
@@ -386,6 +426,7 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 								)}
 								{(onBatchTransfer ||
 									onTransfer ||
+									onGift ||
 									onFreeze ||
 									onUnfreeze ||
 									onBurn) && (
@@ -416,6 +457,17 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 												>
 													<Users className="mr-2 size-4 text-amber-400" />
 													Batch Transfer
+												</DropdownMenuItem>
+											)}
+											{onGift && (
+												<DropdownMenuItem
+													onClick={handleGiftClick}
+													disabled={isLiquidEmpty || isSubmitting}
+													data-testid="holding-action-gift"
+													className="cursor-pointer"
+												>
+													<Gift className="mr-2 size-4 text-amber-400" />
+													Gift
 												</DropdownMenuItem>
 											)}
 											{onTransfer && (
@@ -541,6 +593,17 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 										Batch Transfer
 									</Button>
 								)}
+								{onGift && (
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={handleGiftClick}
+										disabled={isLiquidEmpty || isSubmitting}
+										data-testid="holding-gift-button"
+									>
+										Gift
+									</Button>
+								)}
 								{onBurn && (
 									<Button
 										size="sm"
@@ -558,6 +621,11 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 				)}
 			</div>
 
+			<RentalEscrowNotice
+				escrowedQuantity={rentalEscrowedQuantity}
+				className="mt-2"
+			/>
+
 			{onBatchTransfer && (
 				<BatchTransferModal
 					open={batchTransferOpen}
@@ -567,6 +635,17 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 					liquidBalance={liquidQuantity}
 					isSubmitting={isSubmitting}
 					onConfirm={onBatchTransferSubmit}
+				/>
+			)}
+
+			{giftOpen && (
+				<GiftKeyModal
+					open
+					onOpenChange={setGiftOpen}
+					keyId={position.creatorId}
+					keyName={creator?.title ?? 'this creator'}
+					availableBalance={liquidQuantity}
+					isSubmitting={isSubmitting}
 				/>
 			)}
 

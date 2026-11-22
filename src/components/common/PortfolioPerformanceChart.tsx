@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import Skeleton from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import {
 	PORTFOLIO_HISTORY_RANGES,
 	buildPortfolioChartSeries,
@@ -62,6 +63,8 @@ export function PortfolioPerformanceChart({
 }: PortfolioPerformanceChartProps) {
 	const [range, setRange] = useState<PortfolioHistoryRange>(defaultRange);
 	const [showBenchmark, setShowBenchmark] = useState(false);
+
+	const reducedMotion = useReducedMotion();
 
 	const rangedPoints = useMemo(
 		() => filterHistoryByRange(data, range),
@@ -290,6 +293,7 @@ export function PortfolioPerformanceChart({
 								strokeWidth={2}
 								dot={false}
 								activeDot={{ r: 5 }}
+								isAnimationActive={!reducedMotion}
 							/>
 							{showBenchmark && (
 								<Line
@@ -302,6 +306,7 @@ export function PortfolioPerformanceChart({
 									dot={false}
 									activeDot={{ r: 5 }}
 									connectNulls
+									isAnimationActive={!reducedMotion}
 								/>
 							)}
 						</LineChart>

@@ -99,6 +99,22 @@ describe('CreatorCard props rendering', () => {
 		expect(link).toHaveAttribute('href', '/creator/alex-rivers');
 	}, 15000);
 
+	it('exposes stable test ids for the primary card actions', () => {
+		render(
+			<MemoryRouter>
+				<CreatorCard creator={baseCreator} />
+			</MemoryRouter>
+		);
+
+		expect(screen.getByTestId('creator-card-buy-button')).toHaveTextContent(
+			'Buy Key'
+		);
+		expect(
+			screen.getByTestId('creator-card-watchlist-button')
+		).toHaveAttribute('aria-pressed', 'false');
+		expect(screen.getByTestId('creator-profile-link')).toBeInTheDocument();
+	}, 15000);
+
 	it('renders a dash placeholder for a null price', () => {
 		const creator: Course = {
 			...baseCreator,

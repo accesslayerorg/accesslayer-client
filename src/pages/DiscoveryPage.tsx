@@ -1,8 +1,27 @@
-import { Link } from 'react-router';
-import { ArrowRight, RefreshCw, Flame, Sparkles, Layers, Trophy } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router';
+import {
+	ArrowRight,
+	RefreshCw,
+	Flame,
+	Sparkles,
+	Layers,
+	Trophy,
+	Search,
+} from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useKeyDiscovery } from '@/hooks/useKeyDiscovery';
+import { useDiscoveryAdvancedSearch } from '@/hooks/useDiscoveryAdvancedSearch';
+import AdvancedSearchDrawer from '@/components/common/AdvancedSearchDrawer';
+import ActiveDiscoveryFilterChips from '@/components/common/ActiveDiscoveryFilterChips';
+import {
+	clearDiscoveryFilterSearchParams,
+	countActiveDiscoveryFilters,
+	discoveryFiltersToSearchParams,
+	parseDiscoveryFilters,
+	type DiscoveryFilters,
+} from '@/utils/advancedSearch.utils';
 import DiscoveryKeyCard from '@/components/common/DiscoveryKeyCard';
 import { DiscoveryCardGridSkeleton } from '@/components/common/DiscoveryKeyCardSkeleton';
 import EmptyState from '@/components/common/EmptyState';
@@ -25,24 +44,74 @@ import { useBatchTradeStore, selectBatchItemCount } from '@/hooks/useBatchTradeS
  * 5. Automatic background refresh every 60 seconds without full page reload.
  * 6. Spotlight banner for the paid placement above the key grids (#1219).
  * 7. Seasonal campaigns with wallet eligibility below the spotlight (#1226).
+ * 8. Advanced search drawer with combinable filters, removable chips, and
+ *    URL-persisted state for shareable search links (#1260).
  */
 export default function DiscoveryPage() {
 	useNavigationTiming('discovery');
 	useDocumentTitle('Discover Creator Keys — AccessLayer');
 
+	const [searchParams, setSearchParams] = useSearchParams();
+	const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
+
+	const filters = useMemo(
+		() => parseDiscoveryFilters(searchParams),
+		[searchParams]
+	);
+	const activeFilterCount = countActiveDiscoveryFilters(filters);
+
 	const {
-		trendingKeys,
-		newListings,
+		trendingKeys: discoveredTrendingKeys,
+		newListings: discoveredNewListings,
 		isLoading,
 		isRefreshing,
 		error,
 		refetch,
 	} = useKeyDiscovery({ pollIntervalMs: 60_000 });
 
+	const {
+		trendingKeys,
+		newListings,
+		isLoadingReputation,
+	} = useDiscoveryAdvancedSearch({
+		trendingKeys: discoveredTrendingKeys,
+		newListings: discoveredNewListings,
+		filters,
+	});
+
+	const isFilteringResults = isLoadingReputation;
+
+	const applyFilters = (nextFilters: DiscoveryFilters) => {
+		setSearchParams(previous =>
+			discoveryFiltersToSearchParams(nextFilters, previous)
+		);
+	};
+
+	const clearAllFilters = () => {
+		setSearchParams(previous => clearDiscoveryFilterSearchParams(previous));
+	};
+
+	const removeFilter = (params: readonly string[]) => {
+		setSearchParams(previous => {
+			const next = new URLSearchParams(previous);
+			params.forEach(param => next.delete(param));
+			return next;
+		});
+	};
+
+	const noFilterMatchMessage =
+		activeFilterCount > 0
+			? 'No keys match your active filters.'
+			: undefined;
+
 	const batchItemCount = useBatchTradeStore(selectBatchItemCount);
 	const openBatchDrawer = useBatchTradeStore(state => state.openDrawer);
 
-	const hasError = Boolean(error && trendingKeys.length === 0 && newListings.length === 0);
+	const hasError = Boolean(
+		error &&
+			discoveredTrendingKeys.length === 0 &&
+			discoveredNewListings.length === 0
+	);
 
 	return (
 		<div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(160deg,#08111f_0%,#10213b_45%,#f0b14d_160%)] px-6 pt-12 pb-28 md:px-12 md:pb-16">
@@ -96,6 +165,27 @@ export default function DiscoveryPage() {
 						<Button
 							variant="outline"
 							size="xs"
+							onClick={() => setIsAdvancedSearchOpen(true)}
+							data-testid="discovery-search-button"
+							aria-haspopup="dialog"
+							aria-expanded={isAdvancedSearchOpen}
+							className="h-7 rounded-full border-white/15 bg-white/5 px-3 text-[0.72rem] font-bold text-white/80 hover:border-amber-400/40 hover:bg-white/10 hover:text-white"
+						>
+							<Search className="mr-1.5 size-3.5" aria-hidden="true" />
+							Search
+							{activeFilterCount > 0 && (
+								<span
+									data-testid="discovery-filter-count"
+									className="ml-1.5 rounded-full bg-amber-400 px-1.5 py-0.2 font-mono text-[0.65rem] font-bold text-slate-950"
+								>
+									{activeFilterCount}
+								</span>
+							)}
+						</Button>
+
+						<Button
+							variant="outline"
+							size="xs"
 							onClick={openBatchDrawer}
 							data-testid="discovery-batch-trade-button"
 							className="h-7 rounded-full border-amber-400/30 bg-amber-400/10 px-3 text-[0.72rem] font-bold text-amber-300 hover:bg-amber-400/20 hover:border-amber-400/50"
@@ -120,6 +210,15 @@ export default function DiscoveryPage() {
 							<Trophy className="mr-1.5 size-3.5" aria-hidden="true" />
 							Leaderboard
 						</Link>
+					</div>
+
+					{/* Removable chips for the applied advanced search filters */}
+					<div className="mt-5">
+						<ActiveDiscoveryFilterChips
+							filters={filters}
+							onRemove={removeFilter}
+							onClearAll={clearAllFilters}
+						/>
 					</div>
 				</MarketplaceSection>
 
@@ -174,15 +273,27 @@ export default function DiscoveryPage() {
 									</Link>
 								</div>
 
-								{isLoading ? (
+								{isLoading || isFilteringResults ? (
 									<div data-testid="trending-loading-skeleton">
 										<DiscoveryCardGridSkeleton count={5} />
 									</div>
 								) : trendingKeys.length === 0 ? (
 									<div className="rounded-2xl border border-white/10 bg-slate-900/40 p-8 text-center backdrop-blur-md">
 										<p className="font-jakarta text-sm text-white/50">
-											No trending keys found right now.
+											{noFilterMatchMessage ?? 'No trending keys found right now.'}
 										</p>
+										{noFilterMatchMessage && (
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												onClick={clearAllFilters}
+												data-testid="trending-clear-filters"
+												className="mt-4 rounded-xl border-white/10 bg-white/5 font-bold text-white hover:border-amber-500/30 hover:bg-amber-500/10"
+											>
+												Clear All
+											</Button>
+										)}
 									</div>
 								) : (
 									<div
@@ -237,15 +348,28 @@ export default function DiscoveryPage() {
 									</Link>
 								</div>
 
-								{isLoading ? (
+								{isLoading || isFilteringResults ? (
 									<div data-testid="new-listings-loading-skeleton">
 										<DiscoveryCardGridSkeleton count={10} />
 									</div>
 								) : newListings.length === 0 ? (
 									<div className="rounded-2xl border border-white/10 bg-slate-900/40 p-8 text-center backdrop-blur-md">
 										<p className="font-jakarta text-sm text-white/50">
-											No new listings available right now.
+											{noFilterMatchMessage ??
+												'No new listings available right now.'}
 										</p>
+										{noFilterMatchMessage && (
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												onClick={clearAllFilters}
+												data-testid="new-listings-clear-filters"
+												className="mt-4 rounded-xl border-white/10 bg-white/5 font-bold text-white hover:border-amber-500/30 hover:bg-amber-500/10"
+											>
+												Clear All
+											</Button>
+										)}
 									</div>
 								) : (
 									<div
@@ -266,6 +390,14 @@ export default function DiscoveryPage() {
 					)}
 				</main>
 			</div>
+
+			<AdvancedSearchDrawer
+				open={isAdvancedSearchOpen}
+				onOpenChange={setIsAdvancedSearchOpen}
+				filters={filters}
+				onApply={applyFilters}
+				onClearAll={clearAllFilters}
+			/>
 		</div>
 	);
 }

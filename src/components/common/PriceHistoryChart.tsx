@@ -10,6 +10,7 @@ import {
 import type { ReactNode } from 'react';
 import Skeleton from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type {
 	PriceHistoryInterval,
 	PriceHistoryPoint,
@@ -42,6 +43,8 @@ export function PriceHistoryChart({
 	isLoading,
 	onIntervalChange,
 }: PriceHistoryChartProps) {
+	const reducedMotion = useReducedMotion();
+
 	return (
 		<section
 			className="rounded-4xl border border-white/10 bg-white/2 p-6 shadow-2xl backdrop-blur-md md:p-8"
@@ -140,6 +143,7 @@ export function PriceHistoryChart({
 								strokeWidth={2}
 								dot={{ fill: '#34d399', r: 3, strokeWidth: 0 }}
 								activeDot={{ r: 5 }}
+								isAnimationActive={!reducedMotion}
 							/>
 						</LineChart>
 					</ResponsiveContainer>

@@ -317,13 +317,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.header-animate {
+	:root:not(.motion-normal) .header-animate {
 		animation: none;
 	}
-	.scroll-reveal {
+	:root:not(.motion-normal) .scroll-reveal {
 		opacity: 1;
 	}
-	.scroll-reveal.is-visible {
+	:root:not(.motion-normal) .scroll-reveal.is-visible {
 		animation: none;
 	}
 }
@@ -359,10 +359,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.hero-animate {
+	:root:not(.motion-normal) .hero-animate {
 		animation: none;
 	}
-	.hero-bg-animate {
+	:root:not(.motion-normal) .hero-bg-animate {
 		animation: none;
 	}
 }
@@ -381,7 +381,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.animate-marquee {
+	:root:not(.motion-normal) .animate-marquee {
 		animation: none;
 	}
 }
@@ -423,7 +423,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.creator-card-entry {
+	:root:not(.motion-normal) .creator-card-entry {
 		animation: none;
 	}
 }
@@ -455,9 +455,42 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.badge-reveal {
+	:root:not(.motion-normal) .badge-reveal {
 		animation: none;
 	}
+}
+
+/*
+ * Global reduced-motion handling.
+ *
+ * Non-essential transitions and animations are collapsed to (almost) zero
+ * duration so elements settle in their final state instantly. Focus rings and
+ * other non-transitioned feedback are unaffected because only duration and
+ * iteration are overridden.
+ *
+ * The OS preference is honoured by the media query; the `.motion-reduce`
+ * class lets the in-app settings toggle force the same behaviour when the OS
+ * preference is off. `.motion-normal` opts back into motion when the OS asks
+ * for reduced motion.
+ */
+@media (prefers-reduced-motion: reduce) {
+	:root:not(.motion-normal) *,
+	:root:not(.motion-normal) *::before,
+	:root:not(.motion-normal) *::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+:root.motion-reduce *,
+:root.motion-reduce *::before,
+:root.motion-reduce *::after {
+	animation-duration: 0.001ms !important;
+	animation-iteration-count: 1 !important;
+	transition-duration: 0.001ms !important;
+	scroll-behavior: auto !important;
 }
 
 /*

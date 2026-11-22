@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import Skeleton from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { formatCompactNumber } from '@/utils/numberFormat.utils';
 import type {
 	ProtocolHistoryPoint,
@@ -62,6 +63,8 @@ export const ProtocolAnalyticsChart: React.FC<ProtocolAnalyticsChartProps> = ({
 	className,
 	testId,
 }) => {
+	const reducedMotion = useReducedMotion();
+
 	return (
 		<div
 			className={cn(
@@ -189,6 +192,7 @@ export const ProtocolAnalyticsChart: React.FC<ProtocolAnalyticsChartProps> = ({
 								fillOpacity={1}
 								fill={`url(#${gradientId})`}
 								name={dataKey}
+								isAnimationActive={!reducedMotion}
 							/>
 						</AreaChart>
 					</ResponsiveContainer>
