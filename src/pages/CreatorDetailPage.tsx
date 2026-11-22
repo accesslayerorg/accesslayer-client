@@ -144,6 +144,9 @@ import { MarketMakerChip, MMBadge } from '@/components/common/MarketMakerChip';
 import ReportKeyModal from '@/components/common/ReportKeyModal';
 import ShareQrModal from '@/components/common/ShareQrModal';
 import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
+import { QrCode } from 'lucide-react';
+import RetirementExitPanel from '@/components/common/RetirementExitPanel';
+import RetirementNoticeEmailCard from '@/components/common/RetirementNoticeEmailCard';
 import { QrCode, Bell } from 'lucide-react';
 import PriceAlertForm from '@/components/common/PriceAlertForm';
 
@@ -177,6 +180,9 @@ function CreatorDetailPageContent() {
 	>(null);
 	const [deprecationDismissed, setDeprecationDismissed] = useState(false);
 	const [buyDialogOpen, setBuyDialogOpen] = useState(false);
+	const [retirementSellQuantity, setRetirementSellQuantity] = useState<
+		number | null
+	>(null);
 	const [tradeSide, setTradeSide] = useState<TradeSide>('buy');
 	const [tradeSubmitting, setTradeSubmitting] = useState(false);
 	const [interval, setInterval] = useState<PriceHistoryInterval>('24h');
@@ -242,6 +248,8 @@ function CreatorDetailPageContent() {
 
 	const userPosition = holdings.find(h => h.creatorId === (id || ''));
 	const holdingsCount = userPosition?.quantity ?? 0;
+	const retirementPending =
+		creator?.isRetiring === true && !creator.retirementExecutedAt;
 
 	// #1163 — wallet-scoped lock-up status: while active, selling is
 	// disabled with a LockupActive reason and a live unlock countdown.
@@ -356,11 +364,13 @@ function CreatorDetailPageContent() {
 
 	const buyDisabledReason = !userAddress
 		? 'Connect your wallet to buy this key.'
-		: auctionPhase === 'active'
-			? 'Key is currently in launch auction. Place a bid below to participate.'
-			: isLockedOut
-				? 'Early access is restricted to approved whitelisted wallets.'
-				: undefined;
+		: creator?.isRetiring && !creator.retirementExecutedAt
+			? 'New buys are disabled during the retirement notice period.'
+			: auctionPhase === 'active'
+				? 'Key is currently in launch auction. Place a bid below to participate.'
+				: isLockedOut
+					? 'Early access is restricted to approved whitelisted wallets.'
+					: undefined;
 
 	const {
 		data: onChainMetadata,
@@ -686,20 +696,22 @@ function CreatorDetailPageContent() {
 					</div>
 				</div>
 
-				{creator.isRetiring ? (
+				{retirementPending ? (
 					// Retirement is the stricter, time-bounded terminal state
 					// (#1246); its own banner replaces the deprecation one below
 					// rather than stacking both for the same key.
 					<ExitNoticeBanner
 						creator={creator}
 						holdingsCount={holdingsCount}
+						showWithoutHoldings
 						onSellNow={() =>
 							document
-								.getElementById('secondary-market-sell-panel')
+								.getElementById('retirement-voluntary-exit-panel')
 								?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 						}
 					/>
 				) : (
+					!creator.retirementExecutedAt &&
 					isKeyDeprecated(creator) && (
 						<KeyDeprecationBanner
 							creator={creator}
@@ -709,6 +721,30 @@ function CreatorDetailPageContent() {
 							recentSettlement={recentSettlement}
 						/>
 					)
+				)}
+
+				{retirementPending && holdingsCount > 0 && (
+					<div className="space-y-4">
+						<RetirementExitPanel
+							holdingsCount={holdingsCount}
+							marketPriceStroops={resolveCreatorKeyPriceStroops(creator)}
+							currentSupply={creator.creatorShareSupply}
+							noticeExpiresAt={creator.retirementNoticeExpiresAt}
+							onReviewSell={quantity => {
+								setRetirementSellQuantity(quantity);
+								setTradeSide('sell');
+								setBuyDialogOpen(true);
+							}}
+						/>
+						<RetirementNoticeEmailCard
+							keyName={creator.title || creator.name || 'Creator Key'}
+							holdingsCount={holdingsCount}
+							buybackPriceStroops={
+								creator.retirementBuybackPriceStroops ?? null
+							}
+							noticeExpiresAt={creator.retirementNoticeExpiresAt ?? null}
+						/>
+					</div>
 				)}
 
 				<KeyTradingPausedBanner tradingPaused={creator.tradingPaused} />
@@ -1142,6 +1178,7 @@ function CreatorDetailPageContent() {
 												className="min-h-11 w-full rounded-xl font-bold sm:h-10 sm:min-h-0 sm:w-auto"
 												onClick={() => {
 													setTradeSide('sell');
+													setRetirementSellQuantity(null);
 													setBuyDialogOpen(true);
 												}}
 											>
@@ -1617,7 +1654,11 @@ function CreatorDetailPageContent() {
 						launchPenaltyBps={creator.launchPenaltyBps}
 						keyConfig={keyConfig}
 						isKeyConfigLoading={isKeyConfigLoading}
-						onOpenChange={setBuyDialogOpen}
+						initialAmount={retirementSellQuantity ?? undefined}
+						onOpenChange={open => {
+							setBuyDialogOpen(open);
+							if (!open) setRetirementSellQuantity(null);
+						}}
 						onConfirm={handleConfirmTrade}
 						isSubmitting={tradeSubmitting}
 						requireConfirmation={true}
