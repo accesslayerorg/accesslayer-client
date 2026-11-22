@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { HelmetProvider } from 'react-helmet-async';
 import './index.css';
 import App from './App.tsx';
 import Web3Provider from './providers/Web3Provider.tsx';
@@ -23,21 +24,21 @@ subscribeToQueryCache(queryClient);
 
 // Register the background-sync service worker.
 if ('serviceWorker' in navigator) {
-	navigator.serviceWorker
-		.register('/service-worker.js')
-		.catch(() => {
-			// SW registration is best-effort; a failure must not block the app.
-		});
+	navigator.serviceWorker.register('/service-worker.js').catch(() => {
+		// SW registration is best-effort; a failure must not block the app.
+	});
 }
 
 createRoot(document.getElementById('root')!).render(
-	<StrictMode>
-		<Web3Provider>
-			<ThemeProvider>
-				<PendingTransactionProvider>
-					<App />
-				</PendingTransactionProvider>
-			</ThemeProvider>
-		</Web3Provider>
-	</StrictMode>
+	<HelmetProvider>
+		<StrictMode>
+			<Web3Provider>
+				<ThemeProvider>
+					<PendingTransactionProvider>
+						<App />
+					</PendingTransactionProvider>
+				</ThemeProvider>
+			</Web3Provider>
+		</StrictMode>
+	</HelmetProvider>
 );
