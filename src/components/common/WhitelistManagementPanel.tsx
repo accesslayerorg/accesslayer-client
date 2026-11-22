@@ -8,7 +8,6 @@ import {
 	Users,
 	Copy,
 	Check,
-	Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,6 +29,7 @@ import {
 import { isOwnWallet } from '@/utils/isOwnWallet';
 import { creatorKeysContractService } from '@/services/creatorKeysContract.service';
 import type { WhitelistEntry } from '@/services/creatorWhitelist.service';
+import AllowlistImportModal from '@/components/common/AllowlistImportModal';
 
 export interface WhitelistManagementPanelProps {
 	creatorId: string;
@@ -69,7 +69,6 @@ export const WhitelistManagementPanel: React.FC<
 
 	const [batchInput, setBatchInput] = useState('');
 	const [batchError, setBatchError] = useState<string | null>(null);
-	const [csvFileName, setCsvFileName] = useState<string | null>(null);
 
 	const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
@@ -155,42 +154,6 @@ export const WhitelistManagementPanel: React.FC<
 		});
 		await onAddAddresses(valid);
 		setBatchInput('');
-		setCsvFileName(null);
-	};
-
-	const handleCsvUpload = async (
-		e: React.ChangeEvent<HTMLInputElement>
-	) => {
-		const file = e.target.files?.[0];
-		if (!file) return;
-		setCsvFileName(file.name);
-		setInputMode('batch');
-
-		const text = await (typeof file.text === 'function'
-			? file.text()
-			: new Promise<string>((resolve, reject) => {
-					const reader = new FileReader();
-					reader.onload = () => resolve(String(reader.result ?? ''));
-					reader.onerror = () => reject(reader.error);
-					reader.readAsText(file);
-				}));
-
-		setBatchInput(text);
-		const { valid, invalid } = parseBatchWhitelist(text);
-		if (valid.length > 0) {
-			setBatchError(null);
-			await creatorKeysContractService.add_to_whitelist({
-				creatorId,
-				addresses: valid,
-			});
-			await onAddAddresses(valid);
-		} else if (invalid.length > 0) {
-			setBatchError(
-				`No valid addresses found in CSV. ${invalid.length} invalid entr${
-					invalid.length === 1 ? 'y' : 'ies'
-				}.`
-			);
-		}
 	};
 
 	const handleConfirmRemove = async () => {
@@ -340,22 +303,10 @@ export const WhitelistManagementPanel: React.FC<
 							Add Approved Wallets
 						</h3>
 						<div className="flex items-center gap-2">
-							<label
-								htmlFor="whitelist-csv-file"
-								className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:border-amber-400/40 hover:text-amber-300"
-							>
-								<Upload className="size-3.5" />
-								<span>{csvFileName ?? 'Import CSV'}</span>
-								<input
-									id="whitelist-csv-file"
-									data-testid="whitelist-csv-upload"
-									type="file"
-									accept=".csv,.txt,text/csv"
-									onChange={handleCsvUpload}
-									disabled={isSubmitting}
-									className="sr-only"
-								/>
-							</label>
+							<AllowlistImportModal
+								keyId={creatorId}
+								disabled={isSubmitting}
+							/>
 							<div className="flex items-center rounded-lg border border-white/10 bg-white/[0.03] p-0.5 text-xs">
 								<button
 									type="button"

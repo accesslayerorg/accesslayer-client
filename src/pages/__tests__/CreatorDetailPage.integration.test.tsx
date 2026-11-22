@@ -9,7 +9,7 @@ import CreatorDashboardPage from '@/pages/CreatorDashboardPage';
 import { courseService } from '@/services/course.service';
 import { ApiError } from '@/services/api.service';
 import { queryKeys } from '@/lib/queryKeys';
-import { useAccount } from 'wagmi';
+import { useAccount, useConnect } from 'wagmi';
 
 vi.mock('@/services/course.service', () => ({
 	courseService: {
@@ -22,6 +22,18 @@ vi.mock('@/services/course.service', () => ({
 
 vi.mock('wagmi', () => ({
 	useAccount: vi.fn(),
+	useConnect: vi.fn(),
+}));
+
+vi.mock('@/services/keyComments.service', () => ({
+	keyCommentsService: {
+		getCommentsPage: vi.fn().mockResolvedValue({
+			comments: [],
+			nextCursor: null,
+		}),
+		createComment: vi.fn(),
+		hideComment: vi.fn(),
+	},
 }));
 
 vi.mock('framer-motion', async () => {
@@ -56,6 +68,7 @@ const mockGetPriceHistory = vi.mocked(courseService.getPriceHistory);
 const mockGetHoldersPage = vi.mocked(courseService.getHoldersPage);
 const mockUpdateCourse = vi.mocked(courseService.updateCourse);
 const mockUseAccount = vi.mocked(useAccount);
+const mockUseConnect = vi.mocked(useConnect);
 
 function makeFreshQueryClient() {
 	return new QueryClient({
@@ -87,6 +100,11 @@ describe('CreatorDetailPage Integration', () => {
 		mockUseAccount.mockReturnValue({ address: undefined } as ReturnType<
 			typeof useAccount
 		>);
+		mockUseConnect.mockReturnValue({
+			connect: vi.fn(),
+			connectors: [],
+			isPending: false,
+		} as ReturnType<typeof useConnect>);
 		mockGetHoldersPage.mockResolvedValue({
 			holders: [],
 			nextCursor: null,
@@ -578,5 +596,63 @@ describe('CreatorDetailPage Integration', () => {
 		expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
 		expect(screen.queryByTestId('remaining-mintable-chip')).not.toBeInTheDocument();
 		expect(screen.getByTestId('buy-key-button')).not.toBeDisabled();
+	});
+
+	it('renders the holder count from the API with a K suffix above 1000', async () => {
+		mockGetCourse.mockResolvedValue({
+			id: 'creator-123',
+			title: 'Alex Rivers',
+			description: 'Digital Artist & Illustrator',
+			price: 0.05,
+			priceStroops: 500_000,
+			creatorShareSupply: 120,
+			holderCount: 1240,
+			instructorId: 'arivers',
+			category: 'Art',
+			level: 'BEGINNER',
+		});
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={['/creators/creator-123']}>
+					<Routes>
+						<Route path="/creators/:id" element={<CreatorDetailPage />} />
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		expect(
+			await screen.findByLabelText('Total Holders: 1.2K')
+		).toBeInTheDocument();
+	});
+
+	it('renders holder counts below 1000 as a raw number', async () => {
+		mockGetCourse.mockResolvedValue({
+			id: 'creator-123',
+			title: 'Alex Rivers',
+			description: 'Digital Artist & Illustrator',
+			price: 0.05,
+			priceStroops: 500_000,
+			creatorShareSupply: 120,
+			holderCount: 842,
+			instructorId: 'arivers',
+			category: 'Art',
+			level: 'BEGINNER',
+		});
+
+		render(
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={['/creators/creator-123']}>
+					<Routes>
+						<Route path="/creators/:id" element={<CreatorDetailPage />} />
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		);
+
+		expect(
+			await screen.findByLabelText('Total Holders: 842')
+		).toBeInTheDocument();
 	});
 });

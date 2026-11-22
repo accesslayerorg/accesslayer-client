@@ -9,7 +9,10 @@
  * All amounts are in XLM — the unit the referral API reports fees in.
  */
 
-import type { ReferralSummary, ReferredWallet } from '@/services/referral.service';
+import type {
+	ReferralSummary,
+	ReferredWallet,
+} from '@/services/referral.service';
 
 /**
  * Share of a referred wallet's first-trade fee paid to the referrer, in basis
@@ -85,6 +88,32 @@ export function buildCreatorKeyReferralLink({
 	if (!trimmedWallet) {
 		return `${cleanBase}${path}`;
 	}
+	const params = new URLSearchParams();
+	params.set(REFERRAL_QUERY_PARAM, trimmedWallet);
+	return `${cleanBase}${path}?${params.toString()}`;
+}
+
+export interface CreatorProfileReferralLinkOptions {
+	handle: string;
+	wallet?: string | null;
+	origin?: string;
+}
+
+/** Builds the public creator profile URL with an optional referrer wallet. */
+export function buildCreatorProfileReferralLink({
+	handle,
+	wallet,
+	origin,
+}: CreatorProfileReferralLinkOptions): string {
+	const base =
+		origin ??
+		(typeof window !== 'undefined' && window.location?.origin
+			? window.location.origin
+			: 'https://accesslayer.app');
+	const cleanBase = base.replace(/\/+$/, '');
+	const path = `/creators/${encodeURIComponent(handle)}`;
+	const trimmedWallet = wallet?.trim() ?? '';
+	if (!trimmedWallet) return `${cleanBase}${path}`;
 	const params = new URLSearchParams();
 	params.set(REFERRAL_QUERY_PARAM, trimmedWallet);
 	return `${cleanBase}${path}?${params.toString()}`;

@@ -11,6 +11,19 @@ export interface CreatorWhitelistConfig {
 	entries: WhitelistEntry[];
 }
 
+export interface AllowlistImportInvalidRow {
+	rowNumber: number;
+	reason: string;
+}
+
+export interface AllowlistImportReport {
+	created: number;
+	updated: number;
+	skipped: number;
+	fatalErrors: number;
+	invalidRows: AllowlistImportInvalidRow[];
+}
+
 const WHITELIST_CACHE_TTL = 30_000;
 
 export function whitelistCacheKey(keyId: string): string {
@@ -100,6 +113,25 @@ class CreatorWhitelistService extends BaseApiService {
 			this.localStore.set(keyId, updated);
 			cacheManager.set(cacheKey, updated, WHITELIST_CACHE_TTL);
 			return updated;
+		}
+	}
+
+	async importCsv(
+		keyId: string,
+		file: File,
+		dryRun: boolean
+	): Promise<AllowlistImportReport> {
+		try {
+			const formData = new FormData();
+			formData.append('file', file);
+			const response = await this.api.post<
+				APIResponse<AllowlistImportReport>
+			>(`/keys/${keyId}/whitelist/import`, formData, {
+				params: { dryRun },
+			});
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
 		}
 	}
 

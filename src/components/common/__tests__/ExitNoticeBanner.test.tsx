@@ -22,7 +22,9 @@ describe('ExitNoticeBanner (#1246)', () => {
 	it('renders nothing when the key is neither deprecated nor retiring', () => {
 		render(<ExitNoticeBanner creator={baseCreator} holdingsCount={5} />);
 
-		expect(screen.queryByTestId('exit-notice-banner')).not.toBeInTheDocument();
+		expect(
+			screen.queryByTestId('exit-notice-banner')
+		).not.toBeInTheDocument();
 	});
 
 	it('renders nothing once the holder has fully exited their position', () => {
@@ -33,7 +35,87 @@ describe('ExitNoticeBanner (#1246)', () => {
 			/>
 		);
 
-		expect(screen.queryByTestId('exit-notice-banner')).not.toBeInTheDocument();
+		expect(
+			screen.queryByTestId('exit-notice-banner')
+		).not.toBeInTheDocument();
+	});
+
+	it('shows retirement status on key detail even when the visitor has no holdings', () => {
+		render(
+			<ExitNoticeBanner
+				creator={{ ...baseCreator, isRetiring: true }}
+				holdingsCount={0}
+				showWithoutHoldings
+			/>
+		);
+
+		expect(screen.getByTestId('exit-notice-banner')).toBeInTheDocument();
+		expect(
+			screen.queryByTestId('exit-notice-sell-now-button')
+		).not.toBeInTheDocument();
+	});
+
+	it('renders notice progress from the provided start and expiry timestamps', () => {
+		vi.useFakeTimers();
+		const startedAt = new Date(Date.now() - 3_600_000).toISOString();
+		const expiresAt = new Date(Date.now() + 3_600_000).toISOString();
+
+		render(
+			<ExitNoticeBanner
+				creator={{
+					...baseCreator,
+					isRetiring: true,
+					retirementNoticeStartedAt: startedAt,
+					retirementNoticeExpiresAt: expiresAt,
+				}}
+				holdingsCount={5}
+			/>
+		);
+
+		expect(screen.getByTestId('exit-notice-progress')).toHaveAttribute(
+			'aria-valuenow',
+			'50'
+		);
+		expect(
+			screen.getByTestId('exit-notice-progress-label')
+		).toHaveTextContent('50% elapsed');
+	});
+
+	it('does not show measured progress without a valid notice start', () => {
+		render(
+			<ExitNoticeBanner
+				creator={{
+					...baseCreator,
+					isRetiring: true,
+					retirementNoticeExpiresAt: new Date(
+						Date.now() + 3_600_000
+					).toISOString(),
+				}}
+				holdingsCount={5}
+			/>
+		);
+
+		expect(
+			screen.queryByTestId('exit-notice-progress')
+		).not.toBeInTheDocument();
+	});
+
+	it('hides the notice after retirement execution', () => {
+		render(
+			<ExitNoticeBanner
+				creator={{
+					...baseCreator,
+					deprecated: true,
+					isRetiring: true,
+					retirementExecutedAt: new Date().toISOString(),
+				}}
+				holdingsCount={5}
+			/>
+		);
+
+		expect(
+			screen.queryByTestId('exit-notice-banner')
+		).not.toBeInTheDocument();
 	});
 
 	it('shows the Retirement action type with a red style, and the buyback price', () => {
@@ -53,7 +135,9 @@ describe('ExitNoticeBanner (#1246)', () => {
 		expect(screen.getByTestId('exit-notice-action-type')).toHaveTextContent(
 			'Retirement'
 		);
-		expect(screen.getByTestId('exit-notice-buyback-price')).toBeInTheDocument();
+		expect(screen.getByTestId('exit-notice-buyback-price')).toHaveTextContent(
+			'0.1 XLM'
+		);
 	});
 
 	it('shows the Deprecation action type with no buyback price when not retiring', () => {
@@ -99,6 +183,7 @@ describe('ExitNoticeBanner (#1246)', () => {
 					retirementNoticeExpiresAt: expiresAt,
 				}}
 				holdingsCount={10}
+				onSellNow={vi.fn()}
 			/>
 		);
 
@@ -127,6 +212,7 @@ describe('ExitNoticeBanner (#1246)', () => {
 					retirementNoticeExpiresAt: expiresAt,
 				}}
 				holdingsCount={10}
+				onSellNow={vi.fn()}
 			/>
 		);
 
