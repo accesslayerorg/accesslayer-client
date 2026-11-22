@@ -5,6 +5,7 @@ import CreatorInitialsAvatar from '@/components/common/CreatorInitialsAvatar';
 import Change24hBadge from '@/components/common/Change24hBadge';
 import ReputationScoreBadge from '@/components/common/ReputationScoreBadge';
 import AddToBundleButton from '@/components/common/AddToBundleButton';
+import AddToCompareButton from '@/components/common/AddToCompareButton';
 import AddToBatchButton from '@/components/common/AddToBatchButton';
 import { normalizeCreatorDisplayName } from '@/utils/creatorDisplayName.utils';
 import { formatCreatorHandle } from '@/utils/handleDisplay.utils';
@@ -131,6 +132,11 @@ export const DiscoveryKeyCard: React.FC<DiscoveryKeyCardProps> = ({
 						priceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
 						currentSupply={creator.creatorShareSupply ?? null}
 						thumbnail={avatarSrc}
+						className="relative z-20 shrink-0"
+					/>
+					<AddToCompareButton
+						keyId={creator.id}
+						keyName={displayName}
 						className="relative z-20 shrink-0"
 					/>
 					<AddToBundleButton

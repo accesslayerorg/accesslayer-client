@@ -8,15 +8,21 @@
  */
 import type { ComponentProps, ReactNode } from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LandingPage from '@/pages/LandingPage';
 import { courseService } from '@/services/course.service';
 
-vi.mock('@/hooks/useWallet', () => ({
-	useTradeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-	useWalletHoldings: () => ({ data: [] }),
-}));
+vi.mock('@/hooks/useWallet', async importOriginal => {
+	const actual = await importOriginal<typeof import('@/hooks/useWallet')>();
+
+	return {
+		...actual,
+		useTradeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+		useWalletHoldings: () => ({ data: [] }),
+	};
+});
 
 vi.mock('@/services/course.service', () => ({
 	courseService: { getCourses: vi.fn() },
@@ -124,13 +130,18 @@ describe('LandingPage holdings empty state (#539)', () => {
 		mockGetCourses.mockReset();
 	});
 
-	it('shows empty state with CTA after holdings query settles empty', async () => {
+	it('shows empty state with CTA linking to creator discovery after holdings query settles empty', async () => {
 		mockGetCourses.mockResolvedValue([]);
+		const queryClient = new QueryClient({
+			defaultOptions: { queries: { retry: false } },
+		});
 
 		render(
-			<MemoryRouter>
-				<LandingPage />
-			</MemoryRouter>
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter>
+					<LandingPage />
+				</MemoryRouter>
+			</QueryClientProvider>
 		);
 
 		await waitFor(() => expect(mockGetCourses).toHaveBeenCalled());
@@ -144,9 +155,9 @@ describe('LandingPage holdings empty state (#539)', () => {
 		).toBeInTheDocument();
 		expect(
 			within(getHoldingsOverviewSection()).getByRole('link', {
-				name: 'Browse creators',
+				name: 'Discover creators',
 			})
-		).toHaveAttribute('href', '/creators');
+		).toHaveAttribute('href', '/discovery?source=empty-holdings');
 		// no holding cards
 		expect(
 			within(getHoldingsOverviewSection()).queryAllByText(/\d+ keys ·/)
@@ -162,11 +173,16 @@ describe('LandingPage holdings empty state (#539)', () => {
 					resolveCourses = resolve;
 				})
 		);
+		const queryClient = new QueryClient({
+			defaultOptions: { queries: { retry: false } },
+		});
 
 		render(
-			<MemoryRouter>
-				<LandingPage />
-			</MemoryRouter>
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter>
+					<LandingPage />
+				</MemoryRouter>
+			</QueryClientProvider>
 		);
 
 		// While loading: empty state must not be present

@@ -32,7 +32,10 @@ import KeySimulationTool from '@/components/common/KeySimulationTool';
 import BuyCooldownCountdown from '@/components/common/BuyCooldownCountdown';
 import KeyHolderList from '@/components/common/KeyHolderList';
 import CommentSection from '@/components/common/CommentSection';
+import KeySocialFeed from '@/components/common/KeySocialFeed';
 import KeyHolderLeaderboard from '@/components/common/KeyHolderLeaderboard';
+import KeyRatingSummary from '@/components/common/KeyRatingSummary';
+import RatingForm from '@/components/common/RatingForm';
 import HolderConcentrationChart from '@/components/common/HolderConcentrationChart';
 import HolderConcentrationHeatmap from '@/components/common/HolderConcentrationHeatmap';
 import HolderSnapshotHistory from '@/components/common/HolderSnapshotHistory';
@@ -48,11 +51,16 @@ import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 import { isKeyDeprecated } from '@/utils/keyDeprecation.utils';
 import { Button } from '@/components/ui/button';
 import { CreatorDashboardSkeleton } from '@/components/common/CreatorSkeleton';
-import { bpsToPercent, formatNumber } from '@/utils/numberFormat.utils';
+import {
+	bpsToPercent,
+	formatHolderCount,
+	formatNumber,
+} from '@/utils/numberFormat.utils';
 import {
 	resolveCreatorKeyPriceStroops,
 	formatDisplayKeyPrice,
 } from '@/utils/keyPriceDisplay.utils';
+import { resolveCreatorKeyHolderCount } from '@/utils/creatorProfile.utils';
 import {
 	resolveHighestBid,
 	formatAuctionBidAmount,
@@ -64,6 +72,7 @@ import AuctionPhaseSection from '@/components/common/AuctionPhaseSection';
 import { useAuctionPhase } from '@/hooks/useAuctionPhase';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useKeyHolders } from '@/hooks/useKeyHolders';
+import { useKeyRatings, useSubmitKeyRatingMutation } from '@/hooks/useKeyRatings';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import { useWalletHoldings, useTradeMutation } from '@/hooks/useWallet';
 import KeyMintProgressSection from '@/components/common/KeyMintProgressSection';
@@ -136,6 +145,12 @@ import {
 	isKeyLockupActive,
 } from '@/hooks/useKeyLockup';
 import { formatUnlockCountdown } from '@/utils/lockupCountdown.utils';
+import RentalEscrowNotice from '@/components/rentals/RentalEscrowNotice';
+import { useWalletRentals } from '@/hooks/useKeyRentals';
+import {
+	getEscrowedKeyQuantity,
+	RENTAL_ESCROW_REASON,
+} from '@/utils/keyRental.utils';
 import KeyLockupBadge from '@/components/common/KeyLockupBadge';
 import { useAccount } from 'wagmi';
 import { useKeyMarketMaker } from '@/hooks/useKeyMarketMaker';
@@ -143,7 +158,10 @@ import { MarketMakerChip, MMBadge } from '@/components/common/MarketMakerChip';
 import ReportKeyModal from '@/components/common/ReportKeyModal';
 import ShareQrModal from '@/components/common/ShareQrModal';
 import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
-import { QrCode } from 'lucide-react';
+import { QrCode, Bell } from 'lucide-react';
+import RetirementExitPanel from '@/components/common/RetirementExitPanel';
+import RetirementNoticeEmailCard from '@/components/common/RetirementNoticeEmailCard';
+import PriceAlertForm from '@/components/common/PriceAlertForm';
 import { ExportDateRangeSelector } from '@/components/common/ExportDateRangeSelector';
 import { KeyAnalyticsExportButton } from '@/components/common/KeyAnalyticsExportButton';
 import { fetchRevenueShareDistributions } from '@/services/revenueShare.service';
@@ -175,6 +193,7 @@ function CreatorDetailPageContent() {
 
 	const [hasMounted, setHasMounted] = useState(false);
 	const [buybackModalOpen, setBuybackModalOpen] = useState(false);
+	const [showAlertForm, setShowAlertForm] = useState(false);
 	const [recentSettlement, setRecentSettlement] =
 		useState<KeyBuybackReceipt | null>(null);
 	const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -184,6 +203,9 @@ function CreatorDetailPageContent() {
 	>(null);
 	const [deprecationDismissed, setDeprecationDismissed] = useState(false);
 	const [buyDialogOpen, setBuyDialogOpen] = useState(false);
+	const [retirementSellQuantity, setRetirementSellQuantity] = useState<
+		number | null
+	>(null);
 	const [tradeSide, setTradeSide] = useState<TradeSide>('buy');
 	const [tradeSubmitting, setTradeSubmitting] = useState(false);
 	const [interval, setInterval] = useState<PriceHistoryInterval>('24h');
@@ -283,6 +305,40 @@ const resolvedAnalyticsExportRange = useMemo(
 
 	const userPosition = holdings.find(h => h.creatorId === (id || ''));
 	const holdingsCount = userPosition?.quantity ?? 0;
+	const isHolder = holdingsCount > 0;
+
+	const {
+		ratings,
+		summary: ratingSummary,
+		isLoading: isRatingsLoading,
+	} = useKeyRatings(id || '');
+	const submitRatingMutation = useSubmitKeyRatingMutation(
+		id || '',
+		userAddress
+	);
+	const existingUserRating = useMemo(
+		() =>
+			ratings.find(
+				rating =>
+					userAddress &&
+					rating.walletAddress.toLowerCase() === userAddress.toLowerCase()
+			) ?? null,
+		[ratings, userAddress]
+	const retirementPending =
+		creator?.isRetiring === true && !creator.retirementExecutedAt;
+
+	// #1360 — keys listed for rent stay escrowed by the rental contract: they
+	// cannot be sold, transferred or staked until the rental ends.
+	const { data: walletRentals } = useWalletRentals(userAddress);
+	const rentalEscrowedQuantity = getEscrowedKeyQuantity(
+		walletRentals ?? [],
+		userAddress,
+		id || ''
+	);
+	const tradableHoldingsCount = Math.max(
+		0,
+		holdingsCount - rentalEscrowedQuantity
+	);
 
 	// #1163 — wallet-scoped lock-up status: while active, selling is
 	// disabled with a LockupActive reason and a live unlock countdown.
@@ -397,11 +453,13 @@ const resolvedAnalyticsExportRange = useMemo(
 
 	const buyDisabledReason = !userAddress
 		? 'Connect your wallet to buy this key.'
-		: auctionPhase === 'active'
-			? 'Key is currently in launch auction. Place a bid below to participate.'
-			: isLockedOut
-				? 'Early access is restricted to approved whitelisted wallets.'
-				: undefined;
+		: creator?.isRetiring && !creator.retirementExecutedAt
+			? 'New buys are disabled during the retirement notice period.'
+			: auctionPhase === 'active'
+				? 'Key is currently in launch auction. Place a bid below to participate.'
+				: isLockedOut
+					? 'Early access is restricted to approved whitelisted wallets.'
+					: undefined;
 
 	const {
 		data: onChainMetadata,
@@ -616,11 +674,7 @@ const resolvedAnalyticsExportRange = useMemo(
 		},
 		{
 			label: 'Total Holders',
-			value: formatNumber(
-				creator.creatorShareSupply
-					? Math.ceil(creator.creatorShareSupply / 2)
-					: 10
-			),
+			value: formatHolderCount(resolveCreatorKeyHolderCount(creator)),
 		},
 		// Reserve backstop (#1208); hidden until the key has accrued a reserve.
 		...(keyReserve && getKeyReserveStatus(keyReserve).visible
@@ -727,20 +781,22 @@ const resolvedAnalyticsExportRange = useMemo(
 					</div>
 				</div>
 
-				{creator.isRetiring ? (
+				{retirementPending ? (
 					// Retirement is the stricter, time-bounded terminal state
 					// (#1246); its own banner replaces the deprecation one below
 					// rather than stacking both for the same key.
 					<ExitNoticeBanner
 						creator={creator}
 						holdingsCount={holdingsCount}
+						showWithoutHoldings
 						onSellNow={() =>
 							document
-								.getElementById('secondary-market-sell-panel')
+								.getElementById('retirement-voluntary-exit-panel')
 								?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 						}
 					/>
 				) : (
+					!creator.retirementExecutedAt &&
 					isKeyDeprecated(creator) && (
 						<KeyDeprecationBanner
 							creator={creator}
@@ -750,6 +806,30 @@ const resolvedAnalyticsExportRange = useMemo(
 							recentSettlement={recentSettlement}
 						/>
 					)
+				)}
+
+				{retirementPending && holdingsCount > 0 && (
+					<div className="space-y-4">
+						<RetirementExitPanel
+							holdingsCount={holdingsCount}
+							marketPriceStroops={resolveCreatorKeyPriceStroops(creator)}
+							currentSupply={creator.creatorShareSupply}
+							noticeExpiresAt={creator.retirementNoticeExpiresAt}
+							onReviewSell={quantity => {
+								setRetirementSellQuantity(quantity);
+								setTradeSide('sell');
+								setBuyDialogOpen(true);
+							}}
+						/>
+						<RetirementNoticeEmailCard
+							keyName={creator.title || creator.name || 'Creator Key'}
+							holdingsCount={holdingsCount}
+							buybackPriceStroops={
+								creator.retirementBuybackPriceStroops ?? null
+							}
+							noticeExpiresAt={creator.retirementNoticeExpiresAt ?? null}
+						/>
+					</div>
 				)}
 
 				<KeyTradingPausedBanner tradingPaused={creator.tradingPaused} />
@@ -809,7 +889,27 @@ const resolvedAnalyticsExportRange = useMemo(
 						labelName={displayName}
 						className="mt-3 size-11 shrink-0 sm:size-9"
 					/>
+					<button
+						type="button"
+						onClick={() => setShowAlertForm(v => !v)}
+						aria-expanded={showAlertForm}
+						title="Set price alert"
+						className="mt-3 flex size-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30 sm:size-9"
+					>
+						<Bell className="size-4" aria-hidden="true" />
+					</button>
 				</div>
+
+				{showAlertForm && creator && (
+					<div className="mt-4">
+						<PriceAlertForm
+							creatorId={creator.id}
+							creatorTitle={creator.title}
+							currentPriceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
+							onClose={() => setShowAlertForm(false)}
+						/>
+					</div>
+				)}
 
 				{creator && (
 					<CreatorSocialSection
@@ -1140,6 +1240,21 @@ const resolvedAnalyticsExportRange = useMemo(
 													Sell Key (Locked)
 												</Button>
 											</UnavailableAction>
+										) : tradableHoldingsCount <= 0 ? (
+											<UnavailableAction
+												disabled
+												reason={RENTAL_ESCROW_REASON}
+											>
+												<Button
+													type="button"
+													disabled
+													data-testid="key-detail-sell-button"
+													variant="outline"
+													className="min-h-11 w-full rounded-xl font-bold sm:h-10 sm:min-h-0 sm:w-auto"
+												>
+													Sell Key (Listed for rent)
+												</Button>
+											</UnavailableAction>
 										) : isFloorActive ? (
 											<UnavailableAction
 												disabled
@@ -1163,6 +1278,7 @@ const resolvedAnalyticsExportRange = useMemo(
 												className="min-h-11 w-full rounded-xl font-bold sm:h-10 sm:min-h-0 sm:w-auto"
 												onClick={() => {
 													setTradeSide('sell');
+													setRetirementSellQuantity(null);
 													setBuyDialogOpen(true);
 												}}
 											>
@@ -1177,6 +1293,10 @@ const resolvedAnalyticsExportRange = useMemo(
 										/>
 									)}
 								</div>
+								<RentalEscrowNotice
+									escrowedQuantity={rentalEscrowedQuantity}
+									className="mt-3"
+								/>
 							</div>
 						</TabsContent>
 
@@ -1315,7 +1435,7 @@ const resolvedAnalyticsExportRange = useMemo(
 				<StakingVaultPanel
 					keyId={id ?? ''}
 					userAddress={userAddress}
-					availableBalance={holdingsCount}
+					availableBalance={tradableHoldingsCount}
 					rewardPoolBalance={stakingStats.stakingPoolBalance ?? 0}
 					isLoading={isLoading}
 				/>
@@ -1508,6 +1628,57 @@ const resolvedAnalyticsExportRange = useMemo(
 
 				<div
 					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
+					data-testid="key-ratings-container"
+				>
+					<h2 className="mb-6 font-grotesque text-xl font-black tracking-tight text-white">
+						Ratings & Reviews
+					</h2>
+
+					<SectionErrorBoundary sectionName="key ratings">
+						<div className="space-y-4">
+							<KeyRatingSummary
+								summary={ratingSummary}
+								isLoading={isRatingsLoading}
+							/>
+							<RatingForm
+								existingRating={existingUserRating}
+								isHolder={isHolder}
+								isConnected={Boolean(userAddress)}
+								isSubmitting={submitRatingMutation.isPending}
+								onSubmit={async input => {
+									await submitRatingMutation.mutateAsync(input);
+								}}
+							/>
+							<div className="rounded-xl border border-white/10 bg-white/[0.03] p-4" data-testid="key-ratings-list">
+								<h3 className="mb-3 text-sm font-bold text-white">Recent reviews</h3>
+								{ratings.length === 0 ? (
+									<p className="text-sm text-white/50">No reviews yet.</p>
+								) : (
+									<ul className="space-y-3">
+										{ratings.slice(0, 5).map((rating) => (
+											<li key={rating.id} className="border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
+												<div className="flex items-center justify-between gap-3">
+													<span className="font-mono text-xs text-white/60">
+														{rating.walletAddress.slice(0, 4)}...{rating.walletAddress.slice(-4)}
+													</span>
+													<span className="text-xs font-semibold text-amber-300">{rating.rating}/5</span>
+												</div>
+												{rating.review ? (
+													<p className="mt-1 text-sm text-white/75 break-words">{rating.review}</p>
+												) : (
+													<p className="mt-1 text-sm text-white/40">No written review.</p>
+												)}
+											</li>
+										))}
+									</ul>
+								)}
+							</div>
+						</div>
+					</SectionErrorBoundary>
+				</div>
+
+				<div
+					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
 					data-testid="holder-concentration-container"
 				>
 					<h2 className="mb-6 font-grotesque text-xl font-black tracking-tight text-white">
@@ -1605,6 +1776,14 @@ const resolvedAnalyticsExportRange = useMemo(
 					<CommentSection
 						keyId={creator.id}
 						creatorAddress={creator.instructorId}
+					/>
+				</SectionErrorBoundary>
+
+				<SectionErrorBoundary sectionName="key social feed">
+					<KeySocialFeed
+						keyId={creator.id}
+						creatorAddress={creator.instructorId}
+						userHolding={holdingsCount}
 					/>
 				</SectionErrorBoundary>
 
@@ -1737,14 +1916,18 @@ const resolvedAnalyticsExportRange = useMemo(
 						open={buyDialogOpen}
 						side={tradeSide}
 						creatorName={creator.title || creator.name || 'Creator'}
-						availableHoldings={holdingsCount}
+						availableHoldings={tradableHoldingsCount}
 						keyPriceStroops={resolveCreatorKeyPriceStroops(creator)}
 						currentSupply={creator.creatorShareSupply}
 						maxBuyQuantity={creator.maxBuyQuantity}
 						launchPenaltyBps={creator.launchPenaltyBps}
 						keyConfig={keyConfig}
 						isKeyConfigLoading={isKeyConfigLoading}
-						onOpenChange={setBuyDialogOpen}
+						initialAmount={retirementSellQuantity ?? undefined}
+						onOpenChange={open => {
+							setBuyDialogOpen(open);
+							if (!open) setRetirementSellQuantity(null);
+						}}
 						onConfirm={handleConfirmTrade}
 						isSubmitting={tradeSubmitting}
 						requireConfirmation={true}

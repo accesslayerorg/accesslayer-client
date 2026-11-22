@@ -36,6 +36,8 @@ export const queryKeys = {
 			['creators', creatorId, 'holders'] as const,
 		comments: (creatorId: string) =>
 			['creators', creatorId, 'comments'] as const,
+		socialFeed: (creatorId: string) =>
+			['creators', creatorId, 'social-feed'] as const,
 		holderConcentration: (creatorId: string) =>
 			['creators', creatorId, 'holder-concentration'] as const,
 		holderSnapshots: (creatorId: string, range: string) =>
@@ -58,6 +60,8 @@ export const queryKeys = {
 		tips: (creatorId: string) => ['creators', creatorId, 'tips'] as const,
 		uniqueTraders: (creatorId: string) =>
 			['creators', creatorId, 'unique-traders'] as const,
+		ratings: (creatorId: string) =>
+			['creators', creatorId, 'ratings'] as const,
 		reserve: (creatorId: string) =>
 			['creators', creatorId, 'reserve'] as const,
 		curveConfig: (creatorId: string) =>
@@ -150,6 +154,8 @@ export const queryKeys = {
 			['wallet', address, 'stakingPositions'] as const,
 		xlmBalance: (address: string) =>
 			['wallet', address, 'xlmBalance'] as const,
+		vaultPosition: (address: string) =>
+			['wallet', address, 'vaultPosition'] as const,
 		feeDiscount: (address: string) =>
 			['wallet', address, 'fee-discount'] as const,
 		sellableNow: (address: string, keyId: string) =>
@@ -214,6 +220,9 @@ export const queryKeys = {
 			['governance', 'proposal', proposalId, 'vote'] as const,
 		proposalVotes: (id: string) =>
 			['governance', 'proposal', id, 'votes'] as const,
+		events: (type?: string) =>
+			['governance', 'events', type ?? 'all'] as const,
+		admin: () => ['governance', 'admin'] as const,
 	},
 	mergeProposal: {
 		bySourceKey: (sourceKeyId: string) =>
@@ -239,6 +248,13 @@ export const queryKeys = {
 	airdropClaims: {
 		all: () => ['airdropClaims'] as const,
 		list: (wallet: string) => ['airdropClaims', wallet, 'list'] as const,
+	},
+	keyRentals: {
+		all: () => ['keyRentals'] as const,
+		available: () => ['keyRentals', 'available'] as const,
+		wallet: (wallet: string) => ['keyRentals', 'wallet', wallet] as const,
+		activeRenter: (keyId: string, wallet: string) =>
+			['keyRentals', 'activeRenter', keyId, wallet] as const,
 	},
 	atomicSwap: {
 		all: () => ['atomic-swap'] as const,

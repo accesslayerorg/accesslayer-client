@@ -10,6 +10,7 @@ import CreatorPublicProfilePage from './pages/CreatorPublicProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import NotificationPreferencesPage from './pages/NotificationPreferencesPage';
+import PriceAlertsSettingsPage from './pages/PriceAlertsSettingsPage';
 import TransactionHistoryPage from './pages/TransactionHistoryPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import DiscoveryPage from './pages/DiscoveryPage';
@@ -17,10 +18,12 @@ import ProfilePage from './pages/ProfilePage';
 import FollowingPage from './pages/FollowingPage';
 import ComparePage from './pages/ComparePage';
 import GovernancePage from './pages/GovernancePage';
+import GovernanceFeedPage from './pages/GovernanceFeedPage';
 import ProposalDetailPage from './pages/ProposalDetailPage';
 import ReferralDashboardPage from './pages/ReferralDashboardPage';
 import CreateCreatorKeyPage from './pages/CreateCreatorKeyPage';
 import StakingDashboardPage from './pages/StakingDashboardPage';
+import BorrowPage from './pages/BorrowPage';
 import RevenueDistributionHistoryPage from './pages/RevenueDistributionHistoryPage';
 import BundleManagementPage from './pages/BundleManagementPage';
 import CreatorRevenueDashboardPage from './pages/CreatorRevenueDashboardPage';
@@ -36,6 +39,8 @@ import KeyDiscoveryFeedPage from './pages/KeyDiscoveryFeedPage';
 import KeyDiscoveryLeaderboardPage from './pages/KeyDiscoveryLeaderboardPage';
 import WalletPortfolioPage from './pages/WalletPortfolioPage';
 import CampaignsPage from './pages/CampaignsPage';
+import RentalMarketPage from './pages/RentalMarketPage';
+import MyRentalsPage from './pages/MyRentalsPage';
 import AutoInvestDashboardPage from './pages/AutoInvestDashboardPage';
 import AirdropClaimsPage from './pages/AirdropClaimsPage';
 import ProtocolAnalyticsPage from './pages/ProtocolAnalyticsPage';
@@ -43,7 +48,12 @@ import EscapeRedeemPage from './pages/EscapeRedeemPage';
 import LpPositionsPage from './pages/LpPositionsPage';
 import ProposalCreatePage from './pages/ProposalCreatePage';
 import ApiKeysPage from './pages/ApiKeysPage';
+import RetirementBuybackConfirmedPage from './pages/RetirementBuybackConfirmedPage';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
+import AdminLoginPage from './pages/AdminLoginPage';
+import AdminTwoFactorSetupPage from './pages/AdminTwoFactorSetupPage';
+import AdminTwoFactorChallengePage from './pages/AdminTwoFactorChallengePage';
+import AdminTwoFactorGuard from './components/admin/AdminTwoFactorGuard';
 
 function withRouteErrorBoundary(element: ReactNode, routeName: string) {
 	return (
@@ -90,6 +100,19 @@ export const routes = [
 				element: <KeyDiscoveryFeedPage />,
 			},
 			{
+				// Key rental market: listings with fee, max days and collateral (#1360).
+				path: '/rentals',
+				element: withRouteErrorBoundary(
+					<RentalMarketPage />,
+					'Key rentals'
+				),
+			},
+			{
+				// Listed, rented out and rented in keys for the wallet (#1360).
+				path: '/rentals/mine',
+				element: withRouteErrorBoundary(<MyRentalsPage />, 'My rentals'),
+			},
+			{
 				// Full list of seasonal campaigns linked from discovery (#1226).
 				path: '/campaigns',
 				element: <CampaignsPage />,
@@ -118,6 +141,13 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<CreatorDetailPage />,
 					'Key detail'
+				),
+			},
+			{
+				path: '/keys/:id/retirement/confirmed',
+				element: withRouteErrorBoundary(
+					<RetirementBuybackConfirmedPage />,
+					'Retirement buyback confirmation'
 				),
 			},
 			{
@@ -248,6 +278,13 @@ export const routes = [
 				element: <GovernancePage />,
 			},
 			{
+				path: '/governance/activity',
+				element: withRouteErrorBoundary(
+					<GovernanceFeedPage />,
+					'Governance Activity'
+				),
+			},
+			{
 				path: '/governance/create',
 				element: <ProposalCreatePage />,
 			},
@@ -270,6 +307,10 @@ export const routes = [
 			{
 				path: '/staking',
 				element: <StakingDashboardPage />,
+			},
+			{
+				path: '/borrow',
+				element: withRouteErrorBoundary(<BorrowPage />, 'Borrow'),
 			},
 			{
 				path: '/auto-invest',
@@ -301,10 +342,26 @@ export const routes = [
 			},
 			{
 				path: '/admin/dashboard',
-				element: withRouteErrorBoundary(
-					<AdminDashboardPage />,
-					'Admin dashboard'
+				element: (
+					<AdminTwoFactorGuard>
+						{withRouteErrorBoundary(
+							<AdminDashboardPage />,
+							'Admin dashboard'
+						)}
+					</AdminTwoFactorGuard>
 				),
+			},
+			{
+				path: '/admin/login',
+				element: <AdminLoginPage />,
+			},
+			{
+				path: '/admin/2fa/setup',
+				element: <AdminTwoFactorSetupPage />,
+			},
+			{
+				path: '/admin/2fa/challenge',
+				element: <AdminTwoFactorChallengePage />,
 			},
 			{
 				path: '/revenue-distribution',
@@ -344,6 +401,10 @@ export const routes = [
 			{
 				path: '/settings/notifications',
 				element: <NotificationPreferencesPage />,
+			},
+			{
+				path: '/settings/alerts',
+				element: <PriceAlertsSettingsPage />,
 			},
 			{
 				path: '/transactions',

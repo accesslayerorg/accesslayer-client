@@ -463,9 +463,9 @@ const { data: allTrades = [] } = useTradeHistory(address ?? '');
 								/>
 							}
 							title="No keys yet"
-							description="This wallet doesn't hold any creator keys. Browse the marketplace to pick some up."
-							ctaLabel="Browse the marketplace"
-							ctaHref="/marketplace"
+							description="You don't hold any creator keys yet. Discover creators to get started."
+							ctaLabel="Discover creators"
+							ctaHref="/discovery?source=portfolio-empty"
 							data-testid="portfolio-positions-empty"
 						/>
 					) : (
