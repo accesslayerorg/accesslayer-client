@@ -212,6 +212,9 @@ export const queryKeys = {
 			['governance', 'proposal', proposalId, 'vote'] as const,
 		proposalVotes: (id: string) =>
 			['governance', 'proposal', id, 'votes'] as const,
+		events: (type?: string) =>
+			['governance', 'events', type ?? 'all'] as const,
+		admin: () => ['governance', 'admin'] as const,
 	},
 	mergeProposal: {
 		bySourceKey: (sourceKeyId: string) =>

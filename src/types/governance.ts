@@ -110,3 +110,45 @@ export interface CreateProposalPayload {
 }
 
 export type CreateProposalInput = CreateProposalPayload;
+
+// ── Governance audit feed (#1351) ─────────────────────────────────────────
+
+/** Privileged protocol actions surfaced in the public governance audit feed. */
+export type GovernanceEventType =
+	| 'admin_transfer_proposed'
+	| 'admin_transfer_accepted'
+	| 'admin_transfer_cancelled'
+	| 'config_change'
+	| 'pause'
+	| 'unpause'
+	| 'upgrade';
+
+/** A single privileged change recorded on-chain. */
+export interface GovernanceEvent {
+	id: string;
+	type: GovernanceEventType;
+	/** Account that performed the action. */
+	actor: string;
+	/** Account or setting the action applied to, when there is one. */
+	target: string | null;
+	/** ISO timestamp of the ledger close. */
+	timestamp: string;
+	/** Transaction hash, used for the explorer link and copy action. */
+	txHash: string | null;
+	/** Optional human-readable detail, e.g. `fee_bps: 100 → 150`. */
+	details: string | null;
+}
+
+/** One cursor page of governance events. */
+export interface GovernanceEventsPage {
+	items: GovernanceEvent[];
+	nextCursor: string | null;
+}
+
+/** Current protocol admin and any admin transfer awaiting acceptance. */
+export interface GovernanceAdminState {
+	currentAdmin: string;
+	pendingAdmin: string | null;
+	/** ISO timestamp after which the pending transfer can no longer be accepted. */
+	pendingExpiresAt: string | null;
+}
