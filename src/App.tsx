@@ -10,6 +10,7 @@ import OfflineBanner from './components/common/OfflineBanner';
 import GlobalPauseBanner from './components/common/GlobalPauseBanner';
 import PendingTransactionBanner from './components/common/PendingTransactionBanner';
 import SessionExpiryWatcher from './components/common/SessionExpiryWatcher';
+import StatusBanner from './components/common/StatusBanner';
 import BadgeAchievementListener from './components/common/BadgeAchievementListener';
 import { useContractPausedStore } from './hooks/useContractPausedStore';
 import { routes } from './routes';
@@ -66,6 +67,8 @@ function App() {
 			<EscapeBanner />
 			<OfflineBanner />
 			<GlobalPauseBanner />
+			{/* Platform status banner: degraded / partial outage / maintenance (#1403) */}
+			<StatusBanner />
 			<PendingTransactionBanner />
 			<Toaster
 				toastOptions={{

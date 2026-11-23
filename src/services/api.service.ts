@@ -34,6 +34,107 @@ export class ApiError extends Error {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Rate limiting (#1402)
+// ---------------------------------------------------------------------------
+
+// Default backoff (ms) used when a 429 arrives without a usable Retry-After.
+export const DEFAULT_RATE_LIMIT_BACKOFF_MS = 30_000;
+
+export interface RateLimitState {
+	// Endpoint name only (no query string / ids) — safe for analytics.
+	endpoint: string;
+	// Epoch ms at which the wait period ends.
+	retryAt: number;
+}
+
+let rateLimitState: RateLimitState | null = null;
+const rateLimitListeners = new Set<(state: RateLimitState | null) => void>();
+
+function notifyRateLimitListeners(): void {
+	rateLimitListeners.forEach(listener => listener(rateLimitState));
+}
+
+// Read the current rate-limit state (null when no wait is active).
+export function getRateLimitState(): RateLimitState | null {
+	return rateLimitState;
+}
+
+// Subscribe to rate-limit state changes. Returns an unsubscribe function.
+export function subscribeRateLimit(
+	listener: (state: RateLimitState | null) => void
+): () => void {
+	rateLimitListeners.add(listener);
+	return () => {
+		rateLimitListeners.delete(listener);
+	};
+}
+
+// Clear the rate-limit state once the wait has elapsed.
+export function clearRateLimitState(): void {
+	rateLimitState = null;
+	notifyRateLimitListeners();
+}
+
+// True while a rate-limit wait is active.
+export function isRateLimited(now: number = Date.now()): boolean {
+	return rateLimitState !== null && rateLimitState.retryAt > now;
+}
+
+// Parse a Retry-After header value (seconds or HTTP date) into a wait in ms.
+// Falls back to the default backoff when missing or unparseable.
+export function parseRetryAfter(
+	headerValue: string | number | null | undefined,
+	now: number = Date.now()
+): number {
+	if (headerValue === null || headerValue === undefined) {
+		return DEFAULT_RATE_LIMIT_BACKOFF_MS;
+	}
+
+	const raw = String(headerValue).trim();
+	if (raw === '') {
+		return DEFAULT_RATE_LIMIT_BACKOFF_MS;
+	}
+
+	// Numeric seconds (may be fractional).
+	if (/^\d+(\.\d+)?$/.test(raw)) {
+		const seconds = Number(raw);
+		if (!Number.isFinite(seconds) || seconds < 0) {
+			return DEFAULT_RATE_LIMIT_BACKOFF_MS;
+		}
+		return Math.round(seconds * 1000);
+	}
+
+	// HTTP date.
+	const parsedDate = Date.parse(raw);
+	if (!Number.isNaN(parsedDate)) {
+		return Math.max(0, parsedDate - now);
+	}
+
+	return DEFAULT_RATE_LIMIT_BACKOFF_MS;
+}
+
+// Derive an endpoint name (path only) from a request URL for analytics.
+export function getEndpointName(url: string | undefined): string {
+	if (!url) return 'unknown';
+	try {
+		const parsed = new URL(url, 'http://localhost');
+		return parsed.pathname;
+	} catch {
+		return url.split('?')[0] || 'unknown';
+	}
+}
+
+function publishRateLimit(endpoint: string, retryAfterMs: number): void {
+	const retryAt = Date.now() + retryAfterMs;
+	// Keep the furthest-out wait if multiple 429s arrive in quick succession.
+	if (rateLimitState && rateLimitState.retryAt > retryAt) {
+		return;
+	}
+	rateLimitState = { endpoint, retryAt };
+	notifyRateLimitListeners();
+}
+
 // BASE CLASS - All services inherit from this
 export class BaseApiService {
 	protected api: AxiosInstance;
@@ -78,6 +179,14 @@ export class BaseApiService {
 						window.location.href = '/login';
 						return Promise.reject(refreshError);
 					}
+				}
+
+				if (error.response?.status === 429) {
+					const retryAfterMs = parseRetryAfter(
+						error.response.headers?.['retry-after']
+					);
+					const endpoint = getEndpointName(originalRequest?.url);
+					publishRateLimit(endpoint, retryAfterMs);
 				}
 
 				return Promise.reject(error);
