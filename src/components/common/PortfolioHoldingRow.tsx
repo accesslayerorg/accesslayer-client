@@ -15,6 +15,7 @@ import {
 	formatDisplayKeyPrice,
 	resolveCreatorKeyPriceStroops,
 } from '@/utils/keyPriceDisplay.utils';
+import { useWrapperPosition } from '@/hooks/useWrapperPosition';
 import {
 	calculatePositionPnL,
 	formatPnLDisplay,
@@ -130,9 +131,7 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 			rentalEscrowedQuantity
 	);
 	const isLiquidEmpty = liquidQuantity <= 0;
-	const isBlockedByRentalEscrow = rentalEscrowedQuantity > 0 && isLiquidEmpty;
-	const hasDividends = hasUnclaimedDividend(position.unclaimedDividend);
-	const keyPriceStroops = resolveCreatorKeyPriceStroops(position);
+	const isBlockedByRentalEscrow = rentalEscrowedQuantity > 0 && isLiquidEmpty;const hasDividends = hasUnclaimedDividend(position.unclaimedDividend);	const { data: wrapperPosition = {} } = useWrapperPosition(position.creatorId);	const keyPriceStroops = resolveCreatorKeyPriceStroops(position);
 	const deprecated = isKeyDeprecated(creator);
 	const { paused } = useGlobalPause();
 
@@ -310,10 +309,9 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 							<span>{pnlLabel}</span>
 						</span>
 						<span className="sr-only">unrealised P&amp;L</span>
-					</div>
-					{hasDividends && (
-						<span
-							className="mt-2 inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-400"
+					</div>{hasDividends && (
+					<span
+						className="mt-2 inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-400"
 							title="Unclaimed dividend balance available to reinvest"
 							data-testid="unclaimed-dividend-badge"
 						>
@@ -326,7 +324,18 @@ export const PortfolioHoldingRow: React.FC<PortfolioHoldingRowProps> = ({
 							</span>
 						</span>
 					)}
-				</div>
+					{wrapperPosition.shareBalance > 0 && (
+					<span
+						className="mt-2 inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-400"
+							title="Fractional share balance"
+							data-testid="fractional-share-badge"
+						>
+							<Share2 className="size-3" aria-hidden="true" />
+							<span>
+								{wrapperPosition.shareBalance} shares
+							</span>
+						</span>
+					)}
 
 				<div className="flex items-center gap-3 shrink-0">
 					{!deprecated && (
