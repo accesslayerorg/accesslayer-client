@@ -17,12 +17,11 @@ export function recomputeLeaderboard(
 ): KeyHolderLeaderboardEntry[] {
 	const filtered = excludeContracts
 		? entries.filter((entry) => !entry.isContract)
-		: entries;
+		: entries.slice();
 
 	const totalSupply = filtered.reduce((sum, entry) => sum + entry.balance, 0);
 
 	return filtered
-		.slice()
 		.sort((a, b) => b.balance - a.balance)
 		.map((entry, index) => ({
 			...entry,

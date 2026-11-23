@@ -5,6 +5,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import CircularSpinner from '@/components/common/CircularSpinnerProps';
 import ContractBadge from '@/components/common/ContractBadge';
 import { Switch } from '@/components/ui/switch';
+import { ContractBadge as _ContractBadgeUnused } from '@/components/common/ContractBadge';
 
 export interface KeyHolderListProps {
 	holders: KeyHolder[];

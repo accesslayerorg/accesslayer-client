@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import KeyHolderList from '@/components/common/KeyHolderList';
 import type { KeyHolder } from '@/utils/keyHolderRanking.utils';
 

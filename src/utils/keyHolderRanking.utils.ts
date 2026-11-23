@@ -32,6 +32,22 @@ export interface RankKeyHoldersOptions {
 	excludeContracts?: boolean;
 }
 
+/**
+ * Parses the `excludeContracts` flag from a URL query value so the toggle can
+ * persist in the URL. Only the literal string "1" or "true" enables it.
+ */
+export function parseExcludeContractsParam(value: string | null | undefined): boolean {
+	return value === "1" || value === "true";
+}
+
+/**
+ * Serialises the `excludeContracts` flag for the URL query. Returns `null` when
+ * disabled so the param is removed rather than cluttering the URL.
+ */
+export function serialiseExcludeContractsParam(enabled: boolean): string | null {
+	return enabled ? "1" : null;
+}
+
 function normaliseStaked(holder: KeyHolder): number {
 	const staked = holder.stakedQuantity ?? 0;
 	if (!Number.isFinite(staked) || staked <= 0) return 0;
