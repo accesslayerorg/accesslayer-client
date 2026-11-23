@@ -17,6 +17,10 @@ export interface Course {
 	creatorShareSupply?: number;
 	/** Configured max supply cap for this key; null or undefined for uncapped keys. */
 	maxSupply?: number | null;
+	/** Base price of the key's bonding curve in stroops. */
+	curveBasePriceStroops?: number | null;
+	/** Per-key bonding curve growth factor. */
+	curveGrowthFactor?: number | null;
 	instructorId: string;
 	thumbnail?: string;
 	category: string;

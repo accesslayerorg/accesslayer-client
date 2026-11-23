@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import {
 	Dialog,
 	DialogContent,
@@ -398,6 +399,14 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 							</span>
 						</div>
 					)}
+
+					<Link
+						to="/learn/bonding-curve"
+						data-testid="trade-explainer-link"
+						className="inline-block font-jakarta text-xs font-bold text-amber-300 hover:underline"
+					>
+						How does the price curve work?
+					</Link>
 
 					{/* Price Impact Warning if exceeds 5% */}
 					{priceImpactPercent != null &&

@@ -39,6 +39,9 @@ import KeyDiscoveryFeedPage from './pages/KeyDiscoveryFeedPage';
 import KeyDiscoveryLeaderboardPage from './pages/KeyDiscoveryLeaderboardPage';
 import WalletPortfolioPage from './pages/WalletPortfolioPage';
 import CampaignsPage from './pages/CampaignsPage';
+import LaunchesPage from './pages/LaunchesPage';
+import CreatorVerificationPage from './pages/CreatorVerificationPage';
+import CurveExplainerPage from './pages/CurveExplainerPage';
 import RentalMarketPage from './pages/RentalMarketPage';
 import MyRentalsPage from './pages/MyRentalsPage';
 import AutoInvestDashboardPage from './pages/AutoInvestDashboardPage';
@@ -128,6 +131,24 @@ export const routes = [
 			{
 				path: '/leaderboard',
 				element: <LeaderboardPage />,
+			},
+			{
+				path: '/launches',
+				element: withRouteErrorBoundary(<LaunchesPage />, 'Launches'),
+			},
+			{
+				path: '/creator/verification',
+				element: withRouteErrorBoundary(
+					<CreatorVerificationPage />,
+					'Creator verification'
+				),
+			},
+			{
+				path: '/learn/bonding-curve',
+				element: withRouteErrorBoundary(
+					<CurveExplainerPage />,
+					'Bonding curve explainer'
+				),
 			},
 			{
 				path: '/creator/:id',
