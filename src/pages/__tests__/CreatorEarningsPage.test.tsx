@@ -107,6 +107,8 @@ describe('CreatorEarningsPage', () => {
 		mocks.useCreatorEarnings.mockReturnValue({
 			data: aggregateEarningsSummary(CREATOR_ID, records),
 			isLoading: false,
+			isError: false,
+			refetch: vi.fn(),
 		});
 		mocks.claimMutation.mutate.mockReset();
 		mocks.claimMutation.isPending = false;
@@ -162,7 +164,7 @@ describe('CreatorEarningsPage', () => {
 		});
 	});
 
-	it('disables claim buttons when no wallet is connected', () => {
+	it('prompts for a wallet instead of showing unscoped balances', () => {
 		mocks.useAccount.mockReturnValue({
 			address: undefined,
 			isConnected: false,
@@ -170,7 +172,28 @@ describe('CreatorEarningsPage', () => {
 
 		renderPage();
 
-		expect(screen.getByTestId('claim-earnings-royalties')).toBeDisabled();
 		expect(screen.getByTestId('earnings-connect-prompt')).toBeInTheDocument();
+		expect(
+			screen.getByTestId('earnings-wallet-required')
+		).toBeInTheDocument();
+		expect(
+			screen.queryByTestId('total-unclaimed-card')
+		).not.toBeInTheDocument();
+	});
+
+	it('shows an error state instead of partial totals when a source fails', () => {
+		mocks.useCreatorEarnings.mockReturnValue({
+			data: undefined,
+			isLoading: false,
+			isError: true,
+			refetch: vi.fn(),
+		});
+
+		renderPage();
+
+		expect(screen.getByTestId('earnings-error')).toBeInTheDocument();
+		expect(
+			screen.queryByTestId('total-unclaimed-card')
+		).not.toBeInTheDocument();
 	});
 });

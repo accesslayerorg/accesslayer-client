@@ -24,6 +24,12 @@ export interface CreatorEarningsStreamSummary {
 	claimedXlm: number;
 }
 
+/** Authoritative totals for one stream, as reported by its data source. */
+export type EarningsStreamTotals = Pick<
+	CreatorEarningsStreamSummary,
+	'totalEarnedXlm' | 'unclaimedXlm' | 'claimedXlm'
+>;
+
 /** Full earnings breakdown for a creator across every revenue stream. */
 export interface CreatorEarningsSummary {
 	creatorId: string;

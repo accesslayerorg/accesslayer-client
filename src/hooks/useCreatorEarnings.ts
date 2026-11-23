@@ -4,8 +4,10 @@ import {
 	fetchCreatorEarnings,
 	submitEarningsClaim,
 } from '@/services/creatorEarnings.service';
-import { aggregateEarningsSummary } from '@/utils/creatorEarnings.utils';
-import { EARNINGS_STREAM_LABELS } from '@/utils/creatorEarnings.utils';
+import {
+	applyClaimToSummary,
+	EARNINGS_STREAM_LABELS,
+} from '@/utils/creatorEarnings.utils';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 import type {
@@ -20,11 +22,14 @@ export const EARNINGS_REFETCH_INTERVAL_MS = 60_000;
  * Loads the creator's earnings breakdown across every stream, refreshing every
  * 60 seconds so balances stay current (#1258).
  */
-export function useCreatorEarnings(creatorId: string | undefined) {
+export function useCreatorEarnings(
+	creatorId: string | undefined,
+	wallet: string | undefined
+) {
 	return useQuery({
-		queryKey: queryKeys.creatorEarnings.detail(creatorId ?? ''),
-		queryFn: () => fetchCreatorEarnings(creatorId ?? ''),
-		enabled: Boolean(creatorId),
+		queryKey: queryKeys.creatorEarnings.detail(creatorId ?? '', wallet ?? ''),
+		queryFn: () => fetchCreatorEarnings(creatorId ?? '', wallet ?? ''),
+		enabled: Boolean(creatorId && wallet),
 		refetchInterval: EARNINGS_REFETCH_INTERVAL_MS,
 		refetchIntervalInBackground: false,
 		staleTime: 15_000,
@@ -52,27 +57,23 @@ export function useClaimEarningsStreamMutation(
 		mutationFn: ({ stream, amountXlm }: ClaimEarningsInput) =>
 			submitEarningsClaim(creatorId, stream, amountXlm, wallet),
 		onSuccess: (result: ClaimEarningsResult) => {
-			queryClient.setQueryData<CreatorEarningsSummary>(
-				queryKeys.creatorEarnings.detail(creatorId),
-				old => {
-					if (!old) return old;
-					const records = old.records.map(record =>
-						record.stream === result.stream &&
-						record.status === 'unclaimed'
-							? {
-									...record,
-									status: 'claimed' as const,
-									transactionHash: result.transactionHash,
-								}
-							: record
-					);
-					return aggregateEarningsSummary(creatorId, records);
-				}
+			const detailKey = queryKeys.creatorEarnings.detail(
+				creatorId,
+				wallet ?? ''
+			);
+			queryClient.setQueryData<CreatorEarningsSummary>(detailKey, old =>
+				old
+					? applyClaimToSummary(
+							old,
+							result.stream,
+							result.amountXlm,
+							result.transactionHash,
+							result.claimedAt
+						)
+					: old
 			);
 
-			void queryClient.invalidateQueries({
-				queryKey: queryKeys.creatorEarnings.detail(creatorId),
-			});
+			void queryClient.invalidateQueries({ queryKey: detailKey });
 
 			showToast.success(
 				`${EARNINGS_STREAM_LABELS[result.stream]} earnings claimed`

@@ -4,6 +4,7 @@ import type {
 	CreatorEarningsSummary,
 	DailyEarningsPoint,
 	EarningsStream,
+	EarningsStreamTotals,
 } from '@/types/creatorEarnings';
 
 export const EARNINGS_STREAMS: EarningsStream[] = [
@@ -115,7 +116,8 @@ function createEmptyStreamSummaries(): Record<
  */
 export function aggregateEarningsSummary(
 	creatorId: string,
-	records: CreatorEarningsRecord[]
+	records: CreatorEarningsRecord[],
+	overrides: Partial<Record<EarningsStream, EarningsStreamTotals>> = {}
 ): CreatorEarningsSummary {
 	const streams = createEmptyStreamSummaries();
 	const normalized = records
@@ -137,10 +139,20 @@ export function aggregateEarningsSummary(
 	}
 
 	for (const stream of EARNINGS_STREAMS) {
-		const summary = streams[stream];
-		summary.totalEarnedXlm = roundToTwoDecimals(summary.totalEarnedXlm);
-		summary.unclaimedXlm = roundToTwoDecimals(summary.unclaimedXlm);
-		summary.claimedXlm = roundToTwoDecimals(summary.claimedXlm);
+		const totals = overrides[stream];
+		if (totals) {
+			streams[stream] = {
+				stream,
+				totalEarnedXlm: roundToTwoDecimals(totals.totalEarnedXlm),
+				unclaimedXlm: roundToTwoDecimals(totals.unclaimedXlm),
+				claimedXlm: roundToTwoDecimals(totals.claimedXlm),
+			};
+		} else {
+			const summary = streams[stream];
+			summary.totalEarnedXlm = roundToTwoDecimals(summary.totalEarnedXlm);
+			summary.unclaimedXlm = roundToTwoDecimals(summary.unclaimedXlm);
+			summary.claimedXlm = roundToTwoDecimals(summary.claimedXlm);
+		}
 	}
 
 	const totalEarnedXlm = roundToTwoDecimals(
@@ -243,39 +255,70 @@ export function aggregateDailyEarnings(
 	}));
 }
 
-interface FallbackEarningSeed {
-	stream: EarningsStream;
-	amountXlm: number;
-	daysAgo: number;
-	status: CreatorEarningsRecord['status'];
-}
-
-const FALLBACK_EARNINGS: FallbackEarningSeed[] = [
-	{ stream: 'royalties', amountXlm: 42.5, daysAgo: 1, status: 'unclaimed' },
-	{ stream: 'tips', amountXlm: 18, daysAgo: 2, status: 'unclaimed' },
-	{ stream: 'subscriptions', amountXlm: 65, daysAgo: 3, status: 'unclaimed' },
-	{ stream: 'spotlight', amountXlm: 90, daysAgo: 4, status: 'unclaimed' },
-	{ stream: 'royalties', amountXlm: 118.25, daysAgo: 18, status: 'claimed' },
-	{ stream: 'tips', amountXlm: 32.5, daysAgo: 9, status: 'claimed' },
-	{ stream: 'subscriptions', amountXlm: 140, daysAgo: 24, status: 'claimed' },
-	{ stream: 'spotlight', amountXlm: 75, daysAgo: 14, status: 'claimed' },
-];
-
 /**
- * Deterministic sample data used only when the earnings endpoint is not yet
- * available, mirroring the fallback pattern used by the existing revenue
- * dashboard services.
+ * Applies a confirmed claim to an existing summary: the stream's unclaimed
+ * balance drops by the claimed amount, the claimed total rises to match, and
+ * the stream's unclaimed records are marked as claimed for the breakdown
+ * table. Totals stay consistent because the combined unclaimed balance is
+ * recomputed from the per-stream values.
  */
-export function buildFallbackEarningsRecords(
-	creatorId: string,
-	now = Date.now()
-): CreatorEarningsRecord[] {
-	return FALLBACK_EARNINGS.map((seed, index) => ({
-		id: `${creatorId}-${seed.stream}-${index + 1}`,
-		creatorId,
-		stream: seed.stream,
-		earnedAt: new Date(now - seed.daysAgo * DAY_MS).toISOString(),
-		amountXlm: seed.amountXlm,
-		status: seed.status,
-	}));
+export function applyClaimToSummary(
+	summary: CreatorEarningsSummary,
+	stream: EarningsStream,
+	amountXlm: number,
+	transactionHash: string,
+	claimedAt = Date.now()
+): CreatorEarningsSummary {
+	const amount = toNonNegativeAmount(amountXlm);
+	if (amount <= 0) return summary;
+
+	const current = summary.streams[stream];
+	const claimedNow = Math.min(amount, current.unclaimedXlm);
+	const streams = {
+		...summary.streams,
+		[stream]: {
+			stream,
+			totalEarnedXlm: current.totalEarnedXlm,
+			unclaimedXlm: roundToTwoDecimals(current.unclaimedXlm - claimedNow),
+			claimedXlm: roundToTwoDecimals(current.claimedXlm + claimedNow),
+		},
+	};
+
+	let budget = claimedNow;
+	const records = [...summary.records]
+		.sort(
+			(a, b) =>
+				new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime()
+		)
+		.map(record => {
+			if (record.stream !== stream || record.status === 'claimed') {
+				return record;
+			}
+			if (budget <= 0) return record;
+			budget = roundToTwoDecimals(budget - record.amountXlm);
+			return {
+				...record,
+				status: 'claimed' as const,
+				transactionHash,
+			};
+		});
+
+	const totalUnclaimedXlm = roundToTwoDecimals(
+		EARNINGS_STREAMS.reduce((sum, key) => sum + streams[key].unclaimedXlm, 0)
+	);
+	const totalEarnedXlm = roundToTwoDecimals(
+		EARNINGS_STREAMS.reduce(
+			(sum, key) => sum + streams[key].totalEarnedXlm,
+			0
+		)
+	);
+
+	return {
+		...summary,
+		streams,
+		totalEarnedXlm,
+		totalUnclaimedXlm,
+		records,
+		lastUpdated: claimedAt,
+	};
 }

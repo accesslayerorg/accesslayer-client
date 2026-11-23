@@ -299,7 +299,8 @@ export const queryKeys = {
 	// Creator earnings dashboard with per-stream claim state (#1258).
 	creatorEarnings: {
 		all: () => ['creatorEarnings'] as const,
-		detail: (creatorId: string) => ['creatorEarnings', creatorId] as const,
+		detail: (creatorId: string, wallet: string) =>
+			['creatorEarnings', creatorId, wallet] as const,
 	},
 	creatorRevenue: {
 		all: () => ['creatorRevenue'] as const,

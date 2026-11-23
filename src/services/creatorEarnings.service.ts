@@ -1,13 +1,17 @@
-import { BaseApiService, type APIResponse } from './api.service';
+import { ApiError } from './api.service';
 import { cacheManager } from '@/utils/cache.utils';
+import { royaltyService, type RoyaltyEarningsSummary } from './royalty.service';
+import { tipService } from './tip.service';
+import { keySubscriptionContractService } from './keySubscriptionContract.service';
+import { spotlightAuctionService } from './spotlightAuction.service';
 import { submitCreatorContractCall } from '@/hooks/useCreatorContractActions';
 import { buildMockWithdrawalTxHash } from '@/utils/creatorRevenue.utils';
 import {
 	aggregateEarningsSummary,
-	buildFallbackEarningsRecords,
+	applyClaimToSummary,
+	EARNINGS_STREAMS,
 	EARNINGS_STREAM_CONTRACT_CALLS,
 	isEarningsStream,
-	normalizeEarningsRecord,
 	toNonNegativeAmount,
 } from '@/utils/creatorEarnings.utils';
 import type {
@@ -15,89 +19,201 @@ import type {
 	CreatorEarningsRecord,
 	CreatorEarningsSummary,
 	EarningsStream,
+	EarningsStreamTotals,
 } from '@/types/creatorEarnings';
 
 const EARNINGS_CACHE_PREFIX = 'creator_earnings_';
 const EARNINGS_CACHE_TTL_MS = 15_000;
 
 interface ClaimOverride {
+	amountXlm: number;
 	claimedAt: number;
 	transactionHash: string;
 }
 
 /**
- * Claims submitted during this session. The backend may not yet expose claim
- * state, so these overrides are applied on top of every fetch to keep the
- * unclaimed balances accurate after a successful withdrawal.
+ * Claims submitted during this session. The underlying sources do not all
+ * expose claim state, so these overrides reduce the reported unclaimed balance
+ * by the claimed amount and mark the matching records as claimed.
  */
 const claimOverrides = new Map<
 	string,
 	Partial<Record<EarningsStream, ClaimOverride>>
 >();
 
-function cacheKey(creatorId: string): string {
-	return `${EARNINGS_CACHE_PREFIX}${creatorId}`;
+function claimKey(creatorId: string, wallet?: string): string {
+	return `${creatorId}|${wallet ?? ''}`;
 }
 
-function applyClaimOverrides(
-	creatorId: string,
-	records: CreatorEarningsRecord[]
-): CreatorEarningsRecord[] {
-	const overrides = claimOverrides.get(creatorId);
-	if (!overrides) return records;
+function cacheKey(creatorId: string, wallet?: string): string {
+	return `${EARNINGS_CACHE_PREFIX}${claimKey(creatorId, wallet)}`;
+}
 
-	return records.map(record => {
-		if (record.status === 'claimed') return record;
-		const override = overrides[record.stream];
-		if (!override) return record;
-		return {
-			...record,
-			status: 'claimed',
-			transactionHash: override.transactionHash,
-		};
+function toIsoOrNow(value: string | number | null | undefined): string {
+	if (typeof value === 'number' && Number.isFinite(value)) {
+		const ms = value < 1_000_000_000_000 ? value * 1000 : value;
+		return new Date(ms).toISOString();
+	}
+	if (typeof value === 'string' && value.trim() !== '') {
+		const parsed = Date.parse(value);
+		if (Number.isFinite(parsed)) return new Date(parsed).toISOString();
+	}
+	return new Date().toISOString();
+}
+
+/** Treats a missing resource (404) as "no earnings yet" for optional streams. */
+async function loadAllowingNotFound<T>(promise: Promise<T>): Promise<T | null> {
+	try {
+		return await promise;
+	} catch (error) {
+		if (error instanceof ApiError && error.status === 404) return null;
+		throw error;
+	}
+}
+
+/**
+ * Per-transfer royalty records. The authoritative unclaimed total comes from
+ * the source's `pendingXlm`; `claimedXlm` is allocated oldest-first so the
+ * table's claim status matches the source totals.
+ */
+function buildRoyaltyRecords(
+	creatorId: string,
+	summary: RoyaltyEarningsSummary
+): CreatorEarningsRecord[] {
+	const transfers = [...summary.transfers].sort(
+		(a, b) => Date.parse(a.transferredAt) - Date.parse(b.transferredAt)
+	);
+	let claimedBudget = toNonNegativeAmount(summary.claimedXlm);
+
+	return transfers.flatMap(transfer => {
+		const amountXlm = toNonNegativeAmount(transfer.royaltyEarnedXlm);
+		if (amountXlm <= 0) return [];
+
+		const claimed = claimedBudget >= amountXlm;
+		if (claimed) claimedBudget -= amountXlm;
+
+		return [
+			{
+				id: `royalty-${transfer.id}`,
+				creatorId,
+				stream: 'royalties' as const,
+				earnedAt: toIsoOrNow(transfer.transferredAt),
+				amountXlm,
+				status: claimed ? ('claimed' as const) : ('unclaimed' as const),
+				transactionHash: transfer.transactionHash,
+			},
+		];
 	});
 }
 
-function normalizeRecords(
+function applySessionClaims(
 	creatorId: string,
-	raw: unknown
-): CreatorEarningsRecord[] | null {
-	if (!Array.isArray(raw)) return null;
-	const records = raw
-		.map(entry => normalizeEarningsRecord(entry, creatorId))
-		.filter((record): record is CreatorEarningsRecord => record !== null);
-	return records;
+	wallet: string | undefined,
+	summary: CreatorEarningsSummary
+): CreatorEarningsSummary {
+	const overrides = claimOverrides.get(claimKey(creatorId, wallet));
+	if (!overrides) return summary;
+
+	return EARNINGS_STREAMS.reduce((acc, stream) => {
+		const override = overrides[stream];
+		return override
+			? applyClaimToSummary(
+					acc,
+					stream,
+					override.amountXlm,
+					override.transactionHash,
+					override.claimedAt
+				)
+			: acc;
+	}, summary);
 }
 
-class CreatorEarningsService extends BaseApiService {
+class CreatorEarningsService {
 	/**
-	 * Fetches every earning record for a creator:
-	 * GET /creators/:id/earnings
+	 * Builds the earnings breakdown from the real per-stream data sources:
+	 * royalty ledger, tip ledger, on-chain subscriptions, and the creator's
+	 * live spotlight round. There is no generated fallback: if a required
+	 * source fails, the request fails rather than reporting invented balances.
 	 */
 	async getCreatorEarnings(
-		creatorId: string
+		creatorId: string,
+		wallet: string
 	): Promise<CreatorEarningsSummary> {
-		const key = cacheKey(creatorId);
+		const key = cacheKey(creatorId, wallet);
 		const cached = cacheManager.get<CreatorEarningsSummary>(key);
 		if (cached) return cached;
 
-		let records: CreatorEarningsRecord[] | null = null;
-		try {
-			const response = await this.api.get<
-				APIResponse<CreatorEarningsRecord[]>
-			>(`/creators/${creatorId}/earnings`);
-			records = normalizeRecords(creatorId, response.data.data);
-		} catch {
-			// The earnings endpoint may not be deployed yet; fall back below so
-			// the dashboard still renders with representative data.
+		const [royalties, tips, subscriptions, spotlight] = await Promise.all([
+			loadAllowingNotFound(
+				royaltyService.getRoyaltyEarnings(creatorId, wallet)
+			),
+			tipService.getTipsForCreator(creatorId),
+			keySubscriptionContractService.getSubscriptionsForCreator(creatorId),
+			loadAllowingNotFound(
+				spotlightAuctionService.getSpotlightAuction(creatorId)
+			),
+		]);
+
+		const records: CreatorEarningsRecord[] = [];
+		const overrides: Partial<Record<EarningsStream, EarningsStreamTotals>> = {
+			royalties: {
+				totalEarnedXlm: royalties?.totalEarnedXlm ?? 0,
+				unclaimedXlm: royalties?.pendingXlm ?? 0,
+				claimedXlm: royalties?.claimedXlm ?? 0,
+			},
+		};
+
+		if (royalties) {
+			records.push(...buildRoyaltyRecords(creatorId, royalties));
 		}
 
-		const summary = aggregateEarningsSummary(
-			creatorId,
-			applyClaimOverrides(
+		for (const tip of tips) {
+			const amountXlm = toNonNegativeAmount(tip.netAmount);
+			if (amountXlm <= 0) continue;
+			records.push({
+				id: `tip-${tip.id}`,
 				creatorId,
-				records ?? buildFallbackEarningsRecords(creatorId)
-			)
+				stream: 'tips',
+				earnedAt: toIsoOrNow(tip.timestamp),
+				amountXlm,
+				status: 'unclaimed',
+				transactionHash: tip.txHash,
+			});
+		}
+
+		for (const subscription of subscriptions) {
+			const amountXlm = toNonNegativeAmount(subscription.totalInvestedXlm);
+			if (amountXlm <= 0) continue;
+			records.push({
+				id: `subscription-${subscription.id}`,
+				creatorId,
+				stream: 'subscriptions',
+				earnedAt: toIsoOrNow(
+					subscription.updatedAt || subscription.createdAt
+				),
+				amountXlm,
+				status: 'unclaimed',
+			});
+		}
+
+		// The live round's top bid is the creator's accrued spotlight balance.
+		// The source only exposes the current round, so it is dated at read time.
+		const spotlightAmount = toNonNegativeAmount(spotlight?.highestBid);
+		if (spotlightAmount > 0) {
+			records.push({
+				id: `spotlight-${creatorId}`,
+				creatorId,
+				stream: 'spotlight',
+				earnedAt: new Date().toISOString(),
+				amountXlm: spotlightAmount,
+				status: 'unclaimed',
+			});
+		}
+
+		const summary = applySessionClaims(
+			creatorId,
+			wallet,
+			aggregateEarningsSummary(creatorId, records, overrides)
 		);
 		cacheManager.set(key, summary, EARNINGS_CACHE_TTL_MS);
 		return summary;
@@ -105,8 +221,8 @@ class CreatorEarningsService extends BaseApiService {
 
 	/**
 	 * Claims the unclaimed balance for one stream by submitting the matching
-	 * contract call, then records a local override so totals update on the next
-	 * fetch.
+	 * contract call, then records a session override so the next read reflects
+	 * the withdrawal even before the source catches up.
 	 */
 	async claimEarningsStream(
 		creatorId: string,
@@ -128,13 +244,19 @@ class CreatorEarningsService extends BaseApiService {
 
 		const transactionHash = buildMockWithdrawalTxHash();
 		const claimedAt = Date.now();
-		const existing = claimOverrides.get(creatorId) ?? {};
-		claimOverrides.set(creatorId, {
+		const key = claimKey(creatorId, wallet);
+		const existing = claimOverrides.get(key) ?? {};
+		const previous = existing[stream];
+		claimOverrides.set(key, {
 			...existing,
-			[stream]: { claimedAt, transactionHash },
+			[stream]: {
+				amountXlm: (previous?.amountXlm ?? 0) + amount,
+				claimedAt,
+				transactionHash,
+			},
 		});
 
-		this.invalidateCreatorEarnings(creatorId);
+		this.invalidateCreatorEarnings(creatorId, wallet);
 
 		return {
 			success: true,
@@ -146,8 +268,8 @@ class CreatorEarningsService extends BaseApiService {
 	}
 
 	/** Drops the cached summary after a claim so the next read is fresh. */
-	invalidateCreatorEarnings(creatorId: string): void {
-		cacheManager.invalidate(cacheKey(creatorId));
+	invalidateCreatorEarnings(creatorId: string, wallet?: string): void {
+		cacheManager.invalidate(cacheKey(creatorId, wallet));
 	}
 
 	/** Clears session claim overrides (used by tests). */
@@ -159,9 +281,10 @@ class CreatorEarningsService extends BaseApiService {
 export const creatorEarningsService = new CreatorEarningsService();
 
 export async function fetchCreatorEarnings(
-	creatorId: string
+	creatorId: string,
+	wallet: string
 ): Promise<CreatorEarningsSummary> {
-	return creatorEarningsService.getCreatorEarnings(creatorId);
+	return creatorEarningsService.getCreatorEarnings(creatorId, wallet);
 }
 
 export async function submitEarningsClaim(

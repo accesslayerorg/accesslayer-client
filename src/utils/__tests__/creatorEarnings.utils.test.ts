@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	aggregateDailyEarnings,
 	aggregateEarningsSummary,
-	buildFallbackEarningsRecords,
+	applyClaimToSummary,
 	EARNINGS_STREAM_CONTRACT_CALLS,
 } from '@/utils/creatorEarnings.utils';
 import type { CreatorEarningsRecord } from '@/types/creatorEarnings';
@@ -44,6 +44,28 @@ describe('aggregateEarningsSummary', () => {
 		expect(summary.streams.spotlight.unclaimedXlm).toBe(40);
 		expect(summary.totalUnclaimedXlm).toBe(160);
 		expect(summary.totalEarnedXlm).toBe(240);
+	});
+
+	it('uses authoritative source totals when provided', () => {
+		const summary = aggregateEarningsSummary(
+			CREATOR_ID,
+			[record({ stream: 'royalties', amountXlm: 10 })],
+			{
+				royalties: {
+					totalEarnedXlm: 500,
+					unclaimedXlm: 120,
+					claimedXlm: 380,
+				},
+			}
+		);
+
+		expect(summary.streams.royalties).toMatchObject({
+			totalEarnedXlm: 500,
+			unclaimedXlm: 120,
+			claimedXlm: 380,
+		});
+		expect(summary.totalUnclaimedXlm).toBe(120);
+		expect(summary.totalEarnedXlm).toBe(500);
 	});
 
 	it('sorts records newest first and ignores malformed entries', () => {
@@ -106,21 +128,46 @@ describe('earnings stream contract calls', () => {
 			spotlight: 'claim_spotlight_earnings',
 		});
 	});
+});
 
-	it('builds fallback records that cover all four streams', () => {
-		const summary = aggregateEarningsSummary(
-			CREATOR_ID,
-			buildFallbackEarningsRecords(CREATOR_ID)
+describe('applyClaimToSummary', () => {
+	it('reduces only the claimed stream and recomputes the combined balance', () => {
+		const summary = aggregateEarningsSummary(CREATOR_ID, [
+			record({ stream: 'tips', amountXlm: 20, status: 'unclaimed' }),
+			record({ stream: 'royalties', amountXlm: 50, status: 'unclaimed' }),
+		]);
+
+		const updated = applyClaimToSummary(
+			summary,
+			'tips',
+			20,
+			'tx-hash',
+			1700000000000
 		);
 
-		expect(summary.totalUnclaimedXlm).toBeGreaterThan(0);
-		for (const stream of [
-			'royalties',
-			'tips',
-			'subscriptions',
-			'spotlight',
-		] as const) {
-			expect(summary.streams[stream].unclaimedXlm).toBeGreaterThan(0);
-		}
+		expect(updated.streams.tips.unclaimedXlm).toBe(0);
+		expect(updated.streams.tips.claimedXlm).toBe(20);
+		expect(updated.streams.tips.totalEarnedXlm).toBe(20);
+		expect(updated.streams.royalties.unclaimedXlm).toBe(50);
+		expect(updated.totalUnclaimedXlm).toBe(50);
+		expect(updated.totalEarnedXlm).toBe(70);
+		expect(
+			updated.records.find(entry => entry.stream === 'tips')
+		).toMatchObject({ status: 'claimed', transactionHash: 'tx-hash' });
+		expect(
+			updated.records.find(entry => entry.stream === 'royalties')?.status
+		).toBe('unclaimed');
+	});
+
+	it('never reduces the unclaimed balance below zero', () => {
+		const summary = aggregateEarningsSummary(CREATOR_ID, [
+			record({ stream: 'spotlight', amountXlm: 10, status: 'unclaimed' }),
+		]);
+
+		const updated = applyClaimToSummary(summary, 'spotlight', 999, 'tx-hash');
+
+		expect(updated.streams.spotlight.unclaimedXlm).toBe(0);
+		expect(updated.streams.spotlight.claimedXlm).toBe(10);
+		expect(updated.totalUnclaimedXlm).toBe(0);
 	});
 });

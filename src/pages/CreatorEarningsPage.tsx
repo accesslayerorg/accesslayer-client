@@ -9,6 +9,7 @@ import {
 } from '@/hooks/useCreatorEarnings';
 import { aggregateDailyEarnings } from '@/utils/creatorEarnings.utils';
 import ConnectWalletButton from '@/components/common/ConnectWalletButton';
+import { AsyncButton } from '@/components/ui/async-button';
 import CreatorEarningsCards from '@/components/creator/CreatorEarningsCards';
 import CreatorEarningsChart from '@/components/creator/CreatorEarningsChart';
 import CreatorEarningsTable from '@/components/creator/CreatorEarningsTable';
@@ -30,9 +31,12 @@ export default function CreatorEarningsPage() {
 	const { address } = useAccount();
 
 	const creatorId = id || address || '';
-	const { data: summary, isLoading } = useCreatorEarnings(
-		creatorId || undefined
-	);
+	const {
+		data: summary,
+		isLoading,
+		isError,
+		refetch,
+	} = useCreatorEarnings(creatorId || undefined, address);
 	const claimMutation = useClaimEarningsStreamMutation(creatorId, address);
 
 	useDocumentTitle('Creator Earnings — AccessLayer');
@@ -106,6 +110,38 @@ export default function CreatorEarningsPage() {
 							Connect your wallet, or open this page from a creator key,
 							to load its earnings breakdown.
 						</p>
+					</section>
+				) : !address ? (
+					<section
+						className={CARD_CLASS}
+						data-testid="earnings-wallet-required"
+					>
+						<h2 className="font-grotesque text-lg font-bold text-white">
+							Connect your wallet to load earnings
+						</h2>
+						<p className="mt-1 text-xs text-white/60">
+							Royalty balances are wallet-scoped, so the earnings
+							breakdown loads once your wallet is connected.
+						</p>
+					</section>
+				) : isError ? (
+					<section className={CARD_CLASS} data-testid="earnings-error">
+						<h2 className="font-grotesque text-lg font-bold text-white">
+							Earnings are temporarily unavailable
+						</h2>
+						<p className="mt-1 text-xs text-white/60">
+							We couldn&apos;t load your earnings from the royalty, tip,
+							subscription, or spotlight sources. Balances are not shown
+							rather than reporting incomplete totals.
+						</p>
+						<AsyncButton
+							type="button"
+							className="mt-4 rounded-xl bg-white/10 font-bold text-white hover:bg-white/20"
+							onClick={() => void refetch()}
+							data-testid="earnings-retry-button"
+						>
+							Retry
+						</AsyncButton>
 					</section>
 				) : (
 					<>
