@@ -1,9 +1,9 @@
 import { cn } from '@/lib/utils';
-import { Info, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Info, AlertCircle, CheckCircle2, Loader2, ShieldOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface BuyActionHelperTextProps {
-	state: 'idle' | 'submitting' | 'failed' | 'success';
+	state: 'idle' | 'submitting' | 'failed' | 'success' | 'restricted';
 	className?: string;
 	disabledReason?: string;
 }
@@ -21,6 +21,8 @@ const BuyActionHelperText: React.FC<BuyActionHelperTextProps> = ({
 				return 'Transaction failed. Please check your balance or connection and try again.';
 			case 'success':
 				return 'Transaction confirmed on the network. Your keys are being issued.';
+			case 'restricted':
+				return 'Transactions are unavailable for the connected wallet.';
 			case 'idle':
 			default:
 				return 'A wallet signature will be required to confirm your purchase on-chain.';
@@ -54,6 +56,14 @@ const BuyActionHelperText: React.FC<BuyActionHelperTextProps> = ({
 					accent: 'bg-emerald-500',
 					text: 'text-emerald-200/90',
 					icon: <CheckCircle2 className="size-3.5 text-emerald-400" />,
+				};
+			case 'restricted':
+				return {
+					bg: 'bg-white/[0.03]',
+					border: 'border-white/15',
+					accent: 'bg-white/40',
+					text: 'text-white/60',
+					icon: <ShieldOff className="size-3.5 text-white/50" />,
 				};
 			default:
 				return {

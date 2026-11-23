@@ -10,6 +10,7 @@ export const WALLET_ERROR_COPY = {
 	SIGNATURE_FAILED: "The signature request failed. Please ensure your wallet is unlocked and try again.",
 	GENERIC_TRANSACTION_FAILED: "Transaction failed. Please check your balance or connection and try again.",
 	MaxSupplyReached: "Maximum supply reached. No more keys can be minted.",
+	RESTRICTED_ACCESS: "This wallet cannot access this service. Please contact support for more information.",
 };
 
 export const ERROR_CODE_TO_COPY: Record<string, string> = {
@@ -18,6 +19,33 @@ export const ERROR_CODE_TO_COPY: Record<string, string> = {
 
 export function getErrorMessage(code: string): string {
 	return ERROR_CODE_TO_COPY[code] ?? code;
+}
+
+/**
+ * Error thrown when the server responds with HTTP 451 (Unavailable For Legal Reasons).
+ * The message is intentionally neutral and never includes screening details.
+ */
+export class RestrictedAccessError extends Error {
+	constructor(message: string = WALLET_ERROR_COPY.RESTRICTED_ACCESS) {
+		super(message);
+		this.name = 'RestrictedAccessError';
+		Object.setPrototypeOf(this, RestrictedAccessError.prototype);
+	}
+}
+
+/**
+ * Type guard for RestrictedAccessError
+ */
+export function isRestrictedAccessError(error: unknown): error is RestrictedAccessError {
+	return error instanceof RestrictedAccessError;
+}
+
+/**
+ * Maps an HTTP response status to a RestrictedAccessError when applicable.
+ * Returns null for any other status so callers can continue normal handling.
+ */
+export function toRestrictedAccessError(status: number): RestrictedAccessError | null {
+	return status === 451 ? new RestrictedAccessError() : null;
 }
 
 interface WalletError {

@@ -34,6 +34,43 @@ export class ApiError extends Error {
 	}
 }
 
+// Thrown when the server responds 451 (access restricted for the connected wallet).
+// Intentionally carries no screening details: only a neutral message is exposed.
+export class RestrictedAccessError extends ApiError {
+	constructor() {
+		super('Access to this service is restricted for this wallet.', 451);
+		this.name = 'RestrictedAccessError';
+	}
+}
+
+export function isRestrictedAccessError(
+	error: unknown
+): error is RestrictedAccessError {
+	return error instanceof RestrictedAccessError;
+}
+
+// Listeners notified when a 451 is received, so access state can be updated
+// (e.g. useAccessStatus). Kept free of any screening details.
+type RestrictedListener = () => void;
+const restrictedListeners = new Set<RestrictedListener>();
+
+export function onRestrictedAccess(listener: RestrictedListener): () => void {
+	restrictedListeners.add(listener);
+	return () => {
+		restrictedListeners.delete(listener);
+	};
+}
+
+function notifyRestrictedAccess(): void {
+	restrictedListeners.forEach(listener => {
+		try {
+			listener();
+		} catch {
+			// Listener failures must not affect request error handling.
+		}
+	});
+}
+
 // BASE CLASS - All services inherit from this
 export class BaseApiService {
 	protected api: AxiosInstance;
@@ -53,11 +90,17 @@ export class BaseApiService {
 	}
 
 	private setupInterceptors() {
-		// Response interceptor - handles token refresh
+		// Response interceptor - handles token refresh and restricted access
 		this.api.interceptors.response.use(
 			response => response,
 			async error => {
 				const originalRequest = error.config;
+
+				// Sanctioned / restricted address: map 451 to RestrictedAccessError
+				if (error.response?.status === 451) {
+					notifyRestrictedAccess();
+					return Promise.reject(new RestrictedAccessError());
+				}
 
 				if (
 					error.response?.status === 401 &&
@@ -101,6 +144,10 @@ export class BaseApiService {
 
 	// Common error handler
 	protected handleError(error: unknown): ApiError {
+		if (error instanceof RestrictedAccessError) {
+			return error;
+		}
+
 		if (axios.isAxiosError(error)) {
 			const axiosError = error as AxiosError<APIErrorResponse>;
 

@@ -270,8 +270,7 @@ function normalizeIncidentUpdate(value: unknown): IncidentUpdate | null {
 	);
 	if (!message || !createdAt) return null;
 
-	const state =
-		record.state ?? record.status;
+	const state = record.state ?? record.status;
 	return {
 		message,
 		createdAt,
