@@ -1,3 +1,5 @@
+import { captureException } from '@/utils/errorReporting';
+
 /**
  * Global error handler utilities to prevent duplicate error logging
  * between React error boundaries and window.onerror.
@@ -36,6 +38,7 @@ const processedErrorIds = new Set<string>();
  */
 export function markErrorAsCaught(error: Error): void {
 	caughtErrorIds.add(getErrorIdentity(error));
+	captureException(error);
 }
 
 /**
@@ -104,6 +107,9 @@ export function handleGlobalError(
 		error,
 		timestamp: Date.now(),
 	});
+	if (error) {
+		captureException(error, { source, lineno, colno });
+	}
 
 	return false;
 }
