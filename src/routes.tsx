@@ -27,6 +27,7 @@ import BorrowPage from './pages/BorrowPage';
 import RevenueDistributionHistoryPage from './pages/RevenueDistributionHistoryPage';
 import BundleManagementPage from './pages/BundleManagementPage';
 import CreatorRevenueDashboardPage from './pages/CreatorRevenueDashboardPage';
+import CreatorEarningsPage from './pages/CreatorEarningsPage';
 import SpotlightAuctionPage from './pages/SpotlightAuctionPage';
 import AtomicSwapCreatePage from './pages/AtomicSwapCreatePage';
 import AtomicSwapProposalPage from './pages/AtomicSwapProposalPage';
@@ -236,6 +237,28 @@ export const routes = [
 			{
 				path: '/creator/revenue',
 				element: <CreatorRevenueDashboardPage />,
+			},
+			{
+				// Creator earnings dashboard with per-stream claims (#1258).
+				path: '/creator/earnings',
+				element: withRouteErrorBoundary(
+					<CreatorEarningsPage />,
+					'Creator earnings'
+				),
+			},
+			{
+				path: '/creator/:id/earnings',
+				element: withRouteErrorBoundary(
+					<CreatorEarningsPage />,
+					'Creator earnings'
+				),
+			},
+			{
+				path: '/creators/:id/earnings',
+				element: withRouteErrorBoundary(
+					<CreatorEarningsPage />,
+					'Creator earnings'
+				),
 			},
 			{
 				path: '/notifications',

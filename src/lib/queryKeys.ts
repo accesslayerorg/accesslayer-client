@@ -296,6 +296,11 @@ export const queryKeys = {
 		holders: (keyId: string, metric: KeyHolderLeaderboardMetric = 'volume') =>
 			['keys', keyId, 'leaderboard', metric] as const,
 	},
+	// Creator earnings dashboard with per-stream claim state (#1258).
+	creatorEarnings: {
+		all: () => ['creatorEarnings'] as const,
+		detail: (creatorId: string) => ['creatorEarnings', creatorId] as const,
+	},
 	creatorRevenue: {
 		all: () => ['creatorRevenue'] as const,
 		summary: (creatorId: string) =>
