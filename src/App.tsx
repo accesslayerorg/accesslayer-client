@@ -11,6 +11,8 @@ import GlobalPauseBanner from './components/common/GlobalPauseBanner';
 import PendingTransactionBanner from './components/common/PendingTransactionBanner';
 import SessionExpiryWatcher from './components/common/SessionExpiryWatcher';
 import BadgeAchievementListener from './components/common/BadgeAchievementListener';
+import { RoyaltyEnforcedBadge } from './components/common/RoyaltyEnforcedBadge';
+import { ApprovedMarketplacesPanel } from './components/common/ApprovedMarketplacesPanel';
 import { useContractPausedStore } from './hooks/useContractPausedStore';
 import { routes } from './routes';
 import { useRouteChangeLogging } from './hooks/useRouteChangeLogging';
