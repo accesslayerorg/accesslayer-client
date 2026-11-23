@@ -407,4 +407,9 @@ export const queryKeys = {
 		all: () => ['fee-change'] as const,
 		pending: () => ['fee-change', 'pending'] as const,
 	},
+	mediaKit: {
+		all: () => ['media-kit'] as const,
+		settings: (keyId: string) => ['media-kit', 'settings', keyId] as const,
+		public: (handle: string) => ['media-kit', 'public', handle] as const,
+	},
 } as const;

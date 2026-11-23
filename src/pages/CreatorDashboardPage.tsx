@@ -259,6 +259,15 @@ export default function CreatorDashboardPage() {
 						>
 							Spotlight auction
 						</Link>
+						{isKeyCreator && (
+							<Link
+								to={`/creator/media-kit?key=${encodeURIComponent(id)}`}
+								className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-300 underline-offset-4 hover:text-amber-200 hover:underline"
+								data-testid="creator-dashboard-media-kit-link"
+							>
+								Media kit
+							</Link>
+						)}
 					</div>
 				</div>
 
