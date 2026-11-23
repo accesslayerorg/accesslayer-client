@@ -8,8 +8,12 @@ import { queryKeys } from '@/lib/queryKeys';
  * GET /keys/:keyId/holders. The first page loads on mount; subsequent
  * pages fetch on demand via `fetchNextPage` (wire to a useInfiniteScroll
  * sentinel). Fetching stops once the backend returns `nextCursor: null`.
+ *
+ * When `excludeContracts` is true, holders flagged with `isContract` are
+ * removed from the result, and `rank` and `supplyShare` are recomputed over
+ * the remaining wallet-only holders so the list stays self-consistent.
  */
-export function useKeyHolders(keyId: string) {
+export function useKeyHolders(keyId: string, excludeContracts = false) {
 	const query = useInfiniteQuery({
 		queryKey: queryKeys.creators.holders(keyId),
 		queryFn: ({ pageParam }) =>
@@ -19,7 +23,7 @@ export function useKeyHolders(keyId: string) {
 		enabled: !!keyId,
 	});
 
-	const holders = useMemo<KeyHolderEntry[]>(() => {
+	const allHolders = useMemo<KeyHolderEntry[]>(() => {
 		const seen = new Set<string>();
 		const result: KeyHolderEntry[] = [];
 		for (const page of query.data?.pages ?? []) {
@@ -31,6 +35,23 @@ export function useKeyHolders(keyId: string) {
 		}
 		return result;
 	}, [query.data]);
+
+	const holders = useMemo<KeyHolderEntry[]>(() => {
+		if (!excludeContracts) return allHolders;
+
+		const wallets = allHolders.filter(holder => !holder.isContract);
+		const totalSupply = wallets.reduce(
+			(sum, holder) => sum + holder.balance,
+			0,
+		);
+
+		return wallets.map((holder, index) => ({
+			...holder,
+			rank: index + 1,
+			supplyShare:
+				totalSupply > 0 ? holder.balance / totalSupply : 0,
+		}));
+	}, [allHolders, excludeContracts]);
 
 	return {
 		holders,
