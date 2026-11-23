@@ -373,73 +373,12 @@ export function CurveParametersPanel({
 						{/* Impact Preview */}
 						<div
 							data-testid="curve-impact-preview"
-							className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-sm"
+							className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
 						>
-							<div className="font-jakarta text-xs font-bold uppercase tracking-wider text-white/60 mb-2">
-								Impact Preview
-							</div>
-							{impactPreview ? (
-								<div className="space-y-2">
-									<div className="flex flex-wrap items-center justify-between text-white/80 gap-2">
-										<span>Current Price:</span>
-										<span className="font-mono font-semibold text-white">
-											{formatXlm(impactPreview.currentPrice)}
-										</span>
-									</div>
-									<div className="flex flex-wrap items-center justify-between text-white/80 gap-2">
-										<span>Projected Price:</span>
-										<span className="font-mono font-semibold text-amber-300">
-											{formatXlm(impactPreview.newPrice)}
-										</span>
-									</div>
-									<div className="flex flex-wrap items-center justify-between pt-2 border-t border-white/10 text-white font-medium gap-2">
-										<span>
-											Estimated price change from new parameters:
-										</span>
-										<span
-											className={cn(
-												'font-mono font-bold',
-												impactPreview.priceChange >= 0
-													? 'text-emerald-400'
-													: 'text-rose-400'
-											)}
-										>
-											{impactPreview.priceChange >= 0 ? '+' : ''}
-											{impactPreview.priceChange.toFixed(4)} XLM (
-											{impactPreview.priceChange >= 0 ? '+' : ''}
-											{impactPreview.percentChange.toFixed(2)}%)
-										</span>
-									</div>
-								</div>
-							) : (
-								<p className="text-xs text-white/40">
-									Enter new slope and intercept values above to preview
-									the estimated price impact.
-								</p>
-							)}
-						</div>
-
-						<div className="flex justify-end pt-2">
-							<Button
-								type="submit"
-								data-testid="propose-update-button"
-								disabled={!isValid || isProposing}
-								aria-busy={isProposing || undefined}
-								className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6"
-							>
-								<StableButtonContent
-									isLoading={isProposing}
-									loadingLabel="Submitting Proposal…"
-								>
-									Propose Update
-								</StableButtonContent>
-							</Button>
 						</div>
 					</form>
 				)}
 			</div>
 		</section>
 	);
-}
-
-export default CurveParametersPanel;
+}er
