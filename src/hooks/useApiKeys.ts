@@ -8,7 +8,12 @@ import {
 } from '@/services/apiKey.service';
 import showToast from '@/utils/toast.util';
 
-/** Keys owned by the authenticated user, for the developer settings page (#1322). */
+/**
+ * Keys owned by the authenticated user, for the developer settings page (#1322).
+ *
+ * Also used by the GraphQL explorer key selector. Only key metadata is returned;
+ * the secret is never stored in the query cache.
+ */
 export function useApiKeys() {
 	return useQuery<ApiKey[]>({
 		queryKey: queryKeys.apiKeys.list(),

@@ -17,6 +17,12 @@ export const API_KEY_SCOPE_LABELS: Record<ApiKeyScope, string> = {
 
 export type ApiKeyStatus = 'active' | 'revoked';
 
+/**
+ * Returns the key-placeholder to use in examples (cURL, snippets). The real
+ * secret is never stored or re-fetched, so explorer UIs must use this instead.
+ */
+export const API_KEY_PLACEHOLDER = 'YOUR_API_KEY';
+
 /** Key metadata returned by the API. The full secret is never part of this. */
 export interface ApiKey {
 	id: string;
@@ -79,6 +85,12 @@ class ApiKeyService extends BaseApiService {
 		} catch (error) {
 			throw this.handleError(error);
 		}
+	}
+
+	/** Only active keys can be selected for the GraphQL explorer. */
+	async listActiveApiKeys(): Promise<ApiKey[]> {
+		const keys = await this.listApiKeys();
+		return keys.filter((key) => key.status === 'active');
 	}
 }
 

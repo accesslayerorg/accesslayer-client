@@ -250,6 +250,13 @@ export default function ApiKeysPage() {
 				>
 					{sampleRequest}
 				</pre>
+				<Link
+					to="/settings/developer/graphql"
+					data-testid="graphql-explorer-link"
+					className="mt-3 inline-block text-sm text-foreground underline-offset-4 hover:underline"
+				>
+					Open the GraphQL explorer
+				</Link>
 			</section>
 
 			<CreateApiKeyModal

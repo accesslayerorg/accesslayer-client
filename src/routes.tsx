@@ -48,6 +48,7 @@ import EscapeRedeemPage from './pages/EscapeRedeemPage';
 import LpPositionsPage from './pages/LpPositionsPage';
 import ProposalCreatePage from './pages/ProposalCreatePage';
 import ApiKeysPage from './pages/ApiKeysPage';
+import GraphqlExplorerPage from './pages/GraphqlExplorerPage';
 import RetirementBuybackConfirmedPage from './pages/RetirementBuybackConfirmedPage';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 import AdminLoginPage from './pages/AdminLoginPage';
@@ -397,6 +398,14 @@ export const routes = [
 				// Developer API key management for integrators and creators (#1322).
 				path: '/settings/developer',
 				element: <ApiKeysPage />,
+			},
+			{
+				// In-app GraphQL query explorer with schema browser and saved queries.
+				path: '/settings/developer/graphql',
+				element: withRouteErrorBoundary(
+					<GraphqlExplorerPage />,
+					'GraphQL explorer'
+				),
 			},
 			{
 				path: '/settings/notifications',
