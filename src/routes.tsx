@@ -359,6 +359,8 @@ export const routes = [
 					<DistributionsPage />,
 					'Distributions'
 				),
+			},
+			{
 				path: '/admin/login',
 				element: <AdminLoginPage />,
 			},

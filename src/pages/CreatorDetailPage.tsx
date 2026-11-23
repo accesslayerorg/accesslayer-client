@@ -158,7 +158,6 @@ import { MarketMakerChip, MMBadge } from '@/components/common/MarketMakerChip';
 import ReportKeyModal from '@/components/common/ReportKeyModal';
 import ShareQrModal from '@/components/common/ShareQrModal';
 import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
-import { QrCode } from 'lucide-react';
 import RetirementExitPanel from '@/components/common/RetirementExitPanel';
 import RetirementNoticeEmailCard from '@/components/common/RetirementNoticeEmailCard';
 import { QrCode, Bell } from 'lucide-react';
@@ -281,6 +280,7 @@ function CreatorDetailPageContent() {
 					rating.walletAddress.toLowerCase() === userAddress.toLowerCase()
 			) ?? null,
 		[ratings, userAddress]
+	);
 	const retirementPending =
 		creator?.isRetiring === true && !creator.retirementExecutedAt;
 
