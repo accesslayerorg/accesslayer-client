@@ -60,6 +60,11 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import AdminTwoFactorSetupPage from './pages/AdminTwoFactorSetupPage';
 import AdminTwoFactorChallengePage from './pages/AdminTwoFactorChallengePage';
 import AdminTwoFactorGuard from './components/admin/AdminTwoFactorGuard';
+import BountyBoardPage from './pages/BountyBoardPage';
+import ManageBountyPage from './pages/ManageBountyPage';
+import GrantsPage from './pages/GrantsPage';
+import GrantDetailPage from './pages/GrantDetailPage';
+import EventsPage from './pages/EventsPage';
 
 function withRouteErrorBoundary(element: ReactNode, routeName: string) {
 	return (
@@ -184,7 +189,10 @@ export const routes = [
 			{
 				// Dutch auction buying page with live descending price (secondary sales).
 				path: '/auctions/:id',
-				element: withRouteErrorBoundary(<DutchAuctionPage />, 'Dutch auction'),
+				element: withRouteErrorBoundary(
+					<DutchAuctionPage />,
+					'Dutch auction'
+				),
 			},
 			{
 				path: '/keys/:keyId/lp',
@@ -354,6 +362,42 @@ export const routes = [
 			{
 				path: '/borrow',
 				element: withRouteErrorBoundary(<BorrowPage />, 'Borrow'),
+			},
+			{
+				path: '/bounties',
+				element: withRouteErrorBoundary(
+					<BountyBoardPage />,
+					'Bounty board'
+				),
+			},
+			{
+				path: '/bounties/manage',
+				element: withRouteErrorBoundary(
+					<ManageBountyPage />,
+					'Manage bounties'
+				),
+			},
+			{
+				path: '/bounties/manage/:id',
+				element: withRouteErrorBoundary(
+					<ManageBountyPage />,
+					'Manage bounty'
+				),
+			},
+			{
+				path: '/treasury/grants',
+				element: withRouteErrorBoundary(<GrantsPage />, 'Grants tracker'),
+			},
+			{
+				path: '/treasury/grants/:grantId',
+				element: withRouteErrorBoundary(
+					<GrantDetailPage />,
+					'Grant tracker'
+				),
+			},
+			{
+				path: '/events',
+				element: withRouteErrorBoundary(<EventsPage />, 'Creator events'),
 			},
 			{
 				path: '/auto-invest',

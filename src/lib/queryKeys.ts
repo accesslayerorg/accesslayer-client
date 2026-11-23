@@ -383,4 +383,28 @@ export const queryKeys = {
 		sessions: () => ['sessions'] as const,
 		alerts: () => ['alerts'] as const,
 	},
+	bounties: {
+		all: () => ['bounties'] as const,
+		list: (filters?: Record<string, unknown>) =>
+			['bounties', 'list', filters ?? null] as const,
+		detail: (bountyId: string) => ['bounties', 'detail', bountyId] as const,
+		submissions: (bountyId: string) =>
+			['bounties', 'submissions', bountyId] as const,
+	},
+	grants: {
+		all: () => ['grants'] as const,
+		pages: (filters?: Record<string, unknown>) =>
+			['grants', 'pages', filters ?? null] as const,
+		detail: (grantId: string) => ['grants', 'detail', grantId] as const,
+	},
+	events: {
+		all: () => ['events'] as const,
+		list: (creator?: string) => ['events', 'list', creator ?? ''] as const,
+		redemption: (eventId: string, wallet: string) =>
+			['events', 'redemption', eventId, wallet] as const,
+	},
+	feeChange: {
+		all: () => ['fee-change'] as const,
+		pending: () => ['fee-change', 'pending'] as const,
+	},
 } as const;
