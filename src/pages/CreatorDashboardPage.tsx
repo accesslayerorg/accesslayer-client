@@ -51,6 +51,7 @@ import CreatorRevenuePanel from '@/components/common/CreatorRevenuePanel';
 import DistributeRevenuePanel from '@/components/common/DistributeRevenuePanel';
 import CreatorAnnouncementsPanel from '@/components/common/CreatorAnnouncementsPanel';
 import CreatorEventsPanel from '@/components/events/CreatorEventsPanel';
+import CreatorBroadcastsPanel from '@/components/broadcasts/CreatorBroadcastsPanel';
 import VestingSchedulesViewer from '@/components/creator/VestingSchedulesViewer';
 import PerformanceBondCard from '@/components/creator/PerformanceBondCard';
 import OnboardingChecklistCard from '@/components/creator/OnboardingChecklistCard';
@@ -414,6 +415,26 @@ export default function CreatorDashboardPage() {
 							Create redeemable passes and manage your active events.
 						</p>
 						<CreatorEventsPanel creatorId={id} />
+					</section>
+				)}
+
+				{activeTab === 'overview' && isKeyCreator && (
+					<section
+						className={CARD_CLASS}
+						id="dashboard-broadcasts-section"
+						aria-labelledby="dashboard-broadcasts-heading"
+						data-testid="dashboard-broadcasts-section"
+					>
+						<h2
+							id="dashboard-broadcasts-heading"
+							className="mb-1 font-grotesque text-xl font-black tracking-tight"
+						>
+							Email broadcasts
+						</h2>
+						<p className="mb-6 text-sm text-white/50">
+							Email holders who opted in to hear from you.
+						</p>
+						<CreatorBroadcastsPanel keyId={id} keyName={creator.title} />
 					</section>
 				)}
 

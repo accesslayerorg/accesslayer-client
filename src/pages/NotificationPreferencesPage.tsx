@@ -15,6 +15,7 @@ import {
 	SAVE_SUCCESS_COPY,
 } from '@/constants/notificationPreferences';
 import showToast from '@/utils/toast.util';
+import CreatorEmailOptIns from '@/components/broadcasts/CreatorEmailOptIns';
 
 export type NotificationPreferencesPageProps = Pick<
 	UseNotificationPreferencesOptions,
@@ -178,6 +179,8 @@ export default function NotificationPreferencesPage({
 					</div>
 				</>
 			)}
+
+			{address && <CreatorEmailOptIns address={address} />}
 		</main>
 	);
 }

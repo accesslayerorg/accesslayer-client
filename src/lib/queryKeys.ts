@@ -407,6 +407,12 @@ export const queryKeys = {
 		all: () => ['fee-change'] as const,
 		pending: () => ['fee-change', 'pending'] as const,
 	},
+	broadcasts: {
+		all: () => ['broadcasts'] as const,
+		holders: (keyId: string) => ['broadcasts', 'holders', keyId] as const,
+		history: (keyId: string) => ['broadcasts', 'history', keyId] as const,
+		optIns: (wallet: string) => ['broadcasts', 'opt-ins', wallet] as const,
+	},
 	mediaKit: {
 		all: () => ['media-kit'] as const,
 		settings: (keyId: string) => ['media-kit', 'settings', keyId] as const,

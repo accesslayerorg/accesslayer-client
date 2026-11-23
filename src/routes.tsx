@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
 import MediaKitPage from './pages/MediaKitPage';
 import PublicPressPage from './pages/PublicPressPage';
+import UnsubscribePage from './pages/UnsubscribePage';
 import MarketplacePage from './pages/MarketplacePage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import CreatorDetailPage from './pages/CreatorDetailPage';
@@ -153,6 +154,10 @@ export const routes = [
 			{
 				path: '/k/:handle/press',
 				element: withRouteErrorBoundary(<PublicPressPage />, 'Press page'),
+			},
+			{
+				path: '/unsubscribe/:token',
+				element: withRouteErrorBoundary(<UnsubscribePage />, 'Unsubscribe'),
 			},
 			{
 				path: '/creator/verification',
