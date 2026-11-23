@@ -15,6 +15,8 @@ import { useContractPausedStore } from './hooks/useContractPausedStore';
 import { routes } from './routes';
 import { useRouteChangeLogging } from './hooks/useRouteChangeLogging';
 import { usePriceAlertMonitor } from './hooks/usePriceAlertMonitor';
+import { usePushSubscription } from './hooks/usePushSubscription';
+import { useWallet } from './hooks/useWallet';
 import {
 	useMotionOverrideStore,
 	useReducedMotion,
@@ -27,6 +29,30 @@ function App() {
 	usePriceAlertMonitor();
 	const reducedMotion = useReducedMotion();
 	const motionOverride = useMotionOverrideStore(state => state.override);
+	const { address } = useWallet();
+	const { removeSubscription } = usePushSubscription();
+
+	// Remove the backend push subscription when the wallet signs out (#1413)
+	useEffect(() => {
+		if (address) return;
+		void removeSubscription();
+	}, [address, removeSubscription]);
+
+	// Handle notification clicks forwarded from the service worker (#1413)
+	useEffect(() => {
+		if (!('serviceWorker' in navigator)) return;
+		const onMessage = (event: MessageEvent) => {
+			const data = event.data as
+				| { type?: string; url?: string }
+				| undefined;
+			if (data?.type !== 'PUSH_NOTIFICATION_CLICK' || !data.url) return;
+			router.navigate(data.url);
+		};
+		navigator.serviceWorker.addEventListener('message', onMessage);
+		return () => {
+			navigator.serviceWorker.removeEventListener('message', onMessage);
+		};
+	}, []);
 
 	// Start polling contract pause state on app load (#953)
 	useEffect(() => {

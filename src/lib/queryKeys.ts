@@ -206,6 +206,15 @@ export const queryKeys = {
 		upgradeProxyStatus: () => ['admin', 'proxy', 'status'] as const,
 		upgradeProxyPending: () => ['admin', 'proxy', 'pending'] as const,
 		upgradeProxyHistory: () => ['admin', 'proxy', 'history'] as const,
+		// Privileged-action audit log viewer (#1415). Filters are part of the
+		// key so each filtered page set is cached independently.
+		auditLog: {
+			all: () => ['admin', 'audit-log'] as const,
+			list: (filters?: Record<string, unknown>) =>
+				['admin', 'audit-log', 'list', filters ?? null] as const,
+			export: (filters?: Record<string, unknown>) =>
+				['admin', 'audit-log', 'export', filters ?? null] as const,
+		},
 	},
 	governance: {
 		all: () => ['governance'] as const,
@@ -343,5 +352,10 @@ export const queryKeys = {
 	apiKeys: {
 		all: () => ['api-keys'] as const,
 		list: () => ['api-keys', 'list'] as const,
+	},
+	// OpenAPI document powering the public API docs portal (#1416).
+	openapi: {
+		all: () => ['openapi'] as const,
+		document: () => ['openapi', 'document'] as const,
 	},
 } as const;

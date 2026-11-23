@@ -54,6 +54,8 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import AdminTwoFactorSetupPage from './pages/AdminTwoFactorSetupPage';
 import AdminTwoFactorChallengePage from './pages/AdminTwoFactorChallengePage';
 import AdminTwoFactorGuard from './components/admin/AdminTwoFactorGuard';
+import AuditLogPage from './pages/AuditLogPage';
+import ApiDocsPage from './pages/ApiDocsPage';
 
 function withRouteErrorBoundary(element: ReactNode, routeName: string) {
 	return (
@@ -352,6 +354,18 @@ export const routes = [
 				),
 			},
 			{
+				// Searchable audit log of privileged admin actions (#1415).
+				path: '/admin/audit',
+				element: (
+					<AdminTwoFactorGuard>
+						{withRouteErrorBoundary(
+							<AuditLogPage />,
+							'Admin audit log'
+						)}
+					</AdminTwoFactorGuard>
+				),
+			},
+			{
 				path: '/admin/login',
 				element: <AdminLoginPage />,
 			},
@@ -397,6 +411,14 @@ export const routes = [
 				// Developer API key management for integrators and creators (#1322).
 				path: '/settings/developer',
 				element: <ApiKeysPage />,
+			},
+			{
+				// Public API documentation portal rendered from the OpenAPI spec (#1416).
+				path: '/developers/docs',
+				element: withRouteErrorBoundary(
+					<ApiDocsPage />,
+					'API documentation'
+				),
 			},
 			{
 				path: '/settings/notifications',

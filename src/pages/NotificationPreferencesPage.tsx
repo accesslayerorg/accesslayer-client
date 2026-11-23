@@ -9,6 +9,7 @@ import {
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useStellarWallet } from '@/hooks/useStellarWallet';
 import { NOTIFICATION_PREFERENCE_TYPES } from '@/services/notificationPreferences.service';
+import { PushOptInCard } from '@/components/notifications/PushOptInCard';
 import {
 	NOTIFICATION_PREFERENCE_COPY,
 	SAVE_ERROR_COPY,
@@ -152,6 +153,8 @@ export default function NotificationPreferencesPage({
 							);
 						})}
 					</div>
+
+					<PushOptInCard address={address} />
 
 					<div className="mt-6 flex items-center justify-end gap-4">
 						{saveStatus === 'saving' && (

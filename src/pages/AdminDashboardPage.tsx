@@ -5,6 +5,7 @@ import AclWhitelistPanel from '@/components/admin/AclWhitelistPanel';
 import UpgradeProxyPanel from '@/components/admin/UpgradeProxyPanel';
 import TreasuryPanel from '@/components/admin/TreasuryPanel';
 import TreasuryManagementDashboard from '@/components/admin/TreasuryManagementDashboard';
+import { Link } from 'react-router-dom';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useStellarWallet } from '@/hooks/useStellarWallet';
 import { isAdminWallet } from '@/utils/adminAccess';
@@ -44,13 +45,23 @@ export default function AdminDashboardPage() {
 	return (
 		<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
 			<div className="mx-auto max-w-5xl space-y-8">
-				<header>
-					<h1 className="font-grotesque text-3xl font-black tracking-tight">
-						Admin dashboard
-					</h1>
-					<p className="mt-2 text-sm text-white/50">
-						Manage protocol integrations and access control.
-					</p>
+				<header className="flex flex-wrap items-start justify-between gap-4">
+					<div>
+						<h1 className="font-grotesque text-3xl font-black tracking-tight">
+							Admin dashboard
+						</h1>
+						<p className="mt-2 text-sm text-white/50">
+							Manage protocol integrations and access control.
+						</p>
+					</div>
+					{isAdmin && (
+						<Link
+							to="/admin/audit"
+							className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
+						>
+							View audit log
+						</Link>
+					)}
 				</header>
 
 				{isAdmin && (
