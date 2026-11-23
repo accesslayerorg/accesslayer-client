@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
 import MarketplacePage from './pages/MarketplacePage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import ReferralHoldsPage from './pages/ReferralHoldsPage';
 import CreatorDetailPage from './pages/CreatorDetailPage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
 import CreatorPublicProfilePage from './pages/CreatorPublicProfilePage';
@@ -347,6 +348,17 @@ export const routes = [
 						{withRouteErrorBoundary(
 							<AdminDashboardPage />,
 							'Admin dashboard'
+						)}
+					</AdminTwoFactorGuard>
+				),
+			},
+			{
+				path: '/admin/referral-holds',
+				element: (
+					<AdminTwoFactorGuard>
+						{withRouteErrorBoundary(
+							<ReferralHoldsPage />,
+							'Referral holds review'
 						)}
 					</AdminTwoFactorGuard>
 				),
