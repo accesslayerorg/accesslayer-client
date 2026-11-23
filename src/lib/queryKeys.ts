@@ -222,6 +222,28 @@ export const queryKeys = {
 			['governance', 'events', type ?? 'all'] as const,
 		admin: () => ['governance', 'admin'] as const,
 	},
+	conviction: {
+		all: () => ['conviction'] as const,
+		proposals: () => ['conviction', 'proposals'] as const,
+		proposal: (id: string) => ['conviction', 'proposal', id] as const,
+		balances: (userAddress?: string) =>
+			['conviction', 'balances', userAddress ?? 'default'] as const,
+	},
+	oracle: {
+		all: () => ['oracle'] as const,
+		status: (asset: string) => ['oracle', 'status', asset.toUpperCase()] as const,
+	},
+	ragequit: {
+		all: () => ['ragequit'] as const,
+		state: (proposalId: string, userAddress?: string) =>
+			['ragequit', proposalId, userAddress ?? 'default'] as const,
+	},
+	stream: {
+		all: () => ['stream'] as const,
+		list: (creatorAddress?: string) =>
+			['stream', 'list', creatorAddress ?? 'default'] as const,
+		detail: (streamId: string) => ['stream', 'detail', streamId] as const,
+	},
 	mergeProposal: {
 		bySourceKey: (sourceKeyId: string) =>
 			['mergeProposal', 'source', sourceKeyId] as const,

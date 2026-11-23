@@ -20,6 +20,7 @@ import ComparePage from './pages/ComparePage';
 import GovernancePage from './pages/GovernancePage';
 import GovernanceFeedPage from './pages/GovernanceFeedPage';
 import ProposalDetailPage from './pages/ProposalDetailPage';
+import ConvictionProposalsPage from './pages/ConvictionProposalsPage';
 import ReferralDashboardPage from './pages/ReferralDashboardPage';
 import CreateCreatorKeyPage from './pages/CreateCreatorKeyPage';
 import StakingDashboardPage from './pages/StakingDashboardPage';
@@ -27,6 +28,7 @@ import BorrowPage from './pages/BorrowPage';
 import RevenueDistributionHistoryPage from './pages/RevenueDistributionHistoryPage';
 import BundleManagementPage from './pages/BundleManagementPage';
 import CreatorRevenueDashboardPage from './pages/CreatorRevenueDashboardPage';
+import EarningsStreamPage from './pages/EarningsStreamPage';
 import SpotlightAuctionPage from './pages/SpotlightAuctionPage';
 import DutchAuctionPage from './pages/SpotlightAuctionPage';
 import AtomicSwapCreatePage from './pages/AtomicSwapCreatePage';
@@ -273,6 +275,13 @@ export const routes = [
 				element: <CreatorRevenueDashboardPage />,
 			},
 			{
+				path: '/creator/stream',
+				element: withRouteErrorBoundary(
+					<EarningsStreamPage />,
+					'Creator Earnings Stream'
+				),
+			},
+			{
 				path: '/notifications',
 				element: <NotificationsPage />,
 			},
@@ -311,6 +320,13 @@ export const routes = [
 			{
 				path: '/governance',
 				element: <GovernancePage />,
+			},
+			{
+				path: '/governance/conviction',
+				element: withRouteErrorBoundary(
+					<ConvictionProposalsPage />,
+					'Conviction Governance'
+				),
 			},
 			{
 				path: '/governance/activity',
