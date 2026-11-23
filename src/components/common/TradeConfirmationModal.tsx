@@ -15,6 +15,8 @@ import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import PriceImpactWarning from '@/components/common/PriceImpactWarning';
 import DynamicFeeBreakdown from '@/components/common/DynamicFeeBreakdown';
 import SlippageToleranceSelector from '@/components/common/SlippageToleranceSelector';
+import FeeImpactPreview from '@/components/fees/FeeImpactPreview';
+import { usePendingFeeChange } from '@/hooks/useFeeChange';
 import {
 	formatPriceImpact,
 	isHighPriceImpact,
@@ -91,6 +93,7 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 		slippageTolerancePercent
 	);
 	const [slippageError, setSlippageError] = useState<string | null>(null);
+	const pendingFeeChange = usePendingFeeChange();
 
 	useEffect(() => {
 		setCurrentSlippage(slippageTolerancePercent);
@@ -300,6 +303,13 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 							isLoading={feeIsLoading}
 							error={feeError}
 							onRetry={onFeeRetry ?? (() => {})}
+						/>
+					)}
+
+					{pendingFeeChange && (
+						<FeeImpactPreview
+							pending={pendingFeeChange}
+							totalStroops={totalStroops}
 						/>
 					)}
 
