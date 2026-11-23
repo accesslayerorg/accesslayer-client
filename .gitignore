@@ -10,13 +10,10 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-.env
-.env.*
 !.env.example
 *.local
 
 # Editor directories and files
-.vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
@@ -42,3 +39,4 @@ Thumbs.db
 # Lock files from other package managers
 package-lock.json
 yarn.lock
+config.bat

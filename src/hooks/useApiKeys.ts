@@ -23,6 +23,17 @@ export function useApiKeys() {
 }
 
 /**
+ * Returns only active (non-revoked) keys for selection in the GraphQL explorer.
+ */
+export function useActiveApiKeys() {
+	const query = useApiKeys();
+	return {
+		...query,
+		data: query.data?.filter(key => key.status !== 'revoked'),
+	};
+}
+
+/**
  * Creates a key and hands the one-time secret straight to `onSecretCreated`.
  *
  * The secret deliberately never becomes mutation data or query-cache data:

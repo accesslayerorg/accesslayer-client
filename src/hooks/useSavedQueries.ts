@@ -93,5 +93,10 @@ export function useSavedQueries() {
 		setQueries(previous => previous.filter(item => item.id !== id));
 	}, []);
 
-	return { queries, saveQuery, renameQuery, deleteQuery };
+	// Used by tests and the explorer to reset state between sessions.
+	const clearQueries = useCallback(() => {
+		setQueries([]);
+	}, []);
+
+	return { queries, saveQuery, renameQuery, deleteQuery, clearQueries };
 }
