@@ -16,6 +16,13 @@ export interface OnChainMetadataResult {
 	cid?: string;
 }
 
+export interface SellableBalanceResult {
+	totalBalance: number;
+	sellableNow: number;
+	isExempt: boolean;
+	nextLedgerCloseEstimate?: number;
+}
+
 export type CreatorKeysContractClientFactory = (
 	contractId: string,
 	rpcUrl: string,
@@ -300,6 +307,112 @@ export class CreatorKeysContractService {
 		messageHash?: string;
 	}): Promise<{ success: boolean; hash?: string }> {
 		return this.send_tip(args);
+	}
+
+	/**
+	 * Gets the sellable balance for a wallet/key pair.
+	 * Returns total balance, sellable_now (excluding same-ledger purchases),
+	 * whether the wallet is exempt from same-ledger restrictions,
+	 * and an estimate of when the next ledger closes.
+	 */
+	async getSellableBalance(args: {
+		keyId: string;
+		wallet: string;
+	}): Promise<SellableBalanceResult> {
+		if (!env.VITE_STELLAR_RPC_URL || !env.VITE_CREATOR_KEYS_CONTRACT_ID) {
+			// Fallback for development/testing when contract is not configured
+			return {
+				totalBalance: 0,
+				sellableNow: 0,
+				isExempt: false,
+				nextLedgerCloseEstimate: Date.now() + 5000, // ~5 seconds per ledger
+			};
+		}
+
+		let keyAddress: Address;
+		let walletAddress: Address;
+		try {
+			keyAddress = Address.fromString(args.keyId);
+			walletAddress = Address.fromString(args.wallet);
+		} catch {
+			throw new Error('Invalid key ID or wallet address.');
+		}
+
+		const client = this.factory(
+			env.VITE_CREATOR_KEYS_CONTRACT_ID,
+			env.VITE_STELLAR_RPC_URL,
+			getNetworkPassphrase()
+		) as {
+			get_sellable_balance?: (callArgs: {
+				key_id: Address;
+				wallet: Address;
+			}) => Promise<{
+				result?: {
+					total_balance: bigint;
+					sellable_now: bigint;
+					is_exempt: boolean;
+					next_ledger_close_estimate?: bigint;
+				};
+				hash?: string;
+			}>;
+			get_key_balance?: (callArgs: {
+				key_id: Address;
+				wallet: Address;
+			}) => Promise<{ result?: bigint; hash?: string }>;
+		};
+
+		// Try the new get_sellable_balance contract method first
+		if (typeof client.get_sellable_balance === 'function') {
+			try {
+				const res = await client.get_sellable_balance({
+					key_id: keyAddress,
+					wallet: walletAddress,
+				});
+				const result = res?.result;
+				if (result) {
+					return {
+						totalBalance: Number(result.total_balance),
+						sellableNow: Number(result.sellable_now),
+						isExempt: result.is_exempt,
+						nextLedgerCloseEstimate: result.next_ledger_close_estimate
+							? Number(result.next_ledger_close_estimate)
+							: Date.now() + 5000,
+					};
+				}
+			} catch {
+				// Fall through to fallback logic
+			}
+		}
+
+		// Fallback: use get_key_balance and estimate sellable_now
+		// In a real implementation, the contract would track same-ledger purchases separately
+		if (typeof client.get_key_balance === 'function') {
+			try {
+				const res = await client.get_key_balance({
+					key_id: keyAddress,
+					wallet: walletAddress,
+				});
+				const totalBalance = Number(res?.result ?? 0);
+				// For now, assume all balance is sellable (no same-ledger purchases tracked)
+				// In production, the contract would return sellable_now separately
+				return {
+					totalBalance,
+					sellableNow: totalBalance,
+					isExempt: false,
+					nextLedgerCloseEstimate: Date.now() + 5000,
+				};
+			} catch {
+				// Fall through to default
+			}
+		}
+
+		// Default fallback
+		return {
+			totalBalance: 0,
+			sellableNow: 0,
+			isExempt: false,
+			nextLedgerCloseEstimate: Date.now() + 5000,
+		};
 	}
 
 	async submit_rating(args: {
