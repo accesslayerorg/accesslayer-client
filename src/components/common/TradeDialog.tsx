@@ -79,10 +79,22 @@ import {
 } from '@/utils/liquidityDepth.utils';
 import { useGlobalPause } from '@/hooks/useGlobalPause';
 import { UnavailableAction } from '@/components/ui/unavailable-action';
-import { useContractPausedStore, selectIsPaused } from '@/hooks/useContractPausedStore';
-import { useAllowanceStore, selectNeedsApproval } from '@/hooks/useAllowanceStore';
+import {
+	useContractPausedStore,
+	selectIsPaused,
+} from '@/hooks/useContractPausedStore';
+import {
+	useAllowanceStore,
+	selectNeedsApproval,
+} from '@/hooks/useAllowanceStore';
 import { useShallow } from 'zustand/react/shallow';
-import { useHoldingCapStore, isAtHoldingCap, remainingCapacity } from '@/hooks/useHoldingCapStore';
+import {
+	useHoldingCapStore,
+	isAtHoldingCap,
+	remainingCapacity,
+} from '@/hooks/useHoldingCapStore';
+import LaunchCapMeter from '@/components/common/LaunchCapMeter';
+import { useLaunchCap, useLaunchCapStore } from '@/hooks/useLaunchCap';
 
 export type TradeSide = 'buy' | 'sell' | 'stake' | 'transfer';
 
@@ -236,6 +248,24 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	const atCap = capData ? isAtHoldingCap(capData) : false;
 	const maxBuyable = capData ? remainingCapacity(capData) : null;
 
+	// ── Launch cap (#1180) ────────────────────────────────────────────────
+	const launchCap = useLaunchCap(
+		side === 'buy' ? creatorId : undefined,
+		activeAddress
+	);
+	const recordLaunchPurchase = useLaunchCapStore(
+		state => state.recordPurchase
+	);
+	const launchCapMax =
+		launchCap && !launchCap.isExempt ? launchCap.remainingAllowance : null;
+	const effectiveMaxBuyable =
+		launchCapMax != null
+			? maxBuyable != null
+				? Math.min(maxBuyable, launchCapMax)
+				: launchCapMax
+			: maxBuyable;
+	const atLaunchCap = launchCapMax != null && launchCapMax <= 0;
+
 	// ── Local state ───────────────────────────────────────────────────────
 	const [amountText, setAmountText] = useState('1');
 	const [touched, setTouched] = useState(false);
@@ -352,8 +382,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		setTouched(true);
 		if (side !== 'buy') return;
 		const maxClamp =
-			maxBuyable !== null
-				? Math.min(BUY_QUANTITY_BOUNDS.MAX_QTY, maxBuyable)
+			effectiveMaxBuyable !== null
+				? Math.min(BUY_QUANTITY_BOUNDS.MAX_QTY, effectiveMaxBuyable)
 				: BUY_QUANTITY_BOUNDS.MAX_QTY;
 		const res = clampBuyQuantity(
 			amountText.trim(),
@@ -376,7 +406,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		} else {
 			setAdjustmentNote(null);
 		}
-	}, [amountText, maxBuyable, side]);
+	}, [amountText, effectiveMaxBuyable, side]);
 
 	const parsedAmount = useMemo(() => {
 		const normalized = amountText.trim();
@@ -386,7 +416,10 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 
 	const validationError = useMemo((): string | null => {
 		const normalized = amountText.trim();
-		if (side === 'buy' && (!normalized || !Number.isFinite(parsedAmount) || parsedAmount < 1)) {
+		if (
+			side === 'buy' &&
+			(!normalized || !Number.isFinite(parsedAmount) || parsedAmount < 1)
+		) {
 			return 'Minimum quantity is 1';
 		}
 		if (!normalized) return 'Please enter an amount.';
@@ -401,8 +434,14 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 			return 'Trading is currently suspended because the contract is paused.';
 		if (side === 'buy' && atCap)
 			return 'You have reached the maximum holding cap for this creator.';
-		if (side === 'buy' && maxBuyable !== null && parsedAmount > maxBuyable)
-			return `You can only buy up to ${formatNumber(maxBuyable)} more key${maxBuyable !== 1 ? 's' : ''} (holding cap).`;
+		if (side === 'buy' && atLaunchCap)
+			return 'You have reached the maximum purchase allowance for this launch.';
+		if (
+			side === 'buy' &&
+			effectiveMaxBuyable !== null &&
+			parsedAmount > effectiveMaxBuyable
+		)
+			return `You can only buy up to ${formatNumber(effectiveMaxBuyable)} more key${effectiveMaxBuyable !== 1 ? 's' : ''} (launch/holding allowance).`;
 		if (
 			side === 'buy' &&
 			maxBuyQuantity != null &&
@@ -427,7 +466,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		side,
 		availableHoldings,
 		atCap,
-		maxBuyable,
+		atLaunchCap,
+		effectiveMaxBuyable,
 		maxBuyQuantity,
 		availableSupply,
 		isPaused,
@@ -508,6 +548,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		isCircuitBreakerBreached ||
 		exceedsLiquidityDepth ||
 		atCap ||
+		atLaunchCap ||
 		isPaused ||
 		frozen ||
 		(side === 'sell' && isFloorActive) ||
@@ -544,9 +585,9 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 						? 'Price Floor Active'
 						: side === 'sell'
 							? 'Confirm sell'
-						: side === 'stake'
-							? 'Confirm stake'
-							: 'Confirm transfer';
+							: side === 'stake'
+								? 'Confirm stake'
+								: 'Confirm transfer';
 
 	const estimatedNetworkFee = formatTransactionFeeDisplay(
 		networkFeeEstimate.status === 'success'
@@ -658,11 +699,10 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		if (side === 'sell') {
 			setAmountText(String(Math.max(0, availableHoldings)));
 		} else {
-			const maxVal =
-				maxBuyQuantity != null
-					? maxBuyQuantity
-					: BUY_QUANTITY_BOUNDS.MAX_QTY;
-			setAmountText(String(maxVal));
+			const candidates: number[] = [BUY_QUANTITY_BOUNDS.MAX_QTY];
+			if (maxBuyQuantity != null) candidates.push(maxBuyQuantity);
+			if (effectiveMaxBuyable != null) candidates.push(effectiveMaxBuyable);
+			setAmountText(String(Math.min(...candidates)));
 		}
 	};
 
@@ -760,8 +800,11 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 			return;
 		}
 		await onConfirm(parsedAmount, pricePreview, slippageBounds);
-		if (side === 'buy' && creatorId)
+		if (side === 'buy' && creatorId) {
 			incrementHolding(creatorId, parsedAmount);
+			if (activeAddress)
+				recordLaunchPurchase(creatorId, activeAddress, parsedAmount);
+		}
 	};
 
 	const isMobile = useIsMobile();
@@ -956,7 +999,12 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 							className="mt-0.5 text-rose-200/80"
 							data-testid="trade-dialog-price-floor-reason"
 						>
-							PriceFloorActive: Selling is disabled because current price is at or below the configured floor price{priceFloorStroops != null ? ` (${formatDisplayKeyPrice(priceFloorStroops)})` : ''}.
+							PriceFloorActive: Selling is disabled because current price
+							is at or below the configured floor price
+							{priceFloorStroops != null
+								? ` (${formatDisplayKeyPrice(priceFloorStroops)})`
+								: ''}
+							.
 						</p>
 					</div>
 				</div>
@@ -1026,12 +1074,22 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 							setAdjustmentNote(null);
 						}}
 						onBlur={handleBlur}
-						disabled={isSubmitting || atCap || isPaused || frozen || (side === 'sell' && isFloorActive)}
+						disabled={
+							isSubmitting ||
+							atCap ||
+							atLaunchCap ||
+							isPaused ||
+							frozen ||
+							(side === 'sell' && isFloorActive)
+						}
 						className={cn(
 							'w-full rounded-xl border bg-white/[0.04] px-3 py-2 pr-16 text-white outline-none transition-colors',
 							'border-white/10 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/15',
 							showError ? 'border-red-500/60' : '',
-							atCap || isPaused || frozen || (side === 'sell' && isFloorActive)
+							atCap ||
+								isPaused ||
+								frozen ||
+								(side === 'sell' && isFloorActive)
 								? 'opacity-40 cursor-not-allowed'
 								: ''
 						)}
@@ -1050,7 +1108,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 						disabled={
 							isSubmitting ||
 							frozen ||
-							(side === 'sell' && (availableHoldings <= 0 || isFloorActive))
+							(side === 'sell' &&
+								(availableHoldings <= 0 || isFloorActive))
 						}
 						className="absolute right-2 rounded-md border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-xs font-bold text-amber-300 transition-colors hover:bg-amber-400/20 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
 					>
@@ -1078,14 +1137,18 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 					</p>
 				)}
 
-				{side === 'buy' && maxBuyable !== null && !atCap && (
-					<p className="text-xs text-white/40">
-						Max you can buy:{' '}
-						<span className="font-semibold text-white/60">
-							{formatNumber(maxBuyable)} key{maxBuyable !== 1 ? 's' : ''}
-						</span>
-					</p>
-				)}
+				{side === 'buy' &&
+					maxBuyable !== null &&
+					!atCap &&
+					!atLaunchCap && (
+						<p className="text-xs text-white/40">
+							Max you can buy:{' '}
+							<span className="font-semibold text-white/60">
+								{formatNumber(effectiveMaxBuyable)} key
+								{effectiveMaxBuyable !== 1 ? 's' : ''}
+							</span>
+						</p>
+					)}
 
 				{side === 'buy' && liquidityMaxDepth != null && (
 					<LiquidityDepthIndicator
@@ -1216,6 +1279,11 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 					onApprove={() => activeAddress && submitApproval(activeAddress)}
 				/>
 			)}
+
+			{/* Launch cap meter (#1180) — buy side only */}
+			{side === 'buy' && launchCap && (
+				<LaunchCapMeter data={launchCap} className="my-2.5" />
+			)}
 		</>
 	);
 
@@ -1250,7 +1318,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 						!amountValid ||
 						isSubmitting ||
 						exceedsLiquidityDepth ||
-						(side === 'buy' && (previewLoading || previewError != null)) ||
+						(side === 'buy' &&
+							(previewLoading || previewError != null)) ||
 						paused ||
 						frozen ||
 						(side === 'sell' && isFloorActive)
