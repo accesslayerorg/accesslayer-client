@@ -62,6 +62,7 @@ import ProposalCreatePage from './pages/ProposalCreatePage';
 import ApiKeysPage from './pages/ApiKeysPage';
 import GuardiansPage from './pages/GuardiansPage';
 import GuardianApprovePage from './pages/GuardianApprovePage';
+import PrivacySettingsPage from './pages/PrivacySettingsPage';
 import RetirementBuybackConfirmedPage from './pages/RetirementBuybackConfirmedPage';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 import AdminLoginPage from './pages/AdminLoginPage';
@@ -88,6 +89,7 @@ function withRouteErrorBoundary(element: ReactNode, routeName: string) {
 
 export const routes = [
 	{
+		path: '/',
 		element: <RootLayout />,
 		children: [
 			{
@@ -500,6 +502,9 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<DistributionsPage />,
 					'Distributions'
+				),
+			},
+			{
 				// Searchable audit log of privileged admin actions (#1415).
 				path: '/admin/audit',
 				element: (
@@ -507,6 +512,11 @@ export const routes = [
 						{withRouteErrorBoundary(
 							<AuditLogPage />,
 							'Admin audit log'
+						)}
+					</AdminTwoFactorGuard>
+				),
+			},
+			{
 				path: '/admin/referral-holds',
 				element: (
 					<AdminTwoFactorGuard>
@@ -570,6 +580,9 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<ApiDocsPage />,
 					'API documentation'
+				),
+			},
+			{
 				// Social recovery guardians and recovery approvals (#1382).
 				path: '/settings/recovery',
 				element: withRouteErrorBoundary(
@@ -587,6 +600,14 @@ export const routes = [
 			{
 				path: '/settings/notifications',
 				element: <NotificationPreferencesPage />,
+			},
+			{
+				// Privacy settings: data export and account deletion (#1387).
+				path: '/settings/privacy',
+				element: withRouteErrorBoundary(
+					<PrivacySettingsPage />,
+					'Privacy settings'
+				),
 			},
 			{
 				path: '/settings/alerts',
