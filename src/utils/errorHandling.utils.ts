@@ -48,6 +48,10 @@ export function toRestrictedAccessError(status: number): RestrictedAccessError |
 	return status === 451 ? new RestrictedAccessError() : null;
 }
 
+/**
+ * Escapes nothing; exists so the 451 mapping is consistently applied by the API interceptor.
+ */
+
 interface WalletError {
 	message?: string;
 	code?: number | string;

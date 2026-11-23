@@ -96,7 +96,9 @@ export class BaseApiService {
 			async error => {
 				const originalRequest = error.config;
 
-				// Sanctioned / restricted address: map 451 to RestrictedAccessError
+				// Sanctioned / restricted address: map 451 to RestrictedAccessError.
+				// Callers should check isRestrictedAccessError() and render RestrictedAccessScreen;
+				// no screening details are exposed or logged here.
 				if (error.response?.status === 451) {
 					notifyRestrictedAccess();
 					return Promise.reject(new RestrictedAccessError());
