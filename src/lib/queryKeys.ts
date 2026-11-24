@@ -432,4 +432,13 @@ export const queryKeys = {
 		all: () => ['fee-change'] as const,
 		pending: () => ['fee-change', 'pending'] as const,
 	},
+	dca: {
+		all: () => ['dca-plans'] as const,
+		byWallet: (wallet?: string) => ['dca-plans', wallet ?? 'all'] as const,
+	},
+	ambassador: {
+		all: () => ['ambassador'] as const,
+		stats: (wallet?: string, range: string = '30d') =>
+			['ambassador', 'stats', wallet ?? 'anonymous', range] as const,
+	},
 } as const;

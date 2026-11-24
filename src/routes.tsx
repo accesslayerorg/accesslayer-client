@@ -68,6 +68,10 @@ import ManageBountyPage from './pages/ManageBountyPage';
 import GrantsPage from './pages/GrantsPage';
 import GrantDetailPage from './pages/GrantDetailPage';
 import EventsPage from './pages/EventsPage';
+import DcaPlansPage from './pages/DcaPlansPage';
+import EmbedGeneratorPage from './pages/EmbedGeneratorPage';
+import EmbedWidgetView from './components/creator/EmbedWidgetView';
+import AmbassadorDashboardPage from './pages/AmbassadorDashboardPage';
 
 function withRouteErrorBoundary(element: ReactNode, routeName: string) {
 	return (
@@ -310,6 +314,32 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<WalletPortfolioPage />,
 					'Wallet portfolio'
+				),
+			},
+			{
+				// Dollar-cost averaging recurring purchase plans (#1470).
+				path: '/portfolio/dca',
+				element: withRouteErrorBoundary(<DcaPlansPage />, 'DCA Plans'),
+			},
+			{
+				// Creator embeddable stats badge and widget generator (#1479).
+				path: '/creator/embed',
+				element: withRouteErrorBoundary(
+					<EmbedGeneratorPage />,
+					'Embed Generator'
+				),
+			},
+			{
+				// Standalone embeddable iframe widget (#1479).
+				path: '/embed/widget/:id',
+				element: withRouteErrorBoundary(<EmbedWidgetView />, 'Key Widget'),
+			},
+			{
+				// Ambassador and affiliate dashboard (#1478).
+				path: '/ambassador',
+				element: withRouteErrorBoundary(
+					<AmbassadorDashboardPage />,
+					'Ambassador Dashboard'
 				),
 			},
 			{
