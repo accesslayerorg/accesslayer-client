@@ -7,6 +7,7 @@ import AppErrorBoundary from './components/common/AppErrorBoundary';
 import ContractPausedBanner from './components/common/ContractPausedBanner';
 import EscapeBanner from './components/common/EscapeBanner';
 import OfflineBanner from './components/common/OfflineBanner';
+import InstallPrompt from './components/common/InstallPrompt';
 import GlobalPauseBanner from './components/common/GlobalPauseBanner';
 import PendingTransactionBanner from './components/common/PendingTransactionBanner';
 import PendingFeeChangeBanner from './components/fees/PendingFeeChangeBanner';
@@ -81,6 +82,7 @@ function App() {
 			{/* Badge achievement celebrations, app-wide (#1222) */}
 			<BadgeAchievementListener navigate={path => router.navigate(path)} />
 			<RouterProvider router={router} />
+			<InstallPrompt />
 		</AppErrorBoundary>
 	);
 }

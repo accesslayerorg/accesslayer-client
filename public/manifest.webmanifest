@@ -1,0 +1,25 @@
+{
+	"name": "Access Layer",
+	"short_name": "AccessLayer",
+	"description": "Creator Keys Marketplace on Stellar",
+	"start_url": "/",
+	"scope": "/",
+	"display": "standalone",
+	"orientation": "portrait-primary",
+	"background_color": "#04090f",
+	"theme_color": "#04090f",
+	"icons": [
+		{
+			"src": "/icons/logo.svg",
+			"sizes": "any",
+			"type": "image/svg+xml",
+			"purpose": "any maskable"
+		},
+		{
+			"src": "/accesslayer-client.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any"
+		}
+	]
+}
