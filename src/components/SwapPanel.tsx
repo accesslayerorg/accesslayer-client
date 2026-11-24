@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { AlertCircle, AlertTriangle } from 'lucide-react';
+import { AlertCircle, AlertTriangle, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import QuickAmountButtons from './QuickAmountButtons';
 import OracleHealthBadge from '@/components/common/OracleHealthBadge';
 import { useOracleStatus } from '@/hooks/useOracleStatus';
+import { useOfflineStatus } from '@/hooks/useOfflineStatus';
 import {
 	defaultReservedNetworkFee,
 	type SwapSide,
@@ -40,6 +41,7 @@ const SwapPanel: React.FC<SwapPanelProps> = ({
 }) => {
 	const [side, setSide] = useState<SwapSide>(defaultSide);
 	const oracle = useOracleStatus(oracleAsset);
+	const isOffline = useOfflineStatus();
 
 	const handleSideChange = useCallback((value: string) => {
 		setSide(value as SwapSide);
@@ -183,13 +185,22 @@ const SwapPanel: React.FC<SwapPanelProps> = ({
 						type="button"
 						data-testid="swap-submit"
 						disabled={
-							!isConnected || !Number.isFinite(amount) || amount <= 0 || oracle.isStale
+							!isConnected || !Number.isFinite(amount) || amount <= 0 || oracle.isStale || isOffline
 						}
 						className="w-full"
 					>
 						{side === 'buy' ? 'Buy Keys' : 'Sell Keys'}
 					</Button>
-					{oracle.isStale && (
+					{isOffline && (
+						<p
+							data-testid="swap-offline-disabled-reason"
+							className="text-xs text-amber-400 text-center"
+							role="alert"
+						>
+							Action disabled: You are offline.
+						</p>
+					)}
+					{oracle.isStale && !isOffline && (
 						<p
 							data-testid="swap-stale-disabled-reason"
 							className="text-xs text-red-400 text-center"

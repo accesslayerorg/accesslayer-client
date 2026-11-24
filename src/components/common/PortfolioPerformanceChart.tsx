@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import AccessibleChart, { generateTimeSeriesSummary } from '@/components/common/AccessibleChart';
 import { AlertCircle, TrendingDown, TrendingUp } from 'lucide-react';
 import {
 	CartesianGrid,
@@ -92,6 +93,17 @@ export function PortfolioPerformanceChart({
 
 	const tone = getPnLTone(returnPercent);
 	const showReturn = returnPercent != null && !isLoading && !error;
+
+	const portfolioSeriesForSummary = series.map(s => ({
+		timestamp: String(s.timestamp),
+		value: Number(s.portfolio ?? 0),
+	}));
+	const summary = generateTimeSeriesSummary(portfolioSeriesForSummary, 'value', 'portfolio value');
+	const tableData = series.map(s => ({
+		date: formatPortfolioHistoryDate(String(s.timestamp)),
+		portfolio: formatPortfolioValueXlm(Number(s.portfolio ?? 0)),
+		benchmark: s.benchmark != null ? formatPortfolioValueXlm(Number(s.benchmark)) : '—',
+	}));
 
 	return (
 		<section
@@ -241,77 +253,85 @@ export function PortfolioPerformanceChart({
 					No portfolio history yet
 				</div>
 			) : (
-				<div
-					className="h-65 w-full"
-					data-testid="portfolio-performance-series"
+				<AccessibleChart
+					title="Portfolio Performance"
+					summary={summary}
+					tableHeaders={showBenchmark ? ['Date', 'Portfolio', 'Benchmark'] : ['Date', 'Portfolio']}
+					tableData={tableData}
+					getRowValues={row => showBenchmark ? [String(row.date), String(row.portfolio), String(row.benchmark)] : [String(row.date), String(row.portfolio)]}
 				>
-					<ResponsiveContainer width="100%" height="100%">
-						<LineChart
-							data={series}
-							margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
-						>
-							<CartesianGrid stroke="#ffffff12" vertical={false} />
-							<XAxis
-								dataKey="timestamp"
-								stroke="#ffffff55"
-								tickLine={false}
-								axisLine={false}
-								tickFormatter={value =>
-									formatPortfolioHistoryDate(String(value))
-								}
-								minTickGap={32}
-							/>
-							<YAxis
-								stroke="#ffffff55"
-								tickLine={false}
-								axisLine={false}
-								width={64}
-								tickFormatter={value =>
-									formatPortfolioValueXlm(Number(value))
-								}
-							/>
-							<Tooltip
-								contentStyle={{
-									backgroundColor: '#0b1728',
-									borderColor: '#ffffff22',
-									borderRadius: '0.5rem',
-									color: '#fff',
-								}}
-								labelFormatter={value =>
-									formatPortfolioHistoryDate(String(value))
-								}
-								formatter={(value: unknown, name: unknown) => [
-									formatPortfolioValueXlm(Number(value)),
-									name === 'benchmark' ? 'Benchmark' : 'Portfolio',
-								]}
-							/>
-							<Line
-								type="monotone"
-								dataKey="portfolio"
-								name="portfolio"
-								stroke={PORTFOLIO_LINE_COLOR}
-								strokeWidth={2}
-								dot={false}
-								activeDot={{ r: 5 }}
-								isAnimationActive={!reducedMotion}
-							/>
-							{showBenchmark && (
+					<div
+						className="h-65 w-full"
+						data-testid="portfolio-performance-series"
+					>
+						<ResponsiveContainer width="100%" height="100%">
+							<LineChart
+								data={series}
+								margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
+							>
+								<CartesianGrid stroke="#ffffff12" vertical={false} />
+								<XAxis
+									dataKey="timestamp"
+									stroke="#ffffff55"
+									tickLine={false}
+									axisLine={false}
+									tickFormatter={value =>
+										formatPortfolioHistoryDate(String(value))
+									}
+									minTickGap={32}
+								/>
+								<YAxis
+									stroke="#ffffff55"
+									tickLine={false}
+									axisLine={false}
+									width={64}
+									tickFormatter={value =>
+										formatPortfolioValueXlm(Number(value))
+									}
+								/>
+								<Tooltip
+									contentStyle={{
+										backgroundColor: '#0b1728',
+										borderColor: '#ffffff22',
+										borderRadius: '0.5rem',
+										color: '#fff',
+									}}
+									labelFormatter={value =>
+										formatPortfolioHistoryDate(String(value))
+									}
+									formatter={(value: unknown, name: unknown) => [
+										formatPortfolioValueXlm(Number(value)),
+										name === 'benchmark' ? 'Benchmark' : 'Portfolio',
+									]}
+								/>
 								<Line
 									type="monotone"
-									dataKey="benchmark"
-									name="benchmark"
-									stroke={BENCHMARK_LINE_COLOR}
+									dataKey="portfolio"
+									name="portfolio"
+									stroke={PORTFOLIO_LINE_COLOR}
 									strokeWidth={2}
-									strokeDasharray="5 4"
 									dot={false}
 									activeDot={{ r: 5 }}
-									connectNulls
 									isAnimationActive={!reducedMotion}
 								/>
-							)}
-						</LineChart>
-					</ResponsiveContainer>
-				</div>
+								{showBenchmark && (
+									<Line
+										type="monotone"
+										dataKey="benchmark"
+										name="benchmark"
+										stroke={BENCHMARK_LINE_COLOR}
+										strokeWidth={2}
+										strokeDasharray="5 4"
+										dot={false}
+										activeDot={{ r: 5 }}
+										connectNulls
+										isAnimationActive={!reducedMotion}
+									/>
+								)}
+							</LineChart>
+						</ResponsiveContainer>
+					</div>
+				</AccessibleChart>
 			)}
 		</section>
 	);

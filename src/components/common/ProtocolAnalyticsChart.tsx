@@ -1,4 +1,5 @@
 import React from 'react';
+import AccessibleChart, { generateTimeSeriesSummary } from '@/components/common/AccessibleChart';
 import {
 	Area,
 	AreaChart,
@@ -65,6 +66,16 @@ export const ProtocolAnalyticsChart: React.FC<ProtocolAnalyticsChartProps> = ({
 }) => {
 	const reducedMotion = useReducedMotion();
 
+	const seriesForSummary = (data ?? []).map(d => ({
+		timestamp: String(d.timestamp),
+		value: Number(d[dataKey] ?? 0),
+	}));
+	const summary = generateTimeSeriesSummary(seriesForSummary, 'value', dataKey === 'tvl' ? 'TVL' : 'Volume');
+	const tableData = (data ?? []).map(d => ({
+		timestamp: formatTimestamp(d.timestamp),
+		value: `${formatCompactNumber(Number(d[dataKey] ?? 0))} XLM`,
+	}));
+
 	return (
 		<div
 			className={cn(
@@ -125,78 +136,86 @@ export const ProtocolAnalyticsChart: React.FC<ProtocolAnalyticsChartProps> = ({
 					No data recorded for this time range yet
 				</div>
 			) : (
-				<div className="h-72 w-full" data-testid={`${testId}-container`}>
-					<ResponsiveContainer width="100%" height="100%">
-						<AreaChart
-							data={data}
-							margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-						>
-							<defs>
-								<linearGradient
-									id={gradientId}
-									x1="0"
-									y1="0"
-									x2="0"
-									y2="1"
-								>
-									<stop
-										offset="5%"
-										stopColor={color}
-										stopOpacity={0.4}
-									/>
-									<stop
-										offset="95%"
-										stopColor={color}
-										stopOpacity={0.0}
-									/>
-								</linearGradient>
-							</defs>
-							<CartesianGrid stroke="#ffffff0d" vertical={false} />
-							<XAxis
-								dataKey="timestamp"
-								stroke="#ffffff44"
-								tickLine={false}
-								axisLine={false}
-								tickFormatter={formatTimestamp}
-								minTickGap={28}
-								tick={{ fontSize: 11 }}
-							/>
-							<YAxis
-								stroke="#ffffff44"
-								tickLine={false}
-								axisLine={false}
-								width={58}
-								tickFormatter={val => formatCompactNumber(val)}
-								tick={{ fontSize: 11 }}
-							/>
-							<Tooltip
-								contentStyle={{
-									backgroundColor: '#071221',
-									borderColor: '#ffffff22',
-									borderRadius: '0.75rem',
-									color: '#fff',
-									fontSize: '12px',
-									boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)',
-								}}
-								labelFormatter={formatTimestamp}
-								formatter={(value: unknown) => [
-									`${formatCompactNumber(Number(value))} XLM`,
-									dataKey === 'tvl' ? 'TVL' : 'Volume',
-								]}
-							/>
-							<Area
-								type="monotone"
-								dataKey={dataKey}
-								stroke={color}
-								strokeWidth={2}
-								fillOpacity={1}
-								fill={`url(#${gradientId})`}
-								name={dataKey}
-								isAnimationActive={!reducedMotion}
-							/>
-						</AreaChart>
-					</ResponsiveContainer>
-				</div>
+				<AccessibleChart
+					title={title}
+					summary={summary}
+					tableHeaders={['Date', dataKey === 'tvl' ? 'TVL' : 'Volume']}
+					tableData={tableData}
+					getRowValues={row => [String(row.timestamp), String(row.value)]}
+				>
+					<div className="h-72 w-full" data-testid={`${testId}-container`}>
+						<ResponsiveContainer width="100%" height="100%">
+							<AreaChart
+								data={data}
+								margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+							>
+								<defs>
+									<linearGradient
+										id={gradientId}
+										x1="0"
+										y1="0"
+										x2="0"
+										y2="1"
+									>
+										<stop
+											offset="5%"
+											stopColor={color}
+											stopOpacity={0.4}
+										/>
+										<stop
+											offset="95%"
+											stopColor={color}
+											stopOpacity={0.0}
+										/>
+									</linearGradient>
+								</defs>
+								<CartesianGrid stroke="#ffffff0d" vertical={false} />
+								<XAxis
+									dataKey="timestamp"
+									stroke="#ffffff44"
+									tickLine={false}
+									axisLine={false}
+									tickFormatter={formatTimestamp}
+									minTickGap={28}
+									tick={{ fontSize: 11 }}
+								/>
+								<YAxis
+									stroke="#ffffff44"
+									tickLine={false}
+									axisLine={false}
+									width={58}
+									tickFormatter={val => formatCompactNumber(val)}
+									tick={{ fontSize: 11 }}
+								/>
+								<Tooltip
+									contentStyle={{
+										backgroundColor: '#071221',
+										borderColor: '#ffffff22',
+										borderRadius: '0.75rem',
+										color: '#fff',
+										fontSize: '12px',
+										boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)',
+									}}
+									labelFormatter={formatTimestamp}
+									formatter={(value: unknown) => [
+										`${formatCompactNumber(Number(value))} XLM`,
+										dataKey === 'tvl' ? 'TVL' : 'Volume',
+									]}
+								/>
+								<Area
+									type="monotone"
+									dataKey={dataKey}
+									stroke={color}
+									strokeWidth={2}
+									fillOpacity={1}
+									fill={`url(#${gradientId})`}
+									name={dataKey}
+									isAnimationActive={!reducedMotion}
+								/>
+							</AreaChart>
+						</ResponsiveContainer>
+					</div>
+				</AccessibleChart>
 			)}
 		</div>
 	);

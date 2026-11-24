@@ -15,6 +15,10 @@ import type {
 	PriceHistoryInterval,
 	PriceHistoryPoint,
 } from '@/services/course.service';
+import AccessibleChart, {
+	generateTimeSeriesSummary,
+} from '@/components/common/AccessibleChart';
+import type { GenericDataPoint } from '@/components/common/AccessibleChart';
 
 interface PriceHistoryChartProps {
 	data?: PriceHistoryPoint[];
@@ -44,6 +48,20 @@ export function PriceHistoryChart({
 	onIntervalChange,
 }: PriceHistoryChartProps) {
 	const reducedMotion = useReducedMotion();
+
+	const summary =
+		data.length > 0
+			? generateTimeSeriesSummary(
+					data.map(d => ({ timestamp: d.timestamp, price: d.price })),
+					'price',
+					'price'
+				)
+			: 'No price history available.';
+
+	const tableData: GenericDataPoint[] = data.map(d => ({
+		timestamp: d.timestamp,
+		price: d.price,
+	}));
 
 	return (
 		<section
@@ -100,54 +118,71 @@ export function PriceHistoryChart({
 					No price history yet
 				</div>
 			) : (
-				<div className="h-65 w-full" data-testid="price-history-series">
-					<ResponsiveContainer width="100%" height="100%">
-						<LineChart
-							data={data}
-							margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
-						>
-							<CartesianGrid stroke="#ffffff12" vertical={false} />
-							<XAxis
-								dataKey="timestamp"
-								stroke="#ffffff55"
-								tickLine={false}
-								axisLine={false}
-								tickFormatter={formatTime}
-								minTickGap={32}
-							/>
-							<YAxis
-								dataKey="price"
-								stroke="#ffffff55"
-								tickLine={false}
-								axisLine={false}
-								width={52}
-								tickFormatter={value => `${value} XLM`}
-							/>
-							<Tooltip
-								contentStyle={{
-									backgroundColor: '#0b1728',
-									borderColor: '#ffffff22',
-									borderRadius: '0.5rem',
-									color: '#fff',
-								}}
-								labelFormatter={formatTime}
-								formatter={(value: unknown) => [
-									`${String(value)} XLM`,
-									'Price',
-								]}
-							/>
-							<Line
-								type="monotone"
-								dataKey="price"
-								stroke="#34d399"
-								strokeWidth={2}
-								dot={{ fill: '#34d399', r: 3, strokeWidth: 0 }}
-								activeDot={{ r: 5 }}
-								isAnimationActive={!reducedMotion}
-							/>
-						</LineChart>
-					</ResponsiveContainer>
-				</div>
+				<AccessibleChart
+					title="Price history"
+					summary={summary}
+					tableHeaders={['Time', 'Price (XLM)']}
+					tableData={tableData}
+					getRowValues={row => [
+						new Intl.DateTimeFormat(undefined, {
+							month: 'short',
+							day: 'numeric',
+							hour: 'numeric',
+							minute: '2-digit',
+						}).format(new Date(String(row.timestamp))),
+						String(row.price),
+					]}
+					data-testid="price-history-series"
+				>
+					<div className="h-65 w-full">
+						<ResponsiveContainer width="100%" height="100%">
+							<LineChart
+								data={data}
+								margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
+							>
+								<CartesianGrid stroke="#ffffff12" vertical={false} />
+								<XAxis
+									dataKey="timestamp"
+									stroke="#ffffff55"
+									tickLine={false}
+									axisLine={false}
+									tickFormatter={formatTime}
+									minTickGap={32}
+								/>
+								<YAxis
+									dataKey="price"
+									stroke="#ffffff55"
+									tickLine={false}
+									axisLine={false}
+									width={52}
+									tickFormatter={value => `${value} XLM`}
+								/>
+								<Tooltip
+									contentStyle={{
+										backgroundColor: '#0b1728',
+										borderColor: '#ffffff22',
+										borderRadius: '0.5rem',
+										color: '#fff',
+									}}
+									labelFormatter={formatTime}
+									formatter={(value: unknown) => [
+										`${String(value)} XLM`,
+										'Price',
+									]}
+								/>
+								<Line
+									type="monotone"
+									dataKey="price"
+									stroke="#34d399"
+									strokeWidth={2}
+									dot={{ fill: '#34d399', r: 3, strokeWidth: 0 }}
+									activeDot={{ r: 5 }}
+									isAnimationActive={!reducedMotion}
+								/>
+							</LineChart>
+						</ResponsiveContainer>
+					</div>
+				</AccessibleChart>
 			)}
 		</section>
 	);

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import AccessibleChart from '@/components/common/AccessibleChart';
 import {
 	Area,
 	AreaChart,
@@ -70,6 +71,13 @@ export function KeyDepthChart({
 		model.spreadPercent == null ? '' : ` (${model.spreadPercent.toFixed(2)}%)`;
 	const spreadLabel =
 		model.spread == null ? '—' : `${spreadAmount}${spreadPercentLabel}`;
+
+	const depthSummary = `Market Depth: ${model.points.length} price levels. Best bid: ${hasData ? formatDepthPrice(model.bestBid) : '—'}, Best ask: ${hasData ? formatDepthPrice(model.bestAsk) : '—'}, Mid price: ${hasData ? formatDepthPrice(model.midPrice) : '—'}, Spread: ${hasData ? spreadLabel : '—'}.`;
+	const tableData = model.points.map(p => ({
+		price: formatDepthPrice(p.price),
+		bidVolume: p.bidVolume != null ? formatNumber(p.bidVolume) : '—',
+		askVolume: p.askVolume != null ? formatNumber(p.askVolume) : '—',
+	}));
 
 	return (
 		<section
@@ -206,168 +214,176 @@ export function KeyDepthChart({
 					No open orders for this key yet
 				</div>
 			) : (
-				<div
-					className="relative h-60 w-full sm:h-72 lg:h-80"
-					data-testid="key-depth-chart-series"
+				<AccessibleChart
+					title="Market Depth"
+					summary={depthSummary}
+					tableHeaders={['Price', 'Cumulative Bids', 'Cumulative Asks']}
+					tableData={tableData}
+					getRowValues={row => [String(row.price), String(row.bidVolume), String(row.askVolume)]}
 				>
-					<ResponsiveContainer width="100%" height="100%">
-						<AreaChart
-							data={model.points}
-							margin={chartMargin}
-						>
-							<defs>
-								<linearGradient
-									id="key-depth-bid-fill"
-									x1="0"
-									y1="0"
-									x2="0"
-									y2="1"
-								>
-									<stop
-										offset="0%"
-										stopColor={BID_COLOR}
-										stopOpacity={0.45}
-									/>
-									<stop
-										offset="100%"
-										stopColor={BID_COLOR}
-										stopOpacity={0.04}
-									/>
-								</linearGradient>
-								<linearGradient
-									id="key-depth-ask-fill"
-									x1="0"
-									y1="0"
-									x2="0"
-									y2="1"
-								>
-									<stop
-										offset="0%"
-										stopColor={ASK_COLOR}
-										stopOpacity={0.45}
-									/>
-									<stop
-										offset="100%"
-										stopColor={ASK_COLOR}
-										stopOpacity={0.04}
-									/>
-								</linearGradient>
-							</defs>
-
-							<CartesianGrid stroke="#ffffff12" vertical={false} />
-							<XAxis
-								type="number"
-								dataKey="price"
-								domain={model.domain}
-								stroke="#ffffff55"
-								tickLine={false}
-								axisLine={false}
-								tickCount={isMobile ? 4 : 6}
-								tickFormatter={formatDepthPriceTick}
-								allowDecimals
-							/>
-							<YAxis
-								stroke="#ffffff55"
-								tickLine={false}
-								axisLine={false}
-								width={yAxisWidth}
-								tickFormatter={(value: number) =>
-									formatCompactNumber(value)
-								}
-							/>
-							<Tooltip
-								contentStyle={{
-									backgroundColor: '#0b1728',
-									borderColor: '#ffffff22',
-									borderRadius: '0.5rem',
-									color: '#fff',
-								}}
-								labelFormatter={(label: unknown) =>
-									formatDepthPrice(Number(label))
-								}
-								formatter={(
-									value: unknown,
-									name: unknown,
-									item: unknown
-								): [string, string] | null => {
-									if (value == null) return null;
-
-									const point = (item as { payload?: DepthChartPoint })
-										?.payload;
-									const isBid = name === 'bidVolume';
-									const levelVolume = point
-										? isBid
-											? point.bidAmount
-											: point.askAmount
-										: 0;
-									const cumulative =
-										typeof value === 'number'
-											? value
-											: Number(value);
-
-									return [
-										`${formatNumber(levelVolume)} keys · ${formatNumber(cumulative)} cumulative`,
-										isBid ? 'Bids' : 'Asks',
-									];
-								}}
-							/>
-
-							{model.midPrice != null && (
-								<ReferenceLine
-									x={model.midPrice}
-									stroke="#ffffff66"
-									strokeDasharray="4 4"
-								/>
-							)}
-
-							<Area
-								type="stepAfter"
-								dataKey="bidVolume"
-								stroke={BID_COLOR}
-								strokeWidth={2}
-								fill="url(#key-depth-bid-fill)"
-								isAnimationActive={false}
-								connectNulls={false}
-							/>
-							<Area
-								type="stepAfter"
-								dataKey="askVolume"
-								stroke={ASK_COLOR}
-								strokeWidth={2}
-								fill="url(#key-depth-ask-fill)"
-								isAnimationActive={false}
-								connectNulls={false}
-							/>
-						</AreaChart>
-					</ResponsiveContainer>
-
-					{/* Mid-price marker and spread badge, centred on the plot (#1220) */}
-					{model.midPrice != null && (
-						<div
-							className="pointer-events-none absolute inset-0"
-							aria-hidden="true"
-						>
-							<div
-								className="absolute top-1 -translate-x-1/2 rounded-lg border border-white/15 bg-slate-950/90 px-2.5 py-1 text-center shadow-lg"
-								style={plotCentreStyle}
-								data-testid="key-depth-chart-mid-marker"
-								data-mid-price={model.midPrice}
-								data-best-bid={model.bestBid ?? ''}
-								data-best-ask={model.bestAsk ?? ''}
+					<div
+						className="relative h-60 w-full sm:h-72 lg:h-80"
+						data-testid="key-depth-chart-series"
+					>
+						<ResponsiveContainer width="100%" height="100%">
+							<AreaChart
+								data={model.points}
+								margin={chartMargin}
 							>
-								<span className="block whitespace-nowrap font-mono text-[0.65rem] font-semibold text-white">
-									Mid {formatDepthPrice(model.midPrice)}
-								</span>
-								<span
-									className="block whitespace-nowrap font-mono text-[0.6rem] text-amber-300/90"
-									data-testid="key-depth-chart-spread-marker"
+								<defs>
+									<linearGradient
+										id="key-depth-bid-fill"
+										x1="0"
+										y1="0"
+										x2="0"
+										y2="1"
+									>
+										<stop
+											offset="0%"
+											stopColor={BID_COLOR}
+											stopOpacity={0.45}
+										/>
+										<stop
+											offset="100%"
+											stopColor={BID_COLOR}
+											stopOpacity={0.04}
+										/>
+									</linearGradient>
+									<linearGradient
+										id="key-depth-ask-fill"
+										x1="0"
+										y1="0"
+										x2="0"
+										y2="1"
+									>
+										<stop
+											offset="0%"
+											stopColor={ASK_COLOR}
+											stopOpacity={0.45}
+										/>
+										<stop
+											offset="100%"
+											stopColor={ASK_COLOR}
+											stopOpacity={0.04}
+										/>
+									</linearGradient>
+								</defs>
+
+								<CartesianGrid stroke="#ffffff12" vertical={false} />
+								<XAxis
+									type="number"
+									dataKey="price"
+									domain={model.domain}
+									stroke="#ffffff55"
+									tickLine={false}
+									axisLine={false}
+									tickCount={isMobile ? 4 : 6}
+									tickFormatter={formatDepthPriceTick}
+									allowDecimals
+								/>
+								<YAxis
+									stroke="#ffffff55"
+									tickLine={false}
+									axisLine={false}
+									width={yAxisWidth}
+									tickFormatter={(value: number) =>
+										formatCompactNumber(value)
+									}
+								/>
+								<Tooltip
+									contentStyle={{
+										backgroundColor: '#0b1728',
+										borderColor: '#ffffff22',
+										borderRadius: '0.5rem',
+										color: '#fff',
+									}}
+									labelFormatter={(label: unknown) =>
+										formatDepthPrice(Number(label))
+									}
+									formatter={(
+										value: unknown,
+										name: unknown,
+										item: unknown
+									): [string, string] | null => {
+										if (value == null) return null;
+
+										const point = (item as { payload?: DepthChartPoint })
+											?.payload;
+										const isBid = name === 'bidVolume';
+										const levelVolume = point
+											? isBid
+												? point.bidAmount
+												: point.askAmount
+											: 0;
+										const cumulative =
+											typeof value === 'number'
+												? value
+												: Number(value);
+
+										return [
+											`${formatNumber(levelVolume)} keys · ${formatNumber(cumulative)} cumulative`,
+											isBid ? 'Bids' : 'Asks',
+										];
+									}}
+								/>
+
+								{model.midPrice != null && (
+									<ReferenceLine
+										x={model.midPrice}
+										stroke="#ffffff66"
+										strokeDasharray="4 4"
+									/>
+								)}
+
+								<Area
+									type="stepAfter"
+									dataKey="bidVolume"
+									stroke={BID_COLOR}
+									strokeWidth={2}
+									fill="url(#key-depth-bid-fill)"
+									isAnimationActive={false}
+									connectNulls={false}
+								/>
+								<Area
+									type="stepAfter"
+									dataKey="askVolume"
+									stroke={ASK_COLOR}
+									strokeWidth={2}
+									fill="url(#key-depth-ask-fill)"
+									isAnimationActive={false}
+									connectNulls={false}
+								/>
+							</AreaChart>
+						</ResponsiveContainer>
+
+						{/* Mid-price marker and spread badge, centred on the plot (#1220) */}
+						{model.midPrice != null && (
+							<div
+								className="pointer-events-none absolute inset-0"
+								aria-hidden="true"
+							>
+								<div
+									className="absolute top-1 -translate-x-1/2 rounded-lg border border-white/15 bg-slate-950/90 px-2.5 py-1 text-center shadow-lg"
+									style={plotCentreStyle}
+									data-testid="key-depth-chart-mid-marker"
+									data-mid-price={model.midPrice}
+									data-best-bid={model.bestBid ?? ''}
+									data-best-ask={model.bestAsk ?? ''}
 								>
-									Spread {formatDepthPrice(model.spread)}
-								</span>
+									<span className="block whitespace-nowrap font-mono text-[0.65rem] font-semibold text-white">
+										Mid {formatDepthPrice(model.midPrice)}
+									</span>
+									<span
+										className="block whitespace-nowrap font-mono text-[0.6rem] text-amber-300/90"
+										data-testid="key-depth-chart-spread-marker"
+									>
+										Spread {formatDepthPrice(model.spread)}
+									</span>
+								</div>
 							</div>
-						</div>
-					)}
-				</div>
+						)}
+					</div>
+				</AccessibleChart>
 			)}
 
 			<p className="mt-3 text-xs text-white/35" data-testid="key-depth-chart-caption">

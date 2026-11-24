@@ -1,4 +1,5 @@
 import React from 'react';
+import AccessibleChart, { generateTimeSeriesSummary } from '@/components/common/AccessibleChart';
 import {
 	Area,
 	AreaChart,
@@ -51,6 +52,18 @@ export const CreatorRevenueChart: React.FC<CreatorRevenueChartProps> = ({
 	className,
 }) => {
 	const reducedMotion = useReducedMotion();
+
+	const totalRevenueSeries = (data ?? []).map(d => ({
+		timestamp: String(d.timestamp),
+		value: (d.royalties ?? 0) + (d.subscriptionFees ?? 0) + (d.dividendDeposits ?? 0),
+	}));
+	const summary = generateTimeSeriesSummary(totalRevenueSeries, 'value', 'total revenue');
+	const tableData = (data ?? []).map(d => ({
+		timestamp: formatTimestamp(d.timestamp),
+		royalties: `${Number(d.royalties ?? 0).toFixed(2)} XLM`,
+		subscriptions: `${Number(d.subscriptionFees ?? 0).toFixed(2)} XLM`,
+		dividends: `${Number(d.dividendDeposits ?? 0).toFixed(2)} XLM`,
+	}));
 
 	return (
 		<div
@@ -144,140 +157,148 @@ export const CreatorRevenueChart: React.FC<CreatorRevenueChartProps> = ({
 					No revenue data recorded for this time range yet
 				</div>
 			) : (
-				<div className="h-72 w-full" data-testid="revenue-chart-container">
-					<ResponsiveContainer width="100%" height="100%">
-						<AreaChart
-							data={data}
-							margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-						>
-							<defs>
-								<linearGradient
-									id="colorRoyalties"
-									x1="0"
-									y1="0"
-									x2="0"
-									y2="1"
-								>
-									<stop
-										offset="5%"
-										stopColor="#34d399"
-										stopOpacity={0.4}
-									/>
-									<stop
-										offset="95%"
-										stopColor="#34d399"
-										stopOpacity={0.0}
-									/>
-								</linearGradient>
-								<linearGradient
-									id="colorSubscriptions"
-									x1="0"
-									y1="0"
-									x2="0"
-									y2="1"
-								>
-									<stop
-										offset="5%"
-										stopColor="#818cf8"
-										stopOpacity={0.4}
-									/>
-									<stop
-										offset="95%"
-										stopColor="#818cf8"
-										stopOpacity={0.0}
-									/>
-								</linearGradient>
-								<linearGradient
-									id="colorDividends"
-									x1="0"
-									y1="0"
-									x2="0"
-									y2="1"
-								>
-									<stop
-										offset="5%"
-										stopColor="#fbbf24"
-										stopOpacity={0.4}
-									/>
-									<stop
-										offset="95%"
-										stopColor="#fbbf24"
-										stopOpacity={0.0}
-									/>
-								</linearGradient>
-							</defs>
-							<CartesianGrid stroke="#ffffff0d" vertical={false} />
-							<XAxis
-								dataKey="timestamp"
-								stroke="#ffffff44"
-								tickLine={false}
-								axisLine={false}
-								tickFormatter={formatTimestamp}
-								minTickGap={28}
-								tick={{ fontSize: 11 }}
-							/>
-							<YAxis
-								stroke="#ffffff44"
-								tickLine={false}
-								axisLine={false}
-								width={58}
-								tickFormatter={val => `${val} XLM`}
-								tick={{ fontSize: 11 }}
-							/>
-							<Tooltip
-								contentStyle={{
-									backgroundColor: '#071221',
-									borderColor: '#ffffff22',
-									borderRadius: '0.75rem',
-									color: '#fff',
-									fontSize: '12px',
-									boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)',
-								}}
-								labelFormatter={formatTimestamp}
-								formatter={(value: unknown, name: unknown) => {
-									const labelMap: Record<string, string> = {
-										royalties: 'Royalties',
-										subscriptionFees: 'Subscriptions',
-										dividendDeposits: 'Dividends',
-										total: 'Total',
-									};
-									const label = labelMap[String(name)] ?? String(name);
-									return [`${Number(value).toFixed(2)} XLM`, label];
-								}}
-							/>
-							<Area
-								type="monotone"
-								dataKey="royalties"
-								stroke="#34d399"
-								strokeWidth={2}
-								fillOpacity={1}
-								fill="url(#colorRoyalties)"
-								name="royalties"
-								isAnimationActive={!reducedMotion}
-							/>
-							<Area
-								type="monotone"
-								dataKey="subscriptionFees"
-								stroke="#818cf8"
-								strokeWidth={2}
-								fillOpacity={1}
-								fill="url(#colorSubscriptions)"
-								name="subscriptionFees"
-								isAnimationActive={!reducedMotion}
-							/>
-							<Area
-								type="monotone"
-								dataKey="dividendDeposits"
-								stroke="#fbbf24"
-								strokeWidth={2}
-								fillOpacity={1}
-								fill="url(#colorDividends)"
-								name="dividendDeposits"
-								isAnimationActive={!reducedMotion}
-							/>
-						</AreaChart>
-					</ResponsiveContainer>
-				</div>
+				<AccessibleChart
+					title="Creator Earnings Breakdown"
+					summary={summary}
+					tableHeaders={['Date', 'Royalties', 'Subscriptions', 'Dividends']}
+					tableData={tableData}
+					getRowValues={row => [String(row.timestamp), String(row.royalties), String(row.subscriptions), String(row.dividends)]}
+				>
+					<div className="h-72 w-full" data-testid="revenue-chart-container">
+						<ResponsiveContainer width="100%" height="100%">
+							<AreaChart
+								data={data}
+								margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+							>
+								<defs>
+									<linearGradient
+										id="colorRoyalties"
+										x1="0"
+										y1="0"
+										x2="0"
+										y2="1"
+									>
+										<stop
+											offset="5%"
+											stopColor="#34d399"
+											stopOpacity={0.4}
+										/>
+										<stop
+											offset="95%"
+											stopColor="#34d399"
+											stopOpacity={0.0}
+										/>
+									</linearGradient>
+									<linearGradient
+										id="colorSubscriptions"
+										x1="0"
+										y1="0"
+										x2="0"
+										y2="1"
+									>
+										<stop
+											offset="5%"
+											stopColor="#818cf8"
+											stopOpacity={0.4}
+										/>
+										<stop
+											offset="95%"
+											stopColor="#818cf8"
+											stopOpacity={0.0}
+										/>
+									</linearGradient>
+									<linearGradient
+										id="colorDividends"
+										x1="0"
+										y1="0"
+										x2="0"
+										y2="1"
+									>
+										<stop
+											offset="5%"
+											stopColor="#fbbf24"
+											stopOpacity={0.4}
+										/>
+										<stop
+											offset="95%"
+											stopColor="#fbbf24"
+											stopOpacity={0.0}
+										/>
+									</linearGradient>
+								</defs>
+								<CartesianGrid stroke="#ffffff0d" vertical={false} />
+								<XAxis
+									dataKey="timestamp"
+									stroke="#ffffff44"
+									tickLine={false}
+									axisLine={false}
+									tickFormatter={formatTimestamp}
+									minTickGap={28}
+									tick={{ fontSize: 11 }}
+								/>
+								<YAxis
+									stroke="#ffffff44"
+									tickLine={false}
+									axisLine={false}
+									width={58}
+									tickFormatter={val => `${val} XLM`}
+									tick={{ fontSize: 11 }}
+								/>
+								<Tooltip
+									contentStyle={{
+										backgroundColor: '#071221',
+										borderColor: '#ffffff22',
+										borderRadius: '0.75rem',
+										color: '#fff',
+										fontSize: '12px',
+										boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)',
+									}}
+									labelFormatter={formatTimestamp}
+									formatter={(value: unknown, name: unknown) => {
+										const labelMap: Record<string, string> = {
+											royalties: 'Royalties',
+											subscriptionFees: 'Subscriptions',
+											dividendDeposits: 'Dividends',
+											total: 'Total',
+										};
+										const label = labelMap[String(name)] ?? String(name);
+										return [`${Number(value).toFixed(2)} XLM`, label];
+									}}
+								/>
+								<Area
+									type="monotone"
+									dataKey="royalties"
+									stroke="#34d399"
+									strokeWidth={2}
+									fillOpacity={1}
+									fill="url(#colorRoyalties)"
+									name="royalties"
+									isAnimationActive={!reducedMotion}
+								/>
+								<Area
+									type="monotone"
+									dataKey="subscriptionFees"
+									stroke="#818cf8"
+									strokeWidth={2}
+									fillOpacity={1}
+									fill="url(#colorSubscriptions)"
+									name="subscriptionFees"
+									isAnimationActive={!reducedMotion}
+								/>
+								<Area
+									type="monotone"
+									dataKey="dividendDeposits"
+									stroke="#fbbf24"
+									strokeWidth={2}
+									fillOpacity={1}
+									fill="url(#colorDividends)"
+									name="dividendDeposits"
+									isAnimationActive={!reducedMotion}
+								/>
+							</AreaChart>
+						</ResponsiveContainer>
+					</div>
+				</AccessibleChart>
 			)}
 		</div>
 	);

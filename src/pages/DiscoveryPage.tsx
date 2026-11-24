@@ -299,13 +299,16 @@ export default function DiscoveryPage() {
 									<div
 										data-testid="trending-keys-grid"
 										className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+										role="grid"
+										aria-rowcount={trendingKeys.length}
 									>
 										{trendingKeys.map((creator, index) => (
-											<DiscoveryKeyCard
-												key={creator.id}
-												creator={creator}
-												rank={index + 1}
-											/>
+											<div key={creator.id} role="row" aria-rowindex={index + 1}>
+												<DiscoveryKeyCard
+													creator={creator}
+													rank={index + 1}
+												/>
+											</div>
 										))}
 									</div>
 								)}
@@ -375,13 +378,16 @@ export default function DiscoveryPage() {
 									<div
 										data-testid="new-listings-grid"
 										className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+										role="grid"
+										aria-rowcount={newListings.length}
 									>
-										{newListings.map(creator => (
-											<DiscoveryKeyCard
-												key={creator.id}
-												creator={creator}
-												badgeLabel="NEW"
-											/>
+										{newListings.map((creator, index) => (
+											<div key={creator.id} role="row" aria-rowindex={index + 1}>
+												<DiscoveryKeyCard
+													creator={creator}
+													badgeLabel="NEW"
+												/>
+											</div>
 										))}
 									</div>
 								)}

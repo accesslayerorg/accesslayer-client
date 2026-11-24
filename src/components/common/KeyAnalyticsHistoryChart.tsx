@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import AccessibleChart, { generateTimeSeriesSummary } from '@/components/common/AccessibleChart';
 import {
 	ResponsiveContainer,
 	LineChart,
@@ -57,6 +58,29 @@ export const KeyAnalyticsHistoryChart: React.FC<
 	);
 	const dataKey = metricDataKey(metric);
 	const color = METRIC_COLOR[metric];
+
+	const timeSeriesPoints = useMemo(
+		() =>
+			points.map(p => ({
+				timestamp: formatSnapshotAxisDate(p.ts),
+				value: Number(p[dataKey] ?? 0),
+			})),
+		[points, dataKey]
+	);
+
+	const summary = useMemo(
+		() => generateTimeSeriesSummary(timeSeriesPoints, 'value', metricLabel(metric)),
+		[timeSeriesPoints, metric]
+	);
+
+	const tableData = useMemo(
+		() =>
+			points.map(p => ({
+				date: formatSnapshotAxisDate(p.ts),
+				value: formatMetricValue(metric, Number(p[dataKey] ?? 0)),
+			})),
+		[points, metric, dataKey]
+	);
 
 	return (
 		<div
@@ -138,64 +162,72 @@ export const KeyAnalyticsHistoryChart: React.FC<
 					No snapshots available for this range yet.
 				</p>
 			) : (
-				<div
-					role="img"
-					aria-label={`${metricLabel(metric)} history: ${points.length} snapshot${points.length !== 1 ? 's' : ''}`}
-					style={{ height: chartHeight }}
-					data-testid="key-analytics-history-plot"
+				<AccessibleChart
+					title={`${metricLabel(metric)} History`}
+					summary={summary}
+					tableHeaders={['Date', metricLabel(metric)]}
+					tableData={tableData}
+					getRowValues={row => [String(row.date), String(row.value)]}
 				>
-					<ResponsiveContainer width="100%" height="100%">
-						<LineChart
-							key={metric}
-							data={points}
-							margin={{ top: 8, right: 16, bottom: 4, left: 0 }}
-						>
-							<CartesianGrid
-								strokeDasharray="3 3"
-								stroke="rgba(255,255,255,0.08)"
-							/>
-							<XAxis
-								dataKey="ts"
-								type="number"
-								scale="time"
-								domain={['dataMin', 'dataMax']}
-								tickFormatter={formatSnapshotAxisDate}
-								stroke="rgba(255,255,255,0.4)"
-								fontSize={11}
-							/>
-							<YAxis
-								stroke="rgba(255,255,255,0.4)"
-								fontSize={11}
-								width={56}
-								tickFormatter={value =>
-									formatMetricValue(metric, Number(value))
-								}
-								domain={[0, 'auto']}
-							/>
-							<ChartTooltip
-								labelFormatter={label =>
-									formatSnapshotAxisDate(Number(label))
-								}
-								formatter={value => [
-									formatMetricValue(metric, Number(value)),
-									metricLabel(metric),
-								]}
-							/>
-							<Line
-								type="monotone"
-								dataKey={dataKey}
-								stroke={color}
-								strokeWidth={2}
-								dot={points.length <= 30}
-								activeDot={{ r: 5 }}
-								// Sparse data (gaps in snapshot days) should not be
-								// bridged by a straight line across the missing days.
-								connectNulls={false}
-								isAnimationActive={false}
-							/>
-						</LineChart>
-					</ResponsiveContainer>
-				</div>
+					<div
+						role="img"
+						aria-label={`${metricLabel(metric)} history: ${points.length} snapshot${points.length !== 1 ? 's' : ''}`}
+						style={{ height: chartHeight }}
+						data-testid="key-analytics-history-plot"
+					>
+						<ResponsiveContainer width="100%" height="100%">
+							<LineChart
+								key={metric}
+								data={points}
+								margin={{ top: 8, right: 16, bottom: 4, left: 0 }}
+							>
+								<CartesianGrid
+									strokeDasharray="3 3"
+									stroke="rgba(255,255,255,0.08)"
+								/>
+								<XAxis
+									dataKey="ts"
+									type="number"
+									scale="time"
+									domain={['dataMin', 'dataMax']}
+									tickFormatter={formatSnapshotAxisDate}
+									stroke="rgba(255,255,255,0.4)"
+									fontSize={11}
+								/>
+								<YAxis
+									stroke="rgba(255,255,255,0.4)"
+									fontSize={11}
+									width={56}
+									tickFormatter={value =>
+										formatMetricValue(metric, Number(value))
+									}
+									domain={[0, 'auto']}
+								/>
+								<ChartTooltip
+									labelFormatter={label =>
+										formatSnapshotAxisDate(Number(label))
+									}
+									formatter={value => [
+										formatMetricValue(metric, Number(value)),
+										metricLabel(metric),
+									]}
+								/>
+								<Line
+									type="monotone"
+									dataKey={dataKey}
+									stroke={color}
+									strokeWidth={2}
+									dot={points.length <= 30}
+									activeDot={{ r: 5 }}
+									// Sparse data (gaps in snapshot days) should not be
+									// bridged by a straight line across the missing days.
+									connectNulls={false}
+									isAnimationActive={false}
+								/>
+							</LineChart>
+						</ResponsiveContainer>
+					</div>
+				</AccessibleChart>
 			)}
 		</div>
 	);

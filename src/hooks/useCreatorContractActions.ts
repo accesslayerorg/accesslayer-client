@@ -3,6 +3,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import { cacheManager } from '@/utils/cache.utils';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
+import { decodeContractError } from '@/lib/contractErrors';
 import { curveMigrationCacheKey } from '@/services/curveMigration.service';
 import { buildCurveMigrationExecuteCall } from '@/utils/curveMigration.utils';
 import type { CreatorMetadataChange } from '@/utils/creatorMetadata.utils';
@@ -44,6 +45,11 @@ export async function submitCreatorContractCall(fn: string, args: unknown) {
 
 const submitContractCall = submitCreatorContractCall;
 
+function handleContractError(error: unknown) {
+	const decoded = decodeContractError(error);
+	showToast.error(decoded.message || getSignatureErrorMessage(error));
+}
+
 export interface AuctionConfigInput {
 	price: number;
 	supply: number;
@@ -59,7 +65,7 @@ export function useUpdateMetadataMutation(creatorId: string) {
 		mutationFn: (change: CreatorMetadataChange) =>
 			submitContractCall('update_metadata', { creatorId, ...change }),
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({
@@ -81,7 +87,7 @@ export function useConfigureAuctionMutation(creatorId: string) {
 		mutationFn: (input: AuctionConfigInput) =>
 			submitContractCall('configure_auction', { creatorId, ...input }),
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({
@@ -99,7 +105,7 @@ export function useCancelAuctionMutation(creatorId: string) {
 		mutationKey: ['contract', 'cancel_auction', creatorId],
 		mutationFn: () => submitContractCall('cancel_auction', { creatorId }),
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({
@@ -124,7 +130,7 @@ export function usePlaceAuctionBidMutation(creatorId: string) {
 		mutationFn: (amount: number) =>
 			submitContractCall('place_bid', { creatorId, amount }),
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({
@@ -155,7 +161,7 @@ export function usePlaceSpotlightBidMutation(creatorId: string) {
 		mutationFn: ({ slotId, amount }: PlaceSpotlightBidInput) =>
 			submitContractCall('place_spotlight_bid', { creatorId, slotId, amount }),
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({
@@ -194,7 +200,7 @@ export function usePostAnnouncementMutation(creatorId: string) {
 			});
 		},
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({
@@ -213,7 +219,7 @@ export function useSetLaunchPenaltyMutation(creatorId: string) {
 		mutationFn: (penaltyBps: number) =>
 			submitContractCall('set_launch_penalty', { creatorId, penaltyBps }),
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({
@@ -235,7 +241,7 @@ export function useSetMaxBuyQuantityMutation(creatorId: string) {
 				maxBuyQuantity,
 			}),
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({
@@ -254,7 +260,7 @@ export function useSetBuyCooldownMutation(creatorId: string) {
 		mutationFn: (cooldownLedgers: number) =>
 			submitContractCall('set_buy_cooldown', { creatorId, cooldownLedgers }),
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			// Drop the 30s course cache entry so the refetch below returns the
@@ -276,7 +282,7 @@ export function useSetQuorumBpsMutation(creatorId: string) {
 		mutationFn: (quorumBps: number) =>
 			submitContractCall('set_quorum_bps', { creatorId, quorumBps }),
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			// Drop the 30s course cache entry so the refetch below returns the
@@ -301,7 +307,7 @@ export function useConfigureGraduatedCurveMutation(creatorId: string) {
 				milestones,
 			}),
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({
@@ -325,7 +331,7 @@ export function useDeprecateKeyMutation(creatorId: string) {
 		mutationFn: (input: DeprecateKeyInput) =>
 			submitContractCall('deprecate_key', { creatorId, ...input }),
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			cacheManager.invalidate(`course_${creatorId}`);
@@ -361,7 +367,7 @@ export function useExecuteCurveMigrationMutation(creatorId: string) {
 			return submitContractCall(call.functionName, call.args);
 		},
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			// Drop both cache layers so the refetch returns the migration in
@@ -397,7 +403,7 @@ export function useClaimVestedTokensMutation(
 				amountXlm,
 			}),
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			void queryClient.invalidateQueries({
@@ -423,7 +429,7 @@ export function useTopUpPerformanceBondMutation(creatorId: string) {
 				amountXlm,
 			}),
 		onError: error => {
-			showToast.error(getSignatureErrorMessage(error));
+			handleContractError(error);
 		},
 		onSuccess: () => {
 			void queryClient.invalidateQueries({

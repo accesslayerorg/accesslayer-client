@@ -3,6 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatPercent } from '@/utils/numberFormat.utils';
 import { rankKeyHolders, type KeyHolder } from '@/utils/keyHolderRanking.utils';
+import AccessibleChart from '@/components/common/AccessibleChart';
 
 export interface HolderConcentrationChartProps {
 	holders: KeyHolder[];
@@ -77,73 +78,86 @@ const HolderConcentrationChart: React.FC<HolderConcentrationChartProps> = ({
 		);
 	}
 
+	const summary = `Holder concentration: Top 3 holders control ${formatPercent(topThreePercent, { maximumFractionDigits: 1 })} of supply. ${isHighlyConcentrated ? 'Highly concentrated.' : 'Distribution is balanced.'}`;
+	const tableData = bars.map(b => ({
+		label: b.label,
+		percent: formatPercent(b.percent, { maximumFractionDigits: 1 }),
+	}));
+
 	return (
-		<div
-			className={cn('space-y-4', className)}
+		<AccessibleChart
+			title="Holder Concentration"
+			summary={summary}
+			tableHeaders={['Holder', 'Share']}
+			tableData={tableData}
+			getRowValues={row => [String(row.label), String(row.percent)]}
+			className={className}
 			data-testid="holder-concentration-chart"
 		>
-			<div className="flex flex-wrap items-center justify-between gap-3">
-				<p className="text-sm text-white/60">
-					Top holders by share of circulating supply.
-				</p>
-				{isHighlyConcentrated && (
-					<span
-						className="inline-flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-400/10 px-2.5 py-1 text-xs font-bold text-red-200"
-						data-testid="holder-concentration-warning"
-					>
-						<AlertTriangle className="size-3.5" aria-hidden="true" />
-						Highly concentrated
-					</span>
-				)}
-			</div>
+			<div className="space-y-4">
+				<div className="flex flex-wrap items-center justify-between gap-3">
+					<p className="text-sm text-white/60">
+						Top holders by share of circulating supply.
+					</p>
+					{isHighlyConcentrated && (
+						<span
+							className="inline-flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-400/10 px-2.5 py-1 text-xs font-bold text-red-200"
+							data-testid="holder-concentration-warning"
+						>
+							<AlertTriangle className="size-3.5" aria-hidden="true" />
+							Highly concentrated
+						</span>
+					)}
+				</div>
 
-			<div className="space-y-3">
-				{bars.map(bar => (
-					<div
-						key={bar.id}
-						className="grid gap-2 sm:grid-cols-[minmax(0,10rem)_1fr_4rem] sm:items-center"
-						data-testid="holder-concentration-bar"
-					>
-						<span
-							className={cn(
-								'truncate text-sm font-semibold text-white/80',
-								bar.walletAddress && 'font-mono'
-							)}
-							title={bar.walletAddress ?? bar.label}
-							data-testid={
-								bar.id === 'others'
-									? 'holder-concentration-others-label'
-									: 'holder-concentration-label'
-							}
-						>
-							{bar.label}
-						</span>
+				<div className="space-y-3">
+					{bars.map(bar => (
 						<div
-							className="h-3 overflow-hidden rounded-full bg-white/10"
-							aria-hidden="true"
+							key={bar.id}
+							className="grid gap-2 sm:grid-cols-[minmax(0,10rem)_1fr_4rem] sm:items-center"
+							data-testid="holder-concentration-bar"
 						>
-							<div
+							<span
 								className={cn(
-									'h-full rounded-full',
-									bar.id === 'others' ? 'bg-white/35' : 'bg-amber-400'
+									'truncate text-sm font-semibold text-white/80',
+									bar.walletAddress && 'font-mono'
 								)}
-								style={{ width: `${Math.min(100, bar.percent)}%` }}
-							/>
+								title={bar.walletAddress ?? bar.label}
+								data-testid={
+									bar.id === 'others'
+										? 'holder-concentration-others-label'
+										: 'holder-concentration-label'
+								}
+							>
+								{bar.label}
+							</span>
+							<div
+								className="h-3 overflow-hidden rounded-full bg-white/10"
+								aria-hidden="true"
+							>
+								<div
+									className={cn(
+										'h-full rounded-full',
+										bar.id === 'others' ? 'bg-white/35' : 'bg-amber-400'
+									)}
+									style={{ width: `${Math.min(100, bar.percent)}%` }}
+								/>
+							</div>
+							<span
+								className="text-right text-sm font-bold tabular-nums text-amber-300/90"
+								data-testid={
+									bar.id === 'others'
+										? 'holder-concentration-others-percent'
+										: 'holder-concentration-percent'
+								}
+							>
+								{formatPercent(bar.percent, { maximumFractionDigits: 1 })}
+							</span>
 						</div>
-						<span
-							className="text-right text-sm font-bold tabular-nums text-amber-300/90"
-							data-testid={
-								bar.id === 'others'
-									? 'holder-concentration-others-percent'
-									: 'holder-concentration-percent'
-							}
-						>
-							{formatPercent(bar.percent, { maximumFractionDigits: 1 })}
-						</span>
-					</div>
-				))}
+					))}
+				</div>
 			</div>
-		</div>
+		</AccessibleChart>
 	);
 };
 
