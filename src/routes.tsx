@@ -54,6 +54,8 @@ import EscapeRedeemPage from './pages/EscapeRedeemPage';
 import LpPositionsPage from './pages/LpPositionsPage';
 import ProposalCreatePage from './pages/ProposalCreatePage';
 import ApiKeysPage from './pages/ApiKeysPage';
+import GuardiansPage from './pages/GuardiansPage';
+import GuardianApprovePage from './pages/GuardianApprovePage';
 import RetirementBuybackConfirmedPage from './pages/RetirementBuybackConfirmedPage';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 import AdminLoginPage from './pages/AdminLoginPage';
@@ -484,6 +486,21 @@ export const routes = [
 				// Developer API key management for integrators and creators (#1322).
 				path: '/settings/developer',
 				element: <ApiKeysPage />,
+			},
+			{
+				// Social recovery guardians and recovery approvals (#1382).
+				path: '/settings/recovery',
+				element: withRouteErrorBoundary(
+					<GuardiansPage />,
+					'Social recovery'
+				),
+			},
+			{
+				path: '/settings/recovery/approve',
+				element: withRouteErrorBoundary(
+					<GuardianApprovePage />,
+					'Guardian approvals'
+				),
 			},
 			{
 				path: '/settings/notifications',
