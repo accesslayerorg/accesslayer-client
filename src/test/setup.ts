@@ -12,6 +12,10 @@ vi.mock('wagmi', async importOriginal => {
 	};
 });
 
+vi.mock('@/hooks/useFeeDiscount', () => ({
+	useFeeDiscount: vi.fn(() => ({ data: undefined, isLoading: false })),
+}));
+
 // Node 22+ experimental localStorage polyfill for jsdom test environment
 if (typeof window !== 'undefined') {
 	const store = new Map<string, string>();

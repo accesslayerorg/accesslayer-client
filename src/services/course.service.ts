@@ -2,6 +2,7 @@
 import { BaseApiService, ApiError, type APIResponse } from './api.service';
 import type { CreatorSocialLinks } from '@/types/creatorProfile';
 import type { KeySplitEvent } from '@/types/keySplit';
+import type { LaunchCapConfig } from '@/types/launchCap';
 import type { ContractDynamicFeeRate } from '@/utils/dynamicFeeRate.utils';
 import { cacheManager } from '@/utils/cache.utils';
 
@@ -202,6 +203,8 @@ export interface Course {
 	recentSplit?: KeySplitEvent | null;
 	/** Alias for recentSplit (#1151). */
 	splitExecuted?: KeySplitEvent | null;
+	/** Launch window purchase cap configuration (#1385). */
+	launchCap?: LaunchCapConfig | null;
 }
 
 export interface KeyDeprecation {

@@ -91,6 +91,7 @@ import { usePaymentSchedule } from '@/hooks/usePaymentSchedule';
 import type { SecondaryPriceRange } from '@/services/secondaryPrices.service';
 import type { PriceHistoryInterval } from '@/services/course.service';
 import TradeDialog from '@/components/common/TradeDialog';
+import LaunchCapMeter from '@/components/common/LaunchCapMeter';
 import SpreadIndicator from '@/components/common/SpreadIndicator';
 import OraclePriceIndicator from '@/components/common/OraclePriceIndicator';
 import { useKeyOraclePrice } from '@/hooks/useKeyOraclePrice';
@@ -1067,6 +1068,12 @@ function CreatorDetailPageContent() {
 												)}
 											</p>
 										)}
+
+									<LaunchCapMeter
+										keyId={creator.id}
+										wallet={userAddress}
+										className="mt-3"
+									/>
 								</div>
 
 								<div className="flex flex-wrap items-center gap-2">
@@ -1760,6 +1767,9 @@ function CreatorDetailPageContent() {
 					<TradeDialog
 						open={buyDialogOpen}
 						side={tradeSide}
+						keyId={creator.id}
+						creatorId={creator.id}
+						walletAddress={userAddress}
 						creatorName={creator.title || creator.name || 'Creator'}
 						availableHoldings={tradableHoldingsCount}
 						keyPriceStroops={resolveCreatorKeyPriceStroops(creator)}

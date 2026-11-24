@@ -107,6 +107,10 @@ export const queryKeys = {
 			['creators', creatorId, 'whitelist'] as const,
 		earlyIncentive: (creatorId: string) =>
 			['creators', creatorId, 'early-incentive'] as const,
+		launchCap: (keyId: string, wallet?: string) =>
+			wallet
+				? (['creators', keyId, 'launch-cap', wallet] as const)
+				: (['creators', keyId, 'launch-cap'] as const),
 		secondaryPrices: (creatorId: string, range: string) =>
 			['creators', creatorId, 'secondary-prices', range] as const,
 		// Order-book depth for the market depth chart (#1220).
