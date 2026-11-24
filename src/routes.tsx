@@ -13,6 +13,7 @@ import CreatorDashboardPage from './pages/CreatorDashboardPage';
 import CreatorPublicProfilePage from './pages/CreatorPublicProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
 import OtcTradePage from './pages/OtcTradePage';
+import WatchlistPage from './pages/WatchlistPage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import NotificationPreferencesPage from './pages/NotificationPreferencesPage';
 import PriceAlertsSettingsPage from './pages/PriceAlertsSettingsPage';
@@ -314,6 +315,10 @@ export const routes = [
 			{
 				path: '/notifications',
 				element: <NotificationsPage />,
+			},
+			{
+				path: '/watchlist',
+				element: withRouteErrorBoundary(<WatchlistPage />, 'Watchlist'),
 			},
 			{
 				path: '/settings',

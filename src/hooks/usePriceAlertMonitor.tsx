@@ -1,130 +1,110 @@
-import { createElement, useEffect, useRef, useState } from 'react';
+import { createElement, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { env } from '@/utils/env.utils';
 import { usePriceAlerts } from '@/hooks/usePriceAlerts';
-import { priceAlertStorage } from '@/lib/priceAlertStorage';
 import PriceAlertToast from '@/components/common/PriceAlertToast';
-
-// ---------------------------------------------------------------------------
-// WebSocket price message shape
-// ---------------------------------------------------------------------------
-
-interface PriceMessage {
-	creatorId: string;
-	priceStroops: number;
-}
-
-function isPriceMessage(value: unknown): value is PriceMessage {
-	return (
-		typeof value === 'object' &&
-		value !== null &&
-		typeof (value as Record<string, unknown>).creatorId === 'string' &&
-		typeof (value as Record<string, unknown>).priceStroops === 'number'
-	);
-}
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
+import {
+	keyPriceSocket,
+	type KeyPriceSocketStatus,
+	type KeyPriceUpdate,
+} from '@/services/realtime.service';
 
 export interface UsePriceAlertMonitorResult {
 	isConnected: boolean;
 }
 
-export function usePriceAlertMonitor(): UsePriceAlertMonitorResult {
-	const alerts = usePriceAlerts(state => state.alerts);
-	const alertsRef = useRef(alerts);
-	const [isConnected, setIsConnected] = useState(false);
+/**
+ * One shared monitor owns every alert subscription, even when several
+ * components mount the hook (App plus the price-alerts settings page).
+ */
+let monitorConsumers = 0;
+let stopMonitor: (() => void) | null = null;
 
-	// Keep alertsRef current so the WebSocket message handler always sees the
-	// latest alerts without needing to close/reopen the socket on every change.
-	useEffect(() => {
-		alertsRef.current = alerts;
-	}, [alerts]);
+function startMonitor(): () => void {
+	const firedAlertIds = new Set<string>();
+	const unsubscribes = new Map<string, () => void>();
+	let watchedKeyIds: string[] = [];
 
-	useEffect(() => {
-		const wsBase = env.VITE_BACKEND_URL.replace(/^http/, 'ws');
-		const url = `${wsBase}/ws/prices`;
+	const handleTick = (keyId: string, update: KeyPriceUpdate) => {
+		const { alerts, removeAlert } = usePriceAlerts.getState();
 
-		let ws: WebSocket | null = null;
-		let isMounted = true;
+		for (const alert of alerts) {
+			if (alert.creatorId !== keyId || firedAlertIds.has(alert.id)) continue;
 
-		function handleMessage(event: MessageEvent) {
-			let data: unknown;
-			try {
-				data = JSON.parse(event.data as string);
-			} catch {
-				return;
-			}
+			const crossed =
+				alert.direction === 'above'
+					? update.priceStroops >= alert.thresholdStroops
+					: update.priceStroops <= alert.thresholdStroops;
+			if (!crossed) continue;
 
-			if (!isPriceMessage(data)) return;
-
-			const { creatorId, priceStroops } = data;
-			const relevantAlerts = alertsRef.current.filter(
-				a => a.creatorId === creatorId
+			firedAlertIds.add(alert.id);
+			toast.custom(
+				t =>
+					createElement(PriceAlertToast, {
+						t,
+						alert,
+						triggeredPriceStroops: update.priceStroops,
+					}),
+				{ duration: 8000, id: `price-alert-${alert.id}` }
 			);
 
-			for (const alert of relevantAlerts) {
-				const crossed =
-					alert.direction === 'above'
-						? priceStroops >= alert.thresholdStroops
-						: priceStroops <= alert.thresholdStroops;
+			// Clear the alert so later ticks cannot fire the same notification.
+			removeAlert(alert.id);
+		}
+	};
 
-				if (!crossed) continue;
-
-				// Capture stable references for the closure.
-				const firedAlert = alert;
-				const firedPrice = priceStroops;
-
-				toast.custom(
-					t =>
-						createElement(PriceAlertToast, {
-							t,
-							alert: firedAlert,
-							triggeredPriceStroops: firedPrice,
-						}),
-					{ duration: 8000, id: `price-alert-${firedAlert.id}` }
-				);
-
-				priceAlertStorage.markTriggered(alert.id);
-
-				// Sync the Zustand store so lastTriggeredAt is reflected immediately.
-				usePriceAlerts.setState(state => ({
-					alerts: state.alerts.map(a =>
-						a.id === alert.id
-							? { ...a, lastTriggeredAt: new Date().toISOString() }
-							: a
-					),
-				}));
-			}
+	const syncSubscriptions = () => {
+		const nextKeyIds = [
+			...new Set(usePriceAlerts.getState().alerts.map(alert => alert.creatorId)),
+		];
+		if (
+			nextKeyIds.length === watchedKeyIds.length &&
+			nextKeyIds.every((keyId, index) => keyId === watchedKeyIds[index])
+		) {
+			return;
 		}
 
-		ws = new WebSocket(url);
+		unsubscribes.forEach(unsubscribe => unsubscribe());
+		unsubscribes.clear();
+		watchedKeyIds = nextKeyIds;
 
-		ws.addEventListener('open', () => {
-			if (isMounted) setIsConnected(true);
-		});
+		for (const keyId of nextKeyIds) {
+			unsubscribes.set(
+				keyId,
+				keyPriceSocket.subscribe(keyId, update => handleTick(keyId, update))
+			);
+		}
+	};
 
-		ws.addEventListener('close', () => {
-			if (isMounted) setIsConnected(false);
-		});
+	const unsubscribeStore = usePriceAlerts.subscribe(syncSubscriptions);
+	syncSubscriptions();
 
-		ws.addEventListener('error', () => {
-			if (isMounted) setIsConnected(false);
-		});
+	return () => {
+		unsubscribeStore();
+		unsubscribes.forEach(unsubscribe => unsubscribe());
+		unsubscribes.clear();
+		watchedKeyIds = [];
+	};
+}
 
-		ws.addEventListener('message', handleMessage);
+export function usePriceAlertMonitor(): UsePriceAlertMonitorResult {
+	const [status, setStatus] = useState<KeyPriceSocketStatus>(
+		keyPriceSocket.currentStatus
+	);
+
+	useEffect(() => {
+		const unsubscribeStatus = keyPriceSocket.subscribeStatus(setStatus);
+		monitorConsumers += 1;
+		if (monitorConsumers === 1) stopMonitor = startMonitor();
 
 		return () => {
-			isMounted = false;
-			if (ws) {
-				ws.removeEventListener('message', handleMessage);
-				ws.close();
+			monitorConsumers -= 1;
+			if (monitorConsumers === 0 && stopMonitor) {
+				stopMonitor();
+				stopMonitor = null;
 			}
+			unsubscribeStatus();
 		};
-		// Intentionally runs once: alertsRef keeps the alert snapshot fresh
-		// without reopening the socket on every change.
 	}, []);
 
-	return { isConnected };
+	return { isConnected: status === 'connected' };
 }

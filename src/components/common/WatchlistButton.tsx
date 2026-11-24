@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bookmark } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 import { useConnectedWallet, useWatchlist } from '@/hooks/useWatchlist';
@@ -53,11 +53,12 @@ const WatchlistButton: React.FC<WatchlistButtonProps> = ({
 	return (
 		<button
 			type="button"
+			data-testid="watchlist-toggle"
 			{...rest}
 			aria-label={
 				bookmarked
-					? `${displayName} saved to watchlist. Remove bookmark.`
-					: `Bookmark ${displayName}`
+					? `${displayName} saved to watchlist. Remove bookmark to unwatch.`
+					: `Bookmark ${displayName} — Watch this key`
 			}
 			aria-pressed={bookmarked}
 			onClick={handleToggle}
@@ -70,7 +71,7 @@ const WatchlistButton: React.FC<WatchlistButtonProps> = ({
 				className
 			)}
 		>
-			<Bookmark
+			<Heart
 				className={bookmarked ? 'fill-amber-300' : undefined}
 				aria-hidden="true"
 			/>

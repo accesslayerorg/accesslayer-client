@@ -10,6 +10,7 @@ import {
 	resolveCreatorKeyPriceStroops,
 } from '@/utils/keyPriceDisplay.utils';
 import AddToBatchButton from '@/components/common/AddToBatchButton';
+import WatchlistButton from '@/components/common/WatchlistButton';
 import IssuerVerificationBadge from '@/components/common/IssuerVerificationBadge';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
 import { cn } from '@/lib/utils';
@@ -118,14 +119,20 @@ export const KeyCard: React.FC<KeyCardProps> = ({ creator, className }) => {
 				)}
 			</div>
 
-			<div className="relative z-20 mt-3 pt-3 border-t border-white/10">
+			<div className="relative z-20 mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
+				<WatchlistButton
+					creator={creator}
+					labelName={displayName}
+					size="sm"
+					className="shrink-0"
+				/>
 				<AddToBatchButton
 					keyId={creator.id}
 					keyName={displayName}
 					priceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
 					currentSupply={creator.creatorShareSupply ?? null}
 					thumbnail={avatarSrc}
-					className="w-full justify-between"
+					className="flex-1 justify-between"
 				/>
 			</div>
 		</article>
