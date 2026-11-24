@@ -28,6 +28,9 @@ import {
 import { BUY_QUANTITY_BOUNDS, FEE_BOUNDS } from '@/constants/fees';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
+import { decodeContractError } from '@/lib/contractErrors';
+import TransactionErrorDialog from '@/components/common/TransactionErrorDialog';
+import type { DecodedContractError } from '@/lib/contractErrors';
 import type { KeyConfig } from '@/services/course.service';
 import SpreadIndicator from '@/components/common/SpreadIndicator';
 import HoldingCapIndicator from '@/components/common/HoldingCapIndicator';
@@ -43,6 +46,7 @@ import {
 	isTradeLimitReached,
 } from '@/utils/tradeLimit.utils';
 import { UnavailableAction } from '@/components/ui/unavailable-action';
+import { useOfflineStatus } from '@/hooks/useOfflineStatus';
 export interface BuySellTradeParams {
 	creatorId?: string;
 	side: 'buy' | 'sell';
@@ -147,7 +151,9 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 	>(null);
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
 	const [internalSubmitting, setInternalSubmitting] = useState(false);
+	const [txErrorDecoded, setTxErrorDecoded] = useState<import('@/lib/contractErrors').DecodedContractError | null>(null);
 	const { paused: globalPaused } = useGlobalPause();
+	const isOffline = useOfflineStatus();
 	// Trading is blocked by a platform-wide pause OR a pause on this key (#777).
 	const paused = globalPaused || tradingPaused;
 	// Price floor active (#1152) blocks sell trades when spot price <= floor price.
@@ -439,8 +445,8 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 			setConfirmationOpen(false);
 			onSuccess?.(tradeParams);
 		} catch (error) {
-			const message = getSignatureErrorMessage(error);
-			showToast.error(message);
+			const decoded = decodeContractError(error);
+			setTxErrorDecoded(decoded);
 			onError?.(error);
 		} finally {
 			setInternalSubmitting(false);
@@ -723,13 +729,15 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 
 			{/* Review / Proceed to Confirmation Button */}
 			<UnavailableAction
-				disabled={paused || (side === 'sell' && isFloorActive)}
+				disabled={isOffline || paused || (side === 'sell' && isFloorActive)}
 				reason={
-					globalPaused
-						? 'Platform Paused'
-						: side === 'sell' && isFloorActive
-							? 'PriceFloorActive: Selling is disabled while current price is at or below the floor price.'
-							: 'Trading is currently paused'
+					isOffline
+						? 'Trading is disabled while offline'
+						: globalPaused
+							? 'Platform Paused'
+							: side === 'sell' && isFloorActive
+								? 'PriceFloorActive: Selling is disabled while current price is at or below the floor price.'
+								: 'Trading is currently paused'
 				}
 			>
 				<Button
@@ -738,6 +746,7 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 					disabled={
 						!isValid ||
 						isSubmitting ||
+						isOffline ||
 						(impactWarningActive && !impactAcknowledged) ||
 						paused ||
 						(side === 'sell' && isFloorActive)
@@ -774,6 +783,18 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 				onConfirm={handleConfirmSubmission}
 				onCancel={() => setConfirmationOpen(false)}
 				isSubmitting={isSubmitting}
+			/>
+
+			{/* Contract Error Dialog */}
+			<TransactionErrorDialog
+				open={txErrorDecoded !== null}
+				onClose={() => setTxErrorDecoded(null)}
+				decoded={txErrorDecoded}
+				onRecovery={action => {
+					if (action === 'adjust-slippage') {
+						setSlippageTolerancePercent(2.0);
+					}
+				}}
 			/>
 		</div>
 	);

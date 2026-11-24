@@ -1,3 +1,5 @@
+import { decodeContractError } from '@/lib/contractErrors';
+
 /**
  * Wallet and Signature error handling utilities
  */
@@ -58,7 +60,11 @@ export function getSignatureErrorMessage(error: unknown): string {
 	if (isUserRejection(error)) {
 		return WALLET_ERROR_COPY.SIGNATURE_REJECTED;
 	}
-	
-	// For other failures that aren't explicit rejections
+
+	const decoded = decodeContractError(error);
+	if (decoded.code !== null) {
+		return decoded.message;
+	}
+
 	return WALLET_ERROR_COPY.SIGNATURE_FAILED;
 }
