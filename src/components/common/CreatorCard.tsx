@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router';
+import PrefetchLink from '@/components/common/PrefetchLink';
 import { useAccount } from 'wagmi';
 import { useConnectedWallet } from '@/hooks/useWatchlist';
 import type { Course } from '@/services/course.service';
@@ -362,13 +363,13 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 							Share creator
 						</DropdownMenuItem>
 						<DropdownMenuItem asChild>
-							<Link
+							<PrefetchLink
 								to={`/creator/${creator.id}`}
 								className="cursor-pointer gap-2 text-white/70 focus:bg-white/10 focus:text-white flex items-center w-full"
 							>
 								<ExternalLink className="size-3.5" aria-hidden="true" />
 								View profile
-							</Link>
+							</PrefetchLink>
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
@@ -417,13 +418,13 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 						id={`creator-name-${creator.id}`}
 						className="font-jakarta text-lg font-bold text-white"
 					>
-						<Link
+						<PrefetchLink
 							to={`/creator/${creator.id}`}
 							data-testid="creator-profile-link"
 							className="hover:underline"
 						>
 							{displayCreatorName}
-						</Link>
+						</PrefetchLink>
 					</h3>
 					<VerifiedBadge
 						verified={Boolean(creator.isVerified)}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { getFallbackAvatarColors } from '@/utils/avatarColor.util';
+import ResponsiveImage from '@/components/common/ResponsiveImage';
 
 interface CreatorInitialsAvatarProps {
 	name: string;
@@ -60,11 +61,13 @@ const CreatorInitialsAvatar: React.FC<CreatorInitialsAvatarProps> = ({
 	}
 
 	return (
-		<img
+		<ResponsiveImage
 			src={imageSrc}
 			alt={`${name} avatar`}
+			aspectRatio="1/1"
 			onError={() => setHasError(true)}
-			className={cn('size-full object-cover', imageClassName, className)}
+			className={cn('size-full', className)}
+			imageClassName={cn('size-full object-cover', imageClassName)}
 		/>
 	);
 };

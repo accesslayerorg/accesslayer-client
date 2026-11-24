@@ -7,6 +7,7 @@ import GlobalSearch from '@/components/common/GlobalSearch';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import ThemeToggle from '@/components/common/ThemeToggle';
 import { Link } from 'react-router';
+import PrefetchLink from '@/components/common/PrefetchLink';
 import BatchTradePanel from '@/components/common/BatchTradePanel';
 import { useConnectedWallet, useWatchlist } from '@/hooks/useWatchlist';
 
@@ -72,16 +73,16 @@ export default function Header() {
 								{link.label}
 							</a>
 						) : (
-							<Link
+							<PrefetchLink
 								key={link.href}
 								to={link.href}
 								className={`font-jakarta text-sm transition-colors duration-300 ${scrolled ? 'text-gray-500 hover:text-gray-900' : 'text-white/45 hover:text-white/80'}`}
 							>
 								{link.label}
-							</Link>
+							</PrefetchLink>
 						)
 					)}
-					<Link
+					<PrefetchLink
 						to="/watchlist"
 						className={`relative inline-flex items-center gap-1.5 font-jakarta text-sm transition-colors duration-300 ${scrolled ? 'text-gray-500 hover:text-gray-900' : 'text-white/45 hover:text-white/80'}`}
 						aria-label={`Watchlist, ${watchlistCount} saved ${watchlistCount === 1 ? 'key' : 'keys'}`}
@@ -96,7 +97,7 @@ export default function Header() {
 								{watchlistCount}
 							</span>
 						)}
-					</Link>
+					</PrefetchLink>
 				</nav>
 
 				{/* Global Header Search (#933) */}

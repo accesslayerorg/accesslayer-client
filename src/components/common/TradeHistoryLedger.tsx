@@ -6,6 +6,7 @@ import EmptyState from '@/components/common/EmptyState';
 import { cn } from '@/lib/utils';
 import { useAllTradeHistory } from '@/hooks/useAllTradeHistory';
 import { formatNumber } from '@/utils/numberFormat.utils';
+import { formatDate } from '@/utils/time';
 import { downloadCsv } from '@/utils/transactionHistory.utils';
 import {
 	EMPTY_TRADE_LEDGER_FILTERS,
@@ -231,14 +232,7 @@ export const TradeHistoryLedger: React.FC<TradeHistoryLedgerProps> = ({
 									return (
 										<tr key={trade.id} data-testid="trade-ledger-row">
 											<td className="whitespace-nowrap px-3 py-2">
-												{new Date(
-													trade.timestamp
-												).toLocaleDateString('en-US', {
-													year: 'numeric',
-													month: 'short',
-													day: 'numeric',
-													timeZone: 'UTC',
-												})}
+												{formatDate(trade.timestamp)}
 											</td>
 											<td className="px-3 py-2">{trade.keyName}</td>
 											<td className="px-3 py-2">

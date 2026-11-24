@@ -40,6 +40,7 @@ import HolderConcentrationChart from '@/components/common/HolderConcentrationCha
 import HolderConcentrationHeatmap from '@/components/common/HolderConcentrationHeatmap';
 import HolderSnapshotHistory from '@/components/common/HolderSnapshotHistory';
 import KeyAnalyticsHistoryChart from '@/components/common/KeyAnalyticsHistoryChart';
+import ActivityHeatmap from '@/components/creator/ActivityHeatmap';
 import ReputationBreakdownPanel from '@/components/common/ReputationBreakdownPanel';
 import GraduationCelebration from '@/components/common/GraduationCelebration';
 import StakingRewardsSection from '@/components/common/StakingRewardsSection';
@@ -164,13 +165,14 @@ import { QrCode, Bell } from 'lucide-react';
 import PriceAlertForm from '@/components/common/PriceAlertForm';
 
 /** Series shown in the key detail price panel (#1220 adds the depth tab). */
-type PriceChartTab = 'primary' | 'secondary' | 'depth' | 'revenue';
+type PriceChartTab = 'primary' | 'secondary' | 'depth' | 'revenue' | 'activity';
 
 const PRICE_CHART_TABS: Array<{ id: PriceChartTab; label: string }> = [
 	{ id: 'primary', label: 'Price history' },
 	{ id: 'secondary', label: 'Secondary market' },
 	{ id: 'depth', label: 'Depth' },
 	{ id: 'revenue', label: 'Revenue Share' },
+	{ id: 'activity', label: 'Activity' },
 ];
 
 function CreatorDetailPageContent() {
@@ -924,12 +926,16 @@ function CreatorDetailPageContent() {
 					<SectionErrorBoundary sectionName="market depth">
 						<KeyDepthChart keyId={id || ''} />
 					</SectionErrorBoundary>
-				) : (
+				) : priceChartTab === 'revenue' ? (
 					<SectionErrorBoundary sectionName="revenue share">
 						<RevenueSharePanel
 							keyId={id || ''}
 							wallet={connectedWalletAddress ?? undefined}
 						/>
+					</SectionErrorBoundary>
+				) : (
+					<SectionErrorBoundary sectionName="activity heatmap">
+						<ActivityHeatmap keyId={id || ''} />
 					</SectionErrorBoundary>
 				)}
 
@@ -1458,6 +1464,12 @@ function CreatorDetailPageContent() {
 					<SectionErrorBoundary sectionName="key analytics history">
 						<KeyAnalyticsHistoryChart keyId={creator.id} />
 					</SectionErrorBoundary>
+
+					<div className="mt-8 border-t border-white/10 pt-8">
+						<SectionErrorBoundary sectionName="key activity heatmap">
+							<ActivityHeatmap keyId={creator.id} />
+						</SectionErrorBoundary>
+					</div>
 				</div>
 
 				<div
