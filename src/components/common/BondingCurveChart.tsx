@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AccessibleChart, { generateTimeSeriesSummary } from '@/components/common/AccessibleChart';
 import {
 	ResponsiveContainer,
 	LineChart,
@@ -288,8 +289,23 @@ const BondingCurveChart: React.FC<BondingCurveChartProps> = ({
 	const displayHeight = typeof height === 'number' ? `${height}px` : height;
 	const displayWidth = typeof width === 'number' ? `${width}px` : width;
 
+	const curveSummary = `Bonding Curve: Current supply is ${effectiveCurrentSupply ?? 0} keys at ${formatDisplayKeyPrice(effectiveCurrentPriceStroops ?? 0)}. Total data points: ${chartData.length}.`;
+	const tableData = chartData.map(d => ({
+		supply: d.supply,
+		price: formatDisplayKeyPrice(d.priceStroops),
+	}));
+
 	return (
-		<div className={cn('w-full', className)}>
+		<AccessibleChart
+			title="Bonding Curve"
+			summary={curveSummary}
+			tableHeaders={['Supply', 'Price']}
+			tableData={tableData}
+			getRowValues={row => [String(row.supply), String(row.price)]}
+			className={cn('w-full', className)}
+			data-testid="bonding-curve-chart"
+		>
+			<div>
 			{/* TWAP overlay controls (#931) */}
 			{shouldShowTwapControls && (
 				<div
@@ -610,7 +626,8 @@ const BondingCurveChart: React.FC<BondingCurveChartProps> = ({
 					)}
 				</div>
 			)}
-		</div>
+			</div>
+		</AccessibleChart>
 	);
 };
 
