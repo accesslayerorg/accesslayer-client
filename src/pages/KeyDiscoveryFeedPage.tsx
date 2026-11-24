@@ -205,9 +205,13 @@ export default function KeyDiscoveryFeedPage() {
 						<div
 							className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
 							data-testid="discovery-feed-grid"
+							role="grid"
+							aria-rowcount={displayKeys.length}
 						>
-							{displayKeys.map(creator => (
-								<KeyCard key={creator.id} creator={creator} />
+							{displayKeys.map((creator, index) => (
+								<div key={creator.id} role="row" aria-rowindex={index + 1}>
+									<KeyCard creator={creator} />
+								</div>
 							))}
 						</div>
 

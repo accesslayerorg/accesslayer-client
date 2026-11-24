@@ -1,4 +1,3 @@
-// src/components/common/TradeHistoryTable.tsx
 import React, { useMemo, useState } from 'react';
 import { ArrowUpRight, ArrowDownRight, ClockIcon, Copy, Check, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { buildStellarExpertTxUrl } from '@/constants/stellar';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
 import { env } from '@/utils/env.utils';
+import { VirtualList } from '@/components/common/VirtualList';
 
 const COPY_TOOLTIP_RESET_MS = 2_000;
 
@@ -341,11 +341,15 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
 				</div>
 			</div>
 
-			<div className="space-y-2" data-testid="trade-history-list">
-				{trades.map(trade => (
-					<TradeRow key={trade.id} trade={trade} />
-				))}
-			</div>
+			<VirtualList
+				items={trades}
+				estimateSize={() => 76}
+				renderItem={trade => <TradeRow trade={trade} />}
+				data-testid="trade-history-list"
+				className="space-y-2 max-h-[600px]"
+				aria-rowcount={trades.length}
+				onNearEnd={infiniteScroll && hasNextPage && !isFetchingNextPage ? () => void fetchNextPage() : undefined}
+			/>
 
 			{/* Infinite-scroll sentinel ───── auto-loads the next page (#921) */}
 			{infiniteScroll && hasNextPage && (
