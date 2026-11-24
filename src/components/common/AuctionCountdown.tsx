@@ -24,6 +24,8 @@ const AuctionCountdown: React.FC<AuctionCountdownProps> = ({
 	className,
 }) => {
 	if (label == null) return null;
+	// Closed auctions are shown as a static pill; the ticking label is
+	// intentionally not rendered once the window has ended.
 
 	return (
 		<p

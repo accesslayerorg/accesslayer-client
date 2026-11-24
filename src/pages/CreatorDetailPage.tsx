@@ -1283,20 +1283,22 @@ function CreatorDetailPageContent() {
 				</div>
 
 				{auctionPhase !== 'inactive' && (
-					<AuctionPhaseSection
-						creatorId={creator.id}
-						auctionPrice={creator.auctionPrice}
-						auctionSupply={creator.auctionSupply}
-						auctionSold={creator.auctionSold}
-						auctionEndsAt={creator.auctionEndsAt}
-						auctionMinIncrement={creator.auctionMinIncrement}
-						auctionHighestBid={creator.auctionHighestBid}
-						auctionBids={creator.auctionBids}
-						auctionClearingPrice={creator.auctionClearingPrice}
-						auctionAllocation={creator.auctionAllocation}
-						auctionSettled={creator.auctionSettled}
-						userAddress={userAddress}
-					/>
+					<div id="commit-reveal" data-testid="commit-reveal-panel">
+						<AuctionPhaseSection
+							creatorId={creator.id}
+							auctionPrice={creator.auctionPrice}
+							auctionSupply={creator.auctionSupply}
+							auctionSold={creator.auctionSold}
+							auctionEndsAt={creator.auctionEndsAt}
+							auctionMinIncrement={creator.auctionMinIncrement}
+							auctionHighestBid={creator.auctionHighestBid}
+							auctionBids={creator.auctionBids}
+							auctionClearingPrice={creator.auctionClearingPrice}
+							auctionAllocation={creator.auctionAllocation}
+							auctionSettled={creator.auctionSettled}
+							userAddress={userAddress}
+						/>
+					</div>
 				)}
 
 				{userAddress && !isTradeCooldownActive && (
