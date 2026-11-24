@@ -416,6 +416,17 @@ export const queryKeys = {
 		submissions: (bountyId: string) =>
 			['bounties', 'submissions', bountyId] as const,
 	},
+	broadcasts: {
+		all: () => ['broadcasts'] as const,
+		holders: (keyId: string) => ['broadcasts', 'holders', keyId] as const,
+		history: (keyId: string) => ['broadcasts', 'history', keyId] as const,
+		optIns: (wallet: string) => ['broadcasts', 'opt-ins', wallet] as const,
+	},
+	mediaKit: {
+		all: () => ['media-kit'] as const,
+		settings: (keyId: string) => ['media-kit', 'settings', keyId] as const,
+		public: (handle: string) => ['media-kit', 'public', handle] as const,
+	},
 	grants: {
 		all: () => ['grants'] as const,
 		pages: (filters?: Record<string, unknown>) =>
@@ -431,16 +442,5 @@ export const queryKeys = {
 	feeChange: {
 		all: () => ['fee-change'] as const,
 		pending: () => ['fee-change', 'pending'] as const,
-	},
-	broadcasts: {
-		all: () => ['broadcasts'] as const,
-		holders: (keyId: string) => ['broadcasts', 'holders', keyId] as const,
-		history: (keyId: string) => ['broadcasts', 'history', keyId] as const,
-		optIns: (wallet: string) => ['broadcasts', 'opt-ins', wallet] as const,
-	},
-	mediaKit: {
-		all: () => ['media-kit'] as const,
-		settings: (keyId: string) => ['media-kit', 'settings', keyId] as const,
-		public: (handle: string) => ['media-kit', 'public', handle] as const,
 	},
 } as const;
