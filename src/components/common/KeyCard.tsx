@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router';
+import PrefetchLink from '@/components/common/PrefetchLink';
 import type { Course } from '@/services/course.service';
 import CreatorInitialsAvatar from '@/components/common/CreatorInitialsAvatar';
 import Change24hBadge from '@/components/common/Change24hBadge';
@@ -46,13 +46,13 @@ export const KeyCard: React.FC<KeyCardProps> = ({ creator, className }) => {
 				className
 			)}
 		>
-			<Link
+			<PrefetchLink
 				to={`/creator/${creator.id}`}
 				className="absolute inset-0 z-10 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
 				aria-label={`View ${displayName}'s key details`}
 			>
 				<span className="sr-only">View {displayName}&apos;s key</span>
-			</Link>
+			</PrefetchLink>
 
 			<div>
 				<div className="flex items-start justify-between gap-3">
