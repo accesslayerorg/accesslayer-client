@@ -14,6 +14,7 @@ import type {
 	LeaderboardMetric,
 } from '@/services/analytics.service';
 import type { KeyHolderLeaderboardMetric } from '@/services/keyLeaderboard.service';
+import type { ReferralHoldFilters } from '@/services/adminReferralHolds.service';
 
 export const queryKeys = {
 	creatorProfile: {
@@ -216,6 +217,20 @@ export const queryKeys = {
 		upgradeProxyStatus: () => ['admin', 'proxy', 'status'] as const,
 		upgradeProxyPending: () => ['admin', 'proxy', 'pending'] as const,
 		upgradeProxyHistory: () => ['admin', 'proxy', 'history'] as const,
+		referralHolds: {
+			all: () => ['admin', 'referral-holds'] as const,
+			list: (filters: ReferralHoldFilters = {}) =>
+				[
+					'admin',
+					'referral-holds',
+					'list',
+					filters.status ?? null,
+					filters.reason ?? null,
+				] as const,
+			summary: () => ['admin', 'referral-holds', 'summary'] as const,
+			detail: (id: string) =>
+				['admin', 'referral-holds', 'detail', id] as const,
+		},
 	},
 	governance: {
 		all: () => ['governance'] as const,
