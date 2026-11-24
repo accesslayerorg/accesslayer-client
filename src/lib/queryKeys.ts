@@ -137,6 +137,16 @@ export const queryKeys = {
 	wallet: {
 		holdings: (address: string) => ['wallet', address, 'holdings'] as const,
 		badges: (address: string) => ['wallet', address, 'badges'] as const,
+		soulboundBadges: (address: string) =>
+			['wallet', address, 'soulboundBadges'] as const,
+		balanceHistory: (address: string, keyId?: string, range?: string) =>
+			[
+				'wallet',
+				address,
+				'balanceHistory',
+				keyId ?? 'all',
+				range ?? 'all',
+			] as const,
 		badgeMetrics: (address: string) =>
 			['wallet', address, 'badgeMetrics'] as const,
 		receivedGifts: (address: string) =>
