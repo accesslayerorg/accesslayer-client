@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import {
 	Dialog,
 	DialogContent,
@@ -14,6 +15,8 @@ import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import PriceImpactWarning from '@/components/common/PriceImpactWarning';
 import DynamicFeeBreakdown from '@/components/common/DynamicFeeBreakdown';
 import SlippageToleranceSelector from '@/components/common/SlippageToleranceSelector';
+import FeeImpactPreview from '@/components/fees/FeeImpactPreview';
+import { usePendingFeeChange } from '@/hooks/useFeeChange';
 import {
 	formatPriceImpact,
 	isHighPriceImpact,
@@ -90,6 +93,7 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 		slippageTolerancePercent
 	);
 	const [slippageError, setSlippageError] = useState<string | null>(null);
+	const pendingFeeChange = usePendingFeeChange();
 
 	useEffect(() => {
 		setCurrentSlippage(slippageTolerancePercent);
@@ -302,6 +306,13 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 						/>
 					)}
 
+					{pendingFeeChange && (
+						<FeeImpactPreview
+							pending={pendingFeeChange}
+							totalStroops={totalStroops}
+						/>
+					)}
+
 					{/* Slippage Protection Bounds */}
 					<div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-4 space-y-3">
 						<div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-300">
@@ -398,6 +409,14 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 							</span>
 						</div>
 					)}
+
+					<Link
+						to="/learn/bonding-curve"
+						data-testid="trade-explainer-link"
+						className="inline-block font-jakarta text-xs font-bold text-amber-300 hover:underline"
+					>
+						How does the price curve work?
+					</Link>
 
 					{/* Price Impact Warning if exceeds 5% */}
 					{priceImpactPercent != null &&

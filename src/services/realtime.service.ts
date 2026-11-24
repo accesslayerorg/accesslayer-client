@@ -29,6 +29,21 @@ export interface KeyPriceUpdate {
 
 export type KeyPriceUpdateHandler = (update: KeyPriceUpdate) => void;
 
+/** A single live swap event for one creator key. */
+export interface KeySwapEvent {
+	id: string;
+	keyId: string;
+	type: 'buy' | 'sell';
+	quantity: number;
+	price?: number;
+	walletAddress: string;
+	/** Unix milliseconds. */
+	timestamp: number;
+	transactionHash?: string | null;
+}
+
+export type KeySwapEventHandler = (event: KeySwapEvent) => void;
+
 /** Connection lifecycle exposed to the UI for the "Live" indicator. */
 export type KeyPriceSocketStatus =
 	| 'disabled'
@@ -105,6 +120,50 @@ export function normalizeKeyPriceUpdate(value: unknown): KeyPriceUpdate | null {
 	};
 }
 
+/**
+ * Normalizes an incoming WebSocket frame into a `KeySwapEvent`. Returns `null`
+ * for frames that are not swap events (e.g. price-only ticks).
+ */
+export function normalizeKeySwapEvent(value: unknown): KeySwapEvent | null {
+	const envelope = asRecord(value);
+	const isSwapEnvelope =
+		envelope.type === 'swap' || envelope.type === 'trade' || envelope.event === 'swap';
+	if (!isSwapEnvelope && envelope.data == null) return null;
+	const raw = asRecord(envelope.data ?? envelope);
+
+	const keyId = raw.keyId ?? raw.key_id ?? raw.creatorId ?? raw.creator_id;
+	if (typeof keyId !== 'string' || keyId.trim() === '') return null;
+
+	const rawSide = String(raw.tradeType ?? raw.type ?? raw.side ?? '').toLowerCase();
+	if (rawSide !== 'buy' && rawSide !== 'sell') return null;
+
+	const quantity = toFiniteNumber(raw.quantity ?? raw.amount ?? raw.shares) ?? 0;
+	const price = toFiniteNumber(raw.price ?? raw.pricePerKey ?? raw.price_per_key);
+	const walletAddress = String(
+		raw.walletAddress ?? raw.wallet_address ?? raw.traderAddress ?? raw.wallet ?? raw.trader ?? 'Unknown wallet'
+	);
+	const txHash = raw.transactionHash ?? raw.transaction_hash ?? raw.txHash ?? raw.hash;
+	const transactionHash = typeof txHash === 'string' ? txHash : null;
+
+	const tsRaw = raw.timestamp ?? raw.createdAt ?? raw.created_at ?? raw.tradedAt;
+	const timestampMs = Date.parse(normalizeTimestamp(tsRaw));
+
+	const id = String(
+		raw.id ?? raw.tradeId ?? raw.trade_id ?? transactionHash ?? `${keyId}-${timestampMs}-${rawSide}-${quantity}`
+	);
+
+	return {
+		id,
+		keyId,
+		type: rawSide,
+		quantity,
+		price: price ?? undefined,
+		walletAddress,
+		timestamp: timestampMs,
+		transactionHash,
+	};
+}
+
 /** Minimal structural typing so tests can inject a fake socket. */
 export interface WebSocketLike {
 	readyState: number;
@@ -128,6 +187,7 @@ export class KeyPriceSocket {
 	private readonly url: string | null;
 	private readonly createWebSocket: WebSocketFactory | null;
 	private readonly handlers = new Map<string, Set<KeyPriceUpdateHandler>>();
+	private readonly swapHandlers = new Map<string, Set<KeySwapEventHandler>>();
 	private readonly statusListeners = new Set<
 		(status: KeyPriceSocketStatus) => void
 	>();
@@ -167,33 +227,15 @@ export class KeyPriceSocket {
 	 * re-subscribing server-side) as needed. Returns the unsubscribe fn.
 	 */
 	subscribe(keyId: string, handler: KeyPriceUpdateHandler): () => void {
-		if (!this.isEnabled || !keyId) return () => {};
+		return this.addHandler(this.handlers, 'price', keyId, handler);
+	}
 
-		let keyHandlers = this.handlers.get(keyId);
-		const isFirstHandlerForKey = !keyHandlers || keyHandlers.size === 0;
-		if (!keyHandlers) {
-			keyHandlers = new Set();
-			this.handlers.set(keyId, keyHandlers);
-		}
-		keyHandlers.add(handler);
-
-		this.openIfNeeded();
-		if (isFirstHandlerForKey && this.isOpen()) {
-			this.sendSubscribe(keyId);
-		}
-
-		return () => {
-			const current = this.handlers.get(keyId);
-			if (!current) return;
-			current.delete(handler);
-			if (current.size === 0) {
-				this.handlers.delete(keyId);
-				this.sendUnsubscribe(keyId);
-			}
-			if (this.handlers.size === 0) {
-				this.teardown();
-			}
-		};
+	/**
+	 * Subscribes `handler` to live swap events for `keyId`. Shares the same
+	 * connection and server-side topic as price ticks. Returns the unsubscribe fn.
+	 */
+	subscribeSwaps(keyId: string, handler: KeySwapEventHandler): () => void {
+		return this.addHandler(this.swapHandlers, 'swap', keyId, handler);
 	}
 
 	/** Notifies `listener` of every status transition. */
@@ -210,7 +252,54 @@ export class KeyPriceSocket {
 	/** Closes the socket and drops every subscriber (page teardown/tests). */
 	dispose(): void {
 		this.handlers.clear();
+		this.swapHandlers.clear();
 		this.teardown();
+	}
+
+	private addHandler<H>(
+		registry: Map<string, Set<H>>,
+		_kind: 'price' | 'swap',
+		keyId: string,
+		handler: H
+	): () => void {
+		if (!this.isEnabled || !keyId) return () => {};
+
+		let keyHandlers = registry.get(keyId);
+		const isFirstHandlerForKey =
+			(!keyHandlers || keyHandlers.size === 0) &&
+			!this.hasAnyHandlersFor(keyId);
+		if (!keyHandlers) {
+			keyHandlers = new Set();
+			registry.set(keyId, keyHandlers);
+		}
+		keyHandlers.add(handler);
+
+		this.openIfNeeded();
+		if (isFirstHandlerForKey && this.isOpen()) {
+			this.sendSubscribe(keyId);
+		}
+
+		return () => {
+			const current = registry.get(keyId);
+			if (!current) return;
+			current.delete(handler);
+			if (current.size === 0) {
+				registry.delete(keyId);
+			}
+			if (!this.hasAnyHandlersFor(keyId)) {
+				this.sendUnsubscribe(keyId);
+			}
+			if (this.handlers.size === 0 && this.swapHandlers.size === 0) {
+				this.teardown();
+			}
+		};
+	}
+
+	private hasAnyHandlersFor(keyId: string): boolean {
+		return (
+			(this.handlers.get(keyId)?.size ?? 0) > 0 ||
+			(this.swapHandlers.get(keyId)?.size ?? 0) > 0
+		);
 	}
 
 	private setStatus(next: KeyPriceSocketStatus): void {
@@ -221,6 +310,14 @@ export class KeyPriceSocket {
 
 	private isOpen(): boolean {
 		return this.socket != null && this.socket.readyState === OPEN_STATE;
+	}
+
+	private hasAnySubscribers(): boolean {
+		return this.handlers.size > 0 || this.swapHandlers.size > 0;
+	}
+
+	private allKeyIds(): Set<string> {
+		return new Set([...this.handlers.keys(), ...this.swapHandlers.keys()]);
 	}
 
 	private openIfNeeded(): void {
@@ -237,7 +334,7 @@ export class KeyPriceSocket {
 			this.reconnectAttempts = 0;
 			this.setStatus('connected');
 			// Re-subscribe every currently watched key after a reconnect.
-			for (const keyId of this.handlers.keys()) {
+			for (const keyId of this.allKeyIds()) {
 				this.sendSubscribe(keyId);
 			}
 		};
@@ -250,9 +347,16 @@ export class KeyPriceSocket {
 			} catch {
 				return; // Ignore frames that are not JSON.
 			}
+
+			const swap = normalizeKeySwapEvent(parsed);
+			if (swap) {
+				this.swapHandlers.get(swap.keyId)?.forEach(handler => handler(swap));
+			}
+
 			const update = normalizeKeyPriceUpdate(parsed);
-			if (!update) return;
-			this.handlers.get(update.keyId)?.forEach(handler => handler(update));
+			if (update) {
+				this.handlers.get(update.keyId)?.forEach(handler => handler(update));
+			}
 		};
 
 		socket.onerror = () => {
@@ -262,7 +366,7 @@ export class KeyPriceSocket {
 		socket.onclose = () => {
 			if (this.socket !== socket) return;
 			this.socket = null;
-			if (this.handlers.size === 0) {
+			if (!this.hasAnySubscribers()) {
 				this.setStatus('disabled');
 				return;
 			}

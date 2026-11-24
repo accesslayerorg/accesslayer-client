@@ -158,7 +158,10 @@ import { MarketMakerChip, MMBadge } from '@/components/common/MarketMakerChip';
 import ReportKeyModal from '@/components/common/ReportKeyModal';
 import ShareQrModal from '@/components/common/ShareQrModal';
 import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
+ feat/otc-trade-escrow
 import { Bell, QrCode } from 'lucide-react';
+
+ dev
 import RetirementExitPanel from '@/components/common/RetirementExitPanel';
 import RetirementNoticeEmailCard from '@/components/common/RetirementNoticeEmailCard';
 import PriceAlertForm from '@/components/common/PriceAlertForm';
@@ -1283,20 +1286,22 @@ function CreatorDetailPageContent() {
 				</div>
 
 				{auctionPhase !== 'inactive' && (
-					<AuctionPhaseSection
-						creatorId={creator.id}
-						auctionPrice={creator.auctionPrice}
-						auctionSupply={creator.auctionSupply}
-						auctionSold={creator.auctionSold}
-						auctionEndsAt={creator.auctionEndsAt}
-						auctionMinIncrement={creator.auctionMinIncrement}
-						auctionHighestBid={creator.auctionHighestBid}
-						auctionBids={creator.auctionBids}
-						auctionClearingPrice={creator.auctionClearingPrice}
-						auctionAllocation={creator.auctionAllocation}
-						auctionSettled={creator.auctionSettled}
-						userAddress={userAddress}
-					/>
+					<div id="commit-reveal" data-testid="commit-reveal-panel">
+						<AuctionPhaseSection
+							creatorId={creator.id}
+							auctionPrice={creator.auctionPrice}
+							auctionSupply={creator.auctionSupply}
+							auctionSold={creator.auctionSold}
+							auctionEndsAt={creator.auctionEndsAt}
+							auctionMinIncrement={creator.auctionMinIncrement}
+							auctionHighestBid={creator.auctionHighestBid}
+							auctionBids={creator.auctionBids}
+							auctionClearingPrice={creator.auctionClearingPrice}
+							auctionAllocation={creator.auctionAllocation}
+							auctionSettled={creator.auctionSettled}
+							userAddress={userAddress}
+						/>
+					</div>
 				)}
 
 				{userAddress && !isTradeCooldownActive && (

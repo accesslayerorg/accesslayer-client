@@ -21,6 +21,7 @@ import ComparePage from './pages/ComparePage';
 import GovernancePage from './pages/GovernancePage';
 import GovernanceFeedPage from './pages/GovernanceFeedPage';
 import ProposalDetailPage from './pages/ProposalDetailPage';
+import ConvictionProposalsPage from './pages/ConvictionProposalsPage';
 import ReferralDashboardPage from './pages/ReferralDashboardPage';
 import CreateCreatorKeyPage from './pages/CreateCreatorKeyPage';
 import StakingDashboardPage from './pages/StakingDashboardPage';
@@ -28,7 +29,9 @@ import BorrowPage from './pages/BorrowPage';
 import RevenueDistributionHistoryPage from './pages/RevenueDistributionHistoryPage';
 import BundleManagementPage from './pages/BundleManagementPage';
 import CreatorRevenueDashboardPage from './pages/CreatorRevenueDashboardPage';
+import EarningsStreamPage from './pages/EarningsStreamPage';
 import SpotlightAuctionPage from './pages/SpotlightAuctionPage';
+import DutchAuctionPage from './pages/SpotlightAuctionPage';
 import AtomicSwapCreatePage from './pages/AtomicSwapCreatePage';
 import AtomicSwapProposalPage from './pages/AtomicSwapProposalPage';
 import StatusPage from './pages/StatusPage';
@@ -40,6 +43,9 @@ import KeyDiscoveryFeedPage from './pages/KeyDiscoveryFeedPage';
 import KeyDiscoveryLeaderboardPage from './pages/KeyDiscoveryLeaderboardPage';
 import WalletPortfolioPage from './pages/WalletPortfolioPage';
 import CampaignsPage from './pages/CampaignsPage';
+import LaunchesPage from './pages/LaunchesPage';
+import CreatorVerificationPage from './pages/CreatorVerificationPage';
+import CurveExplainerPage from './pages/CurveExplainerPage';
 import RentalMarketPage from './pages/RentalMarketPage';
 import MyRentalsPage from './pages/MyRentalsPage';
 import AutoInvestDashboardPage from './pages/AutoInvestDashboardPage';
@@ -49,12 +55,19 @@ import EscapeRedeemPage from './pages/EscapeRedeemPage';
 import LpPositionsPage from './pages/LpPositionsPage';
 import ProposalCreatePage from './pages/ProposalCreatePage';
 import ApiKeysPage from './pages/ApiKeysPage';
+import GuardiansPage from './pages/GuardiansPage';
+import GuardianApprovePage from './pages/GuardianApprovePage';
 import RetirementBuybackConfirmedPage from './pages/RetirementBuybackConfirmedPage';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminTwoFactorSetupPage from './pages/AdminTwoFactorSetupPage';
 import AdminTwoFactorChallengePage from './pages/AdminTwoFactorChallengePage';
 import AdminTwoFactorGuard from './components/admin/AdminTwoFactorGuard';
+import BountyBoardPage from './pages/BountyBoardPage';
+import ManageBountyPage from './pages/ManageBountyPage';
+import GrantsPage from './pages/GrantsPage';
+import GrantDetailPage from './pages/GrantDetailPage';
+import EventsPage from './pages/EventsPage';
 
 function withRouteErrorBoundary(element: ReactNode, routeName: string) {
 	return (
@@ -135,6 +148,24 @@ export const routes = [
 				element: <LeaderboardPage />,
 			},
 			{
+				path: '/launches',
+				element: withRouteErrorBoundary(<LaunchesPage />, 'Launches'),
+			},
+			{
+				path: '/creator/verification',
+				element: withRouteErrorBoundary(
+					<CreatorVerificationPage />,
+					'Creator verification'
+				),
+			},
+			{
+				path: '/learn/bonding-curve',
+				element: withRouteErrorBoundary(
+					<CurveExplainerPage />,
+					'Bonding curve explainer'
+				),
+			},
+			{
 				path: '/creator/:id',
 				element: withRouteErrorBoundary(
 					<CreatorDetailPage />,
@@ -160,6 +191,14 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<CreatorDetailPage />,
 					'Key detail'
+				),
+			},
+			{
+				// Dutch auction buying page with live descending price (secondary sales).
+				path: '/auctions/:id',
+				element: withRouteErrorBoundary(
+					<DutchAuctionPage />,
+					'Dutch auction'
 				),
 			},
 			{
@@ -243,6 +282,13 @@ export const routes = [
 				element: <CreatorRevenueDashboardPage />,
 			},
 			{
+				path: '/creator/stream',
+				element: withRouteErrorBoundary(
+					<EarningsStreamPage />,
+					'Creator Earnings Stream'
+				),
+			},
+			{
 				path: '/notifications',
 				element: <NotificationsPage />,
 			},
@@ -283,6 +329,13 @@ export const routes = [
 				element: <GovernancePage />,
 			},
 			{
+				path: '/governance/conviction',
+				element: withRouteErrorBoundary(
+					<ConvictionProposalsPage />,
+					'Conviction Governance'
+				),
+			},
+			{
 				path: '/governance/activity',
 				element: withRouteErrorBoundary(
 					<GovernanceFeedPage />,
@@ -316,6 +369,42 @@ export const routes = [
 			{
 				path: '/borrow',
 				element: withRouteErrorBoundary(<BorrowPage />, 'Borrow'),
+			},
+			{
+				path: '/bounties',
+				element: withRouteErrorBoundary(
+					<BountyBoardPage />,
+					'Bounty board'
+				),
+			},
+			{
+				path: '/bounties/manage',
+				element: withRouteErrorBoundary(
+					<ManageBountyPage />,
+					'Manage bounties'
+				),
+			},
+			{
+				path: '/bounties/manage/:id',
+				element: withRouteErrorBoundary(
+					<ManageBountyPage />,
+					'Manage bounty'
+				),
+			},
+			{
+				path: '/treasury/grants',
+				element: withRouteErrorBoundary(<GrantsPage />, 'Grants tracker'),
+			},
+			{
+				path: '/treasury/grants/:grantId',
+				element: withRouteErrorBoundary(
+					<GrantDetailPage />,
+					'Grant tracker'
+				),
+			},
+			{
+				path: '/events',
+				element: withRouteErrorBoundary(<EventsPage />, 'Creator events'),
 			},
 			{
 				path: '/auto-invest',
@@ -402,6 +491,21 @@ export const routes = [
 				// Developer API key management for integrators and creators (#1322).
 				path: '/settings/developer',
 				element: <ApiKeysPage />,
+			},
+			{
+				// Social recovery guardians and recovery approvals (#1382).
+				path: '/settings/recovery',
+				element: withRouteErrorBoundary(
+					<GuardiansPage />,
+					'Social recovery'
+				),
+			},
+			{
+				path: '/settings/recovery/approve',
+				element: withRouteErrorBoundary(
+					<GuardianApprovePage />,
+					'Guardian approvals'
+				),
 			},
 			{
 				path: '/settings/notifications',

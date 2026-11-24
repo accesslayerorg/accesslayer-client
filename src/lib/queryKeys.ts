@@ -222,6 +222,28 @@ export const queryKeys = {
 			['governance', 'events', type ?? 'all'] as const,
 		admin: () => ['governance', 'admin'] as const,
 	},
+	conviction: {
+		all: () => ['conviction'] as const,
+		proposals: () => ['conviction', 'proposals'] as const,
+		proposal: (id: string) => ['conviction', 'proposal', id] as const,
+		balances: (userAddress?: string) =>
+			['conviction', 'balances', userAddress ?? 'default'] as const,
+	},
+	oracle: {
+		all: () => ['oracle'] as const,
+		status: (asset: string) => ['oracle', 'status', asset.toUpperCase()] as const,
+	},
+	ragequit: {
+		all: () => ['ragequit'] as const,
+		state: (proposalId: string, userAddress?: string) =>
+			['ragequit', proposalId, userAddress ?? 'default'] as const,
+	},
+	stream: {
+		all: () => ['stream'] as const,
+		list: (creatorAddress?: string) =>
+			['stream', 'list', creatorAddress ?? 'default'] as const,
+		detail: (streamId: string) => ['stream', 'detail', streamId] as const,
+	},
 	mergeProposal: {
 		bySourceKey: (sourceKeyId: string) =>
 			['mergeProposal', 'source', sourceKeyId] as const,
@@ -343,5 +365,46 @@ export const queryKeys = {
 	apiKeys: {
 		all: () => ['api-keys'] as const,
 		list: () => ['api-keys', 'list'] as const,
+	},
+	launches: {
+		all: () => ['launches'] as const,
+	},
+	verificationApplication: {
+		all: () => ['verification-application'] as const,
+		mine: () => ['verification-application', 'mine'] as const,
+	},
+	curveParams: {
+		all: () => ['curve-params'] as const,
+		byKey: (keyId: string) => ['curve-params', keyId] as const,
+	},
+	walletSession: {
+		all: () => ['wallet'] as const,
+		notifications: () => ['notifications'] as const,
+		sessions: () => ['sessions'] as const,
+		alerts: () => ['alerts'] as const,
+	},
+	bounties: {
+		all: () => ['bounties'] as const,
+		list: (filters?: Record<string, unknown>) =>
+			['bounties', 'list', filters ?? null] as const,
+		detail: (bountyId: string) => ['bounties', 'detail', bountyId] as const,
+		submissions: (bountyId: string) =>
+			['bounties', 'submissions', bountyId] as const,
+	},
+	grants: {
+		all: () => ['grants'] as const,
+		pages: (filters?: Record<string, unknown>) =>
+			['grants', 'pages', filters ?? null] as const,
+		detail: (grantId: string) => ['grants', 'detail', grantId] as const,
+	},
+	events: {
+		all: () => ['events'] as const,
+		list: (creator?: string) => ['events', 'list', creator ?? ''] as const,
+		redemption: (eventId: string, wallet: string) =>
+			['events', 'redemption', eventId, wallet] as const,
+	},
+	feeChange: {
+		all: () => ['fee-change'] as const,
+		pending: () => ['fee-change', 'pending'] as const,
 	},
 } as const;
