@@ -43,6 +43,7 @@ import {
 	type PortfolioTableSortKey,
 } from '@/utils/portfolioTable.utils';
 import GainsReport from '@/components/common/GainsReport';
+import BalanceHistoryChart from '@/components/common/BalanceHistoryChart';
 
 const SKELETON_ROW_COUNT = 4;
 
@@ -497,6 +498,10 @@ export default function WalletPortfolioPage() {
 							</table>
 						</div>
 					)}
+				</SectionErrorBoundary>
+
+				<SectionErrorBoundary sectionName="balance history">
+					<BalanceHistoryChart address={address} keyNames={keyNames} />
 				</SectionErrorBoundary>
 
 				<SectionErrorBoundary sectionName="realized gains">

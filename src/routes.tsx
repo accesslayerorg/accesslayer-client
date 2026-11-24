@@ -7,6 +7,7 @@ import PublicPressPage from './pages/PublicPressPage';
 import UnsubscribePage from './pages/UnsubscribePage';
 import MarketplacePage from './pages/MarketplacePage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import ReferralHoldsPage from './pages/ReferralHoldsPage';
 import CreatorDetailPage from './pages/CreatorDetailPage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
 import CreatorPublicProfilePage from './pages/CreatorPublicProfilePage';
@@ -57,6 +58,8 @@ import EscapeRedeemPage from './pages/EscapeRedeemPage';
 import LpPositionsPage from './pages/LpPositionsPage';
 import ProposalCreatePage from './pages/ProposalCreatePage';
 import ApiKeysPage from './pages/ApiKeysPage';
+import GuardiansPage from './pages/GuardiansPage';
+import GuardianApprovePage from './pages/GuardianApprovePage';
 import RetirementBuybackConfirmedPage from './pages/RetirementBuybackConfirmedPage';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 import AdminLoginPage from './pages/AdminLoginPage';
@@ -454,6 +457,17 @@ export const routes = [
 				),
 			},
 			{
+				path: '/admin/referral-holds',
+				element: (
+					<AdminTwoFactorGuard>
+						{withRouteErrorBoundary(
+							<ReferralHoldsPage />,
+							'Referral holds review'
+						)}
+					</AdminTwoFactorGuard>
+				),
+			},
+			{
 				path: '/admin/login',
 				element: <AdminLoginPage />,
 			},
@@ -499,6 +513,21 @@ export const routes = [
 				// Developer API key management for integrators and creators (#1322).
 				path: '/settings/developer',
 				element: <ApiKeysPage />,
+			},
+			{
+				// Social recovery guardians and recovery approvals (#1382).
+				path: '/settings/recovery',
+				element: withRouteErrorBoundary(
+					<GuardiansPage />,
+					'Social recovery'
+				),
+			},
+			{
+				path: '/settings/recovery/approve',
+				element: withRouteErrorBoundary(
+					<GuardianApprovePage />,
+					'Guardian approvals'
+				),
 			},
 			{
 				path: '/settings/notifications',
