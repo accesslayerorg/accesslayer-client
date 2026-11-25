@@ -58,6 +58,8 @@ export const queryKeys = {
 			['creators', creatorId, 'spotlight-bids'] as const,
 		announcements: (creatorId: string) =>
 			['creators', creatorId, 'announcements'] as const,
+		scheduledAnnouncements: (keyId: string) =>
+			['creators', keyId, 'scheduled-announcements'] as const,
 		tips: (creatorId: string) => ['creators', creatorId, 'tips'] as const,
 		uniqueTraders: (creatorId: string) =>
 			['creators', creatorId, 'unique-traders'] as const,
