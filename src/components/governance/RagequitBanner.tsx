@@ -206,7 +206,9 @@ export const RagequitBanner: React.FC<RagequitBannerProps> = ({
 					proposalId={proposalId}
 					maxKeys={userKeys}
 					payoutPerKeyXlm={payoutPerKeyXlm}
-					onConfirm={keys => executeRagequit(keys)}
+					onConfirm={async keys => {
+						await executeRagequit(keys);
+					}}
 					isPending={isMutating}
 				/>
 			)}
