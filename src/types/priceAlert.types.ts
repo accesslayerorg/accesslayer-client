@@ -17,3 +17,29 @@ export interface CreatePriceAlertPayload {
   thresholdStroops: number;
   direction: AlertDirection;
 }
+
+export interface ChartAnnotation {
+  id: string;
+  keyId: string;
+  /** ISO timestamp of the annotation's position on the time axis. */
+  time: string;
+  /** Price at the annotation's position. */
+  price: number;
+  text: string;
+}
+
+export interface ChartZoomRange {
+  /** ISO timestamp marking the start of the zoomed range. */
+  start: string;
+  /** ISO timestamp marking the end of the zoomed range. */
+  end: string;
+}
+
+export interface ChartCrosshairPoint {
+  /** ISO timestamp at the cursor position. */
+  time: string;
+  price: number;
+  volume: number;
+  /** Price change relative to the previous data point. */
+  change: number;
+}

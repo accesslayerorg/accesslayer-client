@@ -101,6 +101,37 @@ export type AdminAction =
 	| 'emergency-freeze'
 	| string;
 
+/** A single privileged action recorded by the admin API audit trail. */
+export interface AuditLogEntry {
+	id: string;
+	/** Admin wallet or service principal that performed the action. */
+	actor: string;
+	/** Action identifier, e.g. `freeze-key`, `update-flag`, `resolve-report`. */
+	action: string;
+	/** The entity the action was applied to, when known. */
+	target?: string;
+	/** ISO timestamp recorded by the server when the action occurred. */
+	timestamp: string;
+	/** Payload before the change, when the action mutated state. */
+	before?: unknown;
+	/** Payload after the change, when the action mutated state. */
+	after?: unknown;
+}
+
+export interface AuditLogFilters {
+	actor?: string;
+	action?: string;
+	/** ISO timestamp (inclusive) lower bound for the entry timestamp. */
+	from?: string;
+	/** ISO timestamp (inclusive) upper bound for the entry timestamp. */
+	to?: string;
+}
+
+export interface AuditLogPage {
+	items: AuditLogEntry[];
+	nextCursor: string | null;
+}
+
 export interface UpgradeProxyStatus {
 	/**
 	 * The current logic/implementation address the proxy points to, or null
@@ -308,6 +339,65 @@ function toTimelockAction(raw: unknown): TimelockAction | null {
 				? value.cancellationDeadline
 				: undefined,
 	};
+}
+
+function toAuditLogEntry(raw: unknown): AuditLogEntry | null {
+	if (!raw || typeof raw !== 'object') return null;
+	const value = raw as Record<string, unknown>;
+	if (typeof value.id !== 'string' || !value.id) return null;
+
+	const actor =
+		typeof value.actor === 'string'
+			? value.actor
+			: typeof value.admin === 'string'
+				? value.admin
+				: '';
+	const action =
+		typeof value.action === 'string'
+			? value.action
+			: typeof value.type === 'string'
+				? value.type
+				: '';
+	if (!actor || !action) return null;
+
+	const timestamp =
+		typeof value.timestamp === 'string'
+			? value.timestamp
+			: typeof value.createdAt === 'string'
+				? value.createdAt
+				: new Date().toISOString();
+
+	return {
+		id: value.id,
+		actor,
+		action,
+		target: typeof value.target === 'string' ? value.target : undefined,
+		timestamp,
+		before: value.before,
+		after: value.after,
+	};
+}
+
+function toAuditLogPage(raw: unknown): AuditLogPage {
+	if (!raw || typeof raw !== 'object') return { items: [], nextCursor: null };
+	const value = raw as Record<string, unknown>;
+	const candidates = Array.isArray(value.items)
+		? value.items
+		: Array.isArray(value.entries)
+			? value.entries
+			: Array.isArray(value.data)
+				? value.data
+				: [];
+	const items = candidates
+		.map(toAuditLogEntry)
+		.filter((entry): entry is AuditLogEntry => entry !== null);
+	const nextCursor =
+		typeof value.nextCursor === 'string'
+			? value.nextCursor
+			: typeof value.next_cursor === 'string'
+				? value.next_cursor
+				: null;
+	return { items, nextCursor };
 }
 
 function toTimelockActions(raw: unknown): TimelockAction[] {
@@ -614,6 +704,67 @@ class AdminService extends BaseApiService {
 		return [];
 	}
 
+	/**
+	 * Read a page of the privileged-action audit log -
+	 * GET /admin/audit-log.
+	 */
+	async listAuditLog(
+		filters: AuditLogFilters = {},
+		cursor?: string
+	): Promise<AuditLogPage> {
+		try {
+			const params: Record<string, string> = {};
+			if (filters.actor) params.actor = filters.actor;
+			if (filters.action) params.action = filters.action;
+			if (filters.from) params.from = filters.from;
+			if (filters.to) params.to = filters.to;
+			if (cursor) params.cursor = cursor;
+
+			const response = await this.api.get<APIResponse<unknown>>(
+				'/admin/audit-log',
+				{ params }
+			);
+			return toAuditLogPage(response.data.data);
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/**
+	 * Export the filtered audit log range as CSV -
+	 * GET /admin/audit-log/export.
+	 */
+	async exportAuditLogCsv(
+		filters: AuditLogFilters = {},
+		limit?: number
+	): Promise<Blob> {
+		try {
+			const params: Record<string, string> = {};
+			if (filters.actor) params.actor = filters.actor;
+			if (filters.action) params.action = filters.action;
+			if (filters.from) params.from = filters.from;
+			if (filters.to) params.to = filters.to;
+			if (typeof limit === 'number' && Number.isFinite(limit) && limit > 0) {
+				params.limit = String(Math.floor(limit));
+			}
+
+			const response = await this.api.get('/admin/audit-log/export', {
+				params,
+				responseType: 'blob',
+			});
+			const data = response.data as unknown;
+			if (data instanceof Blob) return data;
+			if (typeof data === 'string') {
+				return new Blob([data], { type: 'text/csv;charset=utf-8' });
+			}
+			return new Blob([String(data ?? '')], {
+				type: 'text/csv;charset=utf-8',
+			});
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
 	/** Read the on-chain protocol fee pool via the admin API. */
 	async getTreasuryBalance(): Promise<TreasuryBalance> {
 		try {
@@ -787,4 +938,18 @@ export async function toggleEmergencyFreezeAction(
 
 export async function fetchUpgradeHistory(): Promise<UpgradeHistoryEvent[]> {
 	return adminService.getUpgradeHistory();
+}
+
+export async function fetchAuditLog(
+	filters: AuditLogFilters = {},
+	cursor?: string
+): Promise<AuditLogPage> {
+	return adminService.listAuditLog(filters, cursor);
+}
+
+export async function exportAuditLog(
+	filters: AuditLogFilters = {},
+	limit?: number
+): Promise<Blob> {
+	return adminService.exportAuditLogCsv(filters, limit);
 }

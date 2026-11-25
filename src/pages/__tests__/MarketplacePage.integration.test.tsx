@@ -8,6 +8,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
+import { HelmetProvider } from 'react-helmet-async';
 import MarketplacePage from '@/pages/MarketplacePage';
 import { useInfiniteCreatorMarketplace } from '@/hooks/useInfiniteCreatorMarketplace';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
@@ -102,9 +103,11 @@ const baseHookReturn = {
 
 function renderPage(initialEntries = ['/marketplace']) {
 	return render(
-		<MemoryRouter initialEntries={initialEntries}>
-			<MarketplacePage />
-		</MemoryRouter>
+		<HelmetProvider>
+			<MemoryRouter initialEntries={initialEntries}>
+				<MarketplacePage />
+			</MemoryRouter>
+		</HelmetProvider>
 	);
 }
 
@@ -134,6 +137,24 @@ describe('MarketplacePage (#918)', () => {
 		);
 	});
 
+	it('renders canonical metadata for the public marketplace page', async () => {
+		renderPage();
+
+		await waitFor(() => {
+			expect(document.title).toBe('Marketplace — AccessLayer');
+			expect(
+				document.head.querySelector('link[rel="canonical"]')
+			).toHaveAttribute('href', 'https://accesslayer.xyz/marketplace');
+		});
+
+		expect(
+			document.head.querySelector('meta[property="og:title"]')
+		).toHaveAttribute('content', 'Marketplace — AccessLayer');
+		expect(
+			document.head.querySelector('meta[name="robots"]')
+		).toHaveAttribute('content', 'index, follow');
+	});
+
 	it('shows the loading skeleton while the first page loads', () => {
 		mockUseInfiniteCreatorMarketplace.mockReturnValue({
 			...baseHookReturn,
@@ -142,7 +163,9 @@ describe('MarketplacePage (#918)', () => {
 
 		renderPage();
 
-		expect(screen.getByTestId('marketplace-loading-skeleton')).toBeInTheDocument();
+		expect(
+			screen.getByTestId('marketplace-loading-skeleton')
+		).toBeInTheDocument();
 		expect(screen.queryAllByRole('article')).toHaveLength(0);
 		expect(screen.getByTestId('marketplace-poll-status')).toHaveTextContent(
 			'Prices refresh every 30s'
@@ -193,7 +216,9 @@ describe('MarketplacePage (#918)', () => {
 			'Creator Creator alice',
 		]);
 		expect(fetchNextPage).not.toHaveBeenCalled();
-		expect(screen.queryByTestId('marketplace-loading-skeleton')).not.toBeInTheDocument();
+		expect(
+			screen.queryByTestId('marketplace-loading-skeleton')
+		).not.toBeInTheDocument();
 	});
 
 	it('filters by supply milestone tier client-side', () => {
@@ -229,8 +254,12 @@ describe('MarketplacePage (#918)', () => {
 
 		renderPage();
 
-		expect(screen.getByRole('status', { name: 'No creators available' })).toBeInTheDocument();
-		expect(screen.getByRole('button', { name: /browse all creators/i })).toBeInTheDocument();
+		expect(
+			screen.getByRole('status', { name: 'No creators available' })
+		).toBeInTheDocument();
+		expect(
+			screen.getByRole('button', { name: /browse all creators/i })
+		).toBeInTheDocument();
 	});
 
 	it('shows a no-results state when filters match nothing, and reset restores the list', async () => {
@@ -268,7 +297,9 @@ describe('MarketplacePage (#918)', () => {
 
 		renderPage();
 
-		expect(screen.getByText("Couldn't load the marketplace")).toBeInTheDocument();
+		expect(
+			screen.getByText("Couldn't load the marketplace")
+		).toBeInTheDocument();
 
 		fireEvent.click(screen.getByRole('button', { name: /try again/i }));
 		expect(refetch).toHaveBeenCalledTimes(1);
@@ -334,7 +365,9 @@ describe('MarketplacePage (#918)', () => {
 
 		renderPage(['/marketplace?sort=newest']);
 
-		const select = screen.getByTestId('marketplace-sort-select') as HTMLSelectElement;
+		const select = screen.getByTestId(
+			'marketplace-sort-select'
+		) as HTMLSelectElement;
 		expect(select.value).toBe('newest');
 		expect(articleLabels()).toEqual([
 			'Creator Creator newest',

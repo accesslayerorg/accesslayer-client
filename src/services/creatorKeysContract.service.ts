@@ -1,6 +1,12 @@
 import { Address, Networks } from '@stellar/stellar-sdk';
 import { Client } from '@stellar/stellar-sdk/contract';
+import type {
+	PermitService,
+	PermitTransferRequest,
+	PermitTransferResult,
+} from '@/types/permit';
 import { env } from '@/utils/env.utils';
+import { PermitUnsupportedError } from '@/utils/permit.utils';
 
 export interface OnChainMetadataResult {
 	name?: string;
@@ -22,6 +28,17 @@ export type CreatorKeysContractClientFactory = (
 	networkPassphrase: string
 ) => unknown;
 
+/**
+ * Adapter supplied once the deployed contract exposes a documented permit
+ * nonce and an atomic permit-plus-transfer transaction builder.
+ */
+export interface PermitContractAdapter {
+	getPermitNonce(owner: string): Promise<bigint>;
+	submitPermitAndTransfer(
+		request: PermitTransferRequest
+	): Promise<PermitTransferResult>;
+}
+
 function getNetworkPassphrase(): string {
 	return env.VITE_STELLAR_NETWORK === 'mainnet'
 		? Networks.PUBLIC
@@ -40,11 +57,38 @@ const defaultFactory: CreatorKeysContractClientFactory = (
 	});
 };
 
-export class CreatorKeysContractService {
+export class CreatorKeysContractService implements PermitService {
 	private readonly factory: CreatorKeysContractClientFactory;
+	private readonly permitAdapter?: PermitContractAdapter;
 
-	constructor(factory: CreatorKeysContractClientFactory = defaultFactory) {
+	constructor(
+		factory: CreatorKeysContractClientFactory = defaultFactory,
+		permitAdapter?: PermitContractAdapter
+	) {
 		this.factory = factory;
+		this.permitAdapter = permitAdapter;
+	}
+
+	/** True only when a real atomic contract adapter has been configured. */
+	supportsPermit(): boolean {
+		return this.permitAdapter !== undefined;
+	}
+
+	async getPermitNonce(owner: string): Promise<bigint> {
+		if (!this.permitAdapter) throw new PermitUnsupportedError();
+		return this.permitAdapter.getPermitNonce(owner);
+	}
+
+	/**
+	 * Delegates one atomic submission to the contract adapter. This deliberately
+	 * does not emulate the operation with separate `permit` and `transfer_from`
+	 * calls because that would violate the one-transaction guarantee.
+	 */
+	async submitPermitAndTransfer(
+		request: PermitTransferRequest
+	): Promise<PermitTransferResult> {
+		if (!this.permitAdapter) throw new PermitUnsupportedError();
+		return this.permitAdapter.submitPermitAndTransfer(request);
 	}
 
 	async getMetadata(keyId: string): Promise<OnChainMetadataResult | null> {
