@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { AwardBadgeParams, SoulboundBadge } from '@/types/badge.types';
 
-export const PRESET_BADGE_TYPES = [
+const PRESET_BADGE_TYPES = [
 	{
 		type: 'early_contributor',
 		name: 'Early Contributor',

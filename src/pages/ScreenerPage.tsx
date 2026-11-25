@@ -135,9 +135,6 @@ export default function ScreenerPage() {
 		setShowSaved(false);
 	};
 
-	const activeSortLabel =
-		SORT_OPTIONS.find(o => o.value === sort)?.label ?? sort;
-
 	return (
 		<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
 			<div className="mx-auto max-w-6xl space-y-8">
