@@ -171,3 +171,96 @@ self.addEventListener('sync', event => {
 		event.waitUntil(drainQueue());
 	}
 });
+
+// ---------------------------------------------------------------------------
+// Web Push — display notifications for orders, gifts and price alerts
+// (Issue #1413). Payloads contain only event metadata and a route path; they
+// must never include balances or other sensitive account data.
+// ---------------------------------------------------------------------------
+
+const DEFAULT_NOTIFICATION_TITLE = 'Access Layer';
+const DEFAULT_NOTIFICATION_URL = '/';
+
+function parsePushPayload(event) {
+	if (!event.data) return {};
+	try {
+		const parsed = event.data.json();
+		return parsed && typeof parsed === 'object' ? parsed : {};
+	} catch {
+		try {
+			return { body: event.data.text() };
+		} catch {
+			return {};
+		}
+	}
+}
+
+function buildNotificationUrl(payload) {
+	const rawUrl = typeof payload.url === 'string' && payload.url ? payload.url : DEFAULT_NOTIFICATION_URL;
+	try {
+		// Resolve relative paths against the service worker scope origin.
+		const resolved = new URL(rawUrl, self.location.origin);
+		// Only allow same-origin navigation targets.
+		if (resolved.origin !== self.location.origin) return DEFAULT_NOTIFICATION_URL;
+		return resolved.pathname + resolved.search + resolved.hash;
+	} catch {
+		return DEFAULT_NOTIFICATION_URL;
+	}
+}
+
+self.addEventListener('push', event => {
+	const payload = parsePushPayload(event);
+
+	const title = typeof payload.title === 'string' && payload.title ? payload.title : DEFAULT_NOTIFICATION_TITLE;
+	const options = {
+		body: typeof payload.body === 'string' ? payload.body : '',
+		icon: '/icons/icon-192.png',
+		badge: '/icons/badge-72.png',
+		tag: typeof payload.tag === 'string' ? payload.tag : undefined,
+		data: {
+			url: buildNotificationUrl(payload),
+			eventType: typeof payload.eventType === 'string' ? payload.eventType : undefined,
+		},
+	};
+
+	event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', event => {
+	event.notification.close();
+
+	const data = event.notification.data || {};
+	const targetUrl = buildNotificationUrl(data);
+
+	event.waitUntil(
+		(async () => {
+			const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+
+			for (const client of clientList) {
+				try {
+					const clientUrl = new URL(client.url);
+					if (clientUrl.origin !== self.location.origin) continue;
+
+					// Focus an existing tab and navigate it to the target route.
+					if ('focus' in client) {
+						await client.focus();
+						if ('navigate' in client) {
+							try {
+								await client.navigate(targetUrl);
+							} catch {
+								// Navigation may be disallowed; the focused tab is enough.
+							}
+						}
+						return;
+					}
+				} catch {
+					// Ignore malformed client URLs and keep looking.
+				}
+			}
+
+			if (self.clients.openWindow) {
+				await self.clients.openWindow(targetUrl);
+			}
+		})()
+	);
+});

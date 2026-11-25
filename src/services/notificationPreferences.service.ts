@@ -136,5 +136,95 @@ export class NotificationPreferencesService {
 	}
 }
 
+export const PUSH_NOTIFICATION_EVENT_TYPES = [
+	'orders',
+	'gifts',
+	'price_alerts',
+] as const;
+
+export type PushNotificationEventType =
+	(typeof PUSH_NOTIFICATION_EVENT_TYPES)[number];
+
+export type PushNotificationPreferences = Record<
+	PushNotificationEventType,
+	boolean
+>;
+
+export interface PushSubscriptionPayload {
+	endpoint: string;
+	keys: {
+		p256dh: string;
+		auth: string;
+	};
+}
+
+export interface RegisterPushSubscriptionRequest {
+	subscription: PushSubscriptionPayload;
+	preferences: PushNotificationPreferences;
+}
+
+export class PushSubscriptionError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'PushSubscriptionError';
+	}
+}
+
+export type PushSubscriptionFetch = typeof fetch;
+
+const PUSH_SUBSCRIPTIONS_ENDPOINT = '/api/notifications/push/subscriptions';
+
+export class PushSubscriptionService {
+	private readonly fetchImpl: PushSubscriptionFetch;
+
+	constructor(fetchImpl: PushSubscriptionFetch = fetch) {
+		this.fetchImpl = fetchImpl;
+	}
+
+	private async request(
+		method: 'POST' | 'PATCH' | 'DELETE',
+		body?: unknown
+	): Promise<void> {
+		let response: Response;
+		try {
+			response = await this.fetchImpl(PUSH_SUBSCRIPTIONS_ENDPOINT, {
+				method,
+				credentials: 'include',
+				headers: { 'Content-Type': 'application/json' },
+				...(body === undefined ? {} : { body: JSON.stringify(body) }),
+			});
+		} catch {
+			throw new PushSubscriptionError(
+				'Unable to reach the notification service. Please try again.'
+			);
+		}
+
+		if (!response.ok) {
+			throw new PushSubscriptionError(
+				`The notification service rejected the request (${response.status}).`
+			);
+		}
+	}
+
+	async registerPushSubscription(
+		subscription: PushSubscriptionPayload,
+		preferences: PushNotificationPreferences
+	): Promise<void> {
+		await this.request('POST', { subscription, preferences });
+	}
+
+	async updatePushPreferences(
+		preferences: PushNotificationPreferences
+	): Promise<void> {
+		await this.request('PATCH', { preferences });
+	}
+
+	async removePushSubscription(): Promise<void> {
+		await this.request('DELETE');
+	}
+}
+
 export const notificationPreferencesService =
 	new NotificationPreferencesService();
+
+export const pushSubscriptionService = new PushSubscriptionService();

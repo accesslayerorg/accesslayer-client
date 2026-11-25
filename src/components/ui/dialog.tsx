@@ -162,6 +162,149 @@ function DialogDescription({
 	);
 }
 
+export interface WalletHelpModalProps {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+}
+
+export function WalletHelpModal({ open, onOpenChange }: WalletHelpModalProps) {
+	const {
+		wallets,
+		reason,
+		reasonLabel,
+		diagnostics,
+		recheck,
+		isRechecking,
+	} = useWalletDetection();
+	const [copied, setCopied] = React.useState(false);
+
+	const copyDiagnostics = React.useCallback(async () => {
+		try {
+			await navigator.clipboard.writeText(diagnostics);
+			setCopied(true);
+			window.setTimeout(() => setCopied(false), 2000);
+		} catch {
+			setCopied(false);
+		}
+	}, [diagnostics]);
+
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent className="max-h-[85vh] overflow-y-auto">
+				<DialogHeader>
+					<DialogTitle>Wallet help</DialogTitle>
+					<DialogDescription>
+						{reasonLabel
+							? `We detected: ${reasonLabel}. Try the highlighted fix first.`
+							: 'Follow the steps below to install or connect a Stellar wallet.'}
+					</DialogDescription>
+				</DialogHeader>
+
+				<section aria-labelledby="wallet-install-heading" className="space-y-3">
+					<h3 id="wallet-install-heading" className="text-sm font-semibold">
+						Install a wallet
+					</h3>
+					<ul className="space-y-2">
+						{wallets.map((wallet) => (
+							<li
+								key={wallet.id}
+								className="flex items-center justify-between gap-3 rounded-md border p-3"
+							>
+								<div>
+									<p className="text-sm font-medium">{wallet.name}</p>
+									<p className="text-muted-foreground text-xs">
+										{wallet.installed ? 'Installed' : 'Not detected'}
+									</p>
+								</div>
+								{!wallet.installed && (
+									<a
+										href={wallet.downloadUrl}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="text-primary text-sm underline"
+									>
+										Install {wallet.name}
+									</a>
+								)}
+							</li>
+						))}
+					</ul>
+					<Button
+						variant="outline"
+						onClick={recheck}
+						disabled={isRechecking}
+						aria-live="polite"
+					>
+						{isRechecking ? 'Rechecking…' : 'Recheck'}
+					</Button>
+				</section>
+
+				<section aria-labelledby="wallet-checklist-heading" className="space-y-2">
+					<h3 id="wallet-checklist-heading" className="text-sm font-semibold">
+						Troubleshooting checklist
+					</h3>
+					<ul className="space-y-2">
+						{checklistItems.map((item) => {
+							const isRelevant = reason === item.reason;
+							return (
+								<li
+									key={item.reason}
+									className={cn(
+										'rounded-md border p-3 text-sm',
+										isRelevant && 'border-primary bg-primary/5'
+									)}
+								>
+									<p className="font-medium">
+										{isRelevant && <span aria-hidden="true">★ </span>}
+										{item.title}
+									</p>
+									<p className="text-muted-foreground text-xs">{item.fix}</p>
+								</li>
+							);
+						})}
+					</ul>
+				</section>
+
+				<DialogFooter>
+					<Button variant="outline" onClick={copyDiagnostics}>
+						{copied ? 'Copied' : 'Copy diagnostics'}
+					</Button>
+					<DialogClose asChild>
+						<Button>Close</Button>
+					</DialogClose>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
+const checklistItems: Array<{
+	reason: string;
+	title: string;
+	fix: string;
+}> = [
+	{
+		reason: 'locked',
+		title: 'Wallet is locked',
+		fix: 'Open your wallet extension and unlock it, then press Recheck.',
+	},
+	{
+		reason: 'wrong-network',
+		title: 'Wrong network',
+		fix: 'Switch your wallet to the Stellar network this app uses, then press Recheck.',
+	},
+	{
+		reason: 'blocked-popup',
+		title: 'Pop-ups blocked',
+		fix: 'Allow pop-ups for this site in your browser settings, then try connecting again.',
+	},
+	{
+		reason: 'adblocker',
+		title: 'Ad blocker or extension conflict',
+		fix: 'Disable ad blockers or conflicting extensions for this site, then press Recheck.',
+	},
+];
+
 export {
 	Dialog,
 	DialogClose,
