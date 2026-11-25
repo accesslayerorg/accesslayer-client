@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { useDebugDrawerStore } from '@/hooks/useDebugDrawerStore';
 
 const links = [
 	{ label: 'Marketplace', href: '/marketplace', external: false },
@@ -44,6 +45,14 @@ export default function Footer() {
 								</Link>
 							)
 						)}
+						<button
+							type="button"
+							data-testid="footer-debug-drawer-trigger"
+							onClick={() => useDebugDrawerStore.getState().open()}
+							className="font-jakarta text-sm text-gray-400 transition-colors hover:text-gray-900"
+						>
+							Debug
+						</button>
 					</nav>
 				</div>
 

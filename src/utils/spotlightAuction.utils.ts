@@ -28,6 +28,37 @@ export function validateSpotlightBid(
 	return null;
 }
 
+/**
+ * Current Dutch auction price, linearly interpolated from start to floor
+ * across the auction duration. Clamps to the floor once the auction has ended.
+ */
+export function getDutchAuctionCurrentPrice(
+	startPrice: number,
+	floorPrice: number,
+	startLedger: number,
+	endLedger: number,
+	currentLedger: number
+): number {
+	if (endLedger <= startLedger) return floorPrice;
+	if (currentLedger <= startLedger) return startPrice;
+	if (currentLedger >= endLedger) return floorPrice;
+	const progress = (currentLedger - startLedger) / (endLedger - startLedger);
+	return startPrice - (startPrice - floorPrice) * progress;
+}
+
+/** Total cost for a purchase including protocol fee and creator royalty. */
+export function getDutchAuctionTotalCost(
+	unitPrice: number,
+	quantity: number,
+	protocolFeeRate: number,
+	royaltyRate: number
+): { subtotal: number; protocolFee: number; royalty: number; total: number } {
+	const subtotal = unitPrice * quantity;
+	const protocolFee = subtotal * protocolFeeRate;
+	const royalty = subtotal * royaltyRate;
+	return { subtotal, protocolFee, royalty, total: subtotal + protocolFee + royalty };
+}
+
 /** Countdown text for a round end time, or null once the round has closed (#1147). */
 export function formatSpotlightTimeRemaining(
 	endsAt: string | null | undefined,

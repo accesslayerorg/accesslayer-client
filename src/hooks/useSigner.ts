@@ -8,6 +8,10 @@ import {
 	type SignerType,
 	type SigningError,
 } from '@/lib/signing';
+import {
+	createEmbeddedSigner,
+	onEmbeddedSessionChange,
+} from '@/services/embeddedWallet.service';
 
 export const SIGNER_PREFERENCE_KEY = 'accesslayer.signer.preference';
 
@@ -16,6 +20,8 @@ export interface UseSignerDependencies {
 	detectHardware?: () => Promise<boolean>;
 	createSoftware?: () => Signer;
 	createHardware?: () => Signer;
+	/** Embedded passkey/email wallet (#1477), used when no browser wallet is found. */
+	createEmbedded?: () => Signer | null;
 	storage?: Pick<Storage, 'getItem' | 'setItem'>;
 }
 
@@ -73,7 +79,8 @@ export function useSigner(
 				software: softwareAvailable
 					? (dependencies.createSoftware?.() ??
 						new FreighterSigner(networkPassphrase))
-					: null,
+					: (dependencies.createEmbedded ??
+							(() => createEmbeddedSigner(networkPassphrase)))(),
 				hardware: hardwareAvailable
 					? (dependencies.createHardware?.() ??
 						new LedgerSigner(networkPassphrase))
@@ -90,6 +97,12 @@ export function useSigner(
 	useEffect(() => {
 		void refresh();
 	}, [refresh]);
+
+	// Pick up an embedded wallet as soon as the user signs in or out (#1477).
+	useEffect(
+		() => onEmbeddedSessionChange(() => void refresh()),
+		[refresh]
+	);
 
 	const setPreference = useCallback(
 		(type: SignerType) => {

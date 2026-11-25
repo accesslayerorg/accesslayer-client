@@ -387,183 +387,25 @@ export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
 									onChange={() =>
 										onDraftChange({ launchMode: option.value })
 									}
+									className="mt-1 accent-amber-400"
 									data-testid={`key-factory-launch-${option.value}`}
-									className="mt-1"
 								/>
-								<span>
+								<span className="space-y-1">
 									<span className="block text-sm font-bold text-white">
 										{option.label}
 									</span>
-									<span className="mt-1 block text-xs text-white/55">
+									<span className="block text-xs text-white/50">
 										{option.description}
 									</span>
 								</span>
 							</label>
 						))}
 					</fieldset>
-
-					{draft.launchMode === 'auction' && (
-						<div className="space-y-1.5">
-							<label
-								htmlFor="key-factory-auction-price"
-								className="text-xs font-bold uppercase tracking-[0.18em] text-white/50"
-							>
-								Auction price (XLM)
-							</label>
-							<input
-								id="key-factory-auction-price"
-								inputMode="decimal"
-								className={fieldClass}
-								value={draft.auctionPriceXlm}
-								disabled={isDeploying}
-								placeholder="5.00"
-								aria-invalid={
-									errorFor('auctionPriceXlm') ? 'true' : undefined
-								}
-								onChange={event =>
-									onDraftChange({ auctionPriceXlm: event.target.value })
-								}
-								data-testid="key-factory-auction-price-input"
-							/>
-							{errorFor('auctionPriceXlm') && (
-								<p role="alert" className="text-xs text-red-400">
-									{errorFor('auctionPriceXlm')}
-								</p>
-							)}
-						</div>
-					)}
 				</div>
 			)}
-
-			{/* Step 4 — bulk whitelist upload */}
-			{step.value === 'whitelist' && (
-				<div className="mt-6" data-testid="key-factory-step-whitelist">
-					<WhitelistUploadInput
-						value={draft.whitelistInput}
-						disabled={isDeploying}
-						error={errorFor('whitelistInput')}
-						onChange={value => onDraftChange({ whitelistInput: value })}
-					/>
-				</div>
-			)}
-
-			{/* Step 5 — review & deploy */}
-			{step.value === 'review' && (
-				<div className="mt-6 space-y-6" data-testid="key-factory-step-review">
-					<dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-						{[
-							{ label: 'Name', value: draft.name || '—' },
-							{ label: 'Category', value: draft.category || '—' },
-							{
-								label: 'Initial price',
-								value: formatXlmPrice(getDraftInitialPriceXlm(draft)),
-							},
-							{
-								label: 'Launch mode',
-								value:
-									draft.launchMode === 'auction'
-										? `Auction at ${draft.auctionPriceXlm || '—'} XLM`
-										: 'Direct launch',
-							},
-							{
-								label: 'Max supply',
-								value: draft.maxSupply || '—',
-							},
-							{
-								label: 'Whitelisted wallets',
-								value: String(whitelist.addresses.length),
-							},
-							{
-								label: 'Deployer',
-								value: deployer || '—',
-							},
-						].map(row => (
-							<div
-								key={row.label}
-								className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
-							>
-								<dt className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-white/40">
-									{row.label}
-								</dt>
-								<dd className="mt-1 break-words text-sm text-white">
-									{row.value}
-								</dd>
-							</div>
-						))}
-					</dl>
-
-					{!draftValidation.isValid && showErrors && (
-						<p
-							role="alert"
-							className="text-sm text-red-400"
-							data-testid="key-factory-review-errors"
-						>
-							Fix the highlighted steps before deploying.
-						</p>
-					)}
-
-					{deploymentStatus && (
-						<div
-							role="status"
-							className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/75"
-							data-testid="key-factory-deployment-status"
-						>
-							{isDeploymentSettled ? null : (
-								<Loader2
-									className="size-4 animate-spin"
-									aria-hidden="true"
-								/>
-							)}
-							<span>
-								{DEPLOYMENT_STATUS_COPY[deploymentStatus]}
-							</span>
-							{transactionHash && (
-								<span
-									className="font-mono text-xs text-white/50"
-									data-testid="key-factory-deployment-tx"
-								>
-									{truncateTxHash(transactionHash)}
-								</span>
-							)}
-						</div>
-					)}
-				</div>
-			)}
-
-			{/* Wizard navigation */}
-			<div className="mt-8 flex flex-wrap items-center gap-3">
-				<Button
-					type="button"
-					variant="outline"
-					className="rounded-xl"
-					onClick={handleBack}
-					disabled={stepIndex === 0 || isDeploying}
-					data-testid="key-factory-back"
-				>
-					Back
-				</Button>
-
-				<Button
-					type="button"
-					className="rounded-xl"
-					onClick={handleNext}
-					disabled={isDeploying}
-					data-testid={
-						isLastStep ? 'key-factory-deploy' : 'key-factory-next'
-					}
-				>
-					{isLastStep ? (
-						<>
-							<Rocket className="mr-2 size-4" aria-hidden="true" />
-							{isDeploying ? 'Deploying…' : 'Deploy key'}
-						</>
-					) : (
-						'Continue'
-					)}
-				</Button>
-			</div>
 		</section>
 	);
 };
 
 export default KeyFactoryWizard;
+	
