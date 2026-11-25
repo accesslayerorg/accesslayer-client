@@ -126,6 +126,11 @@ import type { KeyBuybackReceipt } from '@/hooks/useKeyBuyback';
 import { usePerformanceBond } from '@/hooks/usePerformanceBond';
 import PerformanceBondPanel from '@/components/common/PerformanceBondPanel';
 import WhitelistStatusBadge from '@/components/common/WhitelistStatusBadge';
+import FlagKeyModal from '@/components/common/FlagKeyModal';
+import FlagProgress from '@/components/common/FlagProgress';
+import FrozenForReviewBanner from '@/components/common/FrozenForReviewBanner';
+import { useKeyFlags, useFlagKeyMutation } from '@/hooks/useKeyFlags';
+import { Flag } from 'lucide-react';
 import ShareModal from '@/components/common/ShareModal';
 import SubscriptionInvestmentPanel from '@/components/common/SubscriptionInvestmentPanel';
 import PriceAlertButton from '@/components/common/PriceAlertButton';
@@ -189,6 +194,7 @@ function CreatorDetailPageContent() {
 
 	const [hasMounted, setHasMounted] = useState(false);
 	const [buybackModalOpen, setBuybackModalOpen] = useState(false);
+	const [flagModalOpen, setFlagModalOpen] = useState(false);
 	const [showAlertForm, setShowAlertForm] = useState(false);
 	const [recentSettlement, setRecentSettlement] =
 		useState<KeyBuybackReceipt | null>(null);
@@ -286,6 +292,7 @@ function CreatorDetailPageContent() {
 			) ?? null,
 		[ratings, userAddress]
 	);
+
 	const retirementPending =
 		creator?.isRetiring === true && !creator.retirementExecutedAt;
 
@@ -364,6 +371,22 @@ function CreatorDetailPageContent() {
 	const performanceBond =
 		performanceBondData ?? creator?.performanceBond ?? null;
 
+	// Stake-weighted community flagging (#1386): flag progress, the
+	// auto-freeze state that disables trading, and this wallet's own flag.
+	const {
+		flagCount,
+		threshold,
+		autoFrozen,
+		reviewStatus,
+		frozenAt,
+		requiredStakeStroops,
+		userFlag,
+		resolution,
+		isLoading: isKeyFlagsLoading,
+	} = useKeyFlags(id || '', userAddress);
+	const flagKeyMutation = useFlagKeyMutation(id || '', userAddress);
+
+	// Whitelist gate check for early access keys (#1031)
 	const { phase: auctionPhase } = useAuctionPhase({
 		auctionPrice: creator?.auctionPrice ?? null,
 		auctionSupply: creator?.auctionSupply ?? null,
@@ -748,6 +771,15 @@ function CreatorDetailPageContent() {
 		<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
 			{pageMeta}
 			<div className="mx-auto max-w-7xl space-y-8">
+				{/* Auto-freeze from stake-weighted community flags (#1386) */}
+				<FrozenForReviewBanner
+					autoFrozen={autoFrozen}
+					reviewStatus={reviewStatus}
+					flagCount={flagCount}
+					threshold={threshold}
+					frozenAt={frozenAt}
+				/>
+				{/* Key deprecation notice & guaranteed buyback flow (#923) */}
 				{creator.deprecation && !deprecationDismissed && (
 					<DeprecationBanner
 						deprecation={creator.deprecation}
@@ -1011,6 +1043,41 @@ function CreatorDetailPageContent() {
 					}}
 					isSubmitting={tradeSubmitting || tradeMutation.isPending}
 				/>
+				{/* Community flag progress against the auto-freeze threshold (#1386) */}
+				<FlagProgress
+					flagCount={flagCount}
+					threshold={threshold}
+					autoFrozen={autoFrozen}
+					resolution={resolution}
+					isLoading={isKeyFlagsLoading}
+					action={
+						userAddress ? (
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								className="rounded-xl"
+								disabled={Boolean(userFlag) || flagKeyMutation.isPending}
+								onClick={() => setFlagModalOpen(true)}
+								data-testid="open-flag-key-modal"
+							>
+								<Flag className="size-4" aria-hidden="true" />
+								{userFlag ? 'Flag submitted' : 'Flag this key'}
+							</Button>
+						) : (
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								className="rounded-xl"
+								disabled
+							>
+								Connect wallet to flag
+							</Button>
+						)
+					}
+				/>
+				{/* Deprecation Notice and Buy Action on Key Detail Page */}
 
 				<SectionErrorBoundary sectionName="key statistics">
 					<KeyStatsPanel
@@ -1069,7 +1136,9 @@ function CreatorDetailPageContent() {
 									</div>
 
 									<p className="mt-0.5 text-sm text-white/80">
-										{isKeyDeprecated(creator)
+										{autoFrozen
+											? 'Trading is disabled while community flags on this key are reviewed.'
+											: isKeyDeprecated(creator)
 											? 'Key is deprecated. New buys are disabled.'
 											: keyFreeze
 												? keyFreeze.reason
@@ -1173,7 +1242,17 @@ function CreatorDetailPageContent() {
 										Liquidity Positions
 									</Link>
 
-									{isKeyDeprecated(creator) ? (
+									{autoFrozen ? (
+										<Button
+											disabled
+											data-testid="key-detail-buy-button"
+											variant="outline"
+											className="min-h-11 w-full rounded-xl font-bold sm:h-10 sm:min-h-0 sm:w-auto"
+											title="Trading is frozen while this key is reviewed"
+										>
+											Trading Frozen
+										</Button>
+									) : isKeyDeprecated(creator) ? (
 										<Button
 											disabled
 											data-testid="key-detail-buy-button"
@@ -1818,6 +1897,21 @@ function CreatorDetailPageContent() {
 						}}
 					/>
 				)}
+				{/* Flag key modal with stake + refund/forfeit rules (#1386) */}
+				<FlagKeyModal
+					open={flagModalOpen}
+					onOpenChange={setFlagModalOpen}
+					keyTitle={creator.title || creator.name || 'Creator Key'}
+					requiredStakeStroops={requiredStakeStroops}
+					existingFlag={userFlag}
+					isSubmitting={flagKeyMutation.isPending}
+					onSubmit={async ({ reasonCode }) => {
+						await flagKeyMutation.mutateAsync({
+							reasonCode,
+							stakeStroops: requiredStakeStroops,
+						});
+					}}
+				/>
 
 				{creator && (
 					<TradeDialog

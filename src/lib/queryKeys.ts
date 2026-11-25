@@ -86,6 +86,8 @@ export const queryKeys = {
 			['creators', keyId, 'related', limit] as const,
 		performanceBond: (creatorId: string) =>
 			['creators', creatorId, 'performance-bond'] as const,
+		keyFlags: (creatorId: string) =>
+			['creators', creatorId, 'flags'] as const,
 		snapshotHistory: (creatorId: string, range: string) =>
 			['creators', creatorId, 'snapshot-history', range] as const,
 		reputation: (creatorId: string) =>
