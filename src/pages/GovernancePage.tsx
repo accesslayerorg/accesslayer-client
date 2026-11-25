@@ -90,6 +90,12 @@ function GovernancePageContent() {
 								? `${activeCount} active proposal${activeCount === 1 ? '' : 's'} require${activeCount === 1 ? 's' : ''} your vote.`
 								: 'No active proposals at the moment.'}
 						</p>
+						<Link
+							to="/governance/activity"
+							className="mt-2 inline-block text-xs font-semibold text-amber-300/80 hover:text-amber-200 hover:underline"
+						>
+							View admin & privileged change activity
+						</Link>
 					</div>
 					<CreateProposalDialog
 						trigger={

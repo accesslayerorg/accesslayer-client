@@ -43,9 +43,8 @@ import {
 	isTradeLimitReached,
 } from '@/utils/tradeLimit.utils';
 import { UnavailableAction } from '@/components/ui/unavailable-action';
-import { useAccount } from 'wagmi';
-import { useTradeCooldown } from '@/hooks/useTradeCooldown';
-import CooldownBadge from '@/components/common/CooldownBadge';
+import PaymentAssetSelect from '@/components/common/PaymentAssetSelect';
+import type { PaymentAsset } from '@/types/paymentAsset.types';
 export interface BuySellTradeParams {
 	creatorId?: string;
 	side: 'buy' | 'sell';
@@ -55,6 +54,9 @@ export interface BuySellTradeParams {
 	minPriceStroops?: number | null;
 	slippageTolerancePercent: number;
 	pricePreview?: FeeBreakdown | null;
+	paymentAsset?: string;
+	maxPay?: number;
+	convertedQuote?: number;
 }
 
 export interface BuySellKeyFlowProps {
@@ -152,6 +154,12 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 	>(null);
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
 	const [internalSubmitting, setInternalSubmitting] = useState(false);
+	const [paymentAssetInfo, setPaymentAssetInfo] = useState<{
+		asset?: PaymentAsset;
+		maxPay?: number;
+		convertedQuote?: number;
+		hasSufficientBalance?: boolean;
+	}>({});
 	const { paused: globalPaused } = useGlobalPause();
 	// Trading is blocked by a platform-wide pause OR a pause on this key (#777).
 	const paused = globalPaused || tradingPaused;
@@ -419,6 +427,9 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 			minPriceStroops: slippageBounds?.minPriceStroops ?? null,
 			slippageTolerancePercent,
 			pricePreview,
+			paymentAsset: paymentAssetInfo.asset?.code,
+			maxPay: paymentAssetInfo.maxPay,
+			convertedQuote: paymentAssetInfo.convertedQuote,
 		};
 
 		showToast.loading(
@@ -454,7 +465,9 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 
 	let reviewButtonLabel = 'Review Sell Order';
 	if (side === 'buy') {
-		if (isCapLimitReached) {
+		if (paymentAssetInfo.hasSufficientBalance === false) {
+			reviewButtonLabel = `Insufficient ${paymentAssetInfo.asset?.code || 'Asset'} Balance`;
+		} else if (isCapLimitReached) {
 			reviewButtonLabel = 'Holding Cap Reached';
 		} else if (isCapBreached) {
 			reviewButtonLabel = 'Holding Cap Exceeded';
@@ -696,6 +709,15 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 				</div>
 			)}
 
+			{/* Payment Asset Selector with Converted Quote & Slippage (#1445) */}
+			{side === 'buy' && totalStroops != null && (
+				<PaymentAssetSelect
+					quoteStroops={totalStroops}
+					slippageTolerancePercent={slippageTolerancePercent}
+					onAssetChange={setPaymentAssetInfo}
+				/>
+			)}
+
 			{/* Slippage Tolerance Selector (0.5%, 1%, 2%, custom) */}
 			{!confirmationOpen && (
 				<div className="border-t border-white/10 pt-3">
@@ -758,8 +780,8 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 						isSubmitting ||
 						(impactWarningActive && !impactAcknowledged) ||
 						paused ||
-						tradeCooldown.isCoolingDown ||
-						(side === 'sell' && isFloorActive)
+						(side === 'sell' && isFloorActive) ||
+						(side === 'buy' && paymentAssetInfo.hasSufficientBalance === false)
 					}
 					data-testid="trade-review-button"
 					className={cn(

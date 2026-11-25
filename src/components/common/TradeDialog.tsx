@@ -135,6 +135,8 @@ export interface TradeDialogProps {
 	keyConfig?: KeyConfig | null;
 	/** Whether the key config query is still loading. */
 	isKeyConfigLoading?: boolean;
+	/** Optional sell quantity to prefill when opening the dialog. */
+	initialAmount?: number;
 	/** Key-level circuit breaker threshold in percent (defaults to keyConfig or 15%) (#1034). */
 	circuitBreakerThresholdPercent?: number | null;
 	/** Key-level circuit breaker threshold in basis points (defaults to keyConfig or 1500) (#1034). */
@@ -188,6 +190,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	availableSupply = null,
 	keyConfig,
 	isKeyConfigLoading = false,
+	initialAmount,
 	circuitBreakerThresholdPercent,
 	circuitBreakerThresholdBps,
 	requireConfirmation = false,
@@ -280,7 +283,13 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		if (open) {
 			triggerElementRef.current =
 				document.activeElement as HTMLElement | null;
-			setAmountText('1');
+			setAmountText(
+				initialAmount != null &&
+					Number.isFinite(initialAmount) &&
+					initialAmount > 0
+					? String(initialAmount)
+					: '1'
+			);
 			setTouched(false);
 			setAdjustmentNote(null);
 			setPricePreview(null);
@@ -296,7 +305,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 			fetchCap(creatorId, activeAddress);
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [open, side, activeAddress, creatorId]);
+	}, [open, side, activeAddress, creatorId, initialAmount]);
 
 	// Keyboard shortcuts for amount adjustment.
 	useEffect(() => {

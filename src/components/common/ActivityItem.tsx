@@ -24,6 +24,7 @@ interface EventConfig {
 	iconBg: string;
 	accentBorder: string;
 	label: string;
+	textColor: string;
 }
 
 function getEventConfig(type: WalletActivityEventType): EventConfig {
@@ -39,6 +40,7 @@ function getEventConfig(type: WalletActivityEventType): EventConfig {
 				iconBg: 'bg-emerald-500/10',
 				accentBorder: 'border-l-emerald-500',
 				label: 'Buy',
+				textColor: 'text-emerald-400',
 			};
 		case 'sell':
 			return {
@@ -51,6 +53,7 @@ function getEventConfig(type: WalletActivityEventType): EventConfig {
 				iconBg: 'bg-rose-500/10',
 				accentBorder: 'border-l-rose-500',
 				label: 'Sell',
+				textColor: 'text-rose-400',
 			};
 		case 'stake':
 			return {
@@ -60,6 +63,7 @@ function getEventConfig(type: WalletActivityEventType): EventConfig {
 				iconBg: 'bg-amber-500/10',
 				accentBorder: 'border-l-amber-500',
 				label: 'Stake',
+				textColor: 'text-amber-400',
 			};
 		case 'unstake':
 			return {
@@ -72,6 +76,7 @@ function getEventConfig(type: WalletActivityEventType): EventConfig {
 				iconBg: 'bg-orange-500/10',
 				accentBorder: 'border-l-orange-500',
 				label: 'Unstake',
+				textColor: 'text-orange-400',
 			};
 		case 'claim':
 			return {
@@ -81,6 +86,7 @@ function getEventConfig(type: WalletActivityEventType): EventConfig {
 				iconBg: 'bg-violet-500/10',
 				accentBorder: 'border-l-violet-500',
 				label: 'Claim Reward',
+				textColor: 'text-violet-400',
 			};
 		case 'governance_vote':
 			return {
@@ -88,6 +94,7 @@ function getEventConfig(type: WalletActivityEventType): EventConfig {
 				iconBg: 'bg-sky-500/10',
 				accentBorder: 'border-l-sky-500',
 				label: 'Governance Vote',
+				textColor: 'text-sky-400',
 			};
 	}
 }
@@ -164,7 +171,7 @@ export interface ActivityItemProps {
  * Displays:
  *   - Event-type icon with matching colour
  *   - Key / creator name
- *   - Event label pill
+ *   - Event label pill (Buy = green, Sell = red)
  *   - Amount / price / proposal details per event type
  *   - Relative timestamp
  *   - Truncated tx hash linking to Stellar Expert
@@ -201,16 +208,11 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ entry, className }) => {
 							{entry.creatorHandle}
 						</span>
 						<span
+							data-testid={`activity-item-label-${entry.id}`}
 							className={cn(
 								'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
 								config.iconBg,
-								// text colour matches icon colour via class
-								entry.type === 'buy' && 'text-emerald-400',
-								entry.type === 'sell' && 'text-rose-400',
-								entry.type === 'stake' && 'text-amber-400',
-								entry.type === 'unstake' && 'text-orange-400',
-								entry.type === 'claim' && 'text-violet-400',
-								entry.type === 'governance_vote' && 'text-sky-400'
+								config.textColor
 							)}
 						>
 							{config.label}

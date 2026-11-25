@@ -4,22 +4,28 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TradeDialog from '@/components/common/TradeDialog';
 
 describe('TradeDialog – sell quantity exceeds-holding validation', () => {
 	function renderSellDialog(
 		overrides: Partial<React.ComponentProps<typeof TradeDialog>> = {}
 	) {
+		const queryClient = new QueryClient({
+			defaultOptions: { queries: { retry: false } },
+		});
 		return render(
-			<TradeDialog
-				open={true}
-				side="sell"
-				creatorName="Alice"
-				availableHoldings={3}
-				onOpenChange={vi.fn()}
-				onConfirm={vi.fn()}
-				{...overrides}
-			/>
+			<QueryClientProvider client={queryClient}>
+				<TradeDialog
+					open={true}
+					side="sell"
+					creatorName="Alice"
+					availableHoldings={3}
+					onOpenChange={vi.fn()}
+					onConfirm={vi.fn()}
+					{...overrides}
+				/>
+			</QueryClientProvider>
 		);
 	}
 
@@ -82,6 +88,12 @@ describe('TradeDialog – sell quantity exceeds-holding validation', () => {
 		).not.toBeInTheDocument();
 	});
 
+	it('prefills the requested quantity for a voluntary retirement sell', () => {
+		renderSellDialog({ initialAmount: 2 });
+
+		expect(screen.getByTestId('trade-dialog-amount')).toHaveValue('2');
+	});
+
 	it('accepts quantity 1 (well within holding) without any error', () => {
 		renderSellDialog();
 		const input = screen.getByTestId(
@@ -111,17 +123,22 @@ describe('TradeDialog buy max quantity validation (#880)', () => {
 	function renderBuyDialog(
 		overrides: Partial<React.ComponentProps<typeof TradeDialog>> = {}
 	) {
+		const queryClient = new QueryClient({
+			defaultOptions: { queries: { retry: false } },
+		});
 		return render(
-			<TradeDialog
-				open={true}
-				side="buy"
-				creatorName="Alice"
-				availableHoldings={0}
-				onOpenChange={vi.fn()}
-				onConfirm={vi.fn()}
-				maxBuyQuantity={3}
-				{...overrides}
-			/>
+			<QueryClientProvider client={queryClient}>
+				<TradeDialog
+					open={true}
+					side="buy"
+					creatorName="Alice"
+					availableHoldings={0}
+					onOpenChange={vi.fn()}
+					onConfirm={vi.fn()}
+					maxBuyQuantity={3}
+					{...overrides}
+				/>
+			</QueryClientProvider>
 		);
 	}
 

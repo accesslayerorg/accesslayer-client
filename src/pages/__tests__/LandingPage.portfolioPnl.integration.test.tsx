@@ -22,6 +22,7 @@ vi.mock('@/hooks/useWallet', async () => {
 		...actual,
 		useTradeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 		useWalletHoldings: () => ({ data: mockHoldings() }),
+		useReceivedGifts: () => ({ data: [] }),
 	};
 });
 

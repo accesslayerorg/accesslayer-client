@@ -8,6 +8,7 @@ import {
 	truncateWalletAddress,
 	aggregateReferralEarnings,
 	REFERRAL_TIERS,
+	buildCreatorProfileReferralLink,
 } from '../referral.utils';
 import type { ReferredWallet } from '@/services/referral.service';
 
@@ -19,6 +20,29 @@ function makeWallet(overrides: Partial<ReferredWallet> = {}): ReferredWallet {
 		...overrides,
 	};
 }
+
+describe('buildCreatorProfileReferralLink (#1297)', () => {
+	it('encodes the handle and referral wallet', () => {
+		const url = buildCreatorProfileReferralLink({
+			handle: 'Alice & Co',
+			wallet: 'GTEST123',
+			origin: 'https://accesslayer.app',
+		});
+
+		expect(url).toBe(
+			'https://accesslayer.app/creators/Alice%20%26%20Co?ref=GTEST123'
+		);
+	});
+
+	it('uses the direct profile URL without a wallet', () => {
+		expect(
+			buildCreatorProfileReferralLink({
+				handle: 'alice',
+				origin: 'https://accesslayer.app',
+			})
+		).toBe('https://accesslayer.app/creators/alice');
+	});
+});
 
 describe('resolveReferralTier (#1119)', () => {
 	it('reads a valid tier off the wallet', () => {
@@ -73,9 +97,7 @@ describe('countReferralTiers (#1119)', () => {
 
 describe('truncateWalletAddress (#1119)', () => {
 	it('keeps the first four and last four characters', () => {
-		expect(truncateWalletAddress('GABCDEFGHIZKLMNOPQRSTU')).toBe(
-			'GABC…RSTU'
-		);
+		expect(truncateWalletAddress('GABCDEFGHIZKLMNOPQRSTU')).toBe('GABC…RSTU');
 	});
 
 	it('returns short addresses unchanged', () => {
@@ -142,7 +164,11 @@ describe('buildReferralEarningsRows (#1119)', () => {
 
 	it('falls back to the join date when no first trade exists', () => {
 		const rows = buildReferralEarningsRows([
-			makeWallet({ address: 'GJOINED', rewardXlm: 1, joinedAt: '2026-05-05T00:00:00.000Z' }),
+			makeWallet({
+				address: 'GJOINED',
+				rewardXlm: 1,
+				joinedAt: '2026-05-05T00:00:00.000Z',
+			}),
 		]);
 
 		expect(rows[0].date).toBe('2026-05-05T00:00:00.000Z');
@@ -151,7 +177,11 @@ describe('buildReferralEarningsRows (#1119)', () => {
 	it('marks claimed earnings', () => {
 		const rows = buildReferralEarningsRows([
 			makeWallet({ address: 'GCLAIMED', rewardXlm: 1, rewardClaimed: true }),
-			makeWallet({ address: 'GPENDING', rewardXlm: 1, rewardClaimed: false }),
+			makeWallet({
+				address: 'GPENDING',
+				rewardXlm: 1,
+				rewardClaimed: false,
+			}),
 		]);
 
 		expect(rows.map(row => row.claimed)).toEqual([true, false]);
@@ -195,10 +225,12 @@ describe('buildReferralLink (#1119)', () => {
 describe('aggregateReferralEarnings claimability (#1119)', () => {
 	it('flags a claimable balance only when pending XLM is positive', () => {
 		expect(
-			aggregateReferralEarnings({ wallet: 'GABC', pendingXlm: 2 }).hasClaimable
+			aggregateReferralEarnings({ wallet: 'GABC', pendingXlm: 2 })
+				.hasClaimable
 		).toBe(true);
 		expect(
-			aggregateReferralEarnings({ wallet: 'GABC', pendingXlm: 0 }).hasClaimable
+			aggregateReferralEarnings({ wallet: 'GABC', pendingXlm: 0 })
+				.hasClaimable
 		).toBe(false);
 		expect(aggregateReferralEarnings(null).hasClaimable).toBe(false);
 	});

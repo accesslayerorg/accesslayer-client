@@ -66,6 +66,7 @@ vi.mock('@/hooks/useWallet', async () => {
 			};
 		},
 		useTradeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+		useReceivedGifts: () => ({ data: [] }),
 	};
 });
 
