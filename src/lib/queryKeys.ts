@@ -374,6 +374,14 @@ export const queryKeys = {
 		distributions: (creatorId: string) =>
 			['creatorRevenue', creatorId, 'distributions'] as const,
 	},
+	// Holder-facing distribution history, running total and 12-month chart (#1259).
+	distributions: {
+		all: () => ['distributions'] as const,
+		overview: (wallet: string) =>
+			['distributions', wallet, 'overview'] as const,
+		history: (wallet: string, type: string, page: number) =>
+			['distributions', wallet, 'history', type, page] as const,
+	},
 	// Holder-facing revenue share claims (#1223).
 	revenueShare: {
 		all: () => ['revenueShare'] as const,

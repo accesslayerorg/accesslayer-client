@@ -54,6 +54,7 @@ import RentalMarketPage from './pages/RentalMarketPage';
 import MyRentalsPage from './pages/MyRentalsPage';
 import AutoInvestDashboardPage from './pages/AutoInvestDashboardPage';
 import AirdropClaimsPage from './pages/AirdropClaimsPage';
+import DistributionsPage from './pages/DistributionsPage';
 import ProtocolAnalyticsPage from './pages/ProtocolAnalyticsPage';
 import EscapeRedeemPage from './pages/EscapeRedeemPage';
 import LpPositionsPage from './pages/LpPositionsPage';
@@ -494,6 +495,11 @@ export const routes = [
 				),
 			},
 			{
+				// Holder-facing distribution history with combined earnings chart (#1259).
+				path: '/distributions',
+				element: withRouteErrorBoundary(
+					<DistributionsPage />,
+					'Distributions'
 				// Searchable audit log of privileged admin actions (#1415).
 				path: '/admin/audit',
 				element: (
