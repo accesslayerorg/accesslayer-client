@@ -2,6 +2,9 @@ import type { ReactNode } from 'react';
 import RootLayout from './components/common/RootLayout';
 import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
+import MediaKitPage from './pages/MediaKitPage';
+import PublicPressPage from './pages/PublicPressPage';
+import UnsubscribePage from './pages/UnsubscribePage';
 import MarketplacePage from './pages/MarketplacePage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import ReferralHoldsPage from './pages/ReferralHoldsPage';
@@ -152,6 +155,18 @@ export const routes = [
 			{
 				path: '/launches',
 				element: withRouteErrorBoundary(<LaunchesPage />, 'Launches'),
+			},
+			{
+				path: '/creator/media-kit',
+				element: withRouteErrorBoundary(<MediaKitPage />, 'Media kit'),
+			},
+			{
+				path: '/k/:handle/press',
+				element: withRouteErrorBoundary(<PublicPressPage />, 'Press page'),
+			},
+			{
+				path: '/unsubscribe/:token',
+				element: withRouteErrorBoundary(<UnsubscribePage />, 'Unsubscribe'),
 			},
 			{
 				path: '/creator/verification',

@@ -27,6 +27,7 @@ import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import showToast from '@/utils/toast.util';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
 import { logWalletDisconnectSession } from '@/lib/walletSessionLog';
+import SignInOptionsModal from '@/components/auth/SignInOptionsModal';
 
 function ConnectWalletButton() {
 	const [showAddressPopover, setShowAddressPopover] = useState(false);
@@ -35,6 +36,7 @@ function ConnectWalletButton() {
 	const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
 	const [showConnectDialog, setShowConnectDialog] = useState(false);
 	const [connectError, setConnectError] = useState<string | null>(null);
+	const [showSignInOptions, setShowSignInOptions] = useState(false);
 	const { address, isConnected } = useAccount();
 	const { connect, connectors, error, isPending } = useConnect();
 	const { disconnect } = useDisconnect();
@@ -251,6 +253,16 @@ function ConnectWalletButton() {
 								{WALLET_CONNECTION_AD_BLOCKER_MESSAGE}
 							</p>
 						) : null}
+						<button
+							type="button"
+							onClick={() => {
+								setShowConnectDialog(false);
+								setShowSignInOptions(true);
+							}}
+							className="text-sm font-medium text-blue-700 underline-offset-4 hover:underline"
+						>
+							No wallet? Continue with a passkey or email
+						</button>
 					</div>
 					<DialogFooter>
 						<DialogClose asChild>
@@ -259,6 +271,11 @@ function ConnectWalletButton() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+			<SignInOptionsModal
+				open={showSignInOptions}
+				onOpenChange={setShowSignInOptions}
+				onConnectWallet={() => setShowConnectDialog(true)}
+			/>
 		</>
 	);
 }
