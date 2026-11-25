@@ -329,7 +329,6 @@ function LiveActivityFeed({ wsUrl, keyId }: { wsUrl: string; keyId?: string }) {
 			setEntries(prev => mergeLiveEntry(prev, trade));
 		};
 		return () => ws.close();
-		 
 	}, [wsUrl, keyId]);
 
 	// Events received while paused are queued and merged on resume.

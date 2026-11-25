@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
 	findBalanceAsOfLedger,
 	computeHoldingsAsOfDate,
-	timestampToEstimatedLedger,
 	exportBalanceHistoryToCsv,
 	DEFAULT_REFERENCE_LEDGER,
 	DEFAULT_REFERENCE_TIMESTAMP,

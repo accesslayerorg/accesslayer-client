@@ -2,6 +2,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { HelmetProvider } from 'react-helmet-async';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CreatorPublicProfilePage from '@/pages/CreatorPublicProfilePage';
 import { courseService, type Course } from '@/services/course.service';
@@ -87,16 +88,18 @@ function renderPage(address: string = CREATOR_ADDRESS) {
 	});
 
 	return render(
-		<QueryClientProvider client={queryClient}>
-			<MemoryRouter initialEntries={[`/creator/${address}/profile`]}>
-				<Routes>
-					<Route
-						path="/creator/:address/profile"
-						element={<CreatorPublicProfilePage />}
-					/>
-				</Routes>
-			</MemoryRouter>
-		</QueryClientProvider>
+		<HelmetProvider>
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter initialEntries={[`/creator/${address}/profile`]}>
+					<Routes>
+						<Route
+							path="/creator/:address/profile"
+							element={<CreatorPublicProfilePage />}
+						/>
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		</HelmetProvider>
 	);
 }
 
@@ -153,6 +156,43 @@ describe('CreatorPublicProfilePage (#1054)', () => {
 			screen.getByLabelText('Avg Market Cap: 50 XLM')
 		).toBeInTheDocument();
 		expect(screen.getByLabelText('Keys Issued: 2')).toBeInTheDocument();
+	});
+
+	it('renders data-driven creator metadata and Person structured data', async () => {
+		mockGetCourses.mockResolvedValue([
+			makeKey({
+				socialHandle: 'alexrivers',
+				name: 'Alex Rivers',
+				bio: 'Digital artist and illustrator.',
+			}),
+		]);
+
+		renderPage();
+
+		await waitFor(() => {
+			expect(document.title).toBe(
+				'Alex Rivers — Creator Profile | AccessLayer'
+			);
+			expect(
+				document.head.querySelector('meta[property="og:image"]')
+			).toHaveAttribute(
+				'content',
+				'https://accesslayer.xyz/api/v1/share/creators/alexrivers/image.png'
+			);
+		});
+
+		expect(
+			document.head.querySelector('meta[name="description"]')
+		).toHaveAttribute('content', 'Digital artist and illustrator.');
+		expect(
+			JSON.parse(
+				document.querySelector('script[type="application/ld+json"]')
+					?.textContent ?? '{}'
+			)
+		).toMatchObject({
+			'@type': 'Person',
+			name: 'Alex Rivers',
+		});
 	});
 
 	it('shows the correct status and price for each deployed key', async () => {

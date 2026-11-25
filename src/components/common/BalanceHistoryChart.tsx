@@ -46,16 +46,14 @@ interface ChartPoint {
 	keyName: string;
 }
 
-// Custom Dot for Buy/Sell Markers
-function CustomizedDot({
-	cx,
-	cy,
-	payload,
-}: {
+interface CustomizedDotProps {
 	cx?: number;
 	cy?: number;
-	payload?: Pick<ChartPoint, 'eventType' | 'ledger'>;
-}) {
+	payload?: ChartPoint;
+}
+
+// Custom Dot for Buy/Sell Markers
+function CustomizedDot({ cx, cy, payload }: CustomizedDotProps) {
 	if (!payload) return null;
 
 	const isBuy = payload.eventType === 'buy';

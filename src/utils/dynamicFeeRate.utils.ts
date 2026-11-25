@@ -186,3 +186,62 @@ export function formatEffectiveFeeRate(effectiveFeeBps: number): string {
 	if (!Number.isFinite(effectiveFeeBps)) return 'Effective fee rate: —';
 	return `Effective fee rate: ${bpsToPercent(effectiveFeeBps)}`;
 }
+
+/** Maximum creator fee start rate allowed by the protocol, in basis points. */
+export const MAX_CREATOR_FEE_START_BPS = 1000;
+
+/** Creator fee schedule that decays from a start rate toward a floor. */
+export interface CreatorFeeSchedule {
+	/** Starting creator fee in basis points. */
+	startBps: number;
+	/** Floor creator fee in basis points. */
+	floorBps: number;
+	/** Decay duration in ledgers. */
+	decayLedgers: number;
+}
+
+/**
+ * Validates a creator fee schedule. Returns a map of field name to inline
+ * error message; an empty object means the schedule is valid.
+ */
+export function validateCreatorFeeSchedule(
+	schedule: CreatorFeeSchedule
+): Partial<Record<keyof CreatorFeeSchedule, string>> {
+	const errors: Partial<Record<keyof CreatorFeeSchedule, string>> = {};
+	if (!Number.isFinite(schedule.startBps) || schedule.startBps < 0) {
+		errors.startBps = 'Start rate must be a non-negative number.';
+	} else if (schedule.startBps > MAX_CREATOR_FEE_START_BPS) {
+		errors.startBps = `Start rate cannot exceed ${MAX_CREATOR_FEE_START_BPS} bps.`;
+	}
+	if (!Number.isFinite(schedule.floorBps) || schedule.floorBps < 0) {
+		errors.floorBps = 'Floor rate must be a non-negative number.';
+	} else if (isFloorAboveStart(schedule.floorBps, schedule.startBps)) {
+		errors.floorBps = 'Floor rate cannot be above the start rate.';
+	}
+	if (!Number.isFinite(schedule.decayLedgers) || schedule.decayLedgers <= 0) {
+		errors.decayLedgers = 'Decay duration must be a positive number of ledgers.';
+	}
+	return errors;
+}
+
+function isFloorAboveStart(floorBps: number, startBps: number): boolean {
+	return Number.isFinite(startBps) && floorBps > startBps;
+}
+
+/**
+ * Returns the creator fee in basis points at a given ledger, decaying linearly
+ * from the start rate to the floor over the decay duration.
+ */
+export function getCreatorFeeAtLedger(
+	schedule: CreatorFeeSchedule,
+	elapsedLedgers: number
+): number {
+	if (!Number.isFinite(elapsedLedgers) || elapsedLedgers <= 0) return schedule.startBps;
+	if (schedule.decayLedgers <= 0 || elapsedLedgers >= schedule.decayLedgers) {
+		return schedule.floorBps;
+	}
+	const progress = elapsedLedgers / schedule.decayLedgers;
+	return Math.round(
+		schedule.startBps - (schedule.startBps - schedule.floorBps) * progress
+	);
+}

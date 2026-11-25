@@ -28,7 +28,7 @@ import {
 } from '@/utils/keyPriceDisplay.utils';
 import PercentageBadge from '@/components/common/PercentageBadge';
 import NetworkFeeHint from '@/components/common/NetworkFeeHint';
-import AllowanceApprovalStep from '@/components/common/AllowanceApprovalStep';
+import PermitAllowanceStep from '@/components/common/PermitAllowanceStep';
 import HoldingCapWarning from '@/components/common/HoldingCapWarning';
 import BuyFeeBreakdown from '@/components/common/BuyFeeBreakdown';
 import SellFeeBreakdown from '@/components/common/SellFeeBreakdown';
@@ -83,9 +83,7 @@ import { useContractPausedStore, selectIsPaused } from '@/hooks/useContractPause
 import { useAllowanceStore, selectNeedsApproval } from '@/hooks/useAllowanceStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useHoldingCapStore, isAtHoldingCap, remainingCapacity } from '@/hooks/useHoldingCapStore';
-import { useTradeCooldown } from '@/hooks/useTradeCooldown';
-import CooldownBadge from '@/components/common/CooldownBadge';
-import { formatCooldownDuration } from '@/utils/buyCooldown.utils';
+import type { PermitAllowanceConfig } from '@/types/permit';
 
 export type TradeSide = 'buy' | 'sell' | 'stake' | 'transfer';
 
@@ -167,6 +165,11 @@ export interface TradeDialogProps {
 	networkFeeEstimateProvider?: NetworkFeeDataProvider;
 	/** Optional wallet address override (otherwise uses wagmi account). */
 	walletAddress?: string;
+	/**
+	 * Optional signed-permit capability. When omitted or unsupported, staking
+	 * keeps the standard approve-then-transfer flow.
+	 */
+	permitConfig?: PermitAllowanceConfig;
 }
 
 type NetworkFeeEstimateState =
@@ -204,6 +207,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	isSubmitting = false,
 	networkFeeEstimateProvider,
 	walletAddress,
+	permitConfig,
 }) => {
 	const { address } = useAccount();
 	const activeAddress = walletAddress ?? address;
@@ -1230,10 +1234,18 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 
 			{/* Allowance approval step (#955) — shown when approval is needed for staking */}
 			{requiresAllowanceApproval && (
-				<AllowanceApprovalStep
+				<PermitAllowanceStep
+					owner={activeAddress ?? ''}
+					keyId={creatorId ?? ''}
+					amount={parsedAmount}
+					permitConfig={permitConfig}
 					isApproving={isApproving}
 					errorMessage={approvalError}
 					onApprove={() => activeAddress && submitApproval(activeAddress)}
+					onPermitTransferComplete={result => {
+						permitConfig?.onTransferComplete?.(result);
+						onOpenChange(false);
+					}}
 				/>
 			)}
 		</>
@@ -1274,14 +1286,10 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 					type="button"
 					onClick={handleConfirm}
 					disabled={
-						!amountValid ||
-						isSubmitting ||
-						exceedsLiquidityDepth ||
-						(side === 'buy' && (previewLoading || previewError != null)) ||
-						paused ||
-						frozen ||
-						tradeCooldown.isCoolingDown ||
-						(side === 'sell' && isFloorActive)
+						confirmDisabled ||
+						(side === 'buy' &&
+							(previewLoading || previewError != null)) ||
+						paused
 					}
 					aria-busy={isSubmitting || undefined}
 					data-focus-order="3"
