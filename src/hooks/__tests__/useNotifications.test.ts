@@ -3,7 +3,11 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
-import type { NotificationsResponse } from '@/services/notification.service';
+import * as notificationServiceModule from '@/services/notification.service';
+import type {
+	Notification,
+	NotificationsResponse,
+} from '@/services/notification.service';
 
 vi.mock('@/services/notification.service', () => ({
 	notificationService: {
@@ -12,6 +16,9 @@ vi.mock('@/services/notification.service', () => ({
 		markAllAsRead: vi.fn().mockImplementation(() => new Promise(() => {})),
 	},
 	NotificationService: vi.fn(),
+	fetchMentions: vi.fn().mockResolvedValue([]),
+	fetchOrders: vi.fn().mockResolvedValue([]),
+	fetchGifts: vi.fn().mockResolvedValue([]),
 }));
 
 const USER_ID = 'user_abc123';
@@ -41,6 +48,9 @@ function makeWrapper() {
 describe('useNotifications', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.mocked(notificationServiceModule.fetchMentions).mockResolvedValue([]);
+		vi.mocked(notificationServiceModule.fetchOrders).mockResolvedValue([]);
+		vi.mocked(notificationServiceModule.fetchGifts).mockResolvedValue([]);
 	});
 
 	afterEach(() => {
@@ -170,5 +180,89 @@ describe('useNotifications', () => {
 		// The other notification remains unread.
 		const n2 = result.current.recent.find(n => n.id === 'n2');
 		expect(n2?.read).toBe(false);
+	});
+
+	it('aggregates mention, order, and gift notifications', async () => {
+		const base = Date.now();
+		const mention: Notification = {
+			id: 'mention-1',
+			type: 'mention',
+			message: 'Alice mentioned you',
+			createdAt: new Date(base - 1000).toISOString(),
+			read: false,
+			href: '/creator/alice',
+		};
+		const order: Notification = {
+			id: 'order-1',
+			type: 'order',
+			message: 'Your order is executable',
+			createdAt: new Date(base - 2000).toISOString(),
+			read: false,
+			href: '/orders/order-1',
+		};
+		const gift: Notification = {
+			id: 'gift-1',
+			type: 'gift',
+			message: 'Bob sent you a gift',
+			createdAt: new Date(base - 3000).toISOString(),
+			read: true,
+			href: '/wallet/gifts',
+		};
+
+		vi.mocked(notificationServiceModule.fetchMentions).mockResolvedValue([mention]);
+		vi.mocked(notificationServiceModule.fetchOrders).mockResolvedValue([order]);
+		vi.mocked(notificationServiceModule.fetchGifts).mockResolvedValue([gift]);
+
+		const { result } = renderHook(() => useNotifications(USER_ID), {
+			wrapper: makeWrapper(),
+		});
+
+		await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+		expect(result.current.notifications.map(item => item.type)).toEqual([
+			'mention',
+			'order',
+			'gift',
+		]);
+		expect(result.current.unreadCount).toBe(2);
+	});
+
+	it('applies an optimistic read-all update', async () => {
+		const notifications = [
+			{
+				id: 'n1',
+				type: 'mention' as const,
+				message: 'Alice mentioned you',
+				createdAt: new Date().toISOString(),
+				read: false,
+				href: '/creator/alice',
+			},
+			{
+				id: 'n2',
+				type: 'order' as const,
+				message: 'Your order is executable',
+				createdAt: new Date().toISOString(),
+				read: false,
+				href: '/orders/n2',
+			},
+		];
+		const fetchFn = vi.fn().mockResolvedValue(
+			makeResponse({ notifications, unreadCount: 2 })
+		);
+
+		const { result } = renderHook(
+			() => useNotifications(USER_ID, fetchFn),
+			{ wrapper: makeWrapper() }
+		);
+
+		await waitFor(() => expect(result.current.isLoading).toBe(false));
+		expect(result.current.unreadCount).toBe(2);
+
+		act(() => {
+			result.current.markAllAsRead();
+		});
+
+		await waitFor(() => expect(result.current.unreadCount).toBe(0));
+		expect(result.current.notifications.every(item => item.read)).toBe(true);
 	});
 });
