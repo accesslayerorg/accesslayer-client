@@ -180,6 +180,10 @@ export const queryKeys = {
 	transaction: {
 		status: (hash: string) => ['transaction', hash, 'status'] as const,
 	},
+	permit: {
+		nonce: (contractId: string, owner: string) =>
+			['permit', contractId, owner, 'nonce'] as const,
+	},
 	notifications: {
 		all: () => ['notifications'] as const,
 		list: (userId: string) => ['notifications', userId, 'list'] as const,
