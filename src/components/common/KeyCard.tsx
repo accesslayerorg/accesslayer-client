@@ -11,6 +11,7 @@ import {
 } from '@/utils/keyPriceDisplay.utils';
 import AddToBatchButton from '@/components/common/AddToBatchButton';
 import IssuerVerificationBadge from '@/components/common/IssuerVerificationBadge';
+import VerifiedBadge from '@/components/common/VerifiedBadge';
 import { cn } from '@/lib/utils';
 import FiatValue from '@/components/common/FiatValue';
 import { STROOPS_PER_XLM } from '@/constants/stellar';
@@ -87,6 +88,9 @@ export const KeyCard: React.FC<KeyCardProps> = ({ creator, className }) => {
 						>
 							{handle}
 						</p>
+					)}
+					{creator.isVerified && (
+						<VerifiedBadge verified className="mt-1.5" />
 					)}
 					<IssuerVerificationBadge
 						wallet={creator.instructorId}

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Moon, Sun, Monitor, Bookmark } from 'lucide-react';
+import { Bookmark } from 'lucide-react';
 import WalletStatusChip from '@/components/common/WalletStatusChip';
 import NotificationBell from '@/components/common/NotificationBell';
 import PendingTransactionsDrawer from '@/components/common/PendingTransactionsDrawer';
 import GlobalSearch from '@/components/common/GlobalSearch';
 import { useProfileStore } from '@/hooks/useProfileStore';
-import { useTheme } from '@/hooks/useTheme';
+import ThemeToggle from '@/components/common/ThemeToggle';
 import { Link } from 'react-router';
 import BatchTradePanel from '@/components/common/BatchTradePanel';
 import { useConnectedWallet, useWatchlist } from '@/hooks/useWatchlist';
@@ -15,6 +15,7 @@ const navLinks = [
 	{ label: 'Marketplace', href: '/marketplace', external: false },
 	{ label: 'Discover', href: '/discovery', external: false },
 	{ label: 'Status', href: '/status', external: false },
+	{ label: 'Borrow', href: '/borrow', external: false },
 	{ label: 'About', href: '/about', external: false },
 	{
 		label: 'GitHub',
@@ -27,7 +28,6 @@ export default function Header() {
 	const [scrolled, setScrolled] = useState(false);
 	const [batchOpen, setBatchOpen] = useState(false);
 	const profile = useProfileStore(state => state.profile);
-	const { theme, toggleTheme } = useTheme();
 	const walletKey = useConnectedWallet(state => state.walletKey);
 	const watchlistCount = useWatchlist(state =>
 		state.getWatchlistCount(walletKey)
@@ -116,7 +116,7 @@ export default function Header() {
 					<GlobalSearch />
 				</div>
 
-				{/* Right-side actions: dark mode toggle (#750) + notification bell (#720) + wallet status chip (#686).
+				{/* Right-side actions: theme toggle (#1284) + notification bell (#720) + wallet status chip (#686).
 				    NotificationBell is only rendered when a user profile is available. */}
 				<div className="flex items-center gap-2 shrink-0">
 					<CurrencySelector scrolled={scrolled} />
@@ -128,26 +128,13 @@ export default function Header() {
 						Batch Trade
 					</button>
 					<BatchTradePanel open={batchOpen} onOpenChange={setBatchOpen} />
-					<button
-						type="button"
-						onClick={toggleTheme}
-						aria-label={`Current theme: ${theme}. Click to cycle themes.`}
-						className={`rounded-md p-1.5 transition-colors duration-200 ${
+					<ThemeToggle
+						className={
 							scrolled
 								? 'text-gray-600 hover:bg-black/5 hover:text-gray-900'
 								: 'text-white/60 hover:text-white/90'
-						}`}
-					>
-						{theme === 'dark' && (
-							<Sun className="size-4" aria-hidden="true" />
-						)}
-						{theme === 'light' && (
-							<Moon className="size-4" aria-hidden="true" />
-						)}
-						{theme === 'system' && (
-							<Monitor className="size-4" aria-hidden="true" />
-						)}
-					</button>
+						}
+					/>
 					<PendingTransactionsDrawer
 						className={
 							scrolled

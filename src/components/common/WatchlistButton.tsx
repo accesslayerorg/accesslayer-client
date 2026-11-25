@@ -12,6 +12,8 @@ interface WatchlistButtonProps {
 	size?: 'sm' | 'md';
 	/** Accessible label prefix used to disambiguate multiple buttons on a page. */
 	labelName?: string;
+	/** Optional caller-scoped test id; not set by default to avoid over-tagging. */
+	'data-testid'?: string;
 }
 
 /**
@@ -25,6 +27,7 @@ const WatchlistButton: React.FC<WatchlistButtonProps> = ({
 	className,
 	size = 'md',
 	labelName,
+	...rest
 }) => {
 	const walletKey = useConnectedWallet(state => state.walletKey);
 	const bookmarked = useWatchlist(state => state.isBookmarked(walletKey, creator.id));
@@ -50,6 +53,7 @@ const WatchlistButton: React.FC<WatchlistButtonProps> = ({
 	return (
 		<button
 			type="button"
+			{...rest}
 			aria-label={
 				bookmarked
 					? `${displayName} saved to watchlist. Remove bookmark.`

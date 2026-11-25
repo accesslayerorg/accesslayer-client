@@ -332,6 +332,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 					creator={creator}
 					size="sm"
 					labelName={displayCreatorName}
+					data-testid="creator-card-watchlist-button"
 					className="shadow-lg shadow-black/20"
 				/>
 				<DropdownMenu>
@@ -733,6 +734,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 				</div>
 				<AsyncButton
 					onClick={handleBuy}
+					data-testid="creator-card-buy-button"
 					variant={isConnected ? 'default' : 'outline'}
 					size="sm"
 					isPending={transactionState === 'submitting'}

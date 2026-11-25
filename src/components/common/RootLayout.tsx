@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router';
+import { Outlet, useLocation } from 'react-router';
+import ComparisonTray from '@/components/common/ComparisonTray';
+import { useKeyComparison } from '@/hooks/useKeyComparison';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
 import BundleCartTrigger from '@/components/common/BundleCartTrigger';
 import BundleCartDrawer from '@/components/common/BundleCartDrawer';
 import BatchTradeTrigger from '@/components/common/BatchTradeTrigger';
 import BatchTradeDrawer from '@/components/common/BatchTradeDrawer';
+import DebugDrawer from '@/components/common/DebugDrawer';
 
 /**
  * Root layout shared by all routes.
@@ -19,6 +22,8 @@ import BatchTradeDrawer from '@/components/common/BatchTradeDrawer';
  */
 export default function RootLayout() {
 	const [bundleCartOpen, setBundleCartOpen] = useState(false);
+	const { selectedKeys, removeKey, clearKeys } = useKeyComparison();
+	const { pathname } = useLocation();
 
 	return (
 		<>
@@ -34,6 +39,16 @@ export default function RootLayout() {
 			{/* Batch trade entry point + drawer, available on every route (#1155) */}
 			<BatchTradeTrigger />
 			<BatchTradeDrawer />
+			{/* Developer debug drawer (#1447) */}
+			<DebugDrawer />
+			{/* Key comparison tray (#1247); the compare page has its own controls */}
+			{pathname !== '/compare' && (
+				<ComparisonTray
+					selectedKeys={selectedKeys}
+					onRemoveKey={removeKey}
+					onClearAll={clearKeys}
+				/>
+			)}
 		</>
 	);
 }

@@ -16,7 +16,8 @@ function isValidStellarAddress(address: string): boolean {
 }
 
 export function validateAirdropRecipients(
-	rows: AirdropRecipient[]
+	rows: AirdropRecipient[],
+	resolvedAddresses?: Record<number, string | null>
 ): AirdropRowError[] {
 	const errors: AirdropRowError[] = [];
 	const seen = new Set<string>();
@@ -30,19 +31,33 @@ export function validateAirdropRecipients(
 
 	for (let i = 0; i < rows.length; i++) {
 		const { address, quantity } = rows[i];
+		const trimmed = (address || '').trim();
 
-		if (!isValidStellarAddress(address)) {
+		let effectiveAddress = trimmed;
+		if (trimmed.includes('*')) {
+			const resolved = resolvedAddresses?.[i];
+			if (resolved && isValidStellarAddress(resolved)) {
+				effectiveAddress = resolved;
+			} else {
+				errors.push({
+					rowIndex: i,
+					message: 'Valid Stellar address required',
+				});
+				continue;
+			}
+		} else if (!isValidStellarAddress(trimmed)) {
 			errors.push({ rowIndex: i, message: 'Invalid Stellar address' });
+			continue;
 		}
 
 		if (quantity < 1) {
 			errors.push({ rowIndex: i, message: 'Quantity must be at least 1' });
 		}
 
-		if (seen.has(address)) {
+		if (seen.has(effectiveAddress)) {
 			errors.push({ rowIndex: i, message: 'Duplicate address' });
 		}
-		seen.add(address);
+		seen.add(effectiveAddress);
 	}
 
 	return errors;
