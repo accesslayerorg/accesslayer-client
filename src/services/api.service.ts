@@ -1,4 +1,5 @@
 import { env } from '@/utils/env.utils';
+import { recordRecentError } from '@/utils/recentErrors.utils';
 import axios, { type AxiosInstance, AxiosError } from 'axios';
 import Cookies from 'js-cookie';
 
@@ -17,6 +18,41 @@ export interface APIErrorResponse {
 		message: string;
 	}>;
 }
+
+// Minimal shape of the OpenAPI document served at GET /v1/openapi.json.
+// Only the parts the docs portal relies on are typed; the rest is passed
+// through untouched so the portal can render whatever the server emits.
+export interface OpenApiDocument {
+	openapi: string;
+	info: {
+		title: string;
+		version: string;
+		description?: string;
+	};
+	servers?: Array<{ url: string; description?: string }>;
+	tags?: Array<{ name: string; description?: string }>;
+	paths: Record<string, OpenApiPathItem>;
+	components?: {
+		schemas?: Record<string, unknown>;
+		securitySchemes?: Record<string, unknown>;
+		[key: string]: unknown;
+	};
+	[key: string]: unknown;
+}
+
+export interface OpenApiOperation {
+	tags?: string[];
+	summary?: string;
+	description?: string;
+	operationId?: string;
+	parameters?: unknown[];
+	requestBody?: unknown;
+	responses?: Record<string, unknown>;
+	security?: Array<Record<string, string[]>>;
+	[key: string]: unknown;
+}
+
+export type OpenApiPathItem = Record<string, OpenApiOperation | unknown>;
 
 export class ApiError extends Error {
 	public status: number;
@@ -210,6 +246,7 @@ export class BaseApiService {
 
 	// Common error handler
 	protected handleError(error: unknown): ApiError {
+		let apiError: ApiError;
 		if (axios.isAxiosError(error)) {
 			const axiosError = error as AxiosError<APIErrorResponse>;
 
@@ -218,22 +255,80 @@ export class BaseApiService {
 				const data = axiosError.response.data;
 				const message = data?.message || 'An error occurred';
 
-				return new ApiError(message, status, data);
+				apiError = new ApiError(message, status, data);
 			} else if (axiosError.request) {
-				return new ApiError('Network error - check your connection', 0);
+				apiError = new ApiError('Network error - check your connection', 0);
+			} else {
+				apiError = new ApiError(axiosError.message, 500);
 			}
+		} else if (error instanceof Error) {
+			apiError = new ApiError(error.message, 500);
+		} else {
+			apiError = new ApiError('Something went wrong', 500);
 		}
 
-		if (error instanceof Error) {
-			return new ApiError(error.message, 500);
-		}
-
-		return new ApiError('Something went wrong', 500);
+		recordRecentError(apiError.message, 'api');
+		return apiError;
 	}
 
 	// Override this in child classes if needed
 	protected clearAuth(): void {
 		Cookies.remove(this.ACCESS_TOKEN);
 		Cookies.remove(this.REFRESH_TOKEN);
+	}
+}
+
+// Standalone fetch for the public OpenAPI document (#1416). The docs portal
+// must be able to load the spec even when the user is signed out, so this
+// deliberately bypasses the authenticated axios instance and its refresh
+// interceptor. Failures are surfaced as ApiError so callers can show a
+// retryable error state.
+export async function fetchOpenApiDocument(): Promise<OpenApiDocument> {
+	try {
+		const response = await axios.get<OpenApiDocument>(
+			`${env.VITE_BACKEND_URL}/v1/openapi.json`,
+			{ withCredentials: true }
+		);
+
+		const document = response.data;
+
+		if (!document || typeof document !== 'object' || !document.paths) {
+			throw new ApiError(
+				'Received an invalid OpenAPI document from the server',
+				response.status
+			);
+		}
+
+		return document;
+	} catch (error) {
+		if (error instanceof ApiError) {
+			throw error;
+		}
+
+		if (axios.isAxiosError(error)) {
+			const axiosError = error as AxiosError<APIErrorResponse>;
+
+			if (axiosError.response) {
+				const status = axiosError.response.status;
+				const data = axiosError.response.data;
+				const message =
+					data?.message || 'Failed to load the API specification';
+
+				throw new ApiError(message, status, data);
+			}
+
+			if (axiosError.request) {
+				throw new ApiError(
+					'Network error - could not reach the API specification',
+					0
+				);
+			}
+		}
+
+		if (error instanceof Error) {
+			throw new ApiError(error.message, 500);
+		}
+
+		throw new ApiError('Failed to load the API specification', 500);
 	}
 }

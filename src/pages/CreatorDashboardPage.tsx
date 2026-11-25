@@ -1,10 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import {
-	Link,
-	useLocation,
-	useParams,
-	useSearchParams,
-} from 'react-router';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router';
 import { useAccount } from 'wagmi';
 import { useCreatorDetail } from '@/hooks/useCreators';
 import { useWalletHoldings } from '@/hooks/useWallet';
@@ -55,6 +50,7 @@ import { GraduatedCurveMilestoneChart } from '@/components/common/GraduatedCurve
 import CreatorRevenuePanel from '@/components/common/CreatorRevenuePanel';
 import DistributeRevenuePanel from '@/components/common/DistributeRevenuePanel';
 import CreatorAnnouncementsPanel from '@/components/common/CreatorAnnouncementsPanel';
+import CreatorEventsPanel from '@/components/events/CreatorEventsPanel';
 import VestingSchedulesViewer from '@/components/creator/VestingSchedulesViewer';
 import PerformanceBondCard from '@/components/creator/PerformanceBondCard';
 import OnboardingChecklistCard from '@/components/creator/OnboardingChecklistCard';
@@ -370,9 +366,7 @@ export default function CreatorDashboardPage() {
 					</div>
 				)}
 
-				{activeTab === 'overview' && (
-					<KeyFeeHistoryChart keyId={id} />
-				)}
+				{activeTab === 'overview' && <KeyFeeHistoryChart keyId={id} />}
 
 				{activeTab === 'overview' && (
 					<section
@@ -391,6 +385,26 @@ export default function CreatorDashboardPage() {
 							Post updates to your key holders.
 						</p>
 						<CreatorAnnouncementsPanel creatorId={id} />
+					</section>
+				)}
+
+				{activeTab === 'overview' && (
+					<section
+						className={CARD_CLASS}
+						id="dashboard-events-section"
+						aria-labelledby="dashboard-events-heading"
+						data-testid="dashboard-events-section"
+					>
+						<h2
+							id="dashboard-events-heading"
+							className="mb-1 font-grotesque text-xl font-black tracking-tight"
+						>
+							Holder events
+						</h2>
+						<p className="mb-6 text-sm text-white/50">
+							Create redeemable passes and manage your active events.
+						</p>
+						<CreatorEventsPanel creatorId={id} />
 					</section>
 				)}
 
@@ -638,7 +652,8 @@ export default function CreatorDashboardPage() {
 							</h2>
 
 							<p className="mb-6 text-sm text-white/50">
-								Choose who can view the gated content attached to this key.
+								Choose who can view the gated content attached to this
+								key.
 							</p>
 
 							<ContentGatePanel creatorId={id} wallet={address} />
