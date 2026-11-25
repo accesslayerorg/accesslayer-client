@@ -98,7 +98,6 @@ import { useKeyOraclePrice } from '@/hooks/useKeyOraclePrice';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 import { usePurchaseConfetti } from '@/hooks/usePurchaseConfetti';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useKeyTwap, type TwapWindow } from '@/hooks/useKeyTwap';
 import { useKeyStats } from '@/hooks/useKeyStats';
 import { useKeyUniqueTraders } from '@/hooks/useKeyUniqueTraders';
@@ -158,11 +157,17 @@ import { useKeyMarketMaker } from '@/hooks/useKeyMarketMaker';
 import { MarketMakerChip, MMBadge } from '@/components/common/MarketMakerChip';
 import ReportKeyModal from '@/components/common/ReportKeyModal';
 import ShareQrModal from '@/components/common/ShareQrModal';
+import PageMeta from '@/components/common/PageMeta';
 import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
 import RetirementExitPanel from '@/components/common/RetirementExitPanel';
 import RetirementNoticeEmailCard from '@/components/common/RetirementNoticeEmailCard';
 import { QrCode, Bell } from 'lucide-react';
 import PriceAlertForm from '@/components/common/PriceAlertForm';
+import {
+	buildCanonicalUrl,
+	buildCreatorShareImageUrl,
+} from '@/utils/seo.utils';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
 
 /** Series shown in the key detail price panel (#1220 adds the depth tab). */
 type PriceChartTab = 'primary' | 'secondary' | 'depth' | 'revenue';
@@ -228,7 +233,6 @@ function CreatorDetailPageContent() {
 	);
 
 	useNavigationTiming('creator_profile');
-	useDocumentTitle(creator ? `${creator.title} — AccessLayer` : null);
 
 	useEffect(() => {
 		setHasMounted(true);
@@ -553,9 +557,60 @@ function CreatorDetailPageContent() {
 		}
 	};
 
+	const creatorHandle =
+		creator?.socialHandle?.trim() || creator?.instructorId || '';
+	const canonicalUrl = creator
+		? buildCanonicalUrl(`/keys/${encodeURIComponent(creator.id)}`)
+		: undefined;
+	const shareImage = creator
+		? buildCreatorShareImageUrl(creatorHandle)
+		: undefined;
+	const productDescription =
+		creator?.bio?.trim() ||
+		creator?.description?.trim() ||
+		`${creator?.name || creator?.title || 'Creator'} key on AccessLayer.`;
+	const productPriceStroops = creator
+		? resolveCreatorKeyPriceStroops(creator)
+		: null;
+	const pageMeta = creator && canonicalUrl ? (
+		<PageMeta
+			title={`${creator.title} — Creator Key | AccessLayer`}
+			description={productDescription}
+			image={shareImage}
+			canonicalUrl={canonicalUrl}
+			noindex={
+				keyFreeze !== null ||
+				creator.isRetiring === true ||
+				Boolean(creator.retirementExecutedAt)
+			}
+			structuredData={{
+				'@context': 'https://schema.org',
+				'@type': 'Product',
+				name: creator.title,
+				description: productDescription,
+				image: shareImage,
+				url: canonicalUrl,
+				offers:
+					productPriceStroops == null
+						? undefined
+						: {
+								'@type': 'Offer',
+								price: (
+									productPriceStroops / STROOPS_PER_XLM
+								).toFixed(7),
+								priceCurrency: 'XLM',
+								url: canonicalUrl,
+							},
+			}}
+		/>
+	) : (
+		<PageMeta />
+	);
+
 	if (isLoading) {
 		return (
 			<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
+				{pageMeta}
 				<div className="mx-auto max-w-7xl">
 					<CreatorDashboardSkeleton />
 				</div>
@@ -570,6 +625,7 @@ function CreatorDetailPageContent() {
 		if (is404) {
 			return (
 				<main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[#06111f] px-6 py-16 text-center text-white">
+					{pageMeta}
 					<h1 className="font-grotesque text-3xl font-black">
 						Creator not found
 					</h1>
@@ -690,6 +746,7 @@ function CreatorDetailPageContent() {
 
 	return (
 		<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
+			{pageMeta}
 			<div className="mx-auto max-w-7xl space-y-8">
 				{creator.deprecation && !deprecationDismissed && (
 					<DeprecationBanner
