@@ -1,4 +1,5 @@
 import { env } from '@/utils/env.utils';
+import { recordRecentError } from '@/utils/recentErrors.utils';
 import axios, { type AxiosInstance, AxiosError } from 'axios';
 import Cookies from 'js-cookie';
 
@@ -136,6 +137,7 @@ export class BaseApiService {
 
 	// Common error handler
 	protected handleError(error: unknown): ApiError {
+		let apiError: ApiError;
 		if (axios.isAxiosError(error)) {
 			const axiosError = error as AxiosError<APIErrorResponse>;
 
@@ -144,17 +146,20 @@ export class BaseApiService {
 				const data = axiosError.response.data;
 				const message = data?.message || 'An error occurred';
 
-				return new ApiError(message, status, data);
+				apiError = new ApiError(message, status, data);
 			} else if (axiosError.request) {
-				return new ApiError('Network error - check your connection', 0);
+				apiError = new ApiError('Network error - check your connection', 0);
+			} else {
+				apiError = new ApiError(axiosError.message, 500);
 			}
+		} else if (error instanceof Error) {
+			apiError = new ApiError(error.message, 500);
+		} else {
+			apiError = new ApiError('Something went wrong', 500);
 		}
 
-		if (error instanceof Error) {
-			return new ApiError(error.message, 500);
-		}
-
-		return new ApiError('Something went wrong', 500);
+		recordRecentError(apiError.message, 'api');
+		return apiError;
 	}
 
 	// Override this in child classes if needed

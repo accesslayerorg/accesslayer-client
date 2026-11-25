@@ -6,6 +6,7 @@ import UpgradeProxyPanel from '@/components/admin/UpgradeProxyPanel';
 import TreasuryPanel from '@/components/admin/TreasuryPanel';
 import TreasuryManagementDashboard from '@/components/admin/TreasuryManagementDashboard';
 import { Link } from 'react-router-dom';
+import FeeChangeAdminPanel from '@/components/admin/FeeChangeAdminPanel';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useStellarWallet } from '@/hooks/useStellarWallet';
 import { isAdminWallet } from '@/utils/adminAccess';
@@ -33,8 +34,8 @@ export default function AdminDashboardPage() {
 							Access denied
 						</h2>
 						<p className="mt-2 text-sm text-white/60">
-							Your connected wallet is not in the protocol signer set and cannot
-							view or approve multi-sig actions.
+							Your connected wallet is not in the protocol signer set and
+							cannot view or approve multi-sig actions.
 						</p>
 					</div>
 				</div>
@@ -70,7 +71,9 @@ export default function AdminDashboardPage() {
 							<TreasuryPanel adminAddress={address ?? ''} />
 						</SectionErrorBoundary>
 						<SectionErrorBoundary sectionName="treasury management">
-							<TreasuryManagementDashboard adminAddress={address ?? ''} />
+							<TreasuryManagementDashboard
+								adminAddress={address ?? ''}
+							/>
 						</SectionErrorBoundary>
 						<SectionErrorBoundary sectionName="integration ACL">
 							<AclWhitelistPanel />
@@ -80,6 +83,9 @@ export default function AdminDashboardPage() {
 						</SectionErrorBoundary>
 						<SectionErrorBoundary sectionName="timelock queue">
 							<TimelockQueuePanel isAdmin={isAdmin} />
+						</SectionErrorBoundary>
+						<SectionErrorBoundary sectionName="fee changes">
+							<FeeChangeAdminPanel />
 						</SectionErrorBoundary>
 						<SectionErrorBoundary sectionName="multi-signature administration">
 							<MultiSigAdminPanel isAdmin={isAdmin} />

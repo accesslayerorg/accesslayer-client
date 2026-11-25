@@ -9,6 +9,7 @@ import EscapeBanner from './components/common/EscapeBanner';
 import OfflineBanner from './components/common/OfflineBanner';
 import GlobalPauseBanner from './components/common/GlobalPauseBanner';
 import PendingTransactionBanner from './components/common/PendingTransactionBanner';
+import PendingFeeChangeBanner from './components/fees/PendingFeeChangeBanner';
 import SessionExpiryWatcher from './components/common/SessionExpiryWatcher';
 import BadgeAchievementListener from './components/common/BadgeAchievementListener';
 import { useContractPausedStore } from './hooks/useContractPausedStore';
@@ -93,6 +94,7 @@ function App() {
 			<OfflineBanner />
 			<GlobalPauseBanner />
 			<PendingTransactionBanner />
+			<PendingFeeChangeBanner />
 			<Toaster
 				toastOptions={{
 					ariaProps: {
