@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
 	findBalanceAsOfLedger,
 	computeHoldingsAsOfDate,
-	timestampToEstimatedLedger,
 	exportBalanceHistoryToCsv,
 } from '../balanceHistory.utils';
 import type { BalanceCheckpoint } from '@/types/balanceHistory.types';
