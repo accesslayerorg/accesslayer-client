@@ -12,6 +12,7 @@ import CreatorDetailPage from './pages/CreatorDetailPage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
 import CreatorPublicProfilePage from './pages/CreatorPublicProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
+import OtcTradePage from './pages/OtcTradePage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import NotificationPreferencesPage from './pages/NotificationPreferencesPage';
 import PriceAlertsSettingsPage from './pages/PriceAlertsSettingsPage';
@@ -86,7 +87,6 @@ function withRouteErrorBoundary(element: ReactNode, routeName: string) {
 
 export const routes = [
 	{
-		path: '/',
 		element: <RootLayout />,
 		children: [
 			{
@@ -129,6 +129,11 @@ export const routes = [
 					<RentalMarketPage />,
 					'Key rentals'
 				),
+			},
+			{
+				// OTC key trade escrow screen (#1383).
+				path: '/otc/:id',
+				element: withRouteErrorBoundary(<OtcTradePage />, 'OTC Trade'),
 			},
 			{
 				// Listed, rented out and rented in keys for the wallet (#1360).

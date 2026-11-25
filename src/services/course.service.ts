@@ -33,6 +33,12 @@ export interface Course {
 	/** Cumulative all-time traded volume in stroops, when the API reports it. */
 	totalVolume?: number | null;
 	change24h?: number;
+	/** 24-hour price change as a percentage, when the API reports it. */
+	priceChange24h?: number;
+	/** Percentage of supply held by the top 10 holders, when reported. */
+	top10HolderShare?: number;
+	/** Creator royalty rate in basis points, when configured. */
+	royaltyBps?: number;
 	joinedAt?: string;
 	/** ISO timestamp for when the creator key was created. */
 	createdAt?: string;

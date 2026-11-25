@@ -159,9 +159,9 @@ import ReportKeyModal from '@/components/common/ReportKeyModal';
 import ShareQrModal from '@/components/common/ShareQrModal';
 import PageMeta from '@/components/common/PageMeta';
 import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
+import { Bell, QrCode } from 'lucide-react';
 import RetirementExitPanel from '@/components/common/RetirementExitPanel';
 import RetirementNoticeEmailCard from '@/components/common/RetirementNoticeEmailCard';
-import { QrCode, Bell } from 'lucide-react';
 import PriceAlertForm from '@/components/common/PriceAlertForm';
 import {
 	buildCanonicalUrl,

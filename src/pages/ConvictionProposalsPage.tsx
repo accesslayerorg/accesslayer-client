@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
 import {
 	Coins,
@@ -249,7 +249,9 @@ function ProposalCard({
 				proposalTitle={proposal.title}
 				currentStake={stake}
 				unallocatedBalance={unallocatedBalance}
-				onAllocate={amount => allocateStake(amount)}
+				onAllocate={async amount => {
+					await allocateStake(amount);
+				}}
 				isPending={isMutating}
 			/>
 		</article>
