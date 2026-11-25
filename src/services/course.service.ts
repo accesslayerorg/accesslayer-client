@@ -17,6 +17,10 @@ export interface Course {
 	creatorShareSupply?: number;
 	/** Configured max supply cap for this key; null or undefined for uncapped keys. */
 	maxSupply?: number | null;
+	/** Base price of the key's bonding curve in stroops. */
+	curveBasePriceStroops?: number | null;
+	/** Per-key bonding curve growth factor. */
+	curveGrowthFactor?: number | null;
 	instructorId: string;
 	thumbnail?: string;
 	category: string;
@@ -29,6 +33,12 @@ export interface Course {
 	/** Cumulative all-time traded volume in stroops, when the API reports it. */
 	totalVolume?: number | null;
 	change24h?: number;
+	/** 24-hour price change as a percentage, when the API reports it. */
+	priceChange24h?: number;
+	/** Percentage of supply held by the top 10 holders, when reported. */
+	top10HolderShare?: number;
+	/** Creator royalty rate in basis points, when configured. */
+	royaltyBps?: number;
 	joinedAt?: string;
 	/** ISO timestamp for when the creator key was created. */
 	createdAt?: string;
@@ -82,6 +92,20 @@ export interface Course {
 	auctionAllocation?: number;
 	/** Whether the auction has been settled on-chain (#1164). */
 	auctionSettled?: boolean;
+	/** First ledger where commit/reveal launch participation is available. */
+	launchStartLedger?: number;
+	/** Ledger where the commit phase ends and reveal begins. */
+	launchCommitEndLedger?: number;
+	/** Ledger where the reveal phase ends and results are settled. */
+	launchRevealEndLedger?: number;
+	/** Whether launch orders have been settled. */
+	launchSettled?: boolean;
+	/** Fill amount reported for the connected wallet after settlement. */
+	launchFillAmount?: number;
+	/** Refund amount reported for the connected wallet after settlement. */
+	launchRefundAmount?: number;
+	/** Clearing price reported after settlement. */
+	launchClearingPrice?: number;
 	/**
 	 * Early-sell penalty in basis points (0–2000 = 0%–20%).
 	 * Applied to sells within the first 7 days after key creation.
