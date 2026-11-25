@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router';
+import { useEffect, useMemo } from 'react';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router';
 import { useAccount } from 'wagmi';
 import { useCreatorDetail } from '@/hooks/useCreators';
 import { useWalletHoldings } from '@/hooks/useWallet';
@@ -37,6 +37,7 @@ import {
 import { useKeyVesting, useKeyVestingClaims } from '@/hooks/useKeyVesting';
 import { useCurveMigrations } from '@/hooks/useCurveMigrations';
 import { useCreatorWhitelist } from '@/hooks/useCreatorWhitelist';
+import { useCreatorOnboardingChecklist } from '@/hooks/useCreatorOnboardingChecklist';
 import { isOwnWallet } from '@/utils/isOwnWallet';
 import {
 	formatDisplayKeyPrice,
@@ -49,8 +50,12 @@ import { GraduatedCurveMilestoneChart } from '@/components/common/GraduatedCurve
 import CreatorRevenuePanel from '@/components/common/CreatorRevenuePanel';
 import DistributeRevenuePanel from '@/components/common/DistributeRevenuePanel';
 import CreatorAnnouncementsPanel from '@/components/common/CreatorAnnouncementsPanel';
+import CreatorEventsPanel from '@/components/events/CreatorEventsPanel';
+import CreatorBroadcastsPanel from '@/components/broadcasts/CreatorBroadcastsPanel';
 import VestingSchedulesViewer from '@/components/creator/VestingSchedulesViewer';
 import PerformanceBondCard from '@/components/creator/PerformanceBondCard';
+import OnboardingChecklistCard from '@/components/creator/OnboardingChecklistCard';
+import FundRewardPoolForm from '@/components/creator/FundRewardPoolForm';
 import KeyFeeHistoryChart from '@/components/common/KeyFeeHistoryChart';
 
 const TABS = [
@@ -66,6 +71,7 @@ const CARD_CLASS =
 export default function CreatorDashboardPage() {
 	const { id = '' } = useParams<{ id: string }>();
 	const [searchParams, setSearchParams] = useSearchParams();
+	const { hash } = useLocation();
 	const { address } = useAccount();
 
 	const { data: creator, isLoading, isError } = useCreatorDetail(id);
@@ -92,6 +98,7 @@ export default function CreatorDashboardPage() {
 	const {
 		entries: whitelistEntries,
 		isWhitelistEnabled,
+		isLoading: isWhitelistLoading,
 		addAddresses: addWhitelistAddresses,
 		removeAddress: removeWhitelistAddress,
 		disableWhitelist,
@@ -104,6 +111,15 @@ export default function CreatorDashboardPage() {
 	// The vesting schedule is only meaningful to the wallet the allocation is
 	// registered to (#960), so both queries stay disabled for everyone else.
 	const isKeyCreator = isOwnWallet(address, creator?.instructorId);
+
+	// Setup checklist for newly created keys (#1248). Status is derived from the
+	// same query entries the panels below write to, so it updates live.
+	const onboardingChecklist = useCreatorOnboardingChecklist({
+		keyId: id,
+		enabled: isKeyCreator,
+		whitelistEntryCount: whitelistEntries.length,
+		isWhitelistLoading,
+	});
 	const {
 		data: performanceBond,
 		isLoading: isPerformanceBondLoading,
@@ -171,6 +187,15 @@ export default function CreatorDashboardPage() {
 		);
 	};
 
+	// Checklist CTAs link to `?tab=…#section`. Client-side navigation doesn't
+	// scroll to a hash by itself, and the target section only exists once its
+	// tab has rendered, so scroll after render (#1248).
+	useEffect(() => {
+		if (!hash || isLoading || !creator) return;
+		const target = document.getElementById(hash.slice(1));
+		target?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+	}, [hash, activeTab, isLoading, creator]);
+
 	if (isLoading) {
 		return (
 			<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
@@ -235,6 +260,15 @@ export default function CreatorDashboardPage() {
 						>
 							Spotlight auction
 						</Link>
+						{isKeyCreator && (
+							<Link
+								to={`/creator/media-kit?key=${encodeURIComponent(id)}`}
+								className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-300 underline-offset-4 hover:text-amber-200 hover:underline"
+								data-testid="creator-dashboard-media-kit-link"
+							>
+								Media kit
+							</Link>
+						)}
 					</div>
 				</div>
 
@@ -259,6 +293,13 @@ export default function CreatorDashboardPage() {
 							</div>
 						</div>
 					</div>
+				)}
+
+				{isKeyCreator && (
+					<OnboardingChecklistCard
+						keyId={id}
+						checklist={onboardingChecklist}
+					/>
 				)}
 
 				<ProfileTabPillGroup
@@ -335,13 +376,12 @@ export default function CreatorDashboardPage() {
 					</div>
 				)}
 
-				{activeTab === 'overview' && (
-					<KeyFeeHistoryChart keyId={id} />
-				)}
+				{activeTab === 'overview' && <KeyFeeHistoryChart keyId={id} />}
 
 				{activeTab === 'overview' && (
 					<section
 						className={CARD_CLASS}
+						id="dashboard-announcements-section"
 						aria-labelledby="dashboard-announcements-heading"
 						data-testid="dashboard-announcements-section"
 					>
@@ -358,6 +398,46 @@ export default function CreatorDashboardPage() {
 					</section>
 				)}
 
+				{activeTab === 'overview' && (
+					<section
+						className={CARD_CLASS}
+						id="dashboard-events-section"
+						aria-labelledby="dashboard-events-heading"
+						data-testid="dashboard-events-section"
+					>
+						<h2
+							id="dashboard-events-heading"
+							className="mb-1 font-grotesque text-xl font-black tracking-tight"
+						>
+							Holder events
+						</h2>
+						<p className="mb-6 text-sm text-white/50">
+							Create redeemable passes and manage your active events.
+						</p>
+						<CreatorEventsPanel creatorId={id} />
+					</section>
+				)}
+
+				{activeTab === 'overview' && isKeyCreator && (
+					<section
+						className={CARD_CLASS}
+						id="dashboard-broadcasts-section"
+						aria-labelledby="dashboard-broadcasts-heading"
+						data-testid="dashboard-broadcasts-section"
+					>
+						<h2
+							id="dashboard-broadcasts-heading"
+							className="mb-1 font-grotesque text-xl font-black tracking-tight"
+						>
+							Email broadcasts
+						</h2>
+						<p className="mb-6 text-sm text-white/50">
+							Email holders who opted in to hear from you.
+						</p>
+						<CreatorBroadcastsPanel keyId={id} keyName={creator.title} />
+					</section>
+				)}
+
 				{activeTab === 'revenue' && (
 					<div
 						className="space-y-8"
@@ -370,10 +450,12 @@ export default function CreatorDashboardPage() {
 
 						{/* Revenue distribution to key holders — creator wallets only */}
 						{isKeyCreator && (
-							<DistributeRevenuePanel
-								creatorId={id}
-								wallet={address}
-							/>
+							<div id="distribute-revenue-section">
+								<DistributeRevenuePanel
+									creatorId={id}
+									wallet={address}
+								/>
+							</div>
 						)}
 					</div>
 				)}
@@ -494,6 +576,7 @@ export default function CreatorDashboardPage() {
 						{isKeyCreator && (
 							<section
 								className={CARD_CLASS}
+								id="whitelist-section"
 								data-testid="whitelist-section"
 							>
 								<WhitelistManagementPanel
@@ -513,6 +596,17 @@ export default function CreatorDashboardPage() {
 									}
 								/>
 							</section>
+						)}
+
+						{/* Staking reward pool funding — the target of the "Fund staking pool"
+						    onboarding step (#1248), creator wallets only */}
+						{isKeyCreator && (
+							<div
+								id="staking-pool-section"
+								data-testid="staking-pool-section"
+							>
+								<FundRewardPoolForm keyId={id} />
+							</div>
 						)}
 
 						<section
@@ -588,7 +682,8 @@ export default function CreatorDashboardPage() {
 							</h2>
 
 							<p className="mb-6 text-sm text-white/50">
-								Choose who can view the gated content attached to this key.
+								Choose who can view the gated content attached to this
+								key.
 							</p>
 
 							<ContentGatePanel creatorId={id} wallet={address} />
@@ -596,6 +691,7 @@ export default function CreatorDashboardPage() {
 
 						<section
 							className={CARD_CLASS}
+							id="graduated-curve-section"
 							data-testid="graduated-curve-section"
 						>
 							<h2 className="mb-1 font-grotesque text-xl font-black tracking-tight">

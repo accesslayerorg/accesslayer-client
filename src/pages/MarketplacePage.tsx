@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { ChevronDown, RefreshCw } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useInfiniteCreatorMarketplace } from '@/hooks/useInfiniteCreatorMarketplace';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
@@ -18,6 +17,7 @@ import StickyFilterBar from '@/components/common/StickyFilterBar';
 import TrendingCreatorsSection from '@/components/marketplace/TrendingCreatorsSection';
 import SpotlightBanner from '@/components/marketplace/SpotlightBanner';
 import { Button } from '@/components/ui/button';
+import PageMeta from '@/components/common/PageMeta';
 import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 import {
 	MARKETPLACE_SORT_OPTIONS,
@@ -29,6 +29,7 @@ import {
 	matchesSupplyTier,
 	type SupplyTierFilter,
 } from '@/utils/supplyTier.utils';
+import { buildCanonicalUrl } from '@/utils/seo.utils';
 
 const PAGE_LIMIT = 12;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -64,7 +65,6 @@ function creatorMatchesSearch(creator: Course, query: string): boolean {
  */
 export default function MarketplacePage() {
 	useNavigationTiming('marketplace');
-	useDocumentTitle('Marketplace — AccessLayer');
 
 	const [searchParams, setSearchParams] = useSearchParams();
 
@@ -158,6 +158,11 @@ export default function MarketplacePage() {
 
 	return (
 		<div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(160deg,#08111f_0%,#10213b_45%,#f0b14d_160%)] px-6 pt-12 pb-28 md:px-12 md:pb-12">
+			<PageMeta
+				title="Marketplace — AccessLayer"
+				description="Explore creator keys on AccessLayer, compare live prices, and discover creators on the Stellar marketplace."
+				canonicalUrl={buildCanonicalUrl('/marketplace')}
+			/>
 			<div className="absolute left-[-4rem] top-[10%] size-72 rounded-full bg-amber-300/20 blur-[100px]" />
 			<div className="absolute bottom-[8%] right-[-3rem] size-72 rounded-full bg-emerald-300/15 blur-[100px]" />
 			<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,186,73,0.1),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(74,222,128,0.08),transparent_35%)]" />
@@ -353,15 +358,6 @@ export default function MarketplacePage() {
 										))}
 									</div>
 
-									{isFetchingNextPage && (
-										<div
-											data-testid="marketplace-next-page-skeleton"
-											className="mt-6"
-										>
-											<CreatorCardGridSkeleton count={3} />
-										</div>
-									)}
-
 									{hasMore && (
 										<div
 											ref={sentinelRef}
@@ -380,6 +376,7 @@ export default function MarketplacePage() {
 											<Button
 												type="button"
 												variant="outline"
+												data-testid="marketplace-load-more"
 												onClick={() => void fetchNextPage()}
 												className="rounded-full border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-white"
 											>

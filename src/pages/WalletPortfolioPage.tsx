@@ -4,20 +4,29 @@ import { useAccount } from 'wagmi';
 import { BarChart3, Wallet, Layers } from 'lucide-react';
 import EmptyState from '@/components/common/EmptyState';
 import { Button } from '@/components/ui/button';
-import { useBatchTradeStore, selectBatchItemCount } from '@/hooks/useBatchTradeStore';
+import {
+	useBatchTradeStore,
+	selectBatchItemCount,
+} from '@/hooks/useBatchTradeStore';
 import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
+import BadgeProgressTracker from '@/components/common/BadgeProgressTracker';
+import DiversificationPanel from '@/components/portfolio/DiversificationPanel';
 import Skeleton from '@/components/ui/skeleton';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useWalletHoldings } from '@/hooks/useWallet';
 import { useCreatorPrices } from '@/hooks/useCreatorPrices';
 import { cn } from '@/lib/utils';
-import { resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
+import {
+	formatDisplayKeyPrice,
+	resolveCreatorKeyPriceStroops,
+} from '@/utils/keyPriceDisplay.utils';
 import { useActiveKeySplits } from '@/hooks/useKeySplit';
 import { isSplitActive } from '@/utils/keySplit.utils';
 import KeySplitBanner from '@/components/common/KeySplitBanner';
 import {
 	calculatePnLSummary,
 	calculatePortfolioValue,
+	calculatePositionTotalValue,
 	getPnLToneClassName,
 	getPortfolioValueHelperText,
 	formatPnLDisplay,
@@ -32,6 +41,8 @@ import {
 	type PortfolioTableSortDirection,
 	type PortfolioTableSortKey,
 } from '@/utils/portfolioTable.utils';
+import GainsReport from '@/components/common/GainsReport';
+import BalanceHistoryChart from '@/components/common/BalanceHistoryChart';
 
 const SKELETON_ROW_COUNT = 4;
 
@@ -80,9 +91,8 @@ export default function WalletPortfolioPage() {
 	const { data: creators = [], isLoading: areCreatorsLoading } =
 		useCreatorPrices();
 
-	const [sortKey, setSortKey] = useState<PortfolioTableSortKey>(
-		'current_value'
-	);
+	const [sortKey, setSortKey] =
+		useState<PortfolioTableSortKey>('current_value');
 	const [sortDirection, setSortDirection] =
 		useState<PortfolioTableSortDirection>(
 			defaultDirectionForSortKey('current_value')
@@ -135,6 +145,16 @@ export default function WalletPortfolioPage() {
 		() => calculatePortfolioValue(heldPositions),
 		[heldPositions]
 	);
+	// Positions valued at the current price, for the diversification panel (#1474).
+	const correlationPositions = useMemo(
+		() =>
+			heldPositions.map(position => ({
+				keyId: position.creatorId,
+				name: keyNames[position.creatorId] ?? position.creatorId,
+				valueStroops: calculatePositionTotalValue(position),
+			})),
+		[heldPositions, keyNames]
+	);
 	const pnlSummary = useMemo(
 		() => calculatePnLSummary(heldPositions),
 		[heldPositions]
@@ -151,7 +171,7 @@ export default function WalletPortfolioPage() {
 			const creator = creators.find(c => c.id === creatorId);
 			return Boolean(
 				isSplitActive(creator?.recentSplit) ||
-					isSplitActive(creator?.splitExecuted)
+				isSplitActive(creator?.splitExecuted)
 			);
 		},
 		[creators, isKeySplitActiveFromHook]
@@ -180,7 +200,12 @@ export default function WalletPortfolioPage() {
 			<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
 				<div className="mx-auto max-w-6xl">
 					<EmptyState
-						icon={<Wallet className="size-10 text-amber-300" aria-hidden="true" />}
+						icon={
+							<Wallet
+								className="size-10 text-amber-300"
+								aria-hidden="true"
+							/>
+						}
 						title="No wallet connected"
 						description="Connect a wallet to see your creator-key holdings, their current value, and unrealised PnL."
 						ctaLabel="Browse the marketplace"
@@ -204,8 +229,8 @@ export default function WalletPortfolioPage() {
 							Portfolio
 						</h1>
 						<p className="mt-1 text-sm text-white/60">
-							Your creator-key holdings valued at the current bonding-curve
-							price.
+							Your creator-key holdings valued at the current
+							bonding-curve price.
 						</p>
 					</div>
 
@@ -250,7 +275,9 @@ export default function WalletPortfolioPage() {
 							className="mt-2 font-mono text-2xl font-bold text-white"
 							data-testid="portfolio-total-value"
 						>
-							{isLoading ? '—' : formatPortfolioValueDisplay(portfolioValue)}
+							{isLoading
+								? '—'
+								: formatPortfolioValueDisplay(portfolioValue)}
 						</p>
 						<p className="mt-1 text-xs text-white/45">
 							{getPortfolioValueHelperText(portfolioValue)}
@@ -293,9 +320,11 @@ export default function WalletPortfolioPage() {
 							aria-label="Loading portfolio positions"
 							data-testid="portfolio-table-skeleton"
 						>
-							{Array.from({ length: SKELETON_ROW_COUNT }).map((_, index) => (
-								<Skeleton key={index} className="h-14 w-full" />
-							))}
+							{Array.from({ length: SKELETON_ROW_COUNT }).map(
+								(_, index) => (
+									<Skeleton key={index} className="h-14 w-full" />
+								)
+							)}
 						</div>
 					) : rows.length === 0 ? (
 						<EmptyState
@@ -306,9 +335,9 @@ export default function WalletPortfolioPage() {
 								/>
 							}
 							title="No keys yet"
-							description="This wallet doesn't hold any creator keys. Browse the marketplace to pick some up."
-							ctaLabel="Browse the marketplace"
-							ctaHref="/marketplace"
+							description="You don't hold any creator keys yet. Discover creators to get started."
+							ctaLabel="Discover creators"
+							ctaHref="/discovery?source=portfolio-empty"
 							data-testid="portfolio-positions-empty"
 						/>
 					) : (
@@ -345,7 +374,9 @@ export default function WalletPortfolioPage() {
 														<button
 															type="button"
 															data-testid={`portfolio-sort-${column.sortKey}`}
-															onClick={() => handleSort(column.sortKey!)}
+															onClick={() =>
+																handleSort(column.sortKey!)
+															}
 															className={cn(
 																'inline-flex items-center gap-1 uppercase tracking-[0.18em] transition-colors hover:text-white',
 																isActive && 'text-amber-300'
@@ -354,7 +385,9 @@ export default function WalletPortfolioPage() {
 															{column.label}
 															{isActive && (
 																<span aria-hidden="true">
-																	{sortDirection === 'asc' ? '↑' : '↓'}
+																	{sortDirection === 'asc'
+																		? '↑'
+																		: '↓'}
 																</span>
 															)}
 														</button>
@@ -367,13 +400,121 @@ export default function WalletPortfolioPage() {
 									</tr>
 								</thead>
 								<tbody>
-									{sortedRows.map(row => (
-										<tr key={row.creatorId} className="border-b border-white/5"></tr>
-									))}
+									{sortedRows.map(row => {
+										const isLoadingRow = row.pnl.status === 'loading';
+										const isUnavailable =
+											row.pnl.status === 'unavailable';
+										const displayPnL =
+											row.pnl.unrealisedPnLStroops == null
+												? '—'
+												: formatPnLDisplay(
+														row.pnl.unrealisedPnLStroops
+													);
+										const displayPnLPercent =
+											row.pnl.pnlPercentage == null
+												? '—'
+												: formatPnLPercentage(
+														row.pnl.pnlPercentage
+													);
+
+										return (
+											<tr
+												key={row.creatorId}
+												data-testid="portfolio-position-row"
+												data-key-id={row.creatorId}
+												onClick={() =>
+													navigate(`/creator/${row.creatorId}`)
+												}
+												className="cursor-pointer border-b border-white/5 transition-colors hover:bg-white/[0.04]"
+											>
+												<td className="py-3 pr-4">
+													<div className="flex items-center gap-2">
+														<Link
+															to={`/creator/${row.creatorId}`}
+															className="font-semibold text-white hover:text-amber-300"
+															onClick={event =>
+																event.stopPropagation()
+															}
+														>
+															{row.keyName}
+														</Link>
+														{checkKeySplitActive(
+															row.creatorId
+														) && <SplitAppliedBadge />}
+													</div>
+												</td>
+												<td className="py-3 pr-4 text-right font-mono text-white/80">
+													{row.pnl.quantity}
+												</td>
+												<td className="py-3 pr-4 text-right font-mono text-white/80">
+													{isLoadingRow
+														? '—'
+														: formatDisplayKeyPrice(
+																row.pnl
+																	.averagePurchasePriceStroops
+															)}
+												</td>
+												<td
+													className="py-3 pr-4 text-right font-mono text-white"
+													data-testid="portfolio-row-current-price"
+												>
+													{isLoadingRow || isUnavailable
+														? '—'
+														: formatDisplayKeyPrice(
+																row.pnl.currentPriceStroops
+															)}
+												</td>
+												<td
+													className={cn(
+														'py-3 pr-4 text-right font-mono font-semibold',
+														row.pnl.unrealisedPnLStroops == null
+															? 'text-white/50'
+															: getPnLToneClassName(
+																	row.pnl.unrealisedPnLStroops
+																)
+													)}
+													data-testid="portfolio-row-pnl"
+												>
+													{displayPnL}
+												</td>
+												<td
+													className={cn(
+														'py-3 pr-4 text-right font-mono font-semibold',
+														row.pnl.pnlPercentage == null
+															? 'text-white/50'
+															: getPnLToneClassName(
+																	row.pnl.pnlPercentage
+																)
+													)}
+													data-testid="portfolio-row-pnl-percent"
+												>
+													{displayPnLPercent}
+												</td>
+											</tr>
+										);
+									})}
 								</tbody>
 							</table>
 						</div>
 					)}
+				</SectionErrorBoundary>
+
+				<SectionErrorBoundary sectionName="balance history">
+					<BalanceHistoryChart address={address} keyNames={keyNames} />
+				</SectionErrorBoundary>
+
+				<SectionErrorBoundary sectionName="realized gains">
+					<GainsReport walletAddress={address} />
+				</SectionErrorBoundary>
+
+				{correlationPositions.length > 1 && (
+					<SectionErrorBoundary sectionName="diversification">
+						<DiversificationPanel positions={correlationPositions} />
+					</SectionErrorBoundary>
+				)}
+
+				<SectionErrorBoundary sectionName="badge progress">
+					<BadgeProgressTracker wallet={address} className="mt-10" />
 				</SectionErrorBoundary>
 			</div>
 		</main>

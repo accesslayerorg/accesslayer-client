@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router';
 import { ArrowLeft, SearchX, Share2 } from 'lucide-react';
 import CreatorPublicProfileHeader from '@/components/common/CreatorPublicProfileHeader';
 import CreatorProfileStatRow from '@/components/common/CreatorProfileStatRow';
+import PageMeta from '@/components/common/PageMeta';
 import DeployedCreatorKeyCard from '@/components/common/DeployedCreatorKeyCard';
 import FollowButton from '@/components/common/FollowButton';
 import {
@@ -11,7 +12,6 @@ import {
 } from '@/components/common/CreatorSkeleton';
 import { useCreatorPublicProfile } from '@/hooks/useCreatorPublicProfile';
 import { useCreatorFollows } from '@/hooks/useCreatorFollows';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { ApiError } from '@/services/api.service';
 import { cn } from '@/lib/utils';
 import type { CreatorPublicProfile } from '@/types/creatorProfile';
@@ -20,6 +20,14 @@ import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import { formatCompactNumber } from '@/utils/numberFormat.utils';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
 import showToast from '@/utils/toast.util';
+import { useAccount } from 'wagmi';
+import { QrCode } from 'lucide-react';
+import ShareQrModal from '@/components/common/ShareQrModal';
+import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
+import {
+	buildCanonicalUrl,
+	buildCreatorShareImageUrl,
+} from '@/utils/seo.utils';
 
 const SHARE_COPIED_RESET_MS = 2000;
 
@@ -88,13 +96,42 @@ function CreatorPublicProfilePageContent() {
 	const { address = '' } = useParams<{ address: string }>();
 	const { data: profile, isLoading, error } = useCreatorPublicProfile(address);
 
-	useDocumentTitle(profile ? `${profile.displayName} — AccessLayer` : null);
+	const profileHandle = profile?.keys[0]?.handle || address;
+	const canonicalUrl = buildCanonicalUrl(
+		`/creator/${encodeURIComponent(address)}/profile`
+	);
+	const shareImage = buildCreatorShareImageUrl(profileHandle);
+	const pageMeta = profile ? (
+		<PageMeta
+			title={`${profile.displayName} — Creator Profile | AccessLayer`}
+			description={
+				profile.bio ||
+				`Explore ${profile.displayName}'s creator keys, activity, and community on AccessLayer.`
+			}
+			image={shareImage}
+			canonicalUrl={canonicalUrl}
+			structuredData={{
+				'@context': 'https://schema.org',
+				'@type': 'Person',
+				name: profile.displayName,
+				description: profile.bio || undefined,
+				url: canonicalUrl,
+				image: shareImage,
+				identifier: profile.address,
+				sameAs: profile.socialLinks.map(link => link.url),
+			}}
+		/>
+	) : (
+		<PageMeta />
+	);
 
 	const isFollowing = useCreatorFollows(state => state.isFollowing(address));
 	const follow = useCreatorFollows(state => state.follow);
 	const unfollow = useCreatorFollows(state => state.unfollow);
 
 	const [isShareCopied, setIsShareCopied] = useState(false);
+	const [qrOpen, setQrOpen] = useState(false);
+	const { address: walletAddress } = useAccount();
 
 	/** Copies the canonical profile URL to the clipboard (#1120). */
 	const handleShareProfile = async () => {
@@ -118,6 +155,7 @@ function CreatorPublicProfilePageContent() {
 	if (isLoading) {
 		return (
 			<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
+				{pageMeta}
 				<div className="mx-auto max-w-7xl space-y-8">
 					<CreatorProfileHeaderSkeleton />
 					<CreatorGridSkeleton count={3} />
@@ -129,7 +167,14 @@ function CreatorPublicProfilePageContent() {
 	if (error || !profile) {
 		const isNotFound =
 			!profile || (error instanceof ApiError && error.status === 404);
-		if (isNotFound) return <CreatorProfileNotFound address={address} />;
+		if (isNotFound) {
+			return (
+				<>
+					{pageMeta}
+					<CreatorProfileNotFound address={address} />
+				</>
+			);
+		}
 		throw error;
 	}
 
@@ -138,6 +183,7 @@ function CreatorPublicProfilePageContent() {
 
 	return (
 		<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
+			{pageMeta}
 			<div className="mx-auto max-w-7xl space-y-8">
 				<nav aria-label="Breadcrumb" className="text-xs text-white/50">
 					<Link to="/creators" className="hover:text-amber-300">
@@ -191,6 +237,16 @@ function CreatorPublicProfilePageContent() {
 										'border-amber-400 bg-amber-400 text-slate-950 hover:bg-amber-300'
 								)}
 							/>
+							<button
+								type="button"
+								onClick={() => setQrOpen(true)}
+								data-testid="creator-profile-qr-button"
+								aria-label="QR code"
+								className="h-11 inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-5 font-bold text-white/85 transition-colors hover:border-amber-400/50 hover:text-amber-300"
+							>
+								<QrCode className="size-4" aria-hidden="true" />
+								QR code
+							</button>
 						</>
 					}
 				/>
@@ -239,6 +295,16 @@ function CreatorPublicProfilePageContent() {
 						</div>
 					)}
 				</section>
+
+				<ShareQrModal
+					open={qrOpen}
+					onOpenChange={setQrOpen}
+					url={buildCreatorProfileReferralLink({
+						handle: profile.keys[0]?.handle ?? address,
+						wallet: walletAddress,
+					})}
+					handle={profile.keys[0]?.handle ?? address}
+				/>
 			</div>
 		</main>
 	);

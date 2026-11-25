@@ -10,6 +10,7 @@ import SpotlightBidForm from '@/components/common/SpotlightBidForm';
 import SpotlightMyBids from '@/components/common/SpotlightMyBids';
 import { formatAuctionBidAmount, shortenWalletAddress } from '@/utils/auctionBid.utils';
 import { formatSpotlightTimeRemaining } from '@/utils/spotlightAuction.utils';
+// NOTE: The Dutch auction page (DutchAuctionPage, PriceDecayChart, BuyNowForm) described in this issue is a separate page at /auctions/:id and is not implemented in this file. This file is the Spotlight auction page (#1147), which is unrelated; no change is applied here for the Dutch auction scope.
 
 const CARD_CLASS =
 	'rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8';

@@ -21,6 +21,7 @@ import { CreatorCardGridSkeleton } from '@/components/common/CreatorCardSkeleton
 import EmptyState from '@/components/common/EmptyState';
 import HoldingsEmptyState from '@/components/common/HoldingsEmptyState';
 import PortfolioHoldingRow from '@/components/common/PortfolioHoldingRow';
+import GiftReceivedBanner from '@/components/common/GiftReceivedBanner';
 import EmptySearchSuggestions from '@/components/common/EmptySearchSuggestions';
 import SectionDivider from '@/components/common/SectionDivider';
 import { Button } from '@/components/ui/button';
@@ -1571,6 +1572,7 @@ function LandingPage() {
 						spacing="default"
 						className="marketplace-card-surface rounded-[2rem] border p-6 shadow-[0_24px_80px_-60px_rgba(8,17,31,0.95)] backdrop-blur-sm md:p-8"
 					>
+						<GiftReceivedBanner className="mb-6" />
 						<div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
 							<div>
 								<p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-amber-300/80">
@@ -1758,6 +1760,7 @@ function LandingPage() {
 														recipients,
 													});
 												}}
+												onGift={() => {}}
 												isSubmitting={
 													tradeSubmitting ||
 													batchTransferMutation.isPending

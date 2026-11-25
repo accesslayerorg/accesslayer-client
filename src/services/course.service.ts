@@ -17,6 +17,10 @@ export interface Course {
 	creatorShareSupply?: number;
 	/** Configured max supply cap for this key; null or undefined for uncapped keys. */
 	maxSupply?: number | null;
+	/** Base price of the key's bonding curve in stroops. */
+	curveBasePriceStroops?: number | null;
+	/** Per-key bonding curve growth factor. */
+	curveGrowthFactor?: number | null;
 	instructorId: string;
 	thumbnail?: string;
 	category: string;
@@ -29,6 +33,12 @@ export interface Course {
 	/** Cumulative all-time traded volume in stroops, when the API reports it. */
 	totalVolume?: number | null;
 	change24h?: number;
+	/** 24-hour price change as a percentage, when the API reports it. */
+	priceChange24h?: number;
+	/** Percentage of supply held by the top 10 holders, when reported. */
+	top10HolderShare?: number;
+	/** Creator royalty rate in basis points, when configured. */
+	royaltyBps?: number;
 	joinedAt?: string;
 	/** ISO timestamp for when the creator key was created. */
 	createdAt?: string;
@@ -82,6 +92,20 @@ export interface Course {
 	auctionAllocation?: number;
 	/** Whether the auction has been settled on-chain (#1164). */
 	auctionSettled?: boolean;
+	/** First ledger where commit/reveal launch participation is available. */
+	launchStartLedger?: number;
+	/** Ledger where the commit phase ends and reveal begins. */
+	launchCommitEndLedger?: number;
+	/** Ledger where the reveal phase ends and results are settled. */
+	launchRevealEndLedger?: number;
+	/** Whether launch orders have been settled. */
+	launchSettled?: boolean;
+	/** Fill amount reported for the connected wallet after settlement. */
+	launchFillAmount?: number;
+	/** Refund amount reported for the connected wallet after settlement. */
+	launchRefundAmount?: number;
+	/** Clearing price reported after settlement. */
+	launchClearingPrice?: number;
 	/**
 	 * Early-sell penalty in basis points (0–2000 = 0%–20%).
 	 * Applied to sells within the first 7 days after key creation.
@@ -174,6 +198,8 @@ export interface Course {
 	isRetiring?: boolean;
 	/** Guaranteed per-key buyback price in stroops during the retirement notice window. */
 	retirementBuybackPriceStroops?: number | null;
+	/** ISO timestamp when the retirement notice period began. */
+	retirementNoticeStartedAt?: string | null;
 	/**
 	 * ISO timestamp when the retirement notice window closes; null/absent
 	 * means no fixed deadline has been set yet. The exit-notice banner's
@@ -181,6 +207,10 @@ export interface Course {
 	 * `freezeExpiresAt` drives the freeze banner above.
 	 */
 	retirementNoticeExpiresAt?: string | null;
+	/** ISO timestamp set after `execute_retirement` has completed. */
+	retirementExecutedAt?: string | null;
+	/** Transaction hash produced by `execute_retirement`, when available. */
+	retirementTransactionHash?: string | null;
 
 	/** Whether purchases are restricted to the early-access whitelist. */
 	earlyAccessEnabled?: boolean;
@@ -422,6 +452,64 @@ export interface PerformanceBond {
 	reason?: string | null;
 	/** Slash history, in any order supplied by the API. */
 	slashEvents?: PerformanceBondSlashEvent[] | null;
+}
+
+/** Stake-weighted community flagging (#1386). */
+export type KeyFlagReasonCode =
+	| 'spam'
+	| 'fraud'
+	| 'impersonation'
+	| 'abuse'
+	| 'other';
+
+export type KeyFlagResolutionStatus = 'returned' | 'forfeited';
+
+/** Outcome of the review triggered by a flag. */
+export interface KeyFlagResolution {
+	/** Whether the flagger's stake was returned or forfeited. */
+	status: KeyFlagResolutionStatus;
+	/** ISO timestamp the review resolved this flag. */
+	resolvedAt: string;
+	/** Optional reviewer note explaining the outcome. */
+	note?: string | null;
+}
+
+/** A single wallet's flag against a key. */
+export interface KeyFlag {
+	id?: string;
+	keyId?: string;
+	walletAddress: string;
+	reasonCode: KeyFlagReasonCode | string;
+	/** Stake locked by this flag, in stroops. */
+	stakeStroops: number;
+	createdAt: string;
+	resolution?: KeyFlagResolution | null;
+}
+
+/** Aggregate flag state for a key, including the auto-freeze threshold. */
+export interface KeyFlagsStatus {
+	keyId?: string;
+	flagCount: number;
+	/** Number of flags that auto-freezes trading. */
+	threshold: number;
+	autoFrozen: boolean;
+	/** Review lifecycle once frozen: 'pending' | 'in_review' | 'resolved'. */
+	reviewStatus?: 'pending' | 'in_review' | 'resolved' | string | null;
+	frozenAt?: string | null;
+	/** Stake required to submit a new flag, in stroops. */
+	requiredStakeStroops?: number | null;
+	/** The authenticated wallet's flag, when it already flagged this key. */
+	userFlag?: KeyFlag | null;
+}
+
+/** Receipt returned after a flag locks its stake on-chain. */
+export interface KeyFlagReceipt {
+	txHash: string;
+	keyId: string;
+	walletAddress: string;
+	reasonCode: KeyFlagReasonCode | string;
+	stakeStroops: number;
+	createdAt: string;
 }
 
 export type CourseSortOption =
@@ -1038,6 +1126,56 @@ class CourseService extends BaseApiService {
 				return null;
 			}
 
+			throw this.handleError(error);
+		}
+	}
+
+	// Get stake-weighted community flags - GET /keys/:keyId/flags (#1386)
+	async getKeyFlags(
+		keyId: string,
+		wallet?: string
+	): Promise<KeyFlagsStatus | null> {
+		try {
+			const response = await this.api.get<APIResponse<KeyFlagsStatus>>(
+				`/keys/${keyId}/flags`,
+				{ params: wallet ? { wallet } : undefined }
+			);
+			return response.data.data;
+		} catch (error: unknown) {
+			if (error instanceof ApiError && error.status === 404) {
+				return null;
+			}
+			throw this.handleError(error);
+		}
+	}
+
+	// Lock a stake and flag a key - POST /keys/:keyId/flags (#1386)
+	async flagKey(
+		keyId: string,
+		input: {
+			reasonCode: KeyFlagReasonCode;
+			stakeStroops: number;
+			walletAddress: string;
+		}
+	): Promise<KeyFlagReceipt> {
+		try {
+			const response = await this.api.post<APIResponse<KeyFlagReceipt>>(
+				`/keys/${keyId}/flags`,
+				{
+					reasonCode: input.reasonCode,
+					stakeStroops: input.stakeStroops,
+					walletAddress: input.walletAddress,
+				}
+			);
+			const data = response.data.data;
+			return {
+				...data,
+				keyId: data?.keyId ?? keyId,
+				walletAddress: data?.walletAddress ?? input.walletAddress,
+				reasonCode: data?.reasonCode ?? input.reasonCode,
+				stakeStroops: data?.stakeStroops ?? input.stakeStroops,
+			};
+		} catch (error) {
 			throw this.handleError(error);
 		}
 	}

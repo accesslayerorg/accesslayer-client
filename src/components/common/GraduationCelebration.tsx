@@ -3,6 +3,7 @@ import { GraduationCap, Share2, Link as LinkIcon, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useGraduatedCurveConfig } from '@/hooks/useGraduatedCurveConfig';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { playPurchaseConfetti } from '@/utils/confetti.utils';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
 import { formatNumber } from '@/utils/numberFormat.utils';
@@ -40,6 +41,7 @@ export const GraduationCelebration: React.FC<GraduationCelebrationProps> = ({
 }) => {
 	const { data: config } = useGraduatedCurveConfig(keyId);
 	const graduated = hasKeyGraduated(config, currentSupply);
+	const reducedMotion = useReducedMotion();
 	const [copied, setCopied] = useState(false);
 	const played = useRef(false);
 
@@ -48,8 +50,10 @@ export const GraduationCelebration: React.FC<GraduationCelebrationProps> = ({
 		played.current = true;
 		if (hasCelebratedThisSession(keyId)) return;
 		markCelebratedThisSession(keyId);
-		playPurchaseConfetti(3000);
-	}, [graduated, keyId]);
+		// With reduced motion the static card below is the celebration, so the
+		// confetti burst is skipped.
+		if (!reducedMotion) playPurchaseConfetti(3000);
+	}, [graduated, keyId, reducedMotion]);
 
 	useEffect(() => {
 		if (!copied) return;

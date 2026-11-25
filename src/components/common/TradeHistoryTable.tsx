@@ -1,6 +1,6 @@
 // src/components/common/TradeHistoryTable.tsx
-import React, { useMemo, useState } from 'react';
-import { ArrowUpRight, ArrowDownRight, ClockIcon, Copy, Check, ExternalLink } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowUpRight, ArrowDownRight, ClockIcon, Copy, Check, ExternalLink, Pause, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import EmptyState from '@/components/common/EmptyState';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,9 @@ import { copyTextToClipboard } from '@/utils/clipboard.utils';
 import { env } from '@/utils/env.utils';
 
 const COPY_TOOLTIP_RESET_MS = 2_000;
+const LIVE_FEED_MAX_ENTRIES = 50;
+
+type LiveTrade = Trade & { wallet: string };
 
 interface TradeHistoryTableProps {
 	/** Connected wallet address used as the query key. */
@@ -24,6 +27,13 @@ interface TradeHistoryTableProps {
 	 * without IntersectionObserver.
 	 */
 	infiniteScroll?: boolean;
+	/**
+	 * Optional WebSocket URL. When provided, live swap events are streamed and
+	 * prepended to the feed (capped at 50 entries, newest first).
+	 */
+	wsUrl?: string;
+	/** Optional key identifier used to filter live events. */
+	keyId?: string;
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -32,10 +42,58 @@ function totalCost(trade: Trade): string {
 	return (trade.quantity * trade.pricePerKey).toFixed(4);
 }
 
+function truncateWallet(address: string): string {
+	if (address.length <= 12) return address;
+	return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}
+
+/**
+ * Merges a new live entry into the feed. Newest first, de-duplicated by id,
+ * capped at LIVE_FEED_MAX_ENTRIES (oldest entries pruned from the tail).
+ */
+function mergeLiveEntry(feed: LiveTrade[], entry: LiveTrade): LiveTrade[] {
+	const filtered = feed.filter(t => t.id !== entry.id);
+	const next = [entry, ...filtered];
+	return next.length > LIVE_FEED_MAX_ENTRIES
+		? next.slice(0, LIVE_FEED_MAX_ENTRIES)
+		: next;
+}
+
+function parseLiveSwap(raw: unknown): LiveTrade | null {
+	if (!raw || typeof raw !== 'object') return null;
+	const m = raw as Record<string, unknown>;
+	const direction = m.tradeType ?? m.direction ?? m.side;
+	const tradeType: Trade['tradeType'] | null =
+		direction === 'Buy' || direction === 'buy'
+			? 'Buy'
+			: direction === 'Sell' || direction === 'sell'
+				? 'Sell'
+				: null;
+	if (!tradeType || typeof m.id !== 'string') return null;
+	const quantity = Number(m.quantity ?? m.amount);
+	const pricePerKey = Number(m.pricePerKey ?? m.price);
+	if (!Number.isFinite(quantity) || !Number.isFinite(pricePerKey)) return null;
+	const timestamp = typeof m.timestamp === 'string' || typeof m.timestamp === 'number'
+		? m.timestamp
+		: Date.now();
+	return {
+		id: m.id,
+		tradeType,
+		quantity,
+		pricePerKey,
+		timestamp,
+		wallet: typeof m.wallet === 'string' ? m.wallet : (typeof m.walletAddress === 'string' ? m.walletAddress : ''),
+		keyName: typeof m.keyName === 'string' ? m.keyName : '',
+		transactionHash: typeof m.transactionHash === 'string' ? m.transactionHash : null,
+	} as LiveTrade;
+}
+
 function TradeTypePill({ type }: { type: Trade['tradeType'] }) {
 	const isBuy = type === 'Buy';
 	return (
 		<span
+			data-testid="direction-chip"
+			data-direction={type.toLowerCase()}
 			className={cn(
 				'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
 				isBuy
@@ -239,6 +297,117 @@ function TradeRow({ trade }: { trade: Trade }) {
 	);
 }
 
+// ─── live activity feed ────────────────────────────────────────────────────────
+
+function LiveActivityFeed({ wsUrl, keyId }: { wsUrl: string; keyId?: string }) {
+	const [entries, setEntries] = useState<LiveTrade[]>([]);
+	const [paused, setPaused] = useState(false);
+	const pausedRef = useRef(false);
+	const listRef = useRef<HTMLDivElement>(null);
+
+	pausedRef.current = paused;
+
+	useEffect(() => {
+		const ws = new WebSocket(wsUrl);
+		ws.onmessage = event => {
+			let payload: unknown;
+			try {
+				payload = JSON.parse(String(event.data));
+			} catch {
+				return;
+			}
+			const trade = parseLiveSwap(payload);
+			if (!trade) return;
+			if (keyId && (payload as Record<string, unknown>).keyId !== keyId) return;
+			// While paused, incoming events are buffered in the socket layer by
+			// not updating state; we keep the socket open so no events are lost
+			// from the stream itself. Resuming applies the latest state.
+			if (pausedRef.current) {
+				pendingRef.current.push(trade);
+				return;
+			}
+			setEntries(prev => mergeLiveEntry(prev, trade));
+		};
+		return () => ws.close();
+	}, [wsUrl, keyId]);
+
+	// Events received while paused are queued and merged on resume.
+	const pendingRef = useRef<LiveTrade[]>([]);
+	const togglePaused = () => {
+		if (paused) {
+			const queued = pendingRef.current;
+			pendingRef.current = [];
+			if (queued.length > 0) {
+				setEntries(prev =>
+					queued.reduce((acc, t) => mergeLiveEntry(acc, t), prev)
+				);
+			}
+		}
+		setPaused(!paused);
+	};
+
+	// Auto-scroll to latest (top of list, newest first) when not paused.
+	useEffect(() => {
+		if (!paused && listRef.current) {
+			listRef.current.scrollTop = 0;
+		}
+	}, [entries, paused]);
+
+	return (
+		<section aria-label="Live activity feed" data-testid="live-activity-feed" className="space-y-3">
+			<div className="flex items-center justify-between">
+				<h3 className="text-sm font-semibold text-white">Activity Feed</h3>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={togglePaused}
+					aria-pressed={paused}
+					data-testid="live-feed-toggle"
+					className="rounded-xl border-white/15 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
+				>
+					{paused ? <Play className="mr-1 size-3" aria-hidden="true" /> : <Pause className="mr-1 size-3" aria-hidden="true" />}
+					{paused ? 'Resume' : 'Pause'}
+				</Button>
+			</div>
+
+			{entries.length === 0 ? (
+				<EmptyState
+					title="Waiting for swaps"
+					description="Live trading activity will appear here."
+					data-testid="live-feed-empty"
+				/>
+			) : (
+				<div
+					ref={listRef}
+					className="max-h-96 space-y-2 overflow-y-auto"
+					data-testid="live-feed-list"
+				>
+					{entries.map(entry => {
+						const isBuy = entry.tradeType === 'Buy';
+						return (
+							<div
+								key={entry.id}
+								data-testid="live-feed-entry"
+								className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] p-3 text-xs"
+							>
+								<TradeTypePill type={entry.tradeType} />
+								<span className="font-mono text-white/80">{entry.quantity}</span>
+								<span className="font-mono text-white/80">{entry.pricePerKey.toFixed(4)} XLM</span>
+								<span className="font-mono text-white/50" title={entry.wallet}>
+									{truncateWallet(entry.wallet)}
+								</span>
+								<span className={cn('font-mono text-white/60', isBuy ? '' : '')}>
+									{formatRelativeTime(entry.timestamp)}
+								</span>
+							</div>
+						);
+					})}
+				</div>
+			)}
+		</section>
+	);
+}
+
 // ─── main component ────────────────────────────────────────────────────────────
 
 /**
@@ -249,10 +418,15 @@ function TradeRow({ trade }: { trade: Trade }) {
  * sell rows carry a red left border. A "Load More" button is shown when
  * the server signals more pages exist. An empty-state panel is shown when
  * the user has no trade history.
+ *
+ * When `wsUrl` is provided, a live activity feed is rendered above the
+ * history with real-time swap events (capped at 50, pause/resume supported).
  */
 const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
 	walletAddress,
 	infiniteScroll = false,
+	wsUrl,
+	keyId,
 }) => {
 	const {
 		data,
@@ -325,6 +499,8 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
 	// ── Populated table ────────────────────────────────────────────────────────
 	return (
 		<section aria-label="Trade history">
+			{wsUrl && <LiveActivityFeed wsUrl={wsUrl} keyId={keyId} />}
+
 			{/* Column header row — hidden on mobile, visible on sm+ */}
 			<div className="mb-2 hidden items-center gap-4 px-5 text-[10px] font-bold uppercase tracking-widest text-white/30 sm:flex sm:justify-between">
 				<span className="flex-1">Key</span>
