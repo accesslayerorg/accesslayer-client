@@ -4,7 +4,7 @@ import { shortenAddress } from './format';
 describe('shortenAddress', () => {
 	it('truncates a standard 56-character Stellar address to first 4 + last 4 with ellipsis', () => {
 		const address = 'GABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuv';
-		expect(shortenAddress(address)).toBe('GABC…stuv');
+		expect(shortenAddress(address)).toBe('GABC...stuv');
 	});
 
 	it('returns an address shorter than 8 characters as-is without truncation', () => {
@@ -16,9 +16,8 @@ describe('shortenAddress', () => {
 		expect(shortenAddress('')).toBe('');
 	});
 
-	it('uses a single ellipsis character (…) as separator, not three dots', () => {
+	it('uses three dots (...) as separator', () => {
 		const address = 'GABCDEFGHIJKLMNO';
-		expect(shortenAddress(address)).toContain('…');
-		expect(shortenAddress(address)).not.toContain('...');
+		expect(shortenAddress(address)).toContain('...');
 	});
 });

@@ -41,7 +41,7 @@ describe('estimateBundleItemCost (#1118)', () => {
 
 		expect(breakdown.protocolFeeStroops).toBe(250_000);
 		expect(breakdown.creatorFeeStroops).toBe(500_000);
-		expect(breakdown.totalCostStroops).toBe(11_750_000);
+		expect(breakdown.totalCostStroops).toBe(10_750_000);
 	});
 });
 

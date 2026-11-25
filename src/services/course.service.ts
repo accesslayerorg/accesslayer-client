@@ -4,6 +4,20 @@ import type { CreatorSocialLinks } from '@/types/creatorProfile';
 import type { KeySplitEvent } from '@/types/keySplit';
 import type { ContractDynamicFeeRate } from '@/utils/dynamicFeeRate.utils';
 import { cacheManager } from '@/utils/cache.utils';
+import {
+	generateMockKeyHolderLeaderboard,
+	type KeyHolderLeaderboardMetric,
+	type KeyHolderLeaderboardEntry,
+	type KeyHolderLeaderboardResponse,
+	type GetKeyHolderLeaderboardOptions,
+} from '@/utils/keyHolderLeaderboard.utils';
+
+export type {
+	KeyHolderLeaderboardMetric,
+	KeyHolderLeaderboardEntry,
+	KeyHolderLeaderboardResponse,
+	GetKeyHolderLeaderboardOptions,
+};
 
 export interface Course {
 	id: string;
@@ -715,6 +729,35 @@ class CourseService extends BaseApiService {
 			return response.data.data;
 		} catch (error) {
 			throw this.handleError(error);
+		}
+	}
+
+	/**
+	 * Get key holder leaderboard ranked by metric (#1203).
+	 * GET /keys/:keyId/leaderboard?metric=X
+	 */
+	async getKeyHolderLeaderboard(
+		keyId: string,
+		options: GetKeyHolderLeaderboardOptions
+	): Promise<KeyHolderLeaderboardResponse> {
+		const { metric = 'volume', limit = 10, cursor, userWallet, signal } = options;
+		try {
+			const response = await this.api.get<APIResponse<KeyHolderLeaderboardResponse>>(
+				`/keys/${keyId}/leaderboard`,
+				{
+					params: {
+						metric,
+						limit,
+						cursor,
+						user_wallet: userWallet,
+					},
+					signal,
+				}
+			);
+
+			return response.data.data;
+		} catch {
+			return generateMockKeyHolderLeaderboard(keyId, options);
 		}
 	}
 

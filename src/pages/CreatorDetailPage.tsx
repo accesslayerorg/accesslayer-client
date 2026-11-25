@@ -137,15 +137,17 @@ import KeyLockupBadge from '@/components/common/KeyLockupBadge';
 import { useAccount } from 'wagmi';
 import { useKeyMarketMaker } from '@/hooks/useKeyMarketMaker';
 import { MarketMakerChip, MMBadge } from '@/components/common/MarketMakerChip';
+import KeyHolderLeaderboardPanel from '@/components/common/KeyHolderLeaderboardPanel';
 
-/** Series shown in the key detail price panel (#1220 adds the depth tab). */
-type PriceChartTab = 'primary' | 'secondary' | 'depth' | 'revenue';
+/** Series shown in the key detail price panel (#1220 adds the depth tab, #1203 adds the leaderboard tab). */
+type PriceChartTab = 'primary' | 'secondary' | 'depth' | 'revenue' | 'leaderboard';
 
 const PRICE_CHART_TABS: Array<{ id: PriceChartTab; label: string }> = [
 	{ id: 'primary', label: 'Price history' },
 	{ id: 'secondary', label: 'Secondary market' },
 	{ id: 'depth', label: 'Depth' },
 	{ id: 'revenue', label: 'Revenue Share' },
+	{ id: 'leaderboard', label: 'Leaderboard' },
 ];
 
 function CreatorDetailPageContent() {
@@ -807,11 +809,18 @@ function CreatorDetailPageContent() {
 					<SectionErrorBoundary sectionName="market depth">
 						<KeyDepthChart keyId={id || ''} />
 					</SectionErrorBoundary>
-				) : (
+				) : priceChartTab === 'revenue' ? (
 					<SectionErrorBoundary sectionName="revenue share">
 						<RevenueSharePanel
 							keyId={id || ''}
 							wallet={connectedWalletAddress ?? undefined}
+						/>
+					</SectionErrorBoundary>
+				) : (
+					<SectionErrorBoundary sectionName="key holder leaderboard">
+						<KeyHolderLeaderboardPanel
+							keyId={id || ''}
+							connectedWalletAddress={connectedWalletAddress ?? undefined}
 						/>
 					</SectionErrorBoundary>
 				)}
@@ -1517,6 +1526,7 @@ function CreatorDetailPageContent() {
 						keyPriceStroops={resolveCreatorKeyPriceStroops(creator)}
 						currentSupply={creator.creatorShareSupply}
 						maxBuyQuantity={creator.maxBuyQuantity}
+						holdingCap={creator.holdingCap ?? creator.maxHoldingCap}
 						launchPenaltyBps={creator.launchPenaltyBps}
 						keyConfig={keyConfig}
 						isKeyConfigLoading={isKeyConfigLoading}

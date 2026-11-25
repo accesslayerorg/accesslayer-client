@@ -33,6 +33,8 @@ export const queryKeys = {
 			['creators', creatorId, 'priceHistory', interval] as const,
 		holders: (creatorId: string) =>
 			['creators', creatorId, 'holders'] as const,
+		holderLeaderboard: (keyId: string, metric: string, userWallet?: string) =>
+			['creators', keyId, 'leaderboard', metric, userWallet ?? null] as const,
 		holderConcentration: (creatorId: string) =>
 			['creators', creatorId, 'holder-concentration'] as const,
 		holderSnapshots: (creatorId: string, range: string) =>

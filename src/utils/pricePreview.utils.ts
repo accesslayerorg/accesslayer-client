@@ -93,13 +93,15 @@ export function calculateFeeBreakdown(
 export async function fetchPricePreview(
 	request: PricePreviewRequest
 ): Promise<FeeBreakdown | null> {
-	// Simulate network delay
-	await new Promise(resolve => setTimeout(resolve, 300));
+	if (process.env.NODE_ENV !== 'test') {
+		// Simulate network delay
+		await new Promise(resolve => setTimeout(resolve, 300));
 
-	// Simulate occasional failures (for testing retry logic)
-	// In production, this would be an actual API call
-	if (Math.random() > 0.95) {
-		throw new Error('Price preview fetch failed');
+		// Simulate occasional failures (for testing retry logic)
+		// In production, this would be an actual API call
+		if (Math.random() > 0.95) {
+			throw new Error('Price preview fetch failed');
+		}
 	}
 
 	return calculateFeeBreakdown(request);
