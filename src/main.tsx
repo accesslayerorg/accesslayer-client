@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
 import Web3Provider from './providers/Web3Provider.tsx';
+import { ThemeProvider } from './providers/ThemeProvider.tsx';
 import { PendingTransactionProvider } from './contexts/PendingTransactionContext';
 import { registerUnhandledRejectionLogger } from './utils/unhandledRejectionLogger';
 import { queryClient } from './providers/web3Utils';
@@ -33,9 +34,11 @@ if ('serviceWorker' in navigator) {
 createRoot(document.getElementById('root')!).render(
 	<StrictMode>
 		<Web3Provider>
-			<PendingTransactionProvider>
-				<App />
-			</PendingTransactionProvider>
+			<ThemeProvider>
+				<PendingTransactionProvider>
+					<App />
+				</PendingTransactionProvider>
+			</ThemeProvider>
 		</Web3Provider>
 	</StrictMode>
 );

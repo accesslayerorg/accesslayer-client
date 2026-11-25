@@ -47,6 +47,101 @@ export interface ActiveSpotlight {
 	sponsorLabel?: string | null;
 }
 
+/** Dutch auction state for a secondary key sale (issue: Dutch auction buying page). */
+export type DutchAuctionStatus = 'active' | 'filled' | 'cancelled' | 'closed';
+
+export interface DutchAuction {
+	id: string;
+	keyName: string;
+	creatorId: string;
+	status: DutchAuctionStatus;
+	/** Price in XLM at the auction start ledger. */
+	startPrice: number;
+	/** Lowest price in XLM the auction can decay to. */
+	floorPrice: number;
+	/** Ledger sequence when the price begins decaying. */
+	startLedger: number;
+	/** Ledger sequence when the auction reaches the floor price. */
+	endLedger: number;
+	/** Price decay per ledger in XLM (linear interpolation). */
+	decayPerLedger: number;
+	/** Units still available for purchase. */
+	remainingQuantity: number;
+	/** Protocol fee as a fraction of the price (e.g. 0.02 = 2%). */
+	protocolFeeRate: number;
+	/** Creator royalty as a fraction of the price (e.g. 0.05 = 5%). */
+	creatorRoyaltyRate: number;
+	/** Average ledger close time in seconds, used to schedule price updates. */
+	ledgerCloseSeconds: number;
+	/** Ledger at which the auction was filled or cancelled, if closed. */
+	settledLedger: number | null;
+	/** Final sale price per unit in XLM, when filled. */
+	settledPrice: number | null;
+	/** Quantity sold in total, when closed. */
+	soldQuantity: number;
+}
+
+export interface DutchAuctionPriceSnapshot {
+	/** Current price per unit in XLM at the given ledger. */
+	currentPrice: number;
+	/** Ledger whose price change will next move the displayed value. */
+	nextPriceChangeAt: number;
+}
+
+export interface DutchAuctionCostBreakdown {
+	quantity: number;
+	unitPrice: number;
+	subtotal: number;
+	protocolFee: number;
+	creatorRoyalty: number;
+	total: number;
+}
+
+/**
+ * Linear Dutch auction price at a ledger, matching the contract interpolation.
+ * Price starts at startPrice at startLedger and decays to floorPrice at endLedger.
+ */
+export function interpolateDutchAuctionPrice(
+	auction: Pick<DutchAuction, 'startPrice' | 'floorPrice' | 'startLedger' | 'endLedger'>,
+	ledger: number
+): DutchAuctionPriceSnapshot {
+	const { startPrice, floorPrice, startLedger, endLedger } = auction;
+	if (ledger <= startLedger) {
+		return { currentPrice: startPrice, nextPriceChangeAt: startLedger + 1 };
+	}
+	if (ledger >= endLedger || endLedger <= startLedger) {
+		return { currentPrice: floorPrice, nextPriceChangeAt: endLedger };
+	}
+	const span = endLedger - startLedger;
+	const elapsed = ledger - startLedger;
+	const progress = elapsed / span;
+	const currentPrice = startPrice - (startPrice - floorPrice) * progress;
+	return {
+		currentPrice,
+		nextPriceChangeAt: ledger + 1,
+	};
+}
+
+/** Total cost for a purchase including protocol fee and creator royalty. */
+export function computeDutchAuctionCost(
+	unitPrice: number,
+	quantity: number,
+	protocolFeeRate: number,
+	creatorRoyaltyRate: number
+): DutchAuctionCostBreakdown {
+	const subtotal = unitPrice * quantity;
+	const protocolFee = subtotal * protocolFeeRate;
+	const creatorRoyalty = subtotal * creatorRoyaltyRate;
+	return {
+		quantity,
+		unitPrice,
+		subtotal,
+		protocolFee,
+		creatorRoyalty,
+		total: subtotal + protocolFee + creatorRoyalty,
+	};
+}
+
 class SpotlightAuctionService extends BaseApiService {
 	/**
 	 * Spotlighted key shown at the top of the marketplace (#1219).
@@ -74,6 +169,20 @@ class SpotlightAuctionService extends BaseApiService {
 		try {
 			const response = await this.api.get<APIResponse<SpotlightAuctionState>>(
 				`/creators/${creatorId}/spotlight/auction`
+			);
+			return response.data.data;
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/**
+	 * Dutch auction for a secondary key sale (GET /v1/auctions/:id).
+	 */
+	async getDutchAuction(auctionId: string): Promise<DutchAuction> {
+		try {
+			const response = await this.api.get<APIResponse<DutchAuction>>(
+				`/v1/auctions/${auctionId}`
 			);
 			return response.data.data;
 		} catch (error) {

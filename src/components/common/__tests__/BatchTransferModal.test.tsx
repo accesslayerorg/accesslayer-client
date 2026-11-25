@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import BatchTransferModal from '../BatchTransferModal';
 import { MAX_BATCH_TRANSFER_RECIPIENTS } from '@/utils/batchTransfer.utils';
+import * as stellarService from '@/services/stellar';
+import { truncateAddress } from '@/utils/whitelist.utils';
 
 const mutateAsync = vi.fn();
 
@@ -44,6 +46,7 @@ const renderModal = (
 describe('BatchTransferModal', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		stellarService.clearFederationCache();
 		mutateAsync.mockResolvedValue({ success: true });
 	});
 
@@ -269,5 +272,56 @@ describe('BatchTransferModal', () => {
 
 		await user.click(screen.getByTestId('batch-transfer-cancel'));
 		expect(onOpenChange).toHaveBeenCalledWith(false);
+	});
+
+	it('resolves federation address and submits with resolved Stellar account', async () => {
+		const user = userEvent.setup();
+		const resolvedAddr = validAddress('B');
+		vi.spyOn(stellarService.FederationServer, 'resolve').mockResolvedValue({
+			account_id: resolvedAddr,
+		});
+
+		renderModal({ liquidBalance: 10 });
+
+		const addressInput = screen.getByTestId('batch-transfer-address-0');
+		await user.type(addressInput, 'alice*example.com');
+
+		await waitFor(() => {
+			expect(screen.getByTestId('address-resolved')).toBeInTheDocument();
+		});
+
+		expect(screen.getByTestId('address-resolved')).toHaveTextContent(
+			`Resolved: ${truncateAddress(resolvedAddr)}`
+		);
+
+		await user.click(screen.getByTestId('batch-transfer-submit'));
+
+		await waitFor(() => {
+			expect(mutateAsync).toHaveBeenCalledWith({
+				creatorId: 'creator-1',
+				recipients: [{ address: resolvedAddr, quantity: 1 }],
+			});
+		});
+	});
+
+	it('disables submit when federation address fails resolution', async () => {
+		const user = userEvent.setup();
+		vi.spyOn(stellarService.FederationServer, 'resolve').mockRejectedValue(
+			new Error('Request failed with status code 404')
+		);
+
+		renderModal({ liquidBalance: 10 });
+
+		const addressInput = screen.getByTestId('batch-transfer-address-0');
+		await user.type(addressInput, 'unknown*example.com');
+
+		await waitFor(() => {
+			expect(screen.getByTestId('address-error')).toHaveTextContent(
+				'Federation address not found'
+			);
+		});
+
+		const submitBtn = screen.getByTestId('batch-transfer-submit');
+		expect(submitBtn).toBeDisabled();
 	});
 });

@@ -21,6 +21,7 @@ import {
 import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import { formatCompactNumber } from '@/utils/numberFormat.utils';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type { TwapWindow } from '@/hooks/useKeyTwap';
 
 export interface BondingCurveDataPoint {
@@ -184,6 +185,8 @@ const BondingCurveChart: React.FC<BondingCurveChartProps> = ({
 	// TWAP overlay controls state
 	const [internalTwapWindow, setInternalTwapWindow] = useState<TwapWindow>('24h');
 	const [internalOverlayVisible, setInternalOverlayVisible] = useState<boolean>(true);
+
+	const reducedMotion = useReducedMotion();
 
 	const effectiveTwapWindow = twapWindow ?? internalTwapWindow;
 	const isOverlayVisible =
@@ -440,6 +443,7 @@ const BondingCurveChart: React.FC<BondingCurveChartProps> = ({
 							dot={false}
 							activeDot={{ r: 6, fill: '#f59e0b', stroke: '#1e293b', strokeWidth: 2 }}
 							name="Bonding Curve Price"
+							isAnimationActive={!reducedMotion}
 						/>
 						{/* Price floor indicator line (#1152) */}
 						{priceFloorStroops != null && priceFloorStroops > 0 && (

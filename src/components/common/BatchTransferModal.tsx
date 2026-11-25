@@ -19,6 +19,7 @@ import {
 	type BatchTransferRecipientRow,
 } from '@/utils/batchTransfer.utils';
 import { useBatchTransferMutation } from '@/hooks/useWallet';
+import AddressInput from '@/components/common/AddressInput';
 
 export interface BatchTransferModalProps {
 	open: boolean;
@@ -66,6 +67,9 @@ export default function BatchTransferModal({
 	const [touched, setTouched] = useState<Record<string, boolean>>({});
 	const [hasSubmitted, setHasSubmitted] = useState(false);
 	const [isInternalSubmitting, setIsInternalSubmitting] = useState(false);
+	const [resolvedAddresses, setResolvedAddresses] = useState<
+		Record<string, string | null>
+	>({});
 
 	const batchTransferMutation = useBatchTransferMutation();
 	const firstInputRef = useRef<HTMLInputElement | null>(null);
@@ -85,12 +89,13 @@ export default function BatchTransferModal({
 			setTouched({});
 			setHasSubmitted(false);
 			setIsInternalSubmitting(false);
+			setResolvedAddresses({});
 		}
 	}, [open, initialRecipients]);
 
 	const validation = useMemo(
-		() => validateBatchTransferRows(rows, liquidBalance),
-		[rows, liquidBalance]
+		() => validateBatchTransferRows(rows, liquidBalance, resolvedAddresses),
+		[rows, liquidBalance, resolvedAddresses]
 	);
 
 	const handleAddRow = () => {
@@ -106,11 +111,23 @@ export default function BatchTransferModal({
 			delete next[id];
 			return next;
 		});
+		setResolvedAddresses(prev => {
+			const next = { ...prev };
+			delete next[id];
+			return next;
+		});
 	};
 
 	const handleAddressChange = (id: string, address: string) => {
 		setRows(prev => prev.map(r => (r.id === id ? { ...r, address } : r)));
 		setTouched(prev => ({ ...prev, [id]: true }));
+	};
+
+	const handleAddressResolved = (id: string, resolved: string | null) => {
+		setResolvedAddresses(prev => {
+			if (prev[id] === resolved) return prev;
+			return { ...prev, [id]: resolved };
+		});
 	};
 
 	const handleQuantityChange = (id: string, quantityStr: string) => {
@@ -125,7 +142,7 @@ export default function BatchTransferModal({
 		if (!validation.isValid || isSubmitting) return;
 
 		const payload: BatchTransferRecipient[] = rows.map(r => ({
-			address: r.address.trim().toUpperCase(),
+			address: (resolvedAddresses[r.id] || r.address).trim().toUpperCase(),
 			quantity: Number(r.quantity),
 		}));
 
@@ -233,11 +250,10 @@ export default function BatchTransferModal({
 
 										{/* Wallet Address Input */}
 										<div className="flex-1 min-w-0">
-											<input
+											<AddressInput
 												ref={
 													index === 0 ? firstInputRef : undefined
 												}
-												type="text"
 												value={row.address}
 												onChange={e =>
 													handleAddressChange(
@@ -245,7 +261,10 @@ export default function BatchTransferModal({
 														e.target.value
 													)
 												}
-												placeholder="Stellar wallet address (G...)"
+												onResolved={resolved =>
+													handleAddressResolved(row.id, resolved)
+												}
+												placeholder="Stellar wallet address (G...) or name*domain"
 												aria-label={`Recipient ${index + 1} address`}
 												aria-invalid={showAddressError || undefined}
 												disabled={isSubmitting}

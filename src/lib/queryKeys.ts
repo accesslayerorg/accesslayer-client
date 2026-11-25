@@ -14,6 +14,7 @@ import type {
 	LeaderboardMetric,
 } from '@/services/analytics.service';
 import type { KeyHolderLeaderboardMetric } from '@/services/keyLeaderboard.service';
+import type { ReferralHoldFilters } from '@/services/adminReferralHolds.service';
 
 export const queryKeys = {
 	creatorProfile: {
@@ -34,6 +35,10 @@ export const queryKeys = {
 			['creators', creatorId, 'priceHistory', interval] as const,
 		holders: (creatorId: string) =>
 			['creators', creatorId, 'holders'] as const,
+		comments: (creatorId: string) =>
+			['creators', creatorId, 'comments'] as const,
+		socialFeed: (creatorId: string) =>
+			['creators', creatorId, 'social-feed'] as const,
 		holderConcentration: (creatorId: string) =>
 			['creators', creatorId, 'holder-concentration'] as const,
 		holderSnapshots: (creatorId: string, range: string) =>
@@ -53,10 +58,11 @@ export const queryKeys = {
 			['creators', creatorId, 'spotlight-bids'] as const,
 		announcements: (creatorId: string) =>
 			['creators', creatorId, 'announcements'] as const,
-		tips: (creatorId: string) =>
-			['creators', creatorId, 'tips'] as const,
+		tips: (creatorId: string) => ['creators', creatorId, 'tips'] as const,
 		uniqueTraders: (creatorId: string) =>
 			['creators', creatorId, 'unique-traders'] as const,
+		ratings: (creatorId: string) =>
+			['creators', creatorId, 'ratings'] as const,
 		reserve: (creatorId: string) =>
 			['creators', creatorId, 'reserve'] as const,
 		curveConfig: (creatorId: string) =>
@@ -69,14 +75,15 @@ export const queryKeys = {
 			['creators', creatorId, 'buyback'] as const,
 		keyConfig: (creatorId: string) =>
 			['creators', creatorId, 'key-config'] as const,
-		split: (creatorId: string) =>
-			['creators', creatorId, 'split'] as const,
+		split: (creatorId: string) => ['creators', creatorId, 'split'] as const,
 		vesting: (creatorId: string) =>
 			['creators', creatorId, 'vesting'] as const,
 		vestingClaims: (creatorId: string, wallet: string) =>
 			['creators', creatorId, 'vesting', 'claims', wallet] as const,
 		oraclePrice: (creatorId: string) =>
 			['creators', creatorId, 'oracle-price'] as const,
+		related: (keyId: string, limit: number) =>
+			['creators', keyId, 'related', limit] as const,
 		performanceBond: (creatorId: string) =>
 			['creators', creatorId, 'performance-bond'] as const,
 		snapshotHistory: (creatorId: string, range: string) =>
@@ -131,8 +138,20 @@ export const queryKeys = {
 	wallet: {
 		holdings: (address: string) => ['wallet', address, 'holdings'] as const,
 		badges: (address: string) => ['wallet', address, 'badges'] as const,
+		soulboundBadges: (address: string) =>
+			['wallet', address, 'soulboundBadges'] as const,
+		balanceHistory: (address: string, keyId?: string, range?: string) =>
+			[
+				'wallet',
+				address,
+				'balanceHistory',
+				keyId ?? 'all',
+				range ?? 'all',
+			] as const,
 		badgeMetrics: (address: string) =>
 			['wallet', address, 'badgeMetrics'] as const,
+		receivedGifts: (address: string) =>
+			['wallet', address, 'receivedGifts'] as const,
 		portfolioHistory: (address: string, range: string) =>
 			['wallet', address, 'portfolioHistory', range] as const,
 		activity: (address: string) => ['wallet', address, 'activity'] as const,
@@ -146,7 +165,10 @@ export const queryKeys = {
 			['wallet', address, 'stakingPositions'] as const,
 		xlmBalance: (address: string) =>
 			['wallet', address, 'xlmBalance'] as const,
-		feeDiscount: (address: string) => ['wallet', address, 'fee-discount'] as const,
+		vaultPosition: (address: string) =>
+			['wallet', address, 'vaultPosition'] as const,
+		feeDiscount: (address: string) =>
+			['wallet', address, 'fee-discount'] as const,
 	},
 	lp: {
 		all: () => ['lp'] as const,
@@ -195,6 +217,20 @@ export const queryKeys = {
 		upgradeProxyStatus: () => ['admin', 'proxy', 'status'] as const,
 		upgradeProxyPending: () => ['admin', 'proxy', 'pending'] as const,
 		upgradeProxyHistory: () => ['admin', 'proxy', 'history'] as const,
+		referralHolds: {
+			all: () => ['admin', 'referral-holds'] as const,
+			list: (filters: ReferralHoldFilters = {}) =>
+				[
+					'admin',
+					'referral-holds',
+					'list',
+					filters.status ?? null,
+					filters.reason ?? null,
+				] as const,
+			summary: () => ['admin', 'referral-holds', 'summary'] as const,
+			detail: (id: string) =>
+				['admin', 'referral-holds', 'detail', id] as const,
+		},
 	},
 	governance: {
 		all: () => ['governance'] as const,
@@ -207,6 +243,31 @@ export const queryKeys = {
 			['governance', 'proposal', proposalId, 'vote'] as const,
 		proposalVotes: (id: string) =>
 			['governance', 'proposal', id, 'votes'] as const,
+		events: (type?: string) =>
+			['governance', 'events', type ?? 'all'] as const,
+		admin: () => ['governance', 'admin'] as const,
+	},
+	conviction: {
+		all: () => ['conviction'] as const,
+		proposals: () => ['conviction', 'proposals'] as const,
+		proposal: (id: string) => ['conviction', 'proposal', id] as const,
+		balances: (userAddress?: string) =>
+			['conviction', 'balances', userAddress ?? 'default'] as const,
+	},
+	oracle: {
+		all: () => ['oracle'] as const,
+		status: (asset: string) => ['oracle', 'status', asset.toUpperCase()] as const,
+	},
+	ragequit: {
+		all: () => ['ragequit'] as const,
+		state: (proposalId: string, userAddress?: string) =>
+			['ragequit', proposalId, userAddress ?? 'default'] as const,
+	},
+	stream: {
+		all: () => ['stream'] as const,
+		list: (creatorAddress?: string) =>
+			['stream', 'list', creatorAddress ?? 'default'] as const,
+		detail: (streamId: string) => ['stream', 'detail', streamId] as const,
 	},
 	mergeProposal: {
 		bySourceKey: (sourceKeyId: string) =>
@@ -229,9 +290,19 @@ export const queryKeys = {
 		all: () => ['staking'] as const,
 		dashboard: (wallet: string) => ['staking', wallet, 'dashboard'] as const,
 	},
+	publicPortfolio: {
+		byHandle: (handle: string) => ['publicPortfolio', handle] as const,
+	},
 	airdropClaims: {
 		all: () => ['airdropClaims'] as const,
 		list: (wallet: string) => ['airdropClaims', wallet, 'list'] as const,
+	},
+	keyRentals: {
+		all: () => ['keyRentals'] as const,
+		available: () => ['keyRentals', 'available'] as const,
+		wallet: (wallet: string) => ['keyRentals', 'wallet', wallet] as const,
+		activeRenter: (keyId: string, wallet: string) =>
+			['keyRentals', 'activeRenter', keyId, wallet] as const,
 	},
 	atomicSwap: {
 		all: () => ['atomic-swap'] as const,
@@ -261,14 +332,16 @@ export const queryKeys = {
 		data: (range: ProtocolTimeRange = '30d') =>
 			['protocolAnalytics', 'data', range] as const,
 	},
+	escape: {
+		all: () => ['escape'] as const,
+		status: () => ['escape', 'status'] as const,
+	},
 	keyLeaderboard: {
 		all: () => ['analytics', 'keys', 'leaderboard'] as const,
 		byMetric: (metric: LeaderboardMetric = 'volume') =>
 			['analytics', 'keys', 'leaderboard', metric] as const,
-		holders: (
-			keyId: string,
-			metric: KeyHolderLeaderboardMetric = 'volume'
-		) => ['keys', keyId, 'leaderboard', metric] as const,
+		holders: (keyId: string, metric: KeyHolderLeaderboardMetric = 'volume') =>
+			['keys', keyId, 'leaderboard', metric] as const,
 	},
 	creatorRevenue: {
 		all: () => ['creatorRevenue'] as const,
@@ -293,8 +366,7 @@ export const queryKeys = {
 			['staking-vault', 'stakes', wallet, keyId] as const,
 	},
 	milestoneRewards: {
-		byWallet: (wallet: string) =>
-			['milestone-rewards', wallet] as const,
+		byWallet: (wallet: string) => ['milestone-rewards', wallet] as const,
 	},
 	rebalance: {
 		preview: (wallet: string) => ['rebalance', wallet, 'preview'] as const,
@@ -314,5 +386,59 @@ export const queryKeys = {
 	},
 	supportTickets: {
 		mine: () => ['support-tickets', 'mine'] as const,
+	},
+	apiKeys: {
+		all: () => ['api-keys'] as const,
+		list: () => ['api-keys', 'list'] as const,
+	},
+	launches: {
+		all: () => ['launches'] as const,
+	},
+	verificationApplication: {
+		all: () => ['verification-application'] as const,
+		mine: () => ['verification-application', 'mine'] as const,
+	},
+	curveParams: {
+		all: () => ['curve-params'] as const,
+		byKey: (keyId: string) => ['curve-params', keyId] as const,
+	},
+	walletSession: {
+		all: () => ['wallet'] as const,
+		notifications: () => ['notifications'] as const,
+		sessions: () => ['sessions'] as const,
+		alerts: () => ['alerts'] as const,
+	},
+	bounties: {
+		all: () => ['bounties'] as const,
+		list: (filters?: Record<string, unknown>) =>
+			['bounties', 'list', filters ?? null] as const,
+		detail: (bountyId: string) => ['bounties', 'detail', bountyId] as const,
+		submissions: (bountyId: string) =>
+			['bounties', 'submissions', bountyId] as const,
+	},
+	grants: {
+		all: () => ['grants'] as const,
+		pages: (filters?: Record<string, unknown>) =>
+			['grants', 'pages', filters ?? null] as const,
+		detail: (grantId: string) => ['grants', 'detail', grantId] as const,
+	},
+	events: {
+		all: () => ['events'] as const,
+		list: (creator?: string) => ['events', 'list', creator ?? ''] as const,
+		redemption: (eventId: string, wallet: string) =>
+			['events', 'redemption', eventId, wallet] as const,
+	},
+	feeChange: {
+		all: () => ['fee-change'] as const,
+		pending: () => ['fee-change', 'pending'] as const,
+	},
+	dca: {
+		all: () => ['dca-plans'] as const,
+		byWallet: (wallet?: string) => ['dca-plans', wallet ?? 'all'] as const,
+	},
+	ambassador: {
+		all: () => ['ambassador'] as const,
+		stats: (wallet?: string, range: string = '30d') =>
+			['ambassador', 'stats', wallet ?? 'anonymous', range] as const,
 	},
 } as const;

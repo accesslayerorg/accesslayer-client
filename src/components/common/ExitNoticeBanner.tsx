@@ -17,6 +17,8 @@ export interface ExitNoticeBannerProps {
 	creator: ExitNoticeFields;
 	holdingsCount?: number;
 	onSellNow?: () => void;
+	/** Keep the key-detail notice visible to visitors who do not hold the key. */
+	showWithoutHoldings?: boolean;
 	className?: string;
 }
 
@@ -35,6 +37,7 @@ export const ExitNoticeBanner: React.FC<ExitNoticeBannerProps> = ({
 	creator,
 	holdingsCount = 0,
 	onSellNow,
+	showWithoutHoldings = false,
 	className,
 }) => {
 	const notice = resolveExitNotice(creator);
@@ -49,21 +52,50 @@ export const ExitNoticeBanner: React.FC<ExitNoticeBannerProps> = ({
 			return;
 		}
 
-		setRemainingSeconds(computeRemainingCooldownSeconds(notice.noticeExpiresAt));
+		setRemainingSeconds(
+			computeRemainingCooldownSeconds(notice.noticeExpiresAt)
+		);
 		const intervalId = setInterval(() => {
-			setRemainingSeconds(computeRemainingCooldownSeconds(notice.noticeExpiresAt));
+			setRemainingSeconds(
+				computeRemainingCooldownSeconds(notice.noticeExpiresAt)
+			);
 		}, 1000);
 
 		return () => clearInterval(intervalId);
 	}, [notice?.noticeExpiresAt]);
 
-	if (!notice || hasFullyExitedPosition(holdingsCount)) {
+	if (
+		!notice ||
+		(!showWithoutHoldings && hasFullyExitedPosition(holdingsCount))
+	) {
 		return null;
 	}
 
 	const isRetirement = notice.actionType === 'retirement';
 	const hasDeadline = Boolean(notice.noticeExpiresAt);
 	const expired = hasDeadline && remainingSeconds <= 0;
+	const noticeStartedAtMs = notice.noticeStartedAt
+		? Date.parse(notice.noticeStartedAt)
+		: Number.NaN;
+	const noticeExpiresAtMs = notice.noticeExpiresAt
+		? Date.parse(notice.noticeExpiresAt)
+		: Number.NaN;
+	const hasValidNoticePeriod =
+		isRetirement &&
+		Number.isFinite(noticeStartedAtMs) &&
+		Number.isFinite(noticeExpiresAtMs) &&
+		noticeExpiresAtMs > noticeStartedAtMs;
+	const noticeProgress = hasValidNoticePeriod
+		? Math.min(
+				100,
+				Math.max(
+					0,
+					((Date.now() - noticeStartedAtMs) /
+						(noticeExpiresAtMs - noticeStartedAtMs)) *
+						100
+				)
+			)
+		: null;
 
 	return (
 		<div
@@ -101,9 +133,9 @@ export const ExitNoticeBanner: React.FC<ExitNoticeBannerProps> = ({
 
 					<p className="text-sm leading-relaxed text-white/80">
 						{isRetirement
-							? 'This key is being retired. Trading has ceased permanently. Sell your position now at the guaranteed buyback price before the notice window closes.'
-							: creator.deprecationReason ??
-								'This creator key has been deprecated. Trading on the open market has ceased.'}
+							? 'This key is in its retirement notice period. Sell at the current market rate before the notice closes; unsold positions receive the guaranteed buyback price when retirement is executed.'
+							: (creator.deprecationReason ??
+								'This creator key has been deprecated. Trading on the open market has ceased.')}
 					</p>
 
 					{hasDeadline && (
@@ -124,6 +156,31 @@ export const ExitNoticeBanner: React.FC<ExitNoticeBannerProps> = ({
 									? 'Notice window closed'
 									: `Notice closes in ${formatCooldownDuration(remainingSeconds)}`}
 							</span>
+						</div>
+					)}
+
+					{noticeProgress != null && (
+						<div className="max-w-md space-y-1.5 pt-1">
+							<div className="flex items-center justify-between text-xs text-white/60">
+								<span>Notice period progress</span>
+								<span data-testid="exit-notice-progress-label">
+									{Math.round(noticeProgress)}% elapsed
+								</span>
+							</div>
+							<div
+								className="h-2 overflow-hidden rounded-full bg-white/10"
+								role="progressbar"
+								aria-label="Retirement notice period elapsed"
+								aria-valuemin={0}
+								aria-valuemax={100}
+								aria-valuenow={Math.round(noticeProgress)}
+								data-testid="exit-notice-progress"
+							>
+								<div
+									className="h-full rounded-full bg-red-400 transition-[width]"
+									style={{ width: `${noticeProgress}%` }}
+								/>
+							</div>
 						</div>
 					)}
 				</div>
@@ -148,22 +205,25 @@ export const ExitNoticeBanner: React.FC<ExitNoticeBannerProps> = ({
 						</div>
 					)}
 
-					<Button
-						type="button"
-						onClick={onSellNow}
-						disabled={expired}
-						className={cn(
-							'flex items-center gap-2 self-start rounded-xl px-5 py-2.5 font-bold shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]',
-							isRetirement
-								? 'bg-red-500 text-slate-950 shadow-red-500/10 hover:bg-red-400'
-								: 'bg-amber-500 text-slate-950 shadow-amber-500/10 hover:bg-amber-400',
-							expired && 'cursor-not-allowed opacity-50 hover:scale-100'
-						)}
-						data-testid="exit-notice-sell-now-button"
-					>
-						<span>Sell Now</span>
-						<ArrowRight className="size-4" />
-					</Button>
+					{holdingsCount > 0 && onSellNow && (
+						<Button
+							type="button"
+							onClick={onSellNow}
+							disabled={expired}
+							className={cn(
+								'flex items-center gap-2 self-start rounded-xl px-5 py-2.5 font-bold shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]',
+								isRetirement
+									? 'bg-red-500 text-slate-950 shadow-red-500/10 hover:bg-red-400'
+									: 'bg-amber-500 text-slate-950 shadow-amber-500/10 hover:bg-amber-400',
+								expired &&
+									'cursor-not-allowed opacity-50 hover:scale-100'
+							)}
+							data-testid="exit-notice-sell-now-button"
+						>
+							<span>Sell Now</span>
+							<ArrowRight className="size-4" />
+						</Button>
+					)}
 				</div>
 			</div>
 		</div>
