@@ -7,6 +7,7 @@ import ReputationScoreBadge from '@/components/common/ReputationScoreBadge';
 import AddToBundleButton from '@/components/common/AddToBundleButton';
 import AddToCompareButton from '@/components/common/AddToCompareButton';
 import AddToBatchButton from '@/components/common/AddToBatchButton';
+import VerifiedBadge from '@/components/common/VerifiedBadge';
 import { normalizeCreatorDisplayName } from '@/utils/creatorDisplayName.utils';
 import { formatCreatorHandle } from '@/utils/handleDisplay.utils';
 import {
@@ -102,6 +103,7 @@ export const DiscoveryKeyCard: React.FC<DiscoveryKeyCardProps> = ({
 							{handle}
 						</p>
 					)}
+					{creator.isVerified && <VerifiedBadge verified className="mt-1.5" />}
 				</div>
 			</div>
 

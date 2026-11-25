@@ -25,6 +25,7 @@ import ProtocolRevenueDistributionTable from '@/components/common/ProtocolRevenu
 import WalletActivityFeed from '@/components/common/WalletActivityFeed';
 import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 import WalletBadgeShowcase from '@/components/common/WalletBadgeShowcase';
+import BadgeShowcase from '@/components/common/BadgeShowcase';
 import TruncatedAddress from '@/components/common/TruncatedAddress';
 import { ProfileTabPillGroup } from '@/components/common/ProfileTabPill';
 import ActivePriceAlertsList from '@/components/common/ActivePriceAlertsList';
@@ -316,6 +317,7 @@ export default function ProfilePage() {
 
 				<SectionErrorBoundary sectionName="badges">
 					<WalletBadgeShowcase wallet={profileWallet} />
+					<BadgeShowcase wallet={profileWallet} className="mt-4" />
 				</SectionErrorBoundary>
 
 				{/* Tab navigation */}
