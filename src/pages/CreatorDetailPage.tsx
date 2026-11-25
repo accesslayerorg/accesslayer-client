@@ -158,6 +158,12 @@ import { MarketMakerChip, MMBadge } from '@/components/common/MarketMakerChip';
 import ReportKeyModal from '@/components/common/ReportKeyModal';
 import ShareQrModal from '@/components/common/ShareQrModal';
 import PageMeta from '@/components/common/PageMeta';
+import { useTheme } from '@/providers/themeContext';
+import {
+	generatePalette,
+	createCreatorAccentStyle,
+	readStoredCreatorAccent,
+} from '@/utils/accentPalette.utils';
 import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
 import RetirementExitPanel from '@/components/common/RetirementExitPanel';
 import RetirementNoticeEmailCard from '@/components/common/RetirementNoticeEmailCard';
@@ -217,6 +223,18 @@ function CreatorDetailPageContent() {
 		isFetching,
 		refetch,
 	} = useCreatorDetail(id || '');
+
+	const { resolvedTheme } = useTheme();
+	const creatorAccent = creator?.accentColor ?? (creator?.id ? readStoredCreatorAccent(creator.id) : null);
+	const creatorAccentStyle = useMemo(() => {
+		if (!creatorAccent) return undefined;
+		try {
+			const palette = generatePalette(creatorAccent);
+			return createCreatorAccentStyle(palette, resolvedTheme) as React.CSSProperties;
+		} catch {
+			return undefined;
+		}
+	}, [creatorAccent, resolvedTheme]);
 
 	const { data: priceHistory, isLoading: isPriceHistoryLoading } =
 		usePriceHistory(id || '', interval);
@@ -745,7 +763,12 @@ function CreatorDetailPageContent() {
 			};
 
 	return (
-		<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
+		<main
+			className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12"
+			style={creatorAccentStyle}
+			data-testid="creator-detail-page"
+			data-creator-accent={creatorAccent ?? undefined}
+		>
 			{pageMeta}
 			<div className="mx-auto max-w-7xl space-y-8">
 				{creator.deprecation && !deprecationDismissed && (
