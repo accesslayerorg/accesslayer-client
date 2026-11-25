@@ -485,6 +485,7 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 						type="button"
 						onClick={onConfirm}
 						disabled={
+							disabled ||
 							isSubmitting ||
 							slippageError != null ||
 							(hasLargeTradeGuard && !largeTradeAcknowledged)
