@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
 import MarketplacePage from './pages/MarketplacePage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import ReferralHoldsPage from './pages/ReferralHoldsPage';
 import CreatorDetailPage from './pages/CreatorDetailPage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
 import CreatorPublicProfilePage from './pages/CreatorPublicProfilePage';
@@ -68,6 +69,10 @@ import ManageBountyPage from './pages/ManageBountyPage';
 import GrantsPage from './pages/GrantsPage';
 import GrantDetailPage from './pages/GrantDetailPage';
 import EventsPage from './pages/EventsPage';
+import DcaPlansPage from './pages/DcaPlansPage';
+import EmbedGeneratorPage from './pages/EmbedGeneratorPage';
+import EmbedWidgetView from './components/creator/EmbedWidgetView';
+import AmbassadorDashboardPage from './pages/AmbassadorDashboardPage';
 
 function withRouteErrorBoundary(element: ReactNode, routeName: string) {
 	return (
@@ -317,6 +322,32 @@ export const routes = [
 				),
 			},
 			{
+				// Dollar-cost averaging recurring purchase plans (#1470).
+				path: '/portfolio/dca',
+				element: withRouteErrorBoundary(<DcaPlansPage />, 'DCA Plans'),
+			},
+			{
+				// Creator embeddable stats badge and widget generator (#1479).
+				path: '/creator/embed',
+				element: withRouteErrorBoundary(
+					<EmbedGeneratorPage />,
+					'Embed Generator'
+				),
+			},
+			{
+				// Standalone embeddable iframe widget (#1479).
+				path: '/embed/widget/:id',
+				element: withRouteErrorBoundary(<EmbedWidgetView />, 'Key Widget'),
+			},
+			{
+				// Ambassador and affiliate dashboard (#1478).
+				path: '/ambassador',
+				element: withRouteErrorBoundary(
+					<AmbassadorDashboardPage />,
+					'Ambassador Dashboard'
+				),
+			},
+			{
 				path: '/following',
 				element: <FollowingPage />,
 			},
@@ -441,6 +472,17 @@ export const routes = [
 						{withRouteErrorBoundary(
 							<AdminDashboardPage />,
 							'Admin dashboard'
+						)}
+					</AdminTwoFactorGuard>
+				),
+			},
+			{
+				path: '/admin/referral-holds',
+				element: (
+					<AdminTwoFactorGuard>
+						{withRouteErrorBoundary(
+							<ReferralHoldsPage />,
+							'Referral holds review'
 						)}
 					</AdminTwoFactorGuard>
 				),

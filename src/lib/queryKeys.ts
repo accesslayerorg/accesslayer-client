@@ -14,6 +14,7 @@ import type {
 	LeaderboardMetric,
 } from '@/services/analytics.service';
 import type { KeyHolderLeaderboardMetric } from '@/services/keyLeaderboard.service';
+import type { ReferralHoldFilters } from '@/services/adminReferralHolds.service';
 
 export const queryKeys = {
 	creatorProfile: {
@@ -137,6 +138,16 @@ export const queryKeys = {
 	wallet: {
 		holdings: (address: string) => ['wallet', address, 'holdings'] as const,
 		badges: (address: string) => ['wallet', address, 'badges'] as const,
+		soulboundBadges: (address: string) =>
+			['wallet', address, 'soulboundBadges'] as const,
+		balanceHistory: (address: string, keyId?: string, range?: string) =>
+			[
+				'wallet',
+				address,
+				'balanceHistory',
+				keyId ?? 'all',
+				range ?? 'all',
+			] as const,
 		badgeMetrics: (address: string) =>
 			['wallet', address, 'badgeMetrics'] as const,
 		receivedGifts: (address: string) =>
@@ -206,6 +217,20 @@ export const queryKeys = {
 		upgradeProxyStatus: () => ['admin', 'proxy', 'status'] as const,
 		upgradeProxyPending: () => ['admin', 'proxy', 'pending'] as const,
 		upgradeProxyHistory: () => ['admin', 'proxy', 'history'] as const,
+		referralHolds: {
+			all: () => ['admin', 'referral-holds'] as const,
+			list: (filters: ReferralHoldFilters = {}) =>
+				[
+					'admin',
+					'referral-holds',
+					'list',
+					filters.status ?? null,
+					filters.reason ?? null,
+				] as const,
+			summary: () => ['admin', 'referral-holds', 'summary'] as const,
+			detail: (id: string) =>
+				['admin', 'referral-holds', 'detail', id] as const,
+		},
 	},
 	governance: {
 		all: () => ['governance'] as const,
@@ -406,5 +431,14 @@ export const queryKeys = {
 	feeChange: {
 		all: () => ['fee-change'] as const,
 		pending: () => ['fee-change', 'pending'] as const,
+	},
+	dca: {
+		all: () => ['dca-plans'] as const,
+		byWallet: (wallet?: string) => ['dca-plans', wallet ?? 'all'] as const,
+	},
+	ambassador: {
+		all: () => ['ambassador'] as const,
+		stats: (wallet?: string, range: string = '30d') =>
+			['ambassador', 'stats', wallet ?? 'anonymous', range] as const,
 	},
 } as const;

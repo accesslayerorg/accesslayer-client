@@ -30,6 +30,8 @@ import type { DynamicFeeBreakdown as DynamicFeeBreakdownData } from '@/utils/dyn
 import { ShieldCheck, ArrowRight, Info, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { validateSlippageTolerance } from '@/utils/slippage.utils';
+import LargeTradeGuard from '@/components/common/LargeTradeGuard';
+import { evaluateLargeTradeRules } from '@/utils/largeTradeGuard.utils';
 
 export interface TradeConfirmationModalProps {
 	open: boolean;
@@ -47,6 +49,8 @@ export interface TradeConfirmationModalProps {
 	maxPriceStroops?: number | null;
 	minPriceStroops?: number | null;
 	priceImpactPercent?: number | null;
+	/** Circulating supply of the key used for whale supply-percentage guard (#1480). */
+	currentSupply?: number | null;
 	/** Dynamic fee quote from the contract; rendered when provided (#994). */
 	feeBreakdown?: DynamicFeeBreakdownData | null;
 	/** True while the dynamic fee rate is being fetched from the contract. */
@@ -81,6 +85,7 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 	maxPriceStroops,
 	minPriceStroops,
 	priceImpactPercent,
+	currentSupply = null,
 	feeBreakdown = null,
 	feeIsLoading = false,
 	feeError = null,
@@ -93,7 +98,24 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 		slippageTolerancePercent
 	);
 	const [slippageError, setSlippageError] = useState<string | null>(null);
+	const [largeTradeAcknowledged, setLargeTradeAcknowledged] = useState(false);
 	const pendingFeeChange = usePendingFeeChange();
+
+	const triggeredLargeTradeRules = evaluateLargeTradeRules({
+		amount,
+		unitPriceStroops,
+		totalStroops,
+		priceImpactPercent,
+		currentSupply,
+		side,
+	});
+	const hasLargeTradeGuard = triggeredLargeTradeRules.length > 0;
+
+	useEffect(() => {
+		if (!open) {
+			setLargeTradeAcknowledged(false);
+		}
+	}, [open]);
 
 	useEffect(() => {
 		setCurrentSlippage(slippageTolerancePercent);
@@ -431,6 +453,19 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 								/>
 							</div>
 						)}
+
+					{/* Large Trade Confirmation Guard (#1480) */}
+					{hasLargeTradeGuard && (
+						<LargeTradeGuard
+							triggeredRules={triggeredLargeTradeRules}
+							amount={amount}
+							unitPriceStroops={unitPriceStroops}
+							totalStroops={totalStroops}
+							side={side}
+							creatorName={creatorName}
+							onAcknowledgementChange={setLargeTradeAcknowledged}
+						/>
+					)}
 				</div>
 
 				<DialogFooter className="mt-6 flex flex-row items-center justify-between gap-3 sm:justify-between">
@@ -447,7 +482,11 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 					<Button
 						type="button"
 						onClick={onConfirm}
-						disabled={isSubmitting || slippageError != null}
+						disabled={
+							isSubmitting ||
+							slippageError != null ||
+							(hasLargeTradeGuard && !largeTradeAcknowledged)
+						}
 						aria-busy={isSubmitting || undefined}
 						data-testid="confirmation-modal-confirm"
 						className={cn(
@@ -455,7 +494,9 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 							isBuy
 								? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
 								: 'bg-rose-500 hover:bg-rose-400 text-white',
-							slippageError != null && 'opacity-50 cursor-not-allowed'
+							(slippageError != null ||
+								(hasLargeTradeGuard && !largeTradeAcknowledged)) &&
+								'opacity-50 cursor-not-allowed'
 						)}
 					>
 						<StableButtonContent

@@ -7,6 +7,7 @@ import BundleCartTrigger from '@/components/common/BundleCartTrigger';
 import BundleCartDrawer from '@/components/common/BundleCartDrawer';
 import BatchTradeTrigger from '@/components/common/BatchTradeTrigger';
 import BatchTradeDrawer from '@/components/common/BatchTradeDrawer';
+import DebugDrawer from '@/components/common/DebugDrawer';
 
 /**
  * Root layout shared by all routes.
@@ -38,6 +39,8 @@ export default function RootLayout() {
 			{/* Batch trade entry point + drawer, available on every route (#1155) */}
 			<BatchTradeTrigger />
 			<BatchTradeDrawer />
+			{/* Developer debug drawer (#1447) */}
+			<DebugDrawer />
 			{/* Key comparison tray (#1247); the compare page has its own controls */}
 			{pathname !== '/compare' && (
 				<ComparisonTray
