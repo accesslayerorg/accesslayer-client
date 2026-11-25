@@ -30,6 +30,8 @@ export interface Course {
 	socialLinks?: CreatorSocialLinks | null;
 	isVerified?: boolean;
 	volume24h?: number;
+	/** Percentage of total key supply held by the top ten wallets. */
+	top10HolderShare?: number;
 	/** Cumulative all-time traded volume in stroops, when the API reports it. */
 	totalVolume?: number | null;
 	change24h?: number;

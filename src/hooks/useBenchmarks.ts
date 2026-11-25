@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { courseService, type Course } from '@/services/course.service';
 import { usePortfolioHistory } from '@/hooks/usePortfolioHistory';
+import type { PortfolioHistoryRange, PortfolioHistoryPoint } from '@/utils/portfolioHistory.utils';
 
 export type BenchmarkRange = '7D' | '30D' | '90D' | 'All';
 
@@ -59,7 +60,7 @@ function buildMarketBasket(creators: Course[], dates: string[]): BenchmarkPoint[
 	// come from a price-history endpoint. We generate a smoothed synthetic
 	// series seeded from each creator's current price change for demo purposes.
 	const avgChange =
-		creators.reduce((sum, c) => sum + (c.priceChange24h ?? 0), 0) /
+		creators.reduce((sum, c) => sum + (c.change24h ?? 0), 0) /
 		Math.max(creators.length, 1);
 
 	const dailyRate = avgChange / 100 / dates.length;
@@ -74,7 +75,7 @@ function buildTop10Basket(creators: Course[], dates: string[]): BenchmarkPoint[]
 		.sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0))
 		.slice(0, 10);
 	const avgChange =
-		top10.reduce((sum, c) => sum + (c.priceChange24h ?? 0), 0) /
+		top10.reduce((sum, c) => sum + (c.change24h ?? 0), 0) /
 		Math.max(top10.length, 1);
 	const dailyRate = avgChange / 100 / dates.length;
 	const prices = dates.map((_, i) => 100 * Math.pow(1 + dailyRate, i));
@@ -109,7 +110,16 @@ export function useBenchmarks(range: BenchmarkRange, wallet?: string) {
 		staleTime: 60_000,
 	});
 
-	const portfolioHistoryQuery = usePortfolioHistory(wallet ?? '', range);
+	const historyRange: Record<BenchmarkRange, PortfolioHistoryRange> = {
+		'7D': '7d',
+		'30D': '30d',
+		'90D': '90d',
+		All: 'all',
+	};
+	const portfolioHistoryQuery = usePortfolioHistory(
+		wallet ?? '',
+		historyRange[range]
+	);
 
 	const creators = creatorsQuery.data ?? [];
 
@@ -139,11 +149,11 @@ export function useBenchmarks(range: BenchmarkRange, wallet?: string) {
 		const history = portfolioHistoryQuery.data;
 		if (!history || !history.length) return null;
 
-		const sliced = history.slice(-days - 1);
-		const prices = sliced.map((p: { value: number }) => p.value);
+		const sliced: PortfolioHistoryPoint[] = history.slice(-days - 1);
+		const prices = sliced.map(p => p.value);
 		const normalised = normalise(prices);
-		const points = sliced.map((p: { date: string }, i: number) => ({
-			date: p.date,
+		const points = sliced.map((p, i) => ({
+			date: p.timestamp.slice(0, 10),
 			value: normalised[i],
 		}));
 		return { id: 'portfolio', label: 'Your portfolio', points };
@@ -166,16 +176,16 @@ export function useBenchmarks(range: BenchmarkRange, wallet?: string) {
 
 		// Best/worst key from creators by priceChange24h as a proxy.
 		const sorted = [...creators]
-			.filter(c => c.priceChange24h != null)
-			.sort((a, b) => (b.priceChange24h ?? 0) - (a.priceChange24h ?? 0));
+			.filter(c => c.change24h != null)
+			.sort((a, b) => (b.change24h ?? 0) - (a.change24h ?? 0));
 
 		const bestKey = sorted[0]
-			? { name: sorted[0].title ?? sorted[0].id, returnPct: sorted[0].priceChange24h! }
+			? { name: sorted[0].title ?? sorted[0].id, returnPct: sorted[0].change24h! }
 			: null;
 		const worstKey = sorted[sorted.length - 1]
 			? {
 					name: sorted[sorted.length - 1].title ?? sorted[sorted.length - 1].id,
-					returnPct: sorted[sorted.length - 1].priceChange24h!,
+					returnPct: sorted[sorted.length - 1].change24h!,
 			  }
 			: null;
 
