@@ -70,6 +70,7 @@ import { ApiError } from '@/services/api.service';
 import WatchlistButton from '@/components/common/WatchlistButton';
 import AuctionPhaseSection from '@/components/common/AuctionPhaseSection';
 import { useAuctionPhase } from '@/hooks/useAuctionPhase';
+import CommitRevealPanel from '@/components/common/CommitRevealPanel';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useKeyHolders } from '@/hooks/useKeyHolders';
 import { useKeyRatings, useSubmitKeyRatingMutation } from '@/hooks/useKeyRatings';
@@ -1300,6 +1301,11 @@ function CreatorDetailPageContent() {
 						/>
 					</div>
 				)}
+
+				<CommitRevealPanel
+					keyId={creator.id}
+					userAddress={userAddress}
+				/>
 
 				{userAddress && !isTradeCooldownActive && (
 					<BuyCooldownCountdown nextBuyAllowedAt={nextBuyAllowedAt} />
