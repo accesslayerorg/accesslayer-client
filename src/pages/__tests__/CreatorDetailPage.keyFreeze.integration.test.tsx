@@ -9,6 +9,7 @@ import CreatorDetailPage from '../CreatorDetailPage';
 import { useCreatorDetail } from '@/hooks/useCreators';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { HelmetProvider } from 'react-helmet-async';
 
 vi.mock('@/hooks/useCreators', async importOriginal => {
 	const actual = await importOriginal<typeof import('@/hooks/useCreators')>();
@@ -34,6 +35,10 @@ vi.mock('@/hooks/usePurchaseConfetti', () => ({
 	usePurchaseConfetti: vi.fn(),
 }));
 
+vi.mock('@/components/common/ReportKeyModal', () => ({
+	default: () => null,
+}));
+
 const createTestQueryClient = () =>
 	new QueryClient({
 		defaultOptions: {
@@ -45,13 +50,15 @@ const createTestQueryClient = () =>
 
 const renderPage = () =>
 	render(
-		<QueryClientProvider client={createTestQueryClient()}>
-			<MemoryRouter initialEntries={['/creators/creator-1']}>
-				<Routes>
-					<Route path="/creators/:id" element={<CreatorDetailPage />} />
-				</Routes>
-			</MemoryRouter>
-		</QueryClientProvider>
+		<HelmetProvider>
+			<QueryClientProvider client={createTestQueryClient()}>
+				<MemoryRouter initialEntries={['/creators/creator-1']}>
+					<Routes>
+						<Route path="/creators/:id" element={<CreatorDetailPage />} />
+					</Routes>
+				</MemoryRouter>
+			</QueryClientProvider>
+		</HelmetProvider>
 	);
 
 describe('CreatorDetailPage key freeze banner & trading block (#1121)', () => {
@@ -103,6 +110,24 @@ describe('CreatorDetailPage key freeze banner & trading block (#1121)', () => {
 		// Banner is visible with the reason and a formatted expiry timestamp.
 		const banner = await screen.findByTestId('key-freeze-banner');
 		expect(banner).toHaveAttribute('role', 'alert');
+		await waitFor(() => {
+			expect(
+				document.head.querySelector('meta[name="robots"]')
+			).toHaveAttribute('content', 'noindex, follow');
+		});
+		expect(
+			document.head.querySelector('meta[property="og:type"]')
+		).toHaveAttribute('content', 'product');
+		expect(
+			JSON.parse(
+				document.querySelector('script[type="application/ld+json"]')
+					?.textContent ?? '{}'
+			)
+		).toMatchObject({
+			'@type': 'Product',
+			name: 'Alex Rivers',
+			offers: { price: '0.1000000', priceCurrency: 'XLM' },
+		});
 		expect(screen.getByTestId('key-freeze-reason')).toHaveTextContent(
 			FREEZE_REASON
 		);
@@ -188,7 +213,9 @@ describe('CreatorDetailPage key freeze banner & trading block (#1121)', () => {
 		renderPage();
 
 		await waitFor(() => {
-			expect(screen.getByTestId('key-detail-buy-button')).toBeInTheDocument();
+			expect(
+				screen.getByTestId('key-detail-buy-button')
+			).toBeInTheDocument();
 		});
 
 		expect(screen.queryByTestId('key-freeze-banner')).not.toBeInTheDocument();
@@ -200,9 +227,27 @@ describe('CreatorDetailPage key freeze banner & trading block (#1121)', () => {
 		renderPage();
 
 		await waitFor(() => {
-			expect(screen.getByTestId('key-detail-buy-button')).toBeInTheDocument();
+			expect(
+				screen.getByTestId('key-detail-buy-button')
+			).toBeInTheDocument();
 		});
 
 		expect(screen.queryByTestId('key-freeze-banner')).not.toBeInTheDocument();
+	});
+
+	it('marks retired keys as noindex', async () => {
+		mockCreator({
+			...baseCreator,
+			isRetiring: true,
+			retirementExecutedAt: '2026-01-01T00:00:00.000Z',
+		});
+
+		renderPage();
+
+		await waitFor(() => {
+			expect(
+				document.head.querySelector('meta[name="robots"]')
+			).toHaveAttribute('content', 'noindex, follow');
+		});
 	});
 });

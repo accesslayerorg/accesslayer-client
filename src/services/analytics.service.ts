@@ -192,6 +192,32 @@ export class AnalyticsService extends BaseApiService {
 	}
 
 	/**
+	 * Records a rate-limit (HTTP 429) hit for analytics (#1402).
+	 *
+	 * Only the endpoint name is captured — never request payloads, wallet
+	 * addresses or creator keys — so rate-limit telemetry stays privacy-safe.
+	 */
+	logRateLimitHit(endpointName: string): void {
+		const endpoint = typeof endpointName === 'string' && endpointName.trim()
+			? endpointName.trim()
+			: 'unknown';
+
+		try {
+			// Fire-and-forget: rate-limit telemetry must never break the caller.
+			void this.api
+				.post<APIResponse<null>>('/analytics/rate-limit', {
+					endpoint,
+					occurredAt: new Date().toISOString(),
+				})
+				.catch(() => {
+					/* swallow — telemetry is best-effort */
+				});
+		} catch {
+			/* swallow — telemetry is best-effort */
+		}
+	}
+
+	/**
 	 * Fetches platform-wide creator keys leaderboard ranked by volume,
 	 * holder count, or reputation score (#1206).
 	 */

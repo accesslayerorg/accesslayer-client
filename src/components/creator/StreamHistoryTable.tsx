@@ -74,7 +74,7 @@ export const StreamHistoryTable: React.FC<StreamHistoryTableProps> = ({
 										className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 transition-colors"
 										data-testid={`tx-link-${tx.id}`}
 									>
-										<span>{shortenAddress(tx.txHash, 6)}</span>
+										<span>{shortenAddress(tx.txHash)}</span>
 										<ExternalLink className="size-3" />
 									</a>
 								</td>

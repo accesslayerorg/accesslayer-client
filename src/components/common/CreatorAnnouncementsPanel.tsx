@@ -1,177 +1,66 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import PublishingAnnouncement from '@/components/common/PublishingAnnouncement';
+import AnnouncementComposer from '@/components/common/AnnouncementComposer';
+import ScheduledAnnouncementsList from '@/components/common/ScheduledAnnouncementsList';
 import { useCreatorAnnouncements } from '@/hooks/useCreatorAnnouncements';
-import { usePostAnnouncementMutation } from '@/hooks/useCreatorContractActions';
 import {
 	ANNOUNCEMENT_CATEGORY_LABELS,
-	ANNOUNCEMENT_CONTENT_MAX_LENGTH,
 	formatAnnouncementDate,
-	validateAnnouncementDraft,
 } from '@/utils/announcement.utils';
-import {
-	ANNOUNCEMENT_CATEGORIES,
-	type AnnouncementCategory,
-} from '@/services/announcement.service';
-
-const fieldClass =
-	'w-full rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-white/30 outline-none transition-colors focus:border-amber-400/40 focus:ring-[3px] focus:ring-amber-400/20 disabled:opacity-50';
+import type { ScheduledAnnouncement } from '@/services/announcement.service';
 
 interface CreatorAnnouncementsPanelProps {
 	creatorId: string;
 }
 
 /**
- * Creator dashboard composer for announcements to key holders (#1159).
- * Content is pinned to IPFS on submit; the returned hash is what gets posted
- * on-chain alongside the title and category.
+ * Creator dashboard composer for announcements to key holders (#1159, #1380).
+ * Supports immediate publishing and scheduled publishing controls.
  */
 export default function CreatorAnnouncementsPanel({
 	creatorId,
 }: CreatorAnnouncementsPanelProps) {
-	const [title, setTitle] = useState('');
-	const [category, setCategory] = useState<AnnouncementCategory>('update');
-	const [content, setContent] = useState('');
-	const [showError, setShowError] = useState(false);
+	const [editingAnnouncement, setEditingAnnouncement] =
+		useState<ScheduledAnnouncement | null>(null);
 
 	const { announcements, isLoading, isError } =
 		useCreatorAnnouncements(creatorId);
-	const publish = usePostAnnouncementMutation(creatorId);
-
-	const validationError = validateAnnouncementDraft({ title, category, content });
-	const remaining = ANNOUNCEMENT_CONTENT_MAX_LENGTH - content.length;
-	const isPublishing = publish.isPending;
-
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		if (isPublishing) return;
-		if (validationError) {
-			setShowError(true);
-			return;
-		}
-
-		publish.mutate(
-			{ title: title.trim(), category, content: content.trim() },
-			{
-				onSuccess: () => {
-					setTitle('');
-					setContent('');
-					setCategory('update');
-					setShowError(false);
-				},
-			}
-		);
-	};
 
 	return (
-		<div className="space-y-6" data-testid="creator-announcements-panel">
-			<form onSubmit={handleSubmit} className="space-y-4" noValidate>
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_12rem]">
-					<div className="space-y-1.5">
-						<label
-							htmlFor="announcement-title"
-							className="text-xs font-bold uppercase tracking-[0.18em] text-white/50"
-						>
-							Title
-						</label>
-						<input
-							id="announcement-title"
-							data-testid="announcement-title-input"
-							type="text"
-							maxLength={120}
-							value={title}
-							onChange={e => setTitle(e.target.value)}
-							disabled={isPublishing}
-							placeholder="What's new?"
-							className={fieldClass}
-						/>
-					</div>
+		<div className="space-y-8" data-testid="creator-announcements-panel">
+			{/* Announcement Composer (with publish now / schedule controls) */}
+			<section aria-labelledby="compose-announcement-heading">
+				<h3
+					id="compose-announcement-heading"
+					className="sr-only"
+				>
+					{editingAnnouncement ? 'Edit Announcement' : 'Compose Announcement'}
+				</h3>
+				<AnnouncementComposer
+					creatorId={creatorId}
+					initialAnnouncement={editingAnnouncement}
+					onCancelEdit={() => setEditingAnnouncement(null)}
+					onSuccess={() => setEditingAnnouncement(null)}
+				/>
+			</section>
 
-					<div className="space-y-1.5">
-						<label
-							htmlFor="announcement-category"
-							className="text-xs font-bold uppercase tracking-[0.18em] text-white/50"
-						>
-							Category
-						</label>
-						<select
-							id="announcement-category"
-							data-testid="announcement-category-select"
-							value={category}
-							onChange={e =>
-								setCategory(e.target.value as AnnouncementCategory)
-							}
-							disabled={isPublishing}
-							className={fieldClass}
-						>
-							{ANNOUNCEMENT_CATEGORIES.map(value => (
-								<option key={value} value={value} className="bg-[#06111f]">
-									{ANNOUNCEMENT_CATEGORY_LABELS[value]}
-								</option>
-							))}
-						</select>
-					</div>
-				</div>
+			{/* Scheduled & Draft Announcements List */}
+			<ScheduledAnnouncementsList
+				keyId={creatorId}
+				onEdit={item => setEditingAnnouncement(item)}
+			/>
 
-				<div className="space-y-1.5">
-					<div className="flex items-center justify-between">
-						<label
-							htmlFor="announcement-content"
-							className="text-xs font-bold uppercase tracking-[0.18em] text-white/50"
-						>
-							Content
-						</label>
-						<span
-							data-testid="announcement-char-count"
-							aria-live="polite"
-							className={
-								remaining < 0 ? 'text-xs text-red-400' : 'text-xs text-white/40'
-							}
-						>
-							{content.length}/{ANNOUNCEMENT_CONTENT_MAX_LENGTH}
-						</span>
-					</div>
-					<textarea
-						id="announcement-content"
-						data-testid="announcement-content-input"
-						rows={5}
-						value={content}
-						onChange={e => setContent(e.target.value)}
-						disabled={isPublishing}
-						placeholder="Share an update with your key holders."
-						aria-invalid={showError && remaining < 0 ? 'true' : undefined}
-						className={fieldClass}
-					/>
-				</div>
-
-				{showError && validationError && (
-					<p role="alert" data-testid="announcement-error" className="text-xs text-red-400">
-						{validationError}
-					</p>
-				)}
-
-				{isPublishing ? (
-					<PublishingAnnouncement />
-				) : (
-					<Button
-						type="submit"
-						data-testid="announcement-submit"
-						disabled={remaining < 0}
-					>
-						Publish announcement
-					</Button>
-				)}
-			</form>
-
-			<section aria-labelledby="posted-announcements-heading">
+			{/* Posted Announcements Feed */}
+			<section aria-labelledby="posted-announcements-heading" className="space-y-3">
 				<h3
 					id="posted-announcements-heading"
-					className="mb-3 font-grotesque text-base font-black"
+					className="font-grotesque text-base font-black text-white"
 				>
 					Posted announcements
 				</h3>
 
-				{isLoading && <p className="text-sm text-white/50">Loading announcements…</p>}
+				{isLoading && (
+					<p className="text-sm text-white/50">Loading announcements…</p>
+				)}
 				{isError && (
 					<p className="text-sm text-red-400">Couldn&apos;t load announcements.</p>
 				)}

@@ -61,6 +61,7 @@
 		"react": "^19.1.0",
 		"react-day-picker": "^9.13.0",
 		"react-dom": "^19.1.0",
+		"react-helmet-async": "^3.1.0",
 		"react-hook-form": "^7.54.2",
 		"react-hot-toast": "^2.5.2",
 		"react-router": "^7.7.0",
