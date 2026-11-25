@@ -8,6 +8,8 @@ import {
 	resolveCreatorKeyPriceStroops,
 } from '@/utils/keyPriceDisplay.utils';
 import { cn } from '@/lib/utils';
+import FiatValue from '@/components/common/FiatValue';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
 
 type Props = {
 	creator: RecentlyViewedKey;
@@ -18,7 +20,8 @@ export default function RecentlyViewedKeyCard({ creator }: Props) {
 	const blockie = creator.walletAddress
 		? makeBlockie(creator.walletAddress)
 		: undefined;
-	const price = formatDisplayKeyPrice(resolveCreatorKeyPriceStroops(creator));
+	const priceStroops = resolveCreatorKeyPriceStroops(creator);
+	const price = formatDisplayKeyPrice(priceStroops);
 
 	const hasUp = creator.change24h != null && creator.change24h > 0;
 	const hasDown = creator.change24h != null && creator.change24h < 0;
@@ -56,9 +59,19 @@ export default function RecentlyViewedKeyCard({ creator }: Props) {
 
 			{/* Price + change */}
 			<div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
-				<span className="font-jakarta text-xs font-semibold text-gray-900">
-					{price}
-				</span>
+				<div className="flex flex-col">
+					<span className="font-jakarta text-xs font-semibold text-gray-900">
+						{price}
+					</span>
+					<FiatValue
+						xlmAmount={
+							priceStroops == null
+								? null
+								: priceStroops / STROOPS_PER_XLM
+						}
+						className="text-gray-500"
+					/>
+				</div>
 				{creator.change24h != null ? (
 					<span
 						className={cn(

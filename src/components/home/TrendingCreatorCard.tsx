@@ -8,6 +8,9 @@ import { formatHolderCount } from '@/utils/numberFormat.utils';
 import { cn } from '@/lib/utils';
 import { creatorCardSubtitleClampClass } from '@/utils/lineClamp.utils';
 import { useFormatXlm } from '@/hooks/useFormatXlm';
+import FiatValue from '@/components/common/FiatValue';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
+import { resolveCreatorKeyPriceStroops } from '@/utils/keyPriceDisplay.utils';
 
 export default function TrendingCreatorCard({ creator }: Props) {
 	const name = creator.title || 'Unnamed creator';
@@ -16,6 +19,7 @@ export default function TrendingCreatorCard({ creator }: Props) {
 	const priceXlm = creator.priceStroops
 		? formatXlm(creator.priceStroops)
 		: creator.price.toFixed(2);
+	const priceStroops = resolveCreatorKeyPriceStroops(creator);
 
 	return (
 		<article className="group relative overflow-hidden rounded-2xl border border-black/8 bg-white transition-all duration-300 hover:-translate-y-0.5">
@@ -59,15 +63,25 @@ export default function TrendingCreatorCard({ creator }: Props) {
 
 				{/* Stats row */}
 				<div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
-					<div className="flex items-center gap-1.5">
-						<img
-							src="/icons/key.svg"
-							alt=""
-							className="size-3.5 opacity-40 invert"
+					<div className="flex flex-col items-start">
+						<div className="flex items-center gap-1.5">
+							<img
+								src="/icons/key.svg"
+								alt=""
+								className="size-3.5 opacity-40 invert"
+							/>
+							<span className="font-jakarta text-sm font-semibold text-gray-900">
+								{priceXlm} XLM
+							</span>
+						</div>
+						<FiatValue
+							xlmAmount={
+								priceStroops == null
+									? null
+									: priceStroops / STROOPS_PER_XLM
+							}
+							className="text-gray-500"
 						/>
-						<span className="font-jakarta text-sm font-semibold text-gray-900">
-							{priceXlm} XLM
-						</span>
 					</div>
 					{creator.creatorShareSupply !== undefined && (
 						<div className="flex items-center gap-1.5 text-gray-400">

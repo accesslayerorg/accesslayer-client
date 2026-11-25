@@ -7,6 +7,8 @@ import { useConnectedWallet } from '@/hooks/useWatchlist';
 import { courseService, type Course } from '@/services/course.service';
 import { calculateFeeBreakdown } from '@/utils/pricePreview.utils';
 import { formatXlm } from '@/hooks/useFormatXlm';
+import FiatValue from '@/components/common/FiatValue';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
 
 type DraftOrder = { id: number; creatorId: string; side: 'buy' | 'sell'; quantity: number; slippageBps: number };
 
@@ -88,6 +90,7 @@ export default function BatchTradePanel({ open, onOpenChange }: { open: boolean;
 				{sellExceeded && <p role="alert" className="text-sm text-red-400">A sell order exceeds the available key balance.</p>}
 				<div className="flex justify-between border-t border-white/10 pt-3 text-sm"><span>Estimated fees</span><span>{formatXlm(totalFees)} XLM</span></div>
 				<div className="flex justify-between font-semibold"><span>Estimated buy cost</span><span>{formatXlm(totalCost)} XLM</span></div>
+				{orders.length > 0 && <FiatValue xlmAmount={totalCost / STROOPS_PER_XLM} className="block text-right text-amber-300/70" />}
 			</div>}
 			<DialogFooter><div className="flex gap-2"><Button variant="ghost" onClick={() => close(false)}>Close</Button>{results ? <Button onClick={() => setResults(null)}>Edit orders</Button> : <Button onClick={() => void execute()} disabled={!orders.length || sellExceeded || mutation.isPending}>{mutation.isPending ? 'Executing batch…' : 'Execute batch'}</Button>}</div></DialogFooter>
 		</DialogContent>

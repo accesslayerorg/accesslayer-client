@@ -13,6 +13,8 @@ import {
 	resolveCreatorKeyPriceStroops,
 } from '@/utils/keyPriceDisplay.utils';
 import { cn } from '@/lib/utils';
+import FiatValue from '@/components/common/FiatValue';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
 
 export interface DiscoveryKeyCardProps {
 	creator: Course;
@@ -28,9 +30,13 @@ export const DiscoveryKeyCard: React.FC<DiscoveryKeyCardProps> = ({
 	className,
 }) => {
 	const displayName =
-		normalizeCreatorDisplayName(creator.title || creator.name) || 'Unnamed creator';
-	const handle = formatCreatorHandle(creator.socialHandle || creator.instructorId);
+		normalizeCreatorDisplayName(creator.title || creator.name) ||
+		'Unnamed creator';
+	const handle = formatCreatorHandle(
+		creator.socialHandle || creator.instructorId
+	);
 	const priceFormatted = formatCreatorKeyPriceDisplay(creator);
+	const priceStroops = resolveCreatorKeyPriceStroops(creator);
 	const avatarSrc = creator.thumbnail || creator.avatarUri;
 
 	return (
@@ -110,19 +116,28 @@ export const DiscoveryKeyCard: React.FC<DiscoveryKeyCardProps> = ({
 					Price
 				</span>
 				<div className="flex min-w-0 items-center gap-2">
-					<div className="flex items-center gap-1.5">
-						<img
-							src="/icons/key.svg"
-							alt=""
-							className="size-3.5 opacity-60 invert"
-							aria-hidden="true"
+					<div className="flex min-w-0 flex-col items-start">
+						<div className="flex items-center gap-1.5">
+							<img
+								src="/icons/key.svg"
+								alt=""
+								className="size-3.5 opacity-60 invert"
+								aria-hidden="true"
+							/>
+							<span
+								data-testid="discovery-card-price"
+								className="font-jakarta text-sm font-extrabold text-white"
+							>
+								{priceFormatted}
+							</span>
+						</div>
+						<FiatValue
+							xlmAmount={
+								priceStroops == null
+									? null
+									: priceStroops / STROOPS_PER_XLM
+							}
 						/>
-						<span
-							data-testid="discovery-card-price"
-							className="font-jakarta text-sm font-extrabold text-white"
-						>
-							{priceFormatted}
-						</span>
 					</div>
 					{/* Raised above the full-card link overlay so it stays clickable. */}
 					<AddToBatchButton

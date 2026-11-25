@@ -4,9 +4,10 @@ import { WagmiProvider } from 'wagmi';
 import { wagmiConfig } from '@/lib/web3/wagmiConfig';
 import { useWalletConnectionLogger } from '@/hooks/useWalletConnectionLogger';
 import { queryClient } from './web3Utils';
+import { XlmFiatRateProvider } from '@/components/common/XlmFiatRateProvider';
 
 interface Web3ProviderProps {
-  children: ReactNode;
+	children: ReactNode;
 }
 
 /**
@@ -15,17 +16,17 @@ interface Web3ProviderProps {
  * reconnect banner, etc.) initiated the connection.
  */
 function WalletConnectionLogger() {
-  useWalletConnectionLogger();
-  return null;
+	useWalletConnectionLogger();
+	return null;
 }
 
 export default function Web3Provider({ children }: Web3ProviderProps) {
-  return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <WalletConnectionLogger />
-        {children}
-      </QueryClientProvider>
-    </WagmiProvider>
-  );
+	return (
+		<WagmiProvider config={wagmiConfig}>
+			<QueryClientProvider client={queryClient}>
+				<WalletConnectionLogger />
+				<XlmFiatRateProvider>{children}</XlmFiatRateProvider>
+			</QueryClientProvider>
+		</WagmiProvider>
+	);
 }

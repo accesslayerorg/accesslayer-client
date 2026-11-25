@@ -20,6 +20,12 @@ Every shared hook must include a corresponding test file in
 `src/hooks/__tests__`. Name the test after the hook, for example
 `useExample.test.ts` or `useExample.test.tsx`.
 
+The XLM fiat-rate hook fetches the spot price from CoinGecko. Its React Query
+key includes the selected fiat currency, and its rate data is considered fresh
+for 60 seconds. The display preference is stored separately under `al:currency`
+so changing the selector immediately updates all fiat-value displays and
+persists across visits.
+
 ## Minimal Example
 
 ```ts

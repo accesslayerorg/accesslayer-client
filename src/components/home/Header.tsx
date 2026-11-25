@@ -9,13 +9,18 @@ import { useTheme } from '@/hooks/useTheme';
 import { Link } from 'react-router';
 import BatchTradePanel from '@/components/common/BatchTradePanel';
 import { useConnectedWallet, useWatchlist } from '@/hooks/useWatchlist';
+import CurrencySelector from '@/components/common/CurrencySelector';
 
 const navLinks = [
 	{ label: 'Marketplace', href: '/marketplace', external: false },
 	{ label: 'Discover', href: '/discovery', external: false },
 	{ label: 'Status', href: '/status', external: false },
 	{ label: 'About', href: '/about', external: false },
-	{ label: 'GitHub', href: 'https://github.com/accesslayerorg', external: true },
+	{
+		label: 'GitHub',
+		href: 'https://github.com/accesslayerorg',
+		external: true,
+	},
 ];
 
 export default function Header() {
@@ -24,7 +29,9 @@ export default function Header() {
 	const profile = useProfileStore(state => state.profile);
 	const { theme, toggleTheme } = useTheme();
 	const walletKey = useConnectedWallet(state => state.walletKey);
-	const watchlistCount = useWatchlist(state => state.getWatchlistCount(walletKey));
+	const watchlistCount = useWatchlist(state =>
+		state.getWatchlistCount(walletKey)
+	);
 
 	useEffect(() => {
 		const onScroll = () => {
@@ -51,7 +58,9 @@ export default function Header() {
 						alt="Access Layer"
 						className={`size-6 sm:size-5 transition-all duration-300 ${scrolled ? 'opacity-60 invert' : 'opacity-70'}`}
 					/>
-					<span className={`hidden font-mono text-[13px] uppercase tracking-[0.08em] sm:inline transition-colors duration-300 ${scrolled ? 'text-gray-700' : 'text-white/70'}`}>
+					<span
+						className={`hidden font-mono text-[13px] uppercase tracking-[0.08em] sm:inline transition-colors duration-300 ${scrolled ? 'text-gray-700' : 'text-white/70'}`}
+					>
 						Access Layer
 					</span>
 				</Link>
@@ -86,7 +95,10 @@ export default function Header() {
 						className={`relative inline-flex items-center gap-1.5 font-jakarta text-sm transition-colors duration-300 ${scrolled ? 'text-gray-500 hover:text-gray-900' : 'text-white/45 hover:text-white/80'}`}
 						aria-label={`Watchlist, ${watchlistCount} saved ${watchlistCount === 1 ? 'key' : 'keys'}`}
 					>
-						<Bookmark className="size-4 text-amber-400/80" aria-hidden="true" />
+						<Bookmark
+							className="size-4 text-amber-400/80"
+							aria-hidden="true"
+						/>
 						Watchlist
 						{watchlistCount > 0 && (
 							<span
@@ -107,6 +119,7 @@ export default function Header() {
 				{/* Right-side actions: dark mode toggle (#750) + notification bell (#720) + wallet status chip (#686).
 				    NotificationBell is only rendered when a user profile is available. */}
 				<div className="flex items-center gap-2 shrink-0">
+					<CurrencySelector scrolled={scrolled} />
 					<button
 						type="button"
 						onClick={() => setBatchOpen(true)}
@@ -115,20 +128,26 @@ export default function Header() {
 						Batch Trade
 					</button>
 					<BatchTradePanel open={batchOpen} onOpenChange={setBatchOpen} />
-				<button
-					type="button"
-					onClick={toggleTheme}
-					aria-label={`Current theme: ${theme}. Click to cycle themes.`}
-					className={`rounded-md p-1.5 transition-colors duration-200 ${
-						scrolled
-							? 'text-gray-600 hover:bg-black/5 hover:text-gray-900'
-							: 'text-white/60 hover:text-white/90'
-					}`}
-				>
-					{theme === 'dark' && <Sun className="size-4" aria-hidden="true" />}
-					{theme === 'light' && <Moon className="size-4" aria-hidden="true" />}
-					{theme === 'system' && <Monitor className="size-4" aria-hidden="true" />}
-				</button>
+					<button
+						type="button"
+						onClick={toggleTheme}
+						aria-label={`Current theme: ${theme}. Click to cycle themes.`}
+						className={`rounded-md p-1.5 transition-colors duration-200 ${
+							scrolled
+								? 'text-gray-600 hover:bg-black/5 hover:text-gray-900'
+								: 'text-white/60 hover:text-white/90'
+						}`}
+					>
+						{theme === 'dark' && (
+							<Sun className="size-4" aria-hidden="true" />
+						)}
+						{theme === 'light' && (
+							<Moon className="size-4" aria-hidden="true" />
+						)}
+						{theme === 'system' && (
+							<Monitor className="size-4" aria-hidden="true" />
+						)}
+					</button>
 					<PendingTransactionsDrawer
 						className={
 							scrolled
