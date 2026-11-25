@@ -14,6 +14,9 @@ export interface KeyTrade {
 	transactionHash?: string | null;
 }
 
+/** Maximum number of entries retained in the live activity feed. */
+export const KEY_TRADE_FEED_LIMIT = 50;
+
 type UnknownRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): UnknownRecord {
@@ -82,6 +85,22 @@ export function normalizeKeyTrades(value: unknown, keyId: string): KeyTrade[] {
 	return trades
 		.map((trade, index) => normalizeKeyTrade(trade, keyId, index))
 		.sort((a, b) => b.timestamp - a.timestamp);
+}
+
+/**
+ * Merge a newly received trade into an existing feed.
+ * Deduplicates by id, keeps newest-first ordering, and prunes the oldest
+ * entries so the feed never exceeds KEY_TRADE_FEED_LIMIT.
+ */
+export function appendKeyTradeToFeed(
+	feed: KeyTrade[],
+	trade: KeyTrade,
+	limit = KEY_TRADE_FEED_LIMIT
+): KeyTrade[] {
+	const deduped = feed.filter((existing) => existing.id !== trade.id);
+	return [trade, ...deduped]
+		.sort((a, b) => b.timestamp - a.timestamp)
+		.slice(0, limit);
 }
 
 class KeyTradeService extends BaseApiService {

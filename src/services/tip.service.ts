@@ -12,7 +12,8 @@ function getInitialMockTips(creatorId: string): Tip[] {
 		{
 			tipper: 'GBZXN7PIRZGNMHGA728R3AAX7A8K9R0P1Q2S3T4U5V6W7X8Y9Z0A1B2C',
 			amount: 50,
-			message: 'Incredible work on the latest release! Keep inspiring us. 🚀',
+			message:
+				'Incredible work on the latest release! Keep inspiring us. 🚀',
 			offsetMinutes: 12,
 		},
 		{
@@ -126,11 +127,32 @@ class TipService extends BaseApiService {
 	}
 
 	/**
+	 * Fetches the creator's tip ledger directly from the backend without the
+	 * in-memory store or seeded sample tips. Used by surfaces that must report
+	 * real earnings only (#1258).
+	 */
+	async getTipsForCreator(creatorId: string): Promise<Tip[]> {
+		try {
+			const response = await this.api.get<APIResponse<Tip[]>>(
+				`/creators/${creatorId}/tips`
+			);
+			const tips = response.data?.data;
+			if (!Array.isArray(tips)) return [];
+			return [...tips].sort((a, b) => b.timestamp - a.timestamp);
+		} catch (error) {
+			throw this.handleError(error);
+		}
+	}
+
+	/**
 	 * Records a newly confirmed tip into the local feed cache.
 	 */
 	recordTip(tip: Tip): Tip[] {
 		const existing = tipsStore.get(tip.creatorId) || [];
-		const updated = [tip, ...existing.filter(t => t.id !== tip.id)].slice(0, 10);
+		const updated = [tip, ...existing.filter(t => t.id !== tip.id)].slice(
+			0,
+			10
+		);
 		tipsStore.set(tip.creatorId, updated);
 		return updated;
 	}

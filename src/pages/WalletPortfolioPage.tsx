@@ -10,6 +10,7 @@ import {
 } from '@/hooks/useBatchTradeStore';
 import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 import BadgeProgressTracker from '@/components/common/BadgeProgressTracker';
+import DiversificationPanel from '@/components/portfolio/DiversificationPanel';
 import Skeleton from '@/components/ui/skeleton';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useWalletHoldings } from '@/hooks/useWallet';
@@ -26,6 +27,7 @@ import SplitAppliedBadge from '@/components/common/SplitAppliedBadge';
 import {
 	calculatePnLSummary,
 	calculatePortfolioValue,
+	calculatePositionTotalValue,
 	getPnLToneClassName,
 	getPortfolioValueHelperText,
 	formatPnLDisplay,
@@ -41,6 +43,7 @@ import {
 	type PortfolioTableSortKey,
 } from '@/utils/portfolioTable.utils';
 import GainsReport from '@/components/common/GainsReport';
+import BalanceHistoryChart from '@/components/common/BalanceHistoryChart';
 
 const SKELETON_ROW_COUNT = 4;
 
@@ -142,6 +145,16 @@ export default function WalletPortfolioPage() {
 	const portfolioValue = useMemo(
 		() => calculatePortfolioValue(heldPositions),
 		[heldPositions]
+	);
+	// Positions valued at the current price, for the diversification panel (#1474).
+	const correlationPositions = useMemo(
+		() =>
+			heldPositions.map(position => ({
+				keyId: position.creatorId,
+				name: keyNames[position.creatorId] ?? position.creatorId,
+				valueStroops: calculatePositionTotalValue(position),
+			})),
+		[heldPositions, keyNames]
 	);
 	const pnlSummary = useMemo(
 		() => calculatePnLSummary(heldPositions),
@@ -487,9 +500,19 @@ export default function WalletPortfolioPage() {
 					)}
 				</SectionErrorBoundary>
 
+				<SectionErrorBoundary sectionName="balance history">
+					<BalanceHistoryChart address={address} keyNames={keyNames} />
+				</SectionErrorBoundary>
+
 				<SectionErrorBoundary sectionName="realized gains">
 					<GainsReport walletAddress={address} />
 				</SectionErrorBoundary>
+
+				{correlationPositions.length > 1 && (
+					<SectionErrorBoundary sectionName="diversification">
+						<DiversificationPanel positions={correlationPositions} />
+					</SectionErrorBoundary>
+				)}
 
 				<SectionErrorBoundary sectionName="badge progress">
 					<BadgeProgressTracker wallet={address} className="mt-10" />
