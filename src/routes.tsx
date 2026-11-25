@@ -63,6 +63,8 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import AdminTwoFactorSetupPage from './pages/AdminTwoFactorSetupPage';
 import AdminTwoFactorChallengePage from './pages/AdminTwoFactorChallengePage';
 import AdminTwoFactorGuard from './components/admin/AdminTwoFactorGuard';
+import AuditLogPage from './pages/AuditLogPage';
+import ApiDocsPage from './pages/ApiDocsPage';
 import BountyBoardPage from './pages/BountyBoardPage';
 import ManageBountyPage from './pages/ManageBountyPage';
 import GrantsPage from './pages/GrantsPage';
@@ -472,6 +474,13 @@ export const routes = [
 				),
 			},
 			{
+				// Searchable audit log of privileged admin actions (#1415).
+				path: '/admin/audit',
+				element: (
+					<AdminTwoFactorGuard>
+						{withRouteErrorBoundary(
+							<AuditLogPage />,
+							'Admin audit log'
 				path: '/admin/referral-holds',
 				element: (
 					<AdminTwoFactorGuard>
@@ -530,6 +539,11 @@ export const routes = [
 				element: <ApiKeysPage />,
 			},
 			{
+				// Public API documentation portal rendered from the OpenAPI spec (#1416).
+				path: '/developers/docs',
+				element: withRouteErrorBoundary(
+					<ApiDocsPage />,
+					'API documentation'
 				// Social recovery guardians and recovery approvals (#1382).
 				path: '/settings/recovery',
 				element: withRouteErrorBoundary(
