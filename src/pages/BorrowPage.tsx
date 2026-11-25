@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { AlertTriangle, Landmark } from 'lucide-react';
 import HealthFactorGauge from '@/components/common/HealthFactorGauge';
+import OracleHealthBadge from '@/components/common/OracleHealthBadge';
 import { useStellarWallet } from '@/hooks/useStellarWallet';
 import { useVaultAction, useVaultPosition } from '@/hooks/useVaultPosition';
+import { useOracleStatus } from '@/hooks/useOracleStatus';
 import { getHealthBand, previewHealthFactor } from '@/utils/vaultHealth.utils';
 
 function ActionForm({
@@ -66,6 +68,7 @@ export default function BorrowPage() {
   const { address, isConnected, loading } = useStellarWallet();
   const positionQuery = useVaultPosition(address ?? '');
   const actionMutation = useVaultAction(address ?? '');
+  const oracle = useOracleStatus('XLM');
   const position = positionQuery.data;
   const collateral = position?.collateralValueXlm ?? position?.collateral ?? 0;
   const debt = position?.debt ?? 0;
@@ -82,7 +85,7 @@ export default function BorrowPage() {
   const borrowPreview = previewHealthFactor(collateral, debt, interest, 0, parsed(borrow));
   const repayPreview = previewHealthFactor(collateral, debt, interest, 0, -parsed(repay));
   const submit = (action: 'deposit' | 'withdraw' | 'borrow' | 'repay', amount: number) => {
-    if (!address || amount <= 0) return;
+    if (!address || amount <= 0 || oracle.isStale) return;
     actionMutation.mutate({ address, action, amount });
   };
 
@@ -90,13 +93,48 @@ export default function BorrowPage() {
 
   return (
     <main className="mx-auto min-h-[calc(100vh-4rem)] max-w-5xl px-4 py-8 sm:px-6">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="rounded-lg bg-primary/10 p-2"><Landmark className="size-5" /></div>
-        <div>
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Lending vault</p>
-          <h1 className="text-2xl font-bold">Borrow XLM</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="rounded-lg bg-primary/10 p-2"><Landmark className="size-5" /></div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Lending vault</p>
+            <h1 className="text-2xl font-bold">Borrow XLM</h1>
+          </div>
         </div>
+        <OracleHealthBadge asset="XLM" />
       </div>
+
+      {oracle.isFallback && (
+        <div
+          data-testid="oracle-fallback-banner"
+          role="alert"
+          className="mb-5 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-800 dark:bg-amber-950/30 dark:border-amber-700 dark:text-amber-300"
+        >
+          <AlertTriangle className="size-5 shrink-0 text-amber-500" />
+          <div>
+            <strong>Oracle Fallback Active</strong>
+            <p className="text-sm">
+              The lending vault price oracle is currently using its fallback source ({oracle.sourceName}). Borrow and liquidation calculations are using fallback rates.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {oracle.isStale && (
+        <div
+          data-testid="oracle-stale-banner"
+          role="alert"
+          className="mb-5 flex items-start gap-3 rounded-xl border border-red-300 bg-red-50 p-4 text-red-800 dark:bg-red-950/30 dark:border-red-700 dark:text-red-300"
+        >
+          <AlertTriangle className="size-5 shrink-0 text-red-500" />
+          <div>
+            <strong>Oracle Price Stale</strong>
+            <p className="text-sm">
+              {oracle.staleReason || 'Price feed is stale. All borrowing and collateral actions are temporarily disabled.'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {healthFactor < 1.3 && position && (
         <div role="alert" className="mb-5 flex items-start justify-between rounded-xl border border-red-300 bg-red-50 p-4 text-red-800 dark:bg-red-950/30">
@@ -113,10 +151,50 @@ export default function BorrowPage() {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="grid gap-5 sm:grid-cols-2">
-          <ActionForm title="Deposit collateral" label="Deposit amount" amount={deposit} setAmount={setDeposit} preview={depositPreview} canSubmit={parsed(deposit) > 0} onSubmit={() => submit('deposit', parsed(deposit))} pending={actionMutation.isPending} />
-          <ActionForm title="Withdraw collateral" label="Withdraw amount" amount={withdraw} setAmount={setWithdraw} preview={withdrawPreview} canSubmit={parsed(withdraw) > 0 && parsed(withdraw) <= collateral} onSubmit={() => submit('withdraw', parsed(withdraw))} pending={actionMutation.isPending} explanation={withdrawPreview < 1 ? 'This withdrawal would make your position unhealthy. Health must remain at or above 1.' : undefined} />
-          <ActionForm title="Borrow XLM" label="Borrow amount" amount={borrow} setAmount={setBorrow} preview={borrowPreview} canSubmit={parsed(borrow) > 0} onSubmit={() => submit('borrow', parsed(borrow))} pending={actionMutation.isPending} explanation={borrowPreview < 1 ? 'This borrow would make your position unhealthy. Health must remain at or above 1.' : undefined} />
-          <ActionForm title="Repay debt" label="Repay amount" amount={repay} setAmount={setRepay} preview={repayPreview} canSubmit={parsed(repay) > 0 && parsed(repay) <= debt} onSubmit={() => submit('repay', parsed(repay))} pending={actionMutation.isPending} />
+          <ActionForm
+            title="Deposit collateral"
+            label="Deposit amount"
+            amount={deposit}
+            setAmount={setDeposit}
+            preview={depositPreview}
+            canSubmit={parsed(deposit) > 0 && !oracle.isStale}
+            onSubmit={() => submit('deposit', parsed(deposit))}
+            pending={actionMutation.isPending}
+            explanation={oracle.isStale ? 'Action disabled: Oracle price is stale.' : undefined}
+          />
+          <ActionForm
+            title="Withdraw collateral"
+            label="Withdraw amount"
+            amount={withdraw}
+            setAmount={setWithdraw}
+            preview={withdrawPreview}
+            canSubmit={parsed(withdraw) > 0 && parsed(withdraw) <= collateral && !oracle.isStale}
+            onSubmit={() => submit('withdraw', parsed(withdraw))}
+            pending={actionMutation.isPending}
+            explanation={oracle.isStale ? 'Action disabled: Oracle price is stale.' : withdrawPreview < 1 ? 'This withdrawal would make your position unhealthy. Health must remain at or above 1.' : undefined}
+          />
+          <ActionForm
+            title="Borrow XLM"
+            label="Borrow amount"
+            amount={borrow}
+            setAmount={setBorrow}
+            preview={borrowPreview}
+            canSubmit={parsed(borrow) > 0 && !oracle.isStale}
+            onSubmit={() => submit('borrow', parsed(borrow))}
+            pending={actionMutation.isPending}
+            explanation={oracle.isStale ? 'Action disabled: Oracle price is stale.' : borrowPreview < 1 ? 'This borrow would make your position unhealthy. Health must remain at or above 1.' : undefined}
+          />
+          <ActionForm
+            title="Repay debt"
+            label="Repay amount"
+            amount={repay}
+            setAmount={setRepay}
+            preview={repayPreview}
+            canSubmit={parsed(repay) > 0 && parsed(repay) <= debt && !oracle.isStale}
+            onSubmit={() => submit('repay', parsed(repay))}
+            pending={actionMutation.isPending}
+            explanation={oracle.isStale ? 'Action disabled: Oracle price is stale.' : undefined}
+          />
         </div>
 
         <div className="space-y-5">

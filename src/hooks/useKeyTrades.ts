@@ -3,10 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchKeyTrades, type KeyTrade } from '@/services/keyTrades.service';
 
 export const KEY_TRADES_POLL_INTERVAL_MS = 30_000;
-export const KEY_TRADES_DISPLAY_LIMIT = 5;
+export const KEY_TRADES_DISPLAY_LIMIT = 50;
 const NEW_TRADE_HIGHLIGHT_MS = 2_200;
 
-function mergeTrades(previous: KeyTrade[], incoming: KeyTrade[]): KeyTrade[] {
+function mergeTrades(previous: KeyTrade[], incoming: KeyTrade[], limit: number): KeyTrade[] {
 	const seen = new Set<string>();
 	return [...incoming, ...previous]
 		.filter(trade => {
@@ -14,7 +14,7 @@ function mergeTrades(previous: KeyTrade[], incoming: KeyTrade[]): KeyTrade[] {
 			seen.add(trade.id);
 			return true;
 		})
-		.slice(0, KEY_TRADES_DISPLAY_LIMIT);
+		.slice(0, limit);
 }
 
 export interface UseKeyTradesResult {
@@ -27,9 +27,10 @@ export interface UseKeyTradesResult {
 }
 
 /**
- * Loads the five most recent key trades immediately and polls every 30s.
+ * Loads the most recent key trades immediately and polls every 30s.
  * Previously seen rows are retained across a poll so rows animate only once
- * when they first appear.
+ * when they first appear. The list is capped at `limit` (default 50), with
+ * the oldest entries pruned first.
  */
 export function useKeyTrades(
 	keyId: string,
@@ -67,7 +68,7 @@ export function useKeyTrades(
 
 		const added = incoming.filter(trade => !seenIdsRef.current.has(trade.id));
 		for (const trade of incoming) seenIdsRef.current.add(trade.id);
-		setTrades(previous => mergeTrades(previous, incoming));
+		setTrades(previous => mergeTrades(previous, incoming, limit));
 
 		if (added.length === 0) return;
 		setNewTradeIds(new Set(added.map(trade => trade.id)));

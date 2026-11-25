@@ -14,6 +14,7 @@ import type {
 	LeaderboardMetric,
 } from '@/services/analytics.service';
 import type { KeyHolderLeaderboardMetric } from '@/services/keyLeaderboard.service';
+import type { ReferralHoldFilters } from '@/services/adminReferralHolds.service';
 
 export const queryKeys = {
 	creatorProfile: {
@@ -137,6 +138,16 @@ export const queryKeys = {
 	wallet: {
 		holdings: (address: string) => ['wallet', address, 'holdings'] as const,
 		badges: (address: string) => ['wallet', address, 'badges'] as const,
+		soulboundBadges: (address: string) =>
+			['wallet', address, 'soulboundBadges'] as const,
+		balanceHistory: (address: string, keyId?: string, range?: string) =>
+			[
+				'wallet',
+				address,
+				'balanceHistory',
+				keyId ?? 'all',
+				range ?? 'all',
+			] as const,
 		badgeMetrics: (address: string) =>
 			['wallet', address, 'badgeMetrics'] as const,
 		receivedGifts: (address: string) =>
@@ -206,6 +217,20 @@ export const queryKeys = {
 		upgradeProxyStatus: () => ['admin', 'proxy', 'status'] as const,
 		upgradeProxyPending: () => ['admin', 'proxy', 'pending'] as const,
 		upgradeProxyHistory: () => ['admin', 'proxy', 'history'] as const,
+		referralHolds: {
+			all: () => ['admin', 'referral-holds'] as const,
+			list: (filters: ReferralHoldFilters = {}) =>
+				[
+					'admin',
+					'referral-holds',
+					'list',
+					filters.status ?? null,
+					filters.reason ?? null,
+				] as const,
+			summary: () => ['admin', 'referral-holds', 'summary'] as const,
+			detail: (id: string) =>
+				['admin', 'referral-holds', 'detail', id] as const,
+		},
 	},
 	governance: {
 		all: () => ['governance'] as const,
@@ -221,6 +246,28 @@ export const queryKeys = {
 		events: (type?: string) =>
 			['governance', 'events', type ?? 'all'] as const,
 		admin: () => ['governance', 'admin'] as const,
+	},
+	conviction: {
+		all: () => ['conviction'] as const,
+		proposals: () => ['conviction', 'proposals'] as const,
+		proposal: (id: string) => ['conviction', 'proposal', id] as const,
+		balances: (userAddress?: string) =>
+			['conviction', 'balances', userAddress ?? 'default'] as const,
+	},
+	oracle: {
+		all: () => ['oracle'] as const,
+		status: (asset: string) => ['oracle', 'status', asset.toUpperCase()] as const,
+	},
+	ragequit: {
+		all: () => ['ragequit'] as const,
+		state: (proposalId: string, userAddress?: string) =>
+			['ragequit', proposalId, userAddress ?? 'default'] as const,
+	},
+	stream: {
+		all: () => ['stream'] as const,
+		list: (creatorAddress?: string) =>
+			['stream', 'list', creatorAddress ?? 'default'] as const,
+		detail: (streamId: string) => ['stream', 'detail', streamId] as const,
 	},
 	mergeProposal: {
 		bySourceKey: (sourceKeyId: string) =>
@@ -360,5 +407,38 @@ export const queryKeys = {
 		notifications: () => ['notifications'] as const,
 		sessions: () => ['sessions'] as const,
 		alerts: () => ['alerts'] as const,
+	},
+	bounties: {
+		all: () => ['bounties'] as const,
+		list: (filters?: Record<string, unknown>) =>
+			['bounties', 'list', filters ?? null] as const,
+		detail: (bountyId: string) => ['bounties', 'detail', bountyId] as const,
+		submissions: (bountyId: string) =>
+			['bounties', 'submissions', bountyId] as const,
+	},
+	grants: {
+		all: () => ['grants'] as const,
+		pages: (filters?: Record<string, unknown>) =>
+			['grants', 'pages', filters ?? null] as const,
+		detail: (grantId: string) => ['grants', 'detail', grantId] as const,
+	},
+	events: {
+		all: () => ['events'] as const,
+		list: (creator?: string) => ['events', 'list', creator ?? ''] as const,
+		redemption: (eventId: string, wallet: string) =>
+			['events', 'redemption', eventId, wallet] as const,
+	},
+	feeChange: {
+		all: () => ['fee-change'] as const,
+		pending: () => ['fee-change', 'pending'] as const,
+	},
+	dca: {
+		all: () => ['dca-plans'] as const,
+		byWallet: (wallet?: string) => ['dca-plans', wallet ?? 'all'] as const,
+	},
+	ambassador: {
+		all: () => ['ambassador'] as const,
+		stats: (wallet?: string, range: string = '30d') =>
+			['ambassador', 'stats', wallet ?? 'anonymous', range] as const,
 	},
 } as const;
