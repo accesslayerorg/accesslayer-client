@@ -399,6 +399,11 @@ export const queryKeys = {
 		all: () => ['api-keys'] as const,
 		list: () => ['api-keys', 'list'] as const,
 	},
+	// Shared API rate-limit state (#1402): the active 429 wait window used to
+	// gate retries, disable triggering buttons and pause background polling.
+	rateLimit: {
+		all: () => ['rateLimit'] as const,
+		state: () => ['rateLimit', 'state'] as const,
 	// OpenAPI document powering the public API docs portal (#1416).
 	openapi: {
 		all: () => ['openapi'] as const,
