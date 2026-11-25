@@ -7,6 +7,7 @@ import SessionSecuritySection from '@/components/settings/SessionSecuritySection
 import MyTicketsSection from '@/components/settings/MyTicketsSection';
 import AddressBookPanel from '@/components/settings/AddressBookPanel';
 import MotionSettingsSection from '@/components/settings/MotionSettingsSection';
+import EmbeddedWalletSection from '@/components/settings/EmbeddedWalletSection';
 
 /**
  * Account settings page (#1111).
@@ -80,6 +81,8 @@ export default function AccountSettingsPage() {
 				onRevokeAllOtherSessions={revokeAllOtherSessions}
 				className="mb-6"
 			/>
+
+			<EmbeddedWalletSection className="mb-6" />
 
 			<AddressBookPanel className="mb-6" />
 

@@ -13,8 +13,10 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useKeyDiscovery } from '@/hooks/useKeyDiscovery';
 import { useDiscoveryAdvancedSearch } from '@/hooks/useDiscoveryAdvancedSearch';
+import { useSavedViews } from '@/hooks/useSavedViews';
 import AdvancedSearchDrawer from '@/components/common/AdvancedSearchDrawer';
 import ActiveDiscoveryFilterChips from '@/components/common/ActiveDiscoveryFilterChips';
+import SavedViewsMenu from '@/components/common/SavedViewsMenu';
 import {
 	clearDiscoveryFilterSearchParams,
 	countActiveDiscoveryFilters,
@@ -63,6 +65,23 @@ export default function DiscoveryPage() {
 	const activeFilterCount = countActiveDiscoveryFilters(filters);
 
 	const {
+		views: savedViews,
+		saveView,
+		renameView,
+		deleteView,
+	} = useSavedViews();
+	const [appliedViewId, setAppliedViewId] = useState<string | null>(null);
+	const [appliedViewSnapshot, setAppliedViewSnapshot] = useState<string | null>(
+		null
+	);
+	const currentFiltersSnapshot = useMemo(
+		() => JSON.stringify(filters),
+		[filters]
+	);
+	const isViewModified =
+		appliedViewId !== null && appliedViewSnapshot !== currentFiltersSnapshot;
+
+	const {
 		trendingKeys: discoveredTrendingKeys,
 		newListings: discoveredNewListings,
 		isLoading,
@@ -91,6 +110,37 @@ export default function DiscoveryPage() {
 
 	const clearAllFilters = () => {
 		setSearchParams(previous => clearDiscoveryFilterSearchParams(previous));
+	};
+
+	const applySavedView = (viewId: string) => {
+		const view = savedViews.find(candidate => candidate.id === viewId);
+		if (!view) return;
+		setSearchParams(previous =>
+			discoveryFiltersToSearchParams(view.filters, previous)
+		);
+		setAppliedViewId(view.id);
+		setAppliedViewSnapshot(JSON.stringify(view.filters));
+	};
+
+	const saveCurrentView = (name: string) => {
+		const created = saveView({ name, filters });
+		if (created) {
+			setAppliedViewId(created.id);
+			setAppliedViewSnapshot(currentFiltersSnapshot);
+		}
+		return created;
+	};
+
+	const renameSavedView = (viewId: string, name: string) => {
+		renameView(viewId, name);
+	};
+
+	const deleteSavedView = (viewId: string) => {
+		deleteView(viewId);
+		if (appliedViewId === viewId) {
+			setAppliedViewId(null);
+			setAppliedViewSnapshot(null);
+		}
 	};
 
 	const removeFilter = (params: readonly string[]) => {
@@ -183,6 +233,16 @@ export default function DiscoveryPage() {
 								</span>
 							)}
 						</Button>
+
+						<SavedViewsMenu
+							views={savedViews}
+							activeViewId={appliedViewId}
+							isModified={isViewModified}
+							onApply={applySavedView}
+							onSave={saveCurrentView}
+							onRename={renameSavedView}
+							onDelete={deleteSavedView}
+						/>
 
 						<Button
 							variant="outline"

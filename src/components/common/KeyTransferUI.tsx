@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -16,7 +15,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAddressBook, validateAddressBookInput } from '@/hooks/useAddressBook';
-import { Loader, Send, CheckCircle, Clock } from 'lucide-react';
+import { useRoyaltyEnforcement } from '@/hooks/useRoyaltyEnforcement';
+import { Loader, Send, CheckCircle, Clock, ShieldAlert } from 'lucide-react';
 import showToast from '@/utils/toast.util';
 
 interface KeyTransferFormData {
@@ -43,6 +43,7 @@ interface KeyTransferUIProps {
 }
 
 export default function KeyTransferUI({
+	keyId,
 	keyName,
 	currentOwner,
 	onTransferInitiated,
@@ -63,6 +64,15 @@ export default function KeyTransferUI({
 	const entries = useAddressBook(state => state.entries);
 	const addToAddressBook = useAddressBook(state => state.add);
 
+	const { data: enforcement } = useRoyaltyEnforcement(keyId);
+	const enforcementOn = !!enforcement?.enabled;
+	const recipientIsApprovedMarketplace =
+		!!resolvedRecipient &&
+		!!enforcement?.approvedMarketplaces?.some(
+			m => m.address === resolvedRecipient
+		);
+	const directTransferBlocked = enforcementOn && !recipientIsApprovedMarketplace;
+
 	const { register, handleSubmit, reset } = useForm<KeyTransferFormData>({
 		defaultValues: {
 			recipientAddress: '',
@@ -82,6 +92,13 @@ export default function KeyTransferUI({
 
 		if (!finalAddress) {
 			showToast.error('Please enter a valid recipient address');
+			return;
+		}
+
+		if (directTransferBlocked) {
+			showToast.error(
+				'Royalty enforcement is active. Transfers are limited to approved marketplaces.'
+			);
 			return;
 		}
 
@@ -281,6 +298,19 @@ export default function KeyTransferUI({
 					</CardHeader>
 
 					<CardContent>
+						{enforcementOn && (
+							<Alert className="mb-4">
+								<ShieldAlert className="h-4 w-4" />
+								<AlertDescription>
+									Royalty enforcement is active for this key. Direct
+									wallet-to-wallet transfers are disabled; transfers are
+									only permitted to approved marketplaces.
+									{enforcement?.locked &&
+										' The enforcement setting is locked because the holder threshold has been reached.'}
+								</AlertDescription>
+							</Alert>
+						)}
+
 						{!showTransferForm ? (
 							<Button
 								onClick={() => setShowTransferForm(true)}
@@ -318,6 +348,15 @@ export default function KeyTransferUI({
 										className="mt-1 font-mono text-sm"
 									/>
 								</div>
+
+								{enforcementOn && resolvedRecipient && !recipientIsApprovedMarketplace && (
+									<Alert variant="destructive">
+										<AlertDescription>
+											This recipient is not an approved marketplace. The
+											transfer will be blocked under royalty enforcement.
+										</AlertDescription>
+									</Alert>
+								)}
 
 								{canOfferSave && (
 									<div className="space-y-2">
@@ -365,6 +404,7 @@ export default function KeyTransferUI({
 										disabled={
 											isLoading ||
 											!resolvedRecipient ||
+											directTransferBlocked ||
 											(saveRecipient && !saveLabel.trim())
 										}
 										className="flex-1"

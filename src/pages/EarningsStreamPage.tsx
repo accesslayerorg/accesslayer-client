@@ -127,7 +127,9 @@ function StreamCard({ streamId }: { streamId: string }) {
 			<StreamWithdrawForm
 				streamId={stream.id}
 				claimableBalance={claimable}
-				onWithdraw={amount => withdraw(amount)}
+				onWithdraw={async amount => {
+					await withdraw(amount);
+				}}
 				isPending={isWithdrawing}
 			/>
 

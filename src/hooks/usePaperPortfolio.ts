@@ -22,7 +22,9 @@ function load(): PaperPortfolio {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch {
+    // Ignore unreadable or corrupted storage and fall back to a fresh portfolio.
+  }
   return { balance: STARTING_BALANCE, trades: [], holdings: {} };
 }
 

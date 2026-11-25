@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { courseService, type Course } from '@/services/course.service';
 import { usePortfolioHistory } from '@/hooks/usePortfolioHistory';
+import type { PortfolioHistoryRange } from '@/utils/portfolioHistory.utils';
 
 export type BenchmarkRange = '7D' | '30D' | '90D' | 'All';
 
@@ -34,6 +35,10 @@ const RANGE_DAYS: Record<BenchmarkRange, number | null> = {
 
 function rangeToDays(range: BenchmarkRange): number {
 	return RANGE_DAYS[range] ?? 365;
+}
+
+function toPortfolioHistoryRange(range: BenchmarkRange): PortfolioHistoryRange {
+	return range === 'All' ? 'all' : (range.toLowerCase() as PortfolioHistoryRange);
 }
 
 function generateDates(days: number): string[] {
@@ -109,7 +114,10 @@ export function useBenchmarks(range: BenchmarkRange, wallet?: string) {
 		staleTime: 60_000,
 	});
 
-	const portfolioHistoryQuery = usePortfolioHistory(wallet ?? '', range);
+	const portfolioHistoryQuery = usePortfolioHistory(
+		wallet ?? '',
+		toPortfolioHistoryRange(range)
+	);
 
 	const creators = creatorsQuery.data ?? [];
 
@@ -142,8 +150,8 @@ export function useBenchmarks(range: BenchmarkRange, wallet?: string) {
 		const sliced = history.slice(-days - 1);
 		const prices = sliced.map((p: { value: number }) => p.value);
 		const normalised = normalise(prices);
-		const points = sliced.map((p: { date: string }, i: number) => ({
-			date: p.date,
+		const points = sliced.map((p, i) => ({
+			date: p.timestamp,
 			value: normalised[i],
 		}));
 		return { id: 'portfolio', label: 'Your portfolio', points };

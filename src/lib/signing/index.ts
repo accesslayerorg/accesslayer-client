@@ -1,3 +1,4 @@
+export * from './embedded-wallet-adapter';
 export * from './errors';
 export * from './freighter-signer';
 export * from './ledger-signer';
