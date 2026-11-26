@@ -1,7 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { recordRecentError } from '@/utils/recentErrors.utils';
+import { captureException } from '@/utils/errorReporting';
 
 interface Props {
 	children: ReactNode;
@@ -32,7 +32,7 @@ class AppErrorBoundary extends Component<Props, State> {
 	}
 
 	public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-		recordRecentError(error.message, 'boundary');
+		captureException(error, { componentStack: errorInfo.componentStack });
 		if (import.meta.env.DEV) {
 			console.error('Uncaught error at app root:', error, errorInfo);
 		}

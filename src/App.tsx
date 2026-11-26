@@ -25,6 +25,7 @@ import {
 	useMotionOverrideStore,
 	useReducedMotion,
 } from './hooks/useReducedMotion';
+import ConsentManager from './components/consent/ConsentManager';
 
 const router = createBrowserRouter(routes);
 
@@ -90,29 +91,31 @@ function App() {
 	}, [reducedMotion]);
 
 	return (
-		<AppErrorBoundary>
-			{/* Full-width banner when contract emergency pause is active (#953) */}
-			<ContractPausedBanner />
-			<EscapeBanner />
-			<OfflineBanner />
-			<GlobalPauseBanner />
-			{/* Platform status banner: degraded / partial outage / maintenance (#1403) */}
-			<StatusBanner />
-			<PendingTransactionBanner />
-			<PendingFeeChangeBanner />
-			<Toaster
-				toastOptions={{
-					ariaProps: {
-						role: 'status',
-						'aria-live': 'polite',
-					},
-				}}
-			/>
-			<SessionExpiryWatcher navigate={path => router.navigate(path)} />
-			{/* Badge achievement celebrations, app-wide (#1222) */}
-			<BadgeAchievementListener navigate={path => router.navigate(path)} />
-			<RouterProvider router={router} />
-		</AppErrorBoundary>
+		<>
+			<ConsentManager />
+			<AppErrorBoundary>
+				{/* Full-width banner when contract emergency pause is active (#953) */}
+				<ContractPausedBanner />
+				<EscapeBanner />
+				<OfflineBanner />
+				<GlobalPauseBanner />
+				<PendingTransactionBanner />
+				<Toaster
+					toastOptions={{
+						ariaProps: {
+							role: 'status',
+							'aria-live': 'polite',
+						},
+					}}
+				/>
+				<SessionExpiryWatcher navigate={path => router.navigate(path)} />
+				{/* Badge achievement celebrations, app-wide (#1222) */}
+				<BadgeAchievementListener
+					navigate={path => router.navigate(path)}
+				/>
+				<RouterProvider router={router} />
+			</AppErrorBoundary>
+		</>
 	);
 }
 
