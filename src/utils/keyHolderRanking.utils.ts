@@ -12,6 +12,10 @@ export interface KeyHolder {
 	 */
 	stakedQuantity?: number;
 	walletAddress?: string;
+	/** True when the holder is a smart contract (vault, marketplace, etc.). */
+	isContract?: boolean;
+	/** Known contract name, when the backend can resolve one. */
+	contractName?: string;
 }
 
 export interface RankedKeyHolder extends KeyHolder {
@@ -21,6 +25,27 @@ export interface RankedKeyHolder extends KeyHolder {
 	stakedQuantity: number;
 	/** Liquid (non-staked) portion of `keyCount` — `keyCount - stakedQuantity`, floored at 0. */
 	liquidQuantity: number;
+}
+
+export interface RankKeyHoldersOptions {
+	/** When true, holders flagged as contracts are dropped before ranking. */
+	excludeContracts?: boolean;
+}
+
+/**
+ * Parses the `excludeContracts` flag from a URL query value so the toggle can
+ * persist in the URL. Only the literal string "1" or "true" enables it.
+ */
+export function parseExcludeContractsParam(value: string | null | undefined): boolean {
+	return value === "1" || value === "true";
+}
+
+/**
+ * Serialises the `excludeContracts` flag for the URL query. Returns `null` when
+ * disabled so the param is removed rather than cluttering the URL.
+ */
+export function serialiseExcludeContractsParam(enabled: boolean): string | null {
+	return enabled ? "1" : null;
 }
 
 function normaliseStaked(holder: KeyHolder): number {
@@ -34,18 +59,20 @@ function normaliseStaked(holder: KeyHolder): number {
  * Ranks holders descending by total quantity held (liquid + staked) and
  * computes each holder's share of the total supply held across the list.
  *
- * Staked keys still count toward a holder's ranking — a holder who has staked
- * their entire position is ranked exactly as if those keys were liquid. Each
- * ranked entry also carries the `stakedQuantity` / `liquidQuantity` split so
- * the holders table can surface true liquid supply per row.
+ * When `excludeContracts` is set, contract holders are removed before ranking
+ * so ranks and supply shares are recomputed over wallet-only holders.
  *
  * Ranks are competition-style ("1224"): holders tied on total quantity share
- * the same rank, and the next distinct count resumes at its 1-indexed position
- * rather than incrementing by 1 — e.g. two holders tied for 1st both get
- * rank 1, and the following holder gets rank 3, not rank 2.
+ * the same rank, and the next distinct count resumes at its 1-indexed position.
  */
-export function rankKeyHolders(holders: KeyHolder[]): RankedKeyHolder[] {
-	const sorted = [...holders].sort((a, b) => b.keyCount - a.keyCount);
+export function rankKeyHolders(
+	holders: KeyHolder[],
+	options: RankKeyHoldersOptions = {}
+): RankedKeyHolder[] {
+	const source = options.excludeContracts
+		? holders.filter(holder => !holder.isContract)
+		: holders;
+	const sorted = [...source].sort((a, b) => b.keyCount - a.keyCount);
 	const totalKeys = sorted.reduce((sum, holder) => sum + holder.keyCount, 0);
 
 	let currentRank = 0;

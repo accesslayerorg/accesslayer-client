@@ -3,6 +3,9 @@ import { formatHolderCount, formatPercent } from '@/utils/numberFormat.utils';
 import { rankKeyHolders, type KeyHolder } from '@/utils/keyHolderRanking.utils';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import CircularSpinner from '@/components/common/CircularSpinnerProps';
+import ContractBadge from '@/components/common/ContractBadge';
+import { Switch } from '@/components/ui/switch';
+import { ContractBadge as _ContractBadgeUnused } from '@/components/common/ContractBadge';
 
 export interface KeyHolderListProps {
 	holders: KeyHolder[];
@@ -12,6 +15,10 @@ export interface KeyHolderListProps {
 	isFetchingNextPage?: boolean;
 	/** Callback to fetch the next page of holders. */
 	fetchNextPage?: () => void;
+	/** Whether contract holders are excluded from ranking. */
+	excludeContracts?: boolean;
+	/** Called when the exclude-contracts toggle changes. */
+	onExcludeContractsChange?: (next: boolean) => void;
 }
 
 function truncateAddress(address: string): string {
@@ -21,20 +28,19 @@ function truncateAddress(address: string): string {
 
 /**
  * Ranks investors by total quantity held (liquid + staked) and shows each
- * holder's share of the supply held across the list, alongside a per-row
- * Staked / Liquid split so true liquid supply is visible at a glance. Rows
- * with staked keys carry a staking badge. When infinite scroll props are
- * provided, a sentinel triggers the next page fetch and a loading spinner is
- * shown while the next page loads. When no more pages remain, "All holders
- * loaded" is displayed at the bottom.
+ * holder's share of the supply held across the list. Contract holders are
+ * badged and can be excluded via the toggle, which recomputes ranks and
+ * supply shares over wallet-only holders.
  */
 const KeyHolderList: React.FC<KeyHolderListProps> = ({
 	holders,
 	hasNextPage = false,
 	isFetchingNextPage = false,
 	fetchNextPage,
+	excludeContracts = false,
+	onExcludeContractsChange,
 }) => {
-	const ranked = rankKeyHolders(holders);
+	const ranked = rankKeyHolders(holders, { excludeContracts });
 
 	const sentinelRef = useInfiniteScroll<HTMLDivElement>({
 		enabled: !isFetchingNextPage && !!hasNextPage,
@@ -44,16 +50,31 @@ const KeyHolderList: React.FC<KeyHolderListProps> = ({
 		},
 	});
 
+	const toggle = onExcludeContractsChange ? (
+		<label className="flex items-center gap-2 text-xs text-white/70">
+			<Switch
+				checked={excludeContracts}
+				onCheckedChange={onExcludeContractsChange}
+				data-testid="exclude-contracts-toggle"
+			/>
+			Exclude contracts
+		</label>
+	) : null;
+
 	if (ranked.length === 0 && !isFetchingNextPage) {
 		return (
-			<p className="py-8 text-center text-sm text-white/50" data-testid="key-holder-list-empty">
-				No holders yet.
-			</p>
+			<>
+				{toggle}
+				<p className="py-8 text-center text-sm text-white/50" data-testid="key-holder-list-empty">
+					No holders yet.
+				</p>
+			</>
 		);
 	}
 
 	return (
 		<>
+			{toggle}
 			<div
 				className="flex items-center justify-between gap-3 border-b border-white/10 pb-2 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-white/40"
 				data-testid="key-holder-list-header"
@@ -87,13 +108,16 @@ const KeyHolderList: React.FC<KeyHolderListProps> = ({
 									title={holder.walletAddress}
 									data-testid="key-holder-wallet"
 								>
-									{truncateAddress(holder.walletAddress)}
+									{holder.isContract && holder.contractName
+										? holder.contractName
+										: truncateAddress(holder.walletAddress)}
 								</span>
 							) : (
 								<span className="text-sm font-medium text-white">
 									{holder.displayName}
 								</span>
 							)}
+							{holder.isContract && <ContractBadge />}
 							{holder.stakedQuantity > 0 && (
 								<span
 									className="inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-amber-300"
@@ -107,28 +131,16 @@ const KeyHolderList: React.FC<KeyHolderListProps> = ({
 							)}
 						</div>
 						<div className="flex items-center gap-3 text-right shrink-0 tabular-nums">
-							<span
-								className="w-16 shrink-0 text-sm text-amber-300/90"
-								data-testid="key-holder-staked"
-							>
+							<span className="w-16 shrink-0 text-sm text-amber-300/90" data-testid="key-holder-staked">
 								{formatHolderCount(holder.stakedQuantity)}
 							</span>
-							<span
-								className="w-16 shrink-0 text-sm text-white/70"
-								data-testid="key-holder-liquid"
-							>
+							<span className="w-16 shrink-0 text-sm text-white/70" data-testid="key-holder-liquid">
 								{formatHolderCount(holder.liquidQuantity)}
 							</span>
-							<span
-								className="w-16 shrink-0 text-sm text-white/70"
-								data-testid="key-holder-key-count"
-							>
+							<span className="w-16 shrink-0 text-sm text-white/70" data-testid="key-holder-key-count">
 								{formatHolderCount(holder.keyCount)}
 							</span>
-							<span
-								className="w-16 shrink-0 text-sm font-semibold text-amber-300/90"
-								data-testid="key-holder-share"
-							>
+							<span className="w-16 shrink-0 text-sm font-semibold text-amber-300/90" data-testid="key-holder-share">
 								{formatPercent(holder.sharePercent, { maximumFractionDigits: 1 })}
 							</span>
 						</div>
@@ -143,10 +155,7 @@ const KeyHolderList: React.FC<KeyHolderListProps> = ({
 			)}
 
 			{!hasNextPage && ranked.length > 0 && (
-				<p
-					className="py-4 text-center text-xs text-white/40"
-					data-testid="key-holders-all-loaded"
-				>
+				<p className="py-4 text-center text-xs text-white/40" data-testid="key-holders-all-loaded">
 					All holders loaded
 				</p>
 			)}
