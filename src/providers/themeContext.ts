@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import type { AccentPalette } from '@/utils/accentPalette.utils';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
@@ -15,6 +16,12 @@ export interface ThemeContextValue {
 	resolvedTheme: ResolvedTheme;
 	/** Select a theme and persist it to localStorage. */
 	setTheme: (theme: Theme) => void;
+	/** The active accent color hex code (#1488). */
+	accentColor: string;
+	/** Contrast-safe palette generated for the active accent (#1488). */
+	accentPalette: AccentPalette;
+	/** Select an accent color, validate it, apply it to the document, and persist it (#1488). */
+	setAccentColor: (color: string) => boolean;
 }
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null);
