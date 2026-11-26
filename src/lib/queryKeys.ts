@@ -262,6 +262,9 @@ export const queryKeys = {
 		events: (type?: string) =>
 			['governance', 'events', type ?? 'all'] as const,
 		admin: () => ['governance', 'admin'] as const,
+		/** Rage-quit window state scoped to a proposal + wallet (#1253). */
+		rageQuit: (proposalId: string, wallet: string) =>
+			['governance', 'proposal', proposalId, 'ragequit', wallet] as const,
 	},
 	conviction: {
 		all: () => ['conviction'] as const,

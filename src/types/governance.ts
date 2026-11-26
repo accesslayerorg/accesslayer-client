@@ -18,6 +18,36 @@ export type ProposalStatus =
 
 export type ProposalOutcome = 'passed' | 'failed' | 'quorum_not_met';
 
+// ── Rage-quit (#1253) ─────────────────────────────────────────────────────
+
+/**
+ * Whether the connected holder is eligible to rage-quit a proposal.
+ * Holders who voted *for* the proposal are not eligible.
+ */
+export type RageQuitEligibility =
+	| 'eligible'
+	| 'voted_for'
+	| 'window_closed'
+	| 'cap_reached'
+	| 'unknown';
+
+/** On-chain rage-quit window state for a passed proposal. */
+export interface RageQuitStatus {
+	proposalId: string;
+	/** True while the rage-quit window is open and the cap has not been hit. */
+	isOpen: boolean;
+	/** ISO timestamp when the window closes. */
+	windowEndsAt: string | null;
+	/** Total keys that have already rage-quit as a fraction of supply (0–1). */
+	exitedFraction: number;
+	/** Maximum fraction of supply that may rage-quit (0–1). */
+	maxExitFraction: number;
+	/** Eligibility of the connected wallet. */
+	eligibility: RageQuitEligibility;
+	/** Pro-rata XLM payout the connected wallet would receive per key. */
+	payoutPerKey: number | null;
+}
+
 /** A single selectable option on an on-chain proposal. */
 export interface ProposalOption {
 	label: string;

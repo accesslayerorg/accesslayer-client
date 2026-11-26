@@ -12,6 +12,7 @@ import RagequitBanner from '@/components/governance/RagequitBanner';
 import ProposalVoteHistory from '@/components/common/ProposalVoteHistory';
 import { ProposalVotePanel } from '@/components/common/ProposalVotePanel';
 import QuorumIndicator from '@/components/common/QuorumIndicator';
+import RageQuitPanel from '@/components/common/RageQuitPanel';
 import { useGovernanceProposal } from '@/hooks/useGovernanceProposals';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { cn } from '@/lib/utils';
@@ -226,6 +227,11 @@ export default function ProposalDetailPage() {
 								timelockExpiresAt={proposal.timelockExpiresAt}
 							/>
 						</section>
+					)}
+
+					{/* Rage-quit window for passed proposals (#1253) */}
+					{proposal.status === 'passed' && (
+						<RageQuitPanel proposalId={proposal.id} />
 					)}
 
 					<section className="mt-8" aria-label="Proposal result">
