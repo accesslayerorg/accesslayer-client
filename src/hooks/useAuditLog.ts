@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import {
   useInfiniteQuery,
   type InfiniteData,
@@ -29,6 +29,14 @@ export interface AuditLogPage {
   nextCursor: string | null;
 }
 
+/** Optional filter overrides; omitted values fall back to the URL parameters. */
+export interface AuditLogFilterOverrides {
+  actor?: string;
+  action?: string;
+  from?: string;
+  to?: string;
+}
+
 export interface UseAuditLogResult {
   filters: AuditLogFilters;
   setFilter: (key: keyof AuditLogFilters, value: string) => void;
@@ -40,6 +48,12 @@ export interface UseAuditLogResult {
   hasNextPage: boolean;
   fetchNextPage: () => void;
   isFetchingNextPage: boolean;
+  /** Aliases used by the audit log page. */
+  loading: boolean;
+  error: Error | null;
+  hasMore: boolean;
+  loadMore: () => void;
+  refetch: () => Promise<unknown>;
 }
 
 const SECRET_KEY_PATTERN =
@@ -130,21 +144,23 @@ async function fetchAuditLogPage(
   };
 }
 
-export function useAuditLog(): UseAuditLogResult {
+export function useAuditLog(
+  overrides?: AuditLogFilterOverrides,
+): UseAuditLogResult {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const filters = useMemo<AuditLogFilters>(() => {
     const next: AuditLogFilters = { ...EMPTY_FILTERS };
     for (const key of FILTER_KEYS) {
-      next[key] = searchParams.get(key) ?? '';
+      next[key] = overrides?.[key] ?? searchParams.get(key) ?? '';
     }
     return next;
-  }, [searchParams]);
+  }, [searchParams, overrides]);
 
   const setFilter = useCallback(
     (key: keyof AuditLogFilters, value: string) => {
       setSearchParams(
-        (prev) => {
+        (prev: URLSearchParams) => {
           const next = new URLSearchParams(prev);
           if (value) {
             next.set(key, value);
@@ -161,7 +177,7 @@ export function useAuditLog(): UseAuditLogResult {
 
   const clearFilters = useCallback(() => {
     setSearchParams(
-      (prev) => {
+      (prev: URLSearchParams) => {
         const next = new URLSearchParams(prev);
         for (const key of FILTER_KEYS) {
           next.delete(key);
@@ -203,6 +219,11 @@ export function useAuditLog(): UseAuditLogResult {
     hasNextPage: Boolean(query.hasNextPage),
     fetchNextPage,
     isFetchingNextPage: query.isFetchingNextPage,
+    loading: query.isLoading,
+    error: query.error,
+    hasMore: Boolean(query.hasNextPage),
+    loadMore: fetchNextPage,
+    refetch: query.refetch,
   };
 }
 

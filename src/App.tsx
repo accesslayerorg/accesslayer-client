@@ -9,12 +9,8 @@ import EscapeBanner from './components/common/EscapeBanner';
 import OfflineBanner from './components/common/OfflineBanner';
 import GlobalPauseBanner from './components/common/GlobalPauseBanner';
 import PendingTransactionBanner from './components/common/PendingTransactionBanner';
-import PendingFeeChangeBanner from './components/fees/PendingFeeChangeBanner';
 import SessionExpiryWatcher from './components/common/SessionExpiryWatcher';
-import StatusBanner from './components/common/StatusBanner';
 import BadgeAchievementListener from './components/common/BadgeAchievementListener';
-import { RoyaltyEnforcedBadge } from './components/common/RoyaltyEnforcedBadge';
-import { ApprovedMarketplacesPanel } from './components/common/ApprovedMarketplacesPanel';
 import { useContractPausedStore } from './hooks/useContractPausedStore';
 import { routes } from './routes';
 import { useRouteChangeLogging } from './hooks/useRouteChangeLogging';
@@ -35,13 +31,13 @@ function App() {
 	const reducedMotion = useReducedMotion();
 	const motionOverride = useMotionOverrideStore(state => state.override);
 	const { address } = useWallet();
-	const { removeSubscription } = usePushSubscription();
+	const { disable } = usePushSubscription();
 
 	// Remove the backend push subscription when the wallet signs out (#1413)
 	useEffect(() => {
 		if (address) return;
-		void removeSubscription();
-	}, [address, removeSubscription]);
+		void disable();
+	}, [address, disable]);
 
 	// Handle notification clicks forwarded from the service worker (#1413)
 	useEffect(() => {

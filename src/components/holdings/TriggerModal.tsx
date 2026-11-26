@@ -31,7 +31,7 @@ export function TriggerModal({
   onClose,
   currentPrice,
   quantity,
-  holdingId,
+  holdingId: _holdingId,
   onCreateTrigger,
   protocolFeePercent = 0.01,
   creatorFeePercent = 0.01,

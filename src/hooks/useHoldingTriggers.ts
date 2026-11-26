@@ -13,7 +13,6 @@ import {
   fetchTriggerStatus,
 } from '@/services/holdingTriggers.service';
 import type {
-  HoldingTrigger,
   CreateTriggerInput,
   UpdateTriggerInput,
 } from '@/types/holdingTrigger.types';

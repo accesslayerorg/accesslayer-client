@@ -25,11 +25,13 @@ export interface PushSubscriptionState {
 
 export interface UsePushSubscriptionResult extends PushSubscriptionState {
   /** Request permission (if needed) and subscribe. Must be called from a user action. */
-  enable: () => Promise<void>;
+  enable: (preferences?: PushEventPreferences) => Promise<void>;
   /** Unsubscribe and remove the subscription from the backend. */
   disable: () => Promise<void>;
   /** Toggle a single event type and sync preferences to the backend. */
   toggleEvent: (event: PushEventType) => Promise<void>;
+  /** Replace all event preferences and sync them to the backend when subscribed. */
+  updatePreferences: (preferences: PushEventPreferences) => Promise<void>;
   /** Re-check the current permission/subscription state. */
   refresh: () => Promise<void>;
 }
@@ -190,7 +192,7 @@ export function usePushSubscription(): UsePushSubscriptionResult {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [supported, syncState]);
 
-  const enable = useCallback(async () => {
+  const enable = useCallback(async (nextPreferences: PushEventPreferences = preferences) => {
     if (!supported) {
       setError(UNSUPPORTED_GUIDANCE);
       return;
@@ -229,7 +231,8 @@ export function usePushSubscription(): UsePushSubscriptionResult {
       }
 
       subscriptionRef.current = subscription;
-      await postSubscription(subscriptionToJSON(subscription), preferences);
+      await postSubscription(subscriptionToJSON(subscription), nextPreferences);
+      setPreferences(nextPreferences);
       setSubscribed(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to enable push notifications.');
@@ -294,6 +297,33 @@ export function usePushSubscription(): UsePushSubscriptionResult {
     [preferences, subscribed],
   );
 
+  const updatePreferences = useCallback(
+    async (nextPreferences: PushEventPreferences) => {
+      setPreferences(nextPreferences);
+      setError(null);
+
+      if (!subscribed) {
+        // Preferences are stored locally and sent when the user subscribes.
+        return;
+      }
+
+      setLoading(true);
+      try {
+        await patchPreferences(nextPreferences);
+      } catch (err) {
+        setPreferences(preferences);
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to update notification preferences.',
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [preferences, subscribed],
+  );
+
   // Remove the subscription from the backend on sign-out.
   useEffect(() => {
     if (!supported) return undefined;
@@ -327,6 +357,7 @@ export function usePushSubscription(): UsePushSubscriptionResult {
     enable,
     disable,
     toggleEvent,
+    updatePreferences,
     refresh,
   };
 }
