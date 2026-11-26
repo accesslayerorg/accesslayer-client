@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router';
 import { cn } from '@/lib/utils';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useProfileStore } from '@/hooks/useProfileStore';
+import { useTranslation } from 'react-i18next';
 
 interface Tab {
 	label: string;
@@ -45,6 +46,7 @@ const tabs: Tab[] = [
  * the Notifications tab.  Hidden on md+ viewports via Tailwind's `md:hidden`.
  */
 export function MobileBottomNav() {
+	const { t } = useTranslation();
 	const { pathname } = useLocation();
 	const profile = useProfileStore(state => state.profile);
 	const userId = profile?.id ?? '';
@@ -65,7 +67,7 @@ export function MobileBottomNav() {
 
 	return (
 		<nav
-			aria-label="Mobile navigation"
+			aria-label={t('navigation.mobileNavigation')}
 			className="md:hidden fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 backdrop-blur-md"
 		>
 			<ul className="flex h-16 items-stretch" role="list">
@@ -80,8 +82,8 @@ export function MobileBottomNav() {
 								aria-current={active ? 'page' : undefined}
 								aria-label={
 									isNotifications && unreadCount > 0
-										? `${tab.label} — ${unreadCount} unread`
-										: tab.label
+										? `${t(`navigation.${tab.href === '/' ? 'marketplace' : tab.href === '/profile' ? 'portfolio' : tab.href === '/following' ? 'watchlist' : 'notifications'}`)} — ${unreadCount} unread`
+										: t(`navigation.${tab.href === '/' ? 'marketplace' : tab.href === '/profile' ? 'portfolio' : tab.href === '/following' ? 'watchlist' : 'notifications'}`)
 								}
 								className={cn(
 									'relative flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors',

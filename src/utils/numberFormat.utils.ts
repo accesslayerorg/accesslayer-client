@@ -1,4 +1,13 @@
 export type NumberFormatStyle = 'full' | 'compact';
+import i18n from '@/lib/i18n';
+
+export function getActiveLocale(): string {
+	return i18n.resolvedLanguage === 'es'
+		? 'es'
+		: i18n.resolvedLanguage === 'fr'
+			? 'fr'
+			: 'en';
+}
 
 export interface FormatNumberOptions {
 	style?: NumberFormatStyle;
@@ -21,7 +30,7 @@ function getNumberFormatter({
 		resolvedMinimumFractionDigits
 	);
 
-	return new Intl.NumberFormat(undefined, {
+	return new Intl.NumberFormat(getActiveLocale(), {
 		notation: style === 'compact' ? 'compact' : 'standard',
 		compactDisplay: 'short',
 		maximumFractionDigits: finalMaximumFractionDigits,
@@ -50,7 +59,7 @@ export function formatCompactNumber(
  */
 export function formatXlmPrice(value: number | null | undefined): string {
 	if (value == null || !Number.isFinite(value)) return '0.00 XLM';
-	const formatted = new Intl.NumberFormat('en-US', {
+	const formatted = new Intl.NumberFormat(getActiveLocale(), {
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2,
 		useGrouping: false,
@@ -68,10 +77,18 @@ export function formatXlmPrice(value: number | null | undefined): string {
  */
 export function formatHolderCount(count: number): string {
 	if (count >= 1_000_000) {
-		return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+		const value = new Intl.NumberFormat(getActiveLocale(), {
+			maximumFractionDigits: 1,
+			useGrouping: false,
+		}).format(count / 1_000_000);
+		return `${value}M`;
 	}
 	if (count >= 1_000) {
-		return `${(count / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+		const value = new Intl.NumberFormat(getActiveLocale(), {
+			maximumFractionDigits: 1,
+			useGrouping: false,
+		}).format(count / 1_000);
+		return `${value}K`;
 	}
 	return count.toString();
 }
@@ -118,7 +135,7 @@ export function formatPercent(
 		return emptyPlaceholder;
 	}
 
-	const formatted = new Intl.NumberFormat(undefined, {
+	const formatted = new Intl.NumberFormat(getActiveLocale(), {
 		maximumFractionDigits,
 		minimumFractionDigits,
 	}).format(value);

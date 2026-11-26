@@ -15,6 +15,8 @@ import {
 	durationLabelToSeconds,
 	type AuctionDurationLabel,
 } from '@/utils/auction.utils';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/lib/i18n';
 
 export type SellMode = 'fixed' | 'auction';
 
@@ -38,9 +40,9 @@ export interface SecondaryMarketSellPanelProps {
 	isSubmitting?: boolean;
 }
 
-const TABS: Array<{ id: SellMode; label: string }> = [
-	{ id: 'fixed', label: 'Fixed Price' },
-	{ id: 'auction', label: 'Auction' },
+const TABS: Array<{ id: SellMode; labelKey: 'swap.fixedPrice' | 'swap.auction' }> = [
+	{ id: 'fixed', labelKey: 'swap.fixedPrice' },
+	{ id: 'auction', labelKey: 'swap.auction' },
 ];
 
 const inputClass =
@@ -52,6 +54,7 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 	onCreateAuction,
 	isSubmitting = false,
 }) => {
+	const { t } = useTranslation();
 	const [mode, setMode] = useState<SellMode>('fixed');
 	const [fractionAmount, setFractionAmount] = useState('1');
 	const [reservePrice, setReservePrice] = useState('');
@@ -85,7 +88,7 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 
 	const submitAuction = async () => {
 		if (!auctionSummary) {
-			showToast.error('Enter a valid fraction amount and reserve price');
+			showToast.error(t('swap.invalidAuction'));
 			return;
 		}
 		try {
@@ -95,18 +98,20 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 				durationSeconds: auctionSummary.durationSeconds,
 			});
 			showToast.success(
-				`Auction created — ends ${auctionSummary.endTime.toLocaleTimeString()}`
+				t('swap.auctionCreated', {
+					time: auctionSummary.endTime.toLocaleTimeString(i18n.resolvedLanguage ?? 'en'),
+				})
 			);
 		} catch (error) {
 			showToast.error(
-				error instanceof Error ? error.message : 'Failed to create auction'
+				error instanceof Error ? error.message : t('swap.failedAuction')
 			);
 		}
 	};
 
 	const submitFixedPrice = async () => {
 		if (!Number.isInteger(amount) || amount <= 0 || !Number.isFinite(price) || price <= 0) {
-			showToast.error('Enter a valid fraction amount and price');
+			showToast.error(t('swap.invalidListing'));
 			return;
 		}
 		try {
@@ -114,10 +119,10 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 				fractionAmount: amount,
 				priceStroops: price,
 			});
-			showToast.success('Listing created');
+			showToast.success(t('swap.listingCreated'));
 		} catch (error) {
 			showToast.error(
-				error instanceof Error ? error.message : 'Failed to create listing'
+				error instanceof Error ? error.message : t('swap.failedListing')
 			);
 		}
 	};
@@ -128,7 +133,7 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 			<div
 				className="mb-5 flex gap-2 border-b border-white/10"
 				role="tablist"
-				aria-label="Listing type"
+				aria-label={t('swap.listingType')}
 				data-testid="sell-mode-tabs"
 			>
 				{TABS.map(tab => (
@@ -145,14 +150,14 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 						}`}
 						data-testid={`sell-mode-tab-${tab.id}`}
 					>
-						{tab.label}
+						{t(tab.labelKey)}
 					</button>
 				))}
 			</div>
 
 			{/* Shared: fraction amount */}
 			<label className="mb-3 block">
-				<span className="mb-1 block text-xs text-white/60">Fraction amount</span>
+				<span className="mb-1 block text-xs text-white/60">{t('swap.fractionAmount')}</span>
 				<input
 					type="number"
 					min={1}
@@ -163,7 +168,7 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 					data-testid="auction-fraction-amount"
 				/>
 				<span className="mt-1 block text-[11px] text-white/40">
-					{availableFractions} available
+					{t('swap.available', { count: availableFractions })}
 				</span>
 			</label>
 
@@ -171,7 +176,7 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 				<div className="space-y-3" data-testid="fixed-price-panel">
 					<label className="block">
 						<span className="mb-1 block text-xs text-white/60">
-							Price per fraction (stroops)
+							{t('swap.pricePerFraction')}
 						</span>
 						<input
 							type="number"
@@ -188,14 +193,14 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 						disabled={isSubmitting}
 						data-testid="submit-fixed-price"
 					>
-						{isSubmitting ? 'Submitting…' : 'Create listing'}
+						{isSubmitting ? t('swap.submitting') : t('swap.createListing')}
 					</Button>
 				</div>
 			) : (
 				<div className="space-y-4" data-testid="auction-panel">
 					<label className="block">
 						<span className="mb-1 block text-xs text-white/60">
-							Reserve price (stroops)
+							{t('swap.reservePrice')}
 						</span>
 						<input
 							type="number"
@@ -208,7 +213,7 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 					</label>
 
 					<fieldset>
-						<legend className="mb-1 text-xs text-white/60">Duration</legend>
+						<legend className="mb-1 text-xs text-white/60">{t('swap.duration')}</legend>
 						<div className="flex gap-2" data-testid="auction-duration-selector">
 							{AUCTION_DURATIONS.map(d => (
 								<button
@@ -236,7 +241,7 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 						data-testid="auction-summary"
 					>
 						<div className="flex justify-between">
-							<span className="text-white/60">Reserve</span>
+							<span className="text-white/60">{t('swap.reserve')}</span>
 							<span className="font-mono text-white/90" data-testid="auction-summary-reserve">
 								{auctionSummary
 									? formatDisplayKeyPrice(auctionSummary.reservePriceStroops)
@@ -244,16 +249,18 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 							</span>
 						</div>
 						<div className="flex justify-between">
-							<span className="text-white/60">Fractions</span>
+							<span className="text-white/60">{t('swap.fractions')}</span>
 							<span className="font-mono text-white/90" data-testid="auction-summary-amount">
 								{auctionSummary?.fractionAmount ?? '—'}
 							</span>
 						</div>
 						<div className="flex justify-between">
-							<span className="text-white/60">Ends</span>
+							<span className="text-white/60">{t('swap.ends')}</span>
 							<span className="font-mono text-white/90" data-testid="auction-summary-end">
 								{auctionSummary
-									? auctionSummary.endTime.toLocaleString()
+									? auctionSummary.endTime.toLocaleString(
+											i18n.resolvedLanguage ?? 'en'
+										)
 									: '—'}
 							</span>
 						</div>
@@ -265,7 +272,7 @@ const SecondaryMarketSellPanel: React.FC<SecondaryMarketSellPanelProps> = ({
 						disabled={isSubmitting || !auctionSummary}
 						data-testid="submit-auction"
 					>
-						{isSubmitting ? 'Submitting…' : 'Create auction'}
+						{isSubmitting ? t('swap.submitting') : t('swap.createAuction')}
 					</Button>
 				</div>
 			)}

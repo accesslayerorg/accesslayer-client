@@ -9,6 +9,8 @@ import ThemeToggle from '@/components/common/ThemeToggle';
 import { Link } from 'react-router';
 import BatchTradePanel from '@/components/common/BatchTradePanel';
 import { useConnectedWallet, useWatchlist } from '@/hooks/useWatchlist';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '@/components/common/LanguageSwitcher';
 
 const navLinks = [
 	{ label: 'Marketplace', href: '/marketplace', external: false },
@@ -20,6 +22,7 @@ const navLinks = [
 ];
 
 export default function Header() {
+	const { t } = useTranslation();
 	const [scrolled, setScrolled] = useState(false);
 	const [batchOpen, setBatchOpen] = useState(false);
 	const profile = useProfileStore(state => state.profile);
@@ -69,7 +72,9 @@ export default function Header() {
 								rel="noopener noreferrer"
 								className={`font-jakarta text-sm transition-colors duration-300 ${scrolled ? 'text-gray-500 hover:text-gray-900' : 'text-white/45 hover:text-white/80'}`}
 							>
-								{link.label}
+								{link.external
+									? link.label
+									: t(`navigation.${link.href === '/marketplace' ? 'marketplace' : link.href === '/discovery' ? 'discover' : link.href === '/status' ? 'status' : 'about'}`)}
 							</a>
 						) : (
 							<Link
@@ -77,7 +82,7 @@ export default function Header() {
 								to={link.href}
 								className={`font-jakarta text-sm transition-colors duration-300 ${scrolled ? 'text-gray-500 hover:text-gray-900' : 'text-white/45 hover:text-white/80'}`}
 							>
-								{link.label}
+								{t(`navigation.${link.href === '/marketplace' ? 'marketplace' : link.href === '/discovery' ? 'discover' : link.href === '/status' ? 'status' : 'about'}`)}
 							</Link>
 						)
 					)}
@@ -87,7 +92,7 @@ export default function Header() {
 						aria-label={`Watchlist, ${watchlistCount} saved ${watchlistCount === 1 ? 'key' : 'keys'}`}
 					>
 						<Bookmark className="size-4 text-amber-400/80" aria-hidden="true" />
-						Watchlist
+						{t('navigation.watchlist')}
 						{watchlistCount > 0 && (
 							<span
 								data-testid="header-watchlist-badge"
@@ -107,12 +112,13 @@ export default function Header() {
 				{/* Right-side actions: theme toggle (#1284) + notification bell (#720) + wallet status chip (#686).
 				    NotificationBell is only rendered when a user profile is available. */}
 				<div className="flex items-center gap-2 shrink-0">
+					<LanguageSwitcher />
 					<button
 						type="button"
 						onClick={() => setBatchOpen(true)}
 						className={`rounded-xl border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 ${scrolled ? '' : ''}`}
 					>
-						Batch Trade
+						{t('navigation.batchTrade')}
 					</button>
 					<BatchTradePanel open={batchOpen} onOpenChange={setBatchOpen} />
 					<ThemeToggle

@@ -20,6 +20,7 @@ import {
 } from '@/utils/slippage.utils';
 import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 export interface SwapConfirmationModalProps {
 	open: boolean;
@@ -70,6 +71,7 @@ export const SwapConfirmationModal: React.FC<SwapConfirmationModalProps> = ({
 	isSubmitting = false,
 	quote: customQuote,
 }) => {
+	const { t } = useTranslation();
 	const [tolerance, setTolerance] = useState<number>(
 		slippageTolerancePercent ?? initialSlippage
 	);
@@ -79,8 +81,8 @@ export const SwapConfirmationModal: React.FC<SwapConfirmationModalProps> = ({
 	);
 
 	const isBuy = side === 'buy';
-	const title = isBuy ? 'Confirm Buy Swap' : 'Confirm Sell Swap';
-	const confirmButtonLabel = isBuy ? 'Confirm Buy' : 'Confirm Sell';
+	const title = isBuy ? t('swap.confirmBuy') : t('swap.confirmSell');
+	const confirmButtonLabel = isBuy ? t('swap.confirmBuyAction') : t('swap.confirmSellAction');
 	const assetLabel = tokenName ?? creatorName;
 
 	const handleToleranceChange = (newTolerance: number) => {
@@ -207,8 +209,7 @@ export const SwapConfirmationModal: React.FC<SwapConfirmationModalProps> = ({
 						</DialogTitle>
 					</div>
 					<DialogDescription className="text-xs text-white/60">
-						Review swap details, expected execution price and minimum
-						received bounds before signing.
+						{t('swap.description')}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -216,22 +217,22 @@ export const SwapConfirmationModal: React.FC<SwapConfirmationModalProps> = ({
 					{/* Swap Overview */}
 					<div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
 						<div className="flex items-center justify-between text-sm">
-							<span className="text-white/60">Asset</span>
+							<span className="text-white/60">{t('swap.asset')}</span>
 							<span className="font-semibold text-white">
 								{assetLabel}
 							</span>
 						</div>
 
 						<div className="flex items-center justify-between text-sm">
-							<span className="text-white/60">Swap Amount</span>
+							<span className="text-white/60">{t('swap.swapAmount')}</span>
 							<span className="font-mono font-semibold text-white">
-								{formatNumber(amount)} {amount === 1 ? 'key' : 'keys'}
+								{formatNumber(amount)} {amount === 1 ? t('swap.key') : t('swap.keys')}
 							</span>
 						</div>
 
 						{displayedExpectedPrice != null && (
 							<div className="flex items-center justify-between text-sm">
-								<span className="text-white/60">Expected Price</span>
+								<span className="text-white/60">{t('swap.expectedPrice')}</span>
 								<span
 									className="font-mono text-white/90"
 									data-testid="expected-price"
@@ -244,7 +245,7 @@ export const SwapConfirmationModal: React.FC<SwapConfirmationModalProps> = ({
 						)}
 
 						<div className="flex items-center justify-between text-sm">
-							<span className="text-white/60">Price Impact</span>
+							<span className="text-white/60">{t('swap.priceImpact')}</span>
 							<span
 								className="font-mono text-white/90"
 								data-testid="price-impact"
@@ -255,7 +256,7 @@ export const SwapConfirmationModal: React.FC<SwapConfirmationModalProps> = ({
 
 						<div className="flex items-center justify-between border-t border-white/5 pt-2 text-sm">
 							<span className="text-white/70 font-medium">
-								Minimum Received
+								{t('swap.minimumReceived')}
 							</span>
 							<span
 								className="font-mono font-semibold text-emerald-400"
@@ -270,7 +271,7 @@ export const SwapConfirmationModal: React.FC<SwapConfirmationModalProps> = ({
 					<div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-4 space-y-3">
 						<div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-300">
 							<ShieldCheck className="h-4 w-4 text-amber-400" />
-							<span>Slippage Tolerance</span>
+							<span>{t('swap.slippageTolerance')}</span>
 						</div>
 
 						<SlippageSettings
@@ -292,7 +293,7 @@ export const SwapConfirmationModal: React.FC<SwapConfirmationModalProps> = ({
 						data-testid="swap-confirmation-modal-cancel"
 						className="text-white/70 hover:text-white"
 					>
-						Back
+						{t('swap.back')}
 					</Button>
 					<Button
 						type="button"
@@ -311,7 +312,7 @@ export const SwapConfirmationModal: React.FC<SwapConfirmationModalProps> = ({
 					>
 						<StableButtonContent
 							isLoading={isSubmitting}
-							loadingLabel="Submitting…"
+							loadingLabel={t('swap.submitting')}
 						>
 							<span className="flex items-center gap-1.5">
 								{confirmButtonLabel}
