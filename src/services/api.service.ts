@@ -278,6 +278,20 @@ export class BaseApiService {
 	}
 }
 
+// Shared axios instance for standalone service helpers that don't instantiate
+// a full service class. It reuses BaseApiService so auth refresh, rate-limit
+// tracking and error handling behave identically to class-based services.
+class SharedApiClient extends BaseApiService {
+	public get client(): AxiosInstance {
+		return this.api;
+	}
+}
+
+export const apiClient: AxiosInstance = new SharedApiClient().client;
+
+// Conventional alias used by hooks that import the shared client as `api`.
+export const api = apiClient;
+
 // Standalone fetch for the public OpenAPI document (#1416). The docs portal
 // must be able to load the spec even when the user is signed out, so this
 // deliberately bypasses the authenticated axios instance and its refresh

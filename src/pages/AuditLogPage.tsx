@@ -1,5 +1,6 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useAuditLog } from '../hooks/useAuditLog';
 import { useAdminRole } from '../hooks/useAdminRole';
 
@@ -58,7 +59,7 @@ function toCsvValue(value: unknown): string {
 
 const CSV_ROW_LIMIT = 5000;
 
-export default function AuditLogPage(): JSX.Element {
+export default function AuditLogPage(): React.JSX.Element | null {
   const navigate = useNavigate();
   const { isAdminWallet, loading: roleLoading } = useAdminRole();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -336,7 +337,7 @@ export default function AuditLogPage(): JSX.Element {
   );
 }
 
-function AuditLogSkeleton(): JSX.Element {
+function AuditLogSkeleton(): React.JSX.Element {
   return (
     <div className="audit-log-skeleton" data-testid="audit-log-skeleton" aria-busy="true">
       {Array.from({ length: 6 }).map((_, index) => (

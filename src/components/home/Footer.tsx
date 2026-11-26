@@ -1,22 +1,36 @@
 import { Link } from 'react-router';
-import { useDebugDrawerStore } from '@/hooks/useDebugDrawerStore';
+import { useConsent } from '@/hooks/useConsent';
 
 const links = [
 	{ label: 'Marketplace', href: '/marketplace', external: false },
 	{ label: 'Status', href: '/status', external: false },
 	{ label: 'About', href: '/about', external: false },
-	{ label: 'GitHub', href: 'https://github.com/accesslayerorg', external: true },
-	{ label: 'Telegram', href: 'https://t.me/c/accesslayerorg/', external: true },
+	{
+		label: 'GitHub',
+		href: 'https://github.com/accesslayerorg',
+		external: true,
+	},
+	{
+		label: 'Telegram',
+		href: 'https://t.me/c/accesslayerorg/',
+		external: true,
+	},
 ];
 
 export default function Footer() {
+	const openPreferences = useConsent(state => state.openPreferences);
+
 	return (
 		<footer className="border-t border-gray-100 bg-white px-6 py-14">
 			<div className="mx-auto max-w-5xl">
 				<div className="flex flex-col items-start justify-between gap-10 sm:flex-row sm:items-center">
 					{/* Brand */}
 					<div className="flex items-center gap-3">
-						<img src="/icons/logo.svg" alt="Access Layer" className="size-5 opacity-30 invert" />
+						<img
+							src="/icons/logo.svg"
+							alt="Access Layer"
+							className="size-5 opacity-30 invert"
+						/>
 						<span className="font-mono text-[12px] uppercase tracking-[0.08em] text-gray-400">
 							Access Layer
 						</span>
@@ -46,12 +60,11 @@ export default function Footer() {
 							)
 						)}
 						<button
+							className="font-jakarta text-sm text-gray-400 transition-colors hover:text-gray-900 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-500"
+							onClick={openPreferences}
 							type="button"
-							data-testid="footer-debug-drawer-trigger"
-							onClick={() => useDebugDrawerStore.getState().open()}
-							className="font-jakarta text-sm text-gray-400 transition-colors hover:text-gray-900"
 						>
-							Debug
+							Privacy preferences
 						</button>
 					</nav>
 				</div>

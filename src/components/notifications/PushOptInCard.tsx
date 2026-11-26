@@ -39,6 +39,8 @@ const EVENT_DESCRIPTIONS: Array<{
 ];
 
 export interface PushOptInCardProps {
+  /** Wallet address the push subscription belongs to, when known. */
+  address?: string | null;
   /** Initial preferences loaded from the backend, if available. */
   initialPreferences?: Partial<PushPreferences>;
   /** Called whenever the user changes their push preferences. */
@@ -52,13 +54,13 @@ export const PushOptInCard: React.FC<PushOptInCardProps> = ({
   className,
 }) => {
   const {
-    isSupported,
+    supported: isSupported,
     permission,
-    isSubscribed,
-    isLoading,
+    subscribed: isSubscribed,
+    loading: isLoading,
     error,
-    subscribe,
-    unsubscribe,
+    enable: subscribe,
+    disable: unsubscribe,
     updatePreferences,
   } = usePushSubscription();
 

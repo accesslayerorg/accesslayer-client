@@ -350,7 +350,7 @@ export default function KeyTransferUI({
 								</div>
 
 								{enforcementOn && resolvedRecipient && !recipientIsApprovedMarketplace && (
-									<Alert variant="destructive">
+									<Alert className="border-destructive/50 text-destructive">
 										<AlertDescription>
 											This recipient is not an approved marketplace. The
 											transfer will be blocked under royalty enforcement.

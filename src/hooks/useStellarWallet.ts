@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Networks } from '@stellar/stellar-sdk';
 import { useSigner } from '@/hooks/useSigner';
@@ -275,7 +276,9 @@ export function useWalletDetection(): WalletDetectionState {
 		return {
 			userAgent: win?.navigator?.userAgent ?? 'unknown',
 			networkPassphrase,
-			appVersion: env.VITE_APP_VERSION ?? 'unknown',
+			appVersion:
+				(import.meta.env as Record<string, string | undefined>)
+					.VITE_APP_VERSION ?? 'unknown',
 			extensions,
 			detectedReason,
 			detectedWalletId,

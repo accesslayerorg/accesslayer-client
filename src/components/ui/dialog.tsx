@@ -4,6 +4,11 @@ import { XIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+	useWalletDetection,
+	type WalletFailureReason,
+	type WalletId,
+} from '@/hooks/useStellarWallet';
 
 function Dialog({
 	...props
@@ -167,15 +172,39 @@ export interface WalletHelpModalProps {
 	onOpenChange: (open: boolean) => void;
 }
 
+const WALLET_INSTALL_URLS: Record<WalletId, string> = {
+	freighter: 'https://www.freighter.app/',
+	xbull: 'https://xbull.app/',
+	lobstr: 'https://lobstr.co/',
+	albedo: 'https://albedo.link/',
+	rabet: 'https://rabet.io/',
+};
+
+const REASON_LABELS: Record<WalletFailureReason, string> = {
+	'not-installed': 'no wallet detected',
+	locked: 'a locked wallet',
+	'wrong-network': 'the wrong network',
+	'blocked-popup': 'blocked pop-ups',
+	'ad-blocker': 'an ad blocker or extension conflict',
+	unknown: 'an unknown wallet issue',
+};
+
 export function WalletHelpModal({ open, onOpenChange }: WalletHelpModalProps) {
 	const {
 		wallets,
-		reason,
-		reasonLabel,
-		diagnostics,
+		detectedReason: reason,
+		checking: isRechecking,
 		recheck,
-		isRechecking,
+		getDiagnostics,
 	} = useWalletDetection();
+	const reasonLabel = reason ? REASON_LABELS[reason] : '';
+	const diagnostics = React.useMemo(() => {
+		try {
+			return JSON.stringify(getDiagnostics(), null, 2);
+		} catch {
+			return 'Diagnostics unavailable';
+		}
+	}, [getDiagnostics]);
 	const [copied, setCopied] = React.useState(false);
 
 	const copyDiagnostics = React.useCallback(async () => {
@@ -218,7 +247,7 @@ export function WalletHelpModal({ open, onOpenChange }: WalletHelpModalProps) {
 								</div>
 								{!wallet.installed && (
 									<a
-										href={wallet.downloadUrl}
+										href={WALLET_INSTALL_URLS[wallet.id]}
 										target="_blank"
 										rel="noopener noreferrer"
 										className="text-primary text-sm underline"
@@ -279,10 +308,15 @@ export function WalletHelpModal({ open, onOpenChange }: WalletHelpModalProps) {
 }
 
 const checklistItems: Array<{
-	reason: string;
+	reason: WalletFailureReason;
 	title: string;
 	fix: string;
 }> = [
+	{
+		reason: 'not-installed',
+		title: 'No wallet installed',
+		fix: 'Install one of the wallets above, then press Recheck.',
+	},
 	{
 		reason: 'locked',
 		title: 'Wallet is locked',
@@ -299,7 +333,7 @@ const checklistItems: Array<{
 		fix: 'Allow pop-ups for this site in your browser settings, then try connecting again.',
 	},
 	{
-		reason: 'adblocker',
+		reason: 'ad-blocker',
 		title: 'Ad blocker or extension conflict',
 		fix: 'Disable ad blockers or conflicting extensions for this site, then press Recheck.',
 	},

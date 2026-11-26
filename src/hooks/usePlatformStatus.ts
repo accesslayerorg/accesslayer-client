@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { statusService } from '@/services/status.service';
+import {
+	statusService,
+	type PlatformStatus,
+} from '@/services/status.service';
 import { queryKeys } from '@/lib/queryKeys';
 
 /** Auto-refresh interval required by #1051 — the page polls every 60 seconds. */
@@ -65,10 +68,16 @@ export interface NormalizedPlatformStatus {
 
 /** Result returned by {@link usePlatformStatus}. */
 export interface UsePlatformStatusResult {
+	/** Raw status snapshot with services and incidents, for the public status page. */
+	data: PlatformStatus | undefined;
 	/** Last known good normalized status, or `undefined` before first success. */
 	status: NormalizedPlatformStatus | undefined;
 	/** Whether the initial fetch is still in flight. */
 	isLoading: boolean;
+	/** Whether any fetch (including a background poll) is in flight. */
+	isFetching: boolean;
+	/** Manually refresh the status snapshot. */
+	refetch: () => Promise<unknown>;
 	/**
 	 * Whether the most recent fetch failed. Kept separate from `status` so a
 	 * transient failure never surfaces a false outage — the last known good
@@ -351,8 +360,11 @@ export function usePlatformStatus(): UsePlatformStatusResult {
 		overall === 'maintenance' || status?.maintenance?.isActive === true;
 
 	return {
+		data: query.data,
 		status,
 		isLoading: query.isLoading,
+		isFetching: query.isFetching,
+		refetch: query.refetch,
 		isError: query.isError,
 		error: query.error,
 		isOperational: overall === 'operational',
