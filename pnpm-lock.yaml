@@ -104,6 +104,9 @@ importers:
       react-dom:
         specifier: ^19.1.0
         version: 19.2.8(react@19.2.8)
+      react-helmet-async:
+        specifier: ^3.1.0
+        version: 3.2.0(react@19.2.8)
       react-hook-form:
         specifier: ^7.54.2
         version: 7.90.0(@types/react@19.2.18)(react@19.2.8)
@@ -4020,6 +4023,14 @@ packages:
     resolution: {integrity: sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ==}
     peerDependencies:
       react: ^19.2.8
+
+  react-fast-compare@3.2.4:
+    resolution: {integrity: sha512-YbkgZfjvuokdt6zR8Oki8Bt4QXAZim/9HKSUr5J23GVyX2o8sYD/JlKSFrJvEFIPjotWvkGY7DgUS+udyr8cEw==}
+
+  react-helmet-async@3.2.0:
+    resolution: {integrity: sha512-PpArgNKASlXaxjB1p63QrH4DI5njQOt89i5cUaAz4Be+nBGEOhOUi2ykkDCFRJ5UPRVrzJfTXdRUL5/dHdPxCA==}
+    peerDependencies:
+      react: ^16.6.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   react-hook-form@7.90.0:
     resolution: {integrity: sha512-+NdG0FLzCPhFOp2NNxaUYLF9fyZhNjx9FTBBSYWF71/l6BBlmIc/j6xlp3DbaHWLJbIG7Zd8oznA19xJClU97w==}
@@ -9554,6 +9565,13 @@ snapshots:
     dependencies:
       react: 19.2.8
       scheduler: 0.27.0
+
+  react-fast-compare@3.2.4: {}
+
+  react-helmet-async@3.2.0(react@19.2.8):
+    dependencies:
+      react: 19.2.8
+      react-fast-compare: 3.2.4
 
   react-hook-form@7.90.0(@types/react@19.2.18)(react@19.2.8):
     dependencies:
