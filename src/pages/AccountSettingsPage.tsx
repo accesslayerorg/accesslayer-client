@@ -73,6 +73,21 @@ export default function AccountSettingsPage() {
 				</span>
 			</Link>
 
+			<Link
+				to="/settings/privacy"
+				className="mb-6 flex items-center gap-3 rounded-xl border border-border p-4 transition-colors hover:bg-accent/40"
+			>
+				<ShieldCheck className="size-5 text-foreground" aria-hidden="true" />
+				<span>
+					<span className="block text-sm font-medium text-foreground">
+						Privacy
+					</span>
+					<span className="mt-0.5 block text-xs text-muted-foreground">
+						Export your data or delete your account
+					</span>
+				</span>
+			</Link>
+
 			<SessionSecuritySection
 				sessions={sessions}
 				isLoading={isLoading}

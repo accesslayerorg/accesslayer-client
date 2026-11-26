@@ -426,10 +426,16 @@ export const queryKeys = {
 	rateLimit: {
 		all: () => ['rateLimit'] as const,
 		state: () => ['rateLimit', 'state'] as const,
+	},
 	// OpenAPI document powering the public API docs portal (#1416).
 	openapi: {
 		all: () => ['openapi'] as const,
 		document: () => ['openapi', 'document'] as const,
+	},
+	privacy: {
+		exportStatus: () => ['privacy', 'export', 'status'] as const,
+		deletion: () => ['privacy', 'deletion'] as const,
+	},
 	launches: {
 		all: () => ['launches'] as const,
 	},
