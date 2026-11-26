@@ -491,4 +491,29 @@ export const queryKeys = {
 		stats: (wallet?: string, range: string = '30d') =>
 			['ambassador', 'stats', wallet ?? 'anonymous', range] as const,
 	},
+	collections: {
+		all: () => ['collections'] as const,
+		list: () => ['collections', 'list'] as const,
+		detail: (slug: string) => ['collections', 'detail', slug] as const,
+		featured: () => ['collections', 'featured'] as const,
+		followed: (wallet: string) => ['collections', 'followed', wallet] as const,
+	},
+	backtest: {
+		historicalPrices: (keyId: string, range: string) =>
+			['backtest', 'prices', keyId, range] as const,
+		xlmPrices: (range: string) => ['backtest', 'xlm-prices', range] as const,
+		keyCreatedDate: (keyId: string) =>
+			['backtest', 'key-created', keyId] as const,
+	},
+	positionCalculator: {
+		quote: (keyId: string, quantity: number, side: string) =>
+			['position', 'quote', keyId, quantity, side] as const,
+	},
+	holdingTriggers: {
+		byHolding: (holdingId: string) =>
+			['triggers', 'holding', holdingId] as const,
+		all: (wallet: string) => ['triggers', 'all', wallet] as const,
+		active: (wallet: string) => ['triggers', 'active', wallet] as const,
+		byId: (triggerId: string) => ['triggers', 'detail', triggerId] as const,
+	},
 } as const;
