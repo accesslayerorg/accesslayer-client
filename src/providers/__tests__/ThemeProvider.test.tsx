@@ -209,6 +209,45 @@ function ThemeProbe() {
 	return <span>{theme}</span>;
 }
 
+import { ACCENT_STORAGE_KEY, DEFAULT_ACCENT } from '@/utils/accentPalette.utils';
+
+describe('ThemeProvider accent customization (#1488)', () => {
+	it('provides default accent on initial load', () => {
+		const { result } = renderTheme();
+		expect(result.current.accentColor).toBe(DEFAULT_ACCENT);
+		expect(result.current.accentPalette.light.contrastRatio).toBeGreaterThanOrEqual(4.5);
+		expect(document.documentElement.style.getPropertyValue('--accent')).toBe(DEFAULT_ACCENT);
+	});
+
+	it('loads persisted accent from localStorage', () => {
+		localStorage.setItem(ACCENT_STORAGE_KEY, '#059669');
+		const { result } = renderTheme();
+		expect(result.current.accentColor).toBe('#059669');
+		expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#059669');
+	});
+
+	it('updates accent and applies it immediately to document CSS variables', () => {
+		const { result } = renderTheme();
+		act(() => {
+			const success = result.current.setAccentColor('#d97706');
+			expect(success).toBe(true);
+		});
+		expect(result.current.accentColor).toBe('#d97706');
+		expect(localStorage.getItem(ACCENT_STORAGE_KEY)).toBe('#d97706');
+		expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#d97706');
+	});
+
+	it('rejects invalid or non-compliant colors without modifying state', () => {
+		const { result } = renderTheme();
+		const prev = result.current.accentColor;
+		act(() => {
+			const success = result.current.setAccentColor('#ffffff');
+			expect(success).toBe(false);
+		});
+		expect(result.current.accentColor).toBe(prev);
+	});
+});
+
 describe('ThemeProvider accessibility of resolved state', () => {
 	it('exposes the theme through its context to consumers', () => {
 		installMatchMedia(true);

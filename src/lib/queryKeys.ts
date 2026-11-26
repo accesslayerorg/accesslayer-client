@@ -14,6 +14,7 @@ import type {
 	LeaderboardMetric,
 } from '@/services/analytics.service';
 import type { KeyHolderLeaderboardMetric } from '@/services/keyLeaderboard.service';
+import type { ReferralHoldFilters } from '@/services/adminReferralHolds.service';
 
 export const queryKeys = {
 	creatorProfile: {
@@ -57,6 +58,8 @@ export const queryKeys = {
 			['creators', creatorId, 'spotlight-bids'] as const,
 		announcements: (creatorId: string) =>
 			['creators', creatorId, 'announcements'] as const,
+		scheduledAnnouncements: (keyId: string) =>
+			['creators', keyId, 'scheduled-announcements'] as const,
 		tips: (creatorId: string) => ['creators', creatorId, 'tips'] as const,
 		uniqueTraders: (creatorId: string) =>
 			['creators', creatorId, 'unique-traders'] as const,
@@ -85,6 +88,8 @@ export const queryKeys = {
 			['creators', keyId, 'related', limit] as const,
 		performanceBond: (creatorId: string) =>
 			['creators', creatorId, 'performance-bond'] as const,
+		keyFlags: (creatorId: string) =>
+			['creators', creatorId, 'flags'] as const,
 		snapshotHistory: (creatorId: string, range: string) =>
 			['creators', creatorId, 'snapshot-history', range] as const,
 		reputation: (creatorId: string) =>
@@ -141,6 +146,16 @@ export const queryKeys = {
 	wallet: {
 		holdings: (address: string) => ['wallet', address, 'holdings'] as const,
 		badges: (address: string) => ['wallet', address, 'badges'] as const,
+		soulboundBadges: (address: string) =>
+			['wallet', address, 'soulboundBadges'] as const,
+		balanceHistory: (address: string, keyId?: string, range?: string) =>
+			[
+				'wallet',
+				address,
+				'balanceHistory',
+				keyId ?? 'all',
+				range ?? 'all',
+			] as const,
 		badgeMetrics: (address: string) =>
 			['wallet', address, 'badgeMetrics'] as const,
 		receivedGifts: (address: string) =>
@@ -172,6 +187,10 @@ export const queryKeys = {
 	},
 	transaction: {
 		status: (hash: string) => ['transaction', hash, 'status'] as const,
+	},
+	permit: {
+		nonce: (contractId: string, owner: string) =>
+			['permit', contractId, owner, 'nonce'] as const,
 	},
 	notifications: {
 		all: () => ['notifications'] as const,
@@ -210,6 +229,28 @@ export const queryKeys = {
 		upgradeProxyStatus: () => ['admin', 'proxy', 'status'] as const,
 		upgradeProxyPending: () => ['admin', 'proxy', 'pending'] as const,
 		upgradeProxyHistory: () => ['admin', 'proxy', 'history'] as const,
+		// Privileged-action audit log viewer (#1415). Filters are part of the
+		// key so each filtered page set is cached independently.
+		auditLog: {
+			all: () => ['admin', 'audit-log'] as const,
+			list: (filters?: Record<string, unknown>) =>
+				['admin', 'audit-log', 'list', filters ?? null] as const,
+			export: (filters?: Record<string, unknown>) =>
+				['admin', 'audit-log', 'export', filters ?? null] as const,
+		referralHolds: {
+			all: () => ['admin', 'referral-holds'] as const,
+			list: (filters: ReferralHoldFilters = {}) =>
+				[
+					'admin',
+					'referral-holds',
+					'list',
+					filters.status ?? null,
+					filters.reason ?? null,
+				] as const,
+			summary: () => ['admin', 'referral-holds', 'summary'] as const,
+			detail: (id: string) =>
+				['admin', 'referral-holds', 'detail', id] as const,
+		},
 	},
 	governance: {
 		all: () => ['governance'] as const,
@@ -322,6 +363,12 @@ export const queryKeys = {
 		holders: (keyId: string, metric: KeyHolderLeaderboardMetric = 'volume') =>
 			['keys', keyId, 'leaderboard', metric] as const,
 	},
+	// Creator earnings dashboard with per-stream claim state (#1258).
+	creatorEarnings: {
+		all: () => ['creatorEarnings'] as const,
+		detail: (creatorId: string, wallet: string) =>
+			['creatorEarnings', creatorId, wallet] as const,
+	},
 	creatorRevenue: {
 		all: () => ['creatorRevenue'] as const,
 		summary: (creatorId: string) =>
@@ -332,6 +379,14 @@ export const queryKeys = {
 			['creatorRevenue', creatorId, 'withdrawals'] as const,
 		distributions: (creatorId: string) =>
 			['creatorRevenue', creatorId, 'distributions'] as const,
+	},
+	// Holder-facing distribution history, running total and 12-month chart (#1259).
+	distributions: {
+		all: () => ['distributions'] as const,
+		overview: (wallet: string) =>
+			['distributions', wallet, 'overview'] as const,
+		history: (wallet: string, type: string, page: number) =>
+			['distributions', wallet, 'history', type, page] as const,
 	},
 	// Holder-facing revenue share claims (#1223).
 	revenueShare: {
@@ -370,6 +425,15 @@ export const queryKeys = {
 		all: () => ['api-keys'] as const,
 		list: () => ['api-keys', 'list'] as const,
 	},
+	// Shared API rate-limit state (#1402): the active 429 wait window used to
+	// gate retries, disable triggering buttons and pause background polling.
+	rateLimit: {
+		all: () => ['rateLimit'] as const,
+		state: () => ['rateLimit', 'state'] as const,
+	// OpenAPI document powering the public API docs portal (#1416).
+	openapi: {
+		all: () => ['openapi'] as const,
+		document: () => ['openapi', 'document'] as const,
 	launches: {
 		all: () => ['launches'] as const,
 	},
@@ -395,6 +459,17 @@ export const queryKeys = {
 		submissions: (bountyId: string) =>
 			['bounties', 'submissions', bountyId] as const,
 	},
+	broadcasts: {
+		all: () => ['broadcasts'] as const,
+		holders: (keyId: string) => ['broadcasts', 'holders', keyId] as const,
+		history: (keyId: string) => ['broadcasts', 'history', keyId] as const,
+		optIns: (wallet: string) => ['broadcasts', 'opt-ins', wallet] as const,
+	},
+	mediaKit: {
+		all: () => ['media-kit'] as const,
+		settings: (keyId: string) => ['media-kit', 'settings', keyId] as const,
+		public: (handle: string) => ['media-kit', 'public', handle] as const,
+	},
 	grants: {
 		all: () => ['grants'] as const,
 		pages: (filters?: Record<string, unknown>) =>
@@ -410,5 +485,39 @@ export const queryKeys = {
 	feeChange: {
 		all: () => ['fee-change'] as const,
 		pending: () => ['fee-change', 'pending'] as const,
+	},
+	dca: {
+		all: () => ['dca-plans'] as const,
+		byWallet: (wallet?: string) => ['dca-plans', wallet ?? 'all'] as const,
+	},
+	ambassador: {
+		all: () => ['ambassador'] as const,
+		stats: (wallet?: string, range: string = '30d') =>
+			['ambassador', 'stats', wallet ?? 'anonymous', range] as const,
+	},
+	collections: {
+		all: () => ['collections'] as const,
+		list: () => ['collections', 'list'] as const,
+		detail: (slug: string) => ['collections', 'detail', slug] as const,
+		featured: () => ['collections', 'featured'] as const,
+		followed: (wallet: string) => ['collections', 'followed', wallet] as const,
+	},
+	backtest: {
+		historicalPrices: (keyId: string, range: string) =>
+			['backtest', 'prices', keyId, range] as const,
+		xlmPrices: (range: string) => ['backtest', 'xlm-prices', range] as const,
+		keyCreatedDate: (keyId: string) =>
+			['backtest', 'key-created', keyId] as const,
+	},
+	positionCalculator: {
+		quote: (keyId: string, quantity: number, side: string) =>
+			['position', 'quote', keyId, quantity, side] as const,
+	},
+	holdingTriggers: {
+		byHolding: (holdingId: string) =>
+			['triggers', 'holding', holdingId] as const,
+		all: (wallet: string) => ['triggers', 'all', wallet] as const,
+		active: (wallet: string) => ['triggers', 'active', wallet] as const,
+		byId: (triggerId: string) => ['triggers', 'detail', triggerId] as const,
 	},
 } as const;

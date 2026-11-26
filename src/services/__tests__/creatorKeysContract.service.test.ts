@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Keypair } from '@stellar/stellar-sdk';
 import { CreatorKeysContractService } from '@/services/creatorKeysContract.service';
+import type { PermitTransferRequest } from '@/types/permit';
 
 vi.mock('@/utils/env.utils', () => ({
 	env: {
@@ -76,5 +77,52 @@ describe('CreatorKeysContractService (#1033)', () => {
 				recipients: [{ address: recipientAddress, quantity: 1 }],
 			})
 		).rejects.toThrow();
+	});
+});
+
+describe('CreatorKeysContractService permit boundary (#1390)', () => {
+	it('reports permits as unsupported without a real contract adapter', async () => {
+		const service = new CreatorKeysContractService();
+
+		expect(service.supportsPermit()).toBe(false);
+		await expect(service.getPermitNonce('GOWNER')).rejects.toThrow(
+			/Signed permits are not supported/i
+		);
+	});
+
+	it('forwards permit and transfer as one adapter submission', async () => {
+		const getPermitNonce = vi.fn().mockResolvedValue(2n);
+		const submitPermitAndTransfer = vi.fn().mockResolvedValue({
+			hash: 'permit-transfer-hash',
+		});
+		const service = new CreatorKeysContractService(vi.fn(), {
+			getPermitNonce,
+			submitPermitAndTransfer,
+		});
+		const request = {
+			permit: {
+				domain: 'accesslayer.creator-keys.permit',
+				version: 1,
+				contract: 'CCONTRACT',
+				networkPassphraseHash: 'network-hash',
+				owner: 'GOWNER',
+				spender: 'CSPENDER',
+				key: 'CKEY',
+				amount: '1',
+				deadline: '1800000000',
+				nonce: '2',
+				message: 'exact-message',
+			},
+			signature: 'signature',
+			recipient: 'CVAULT',
+		} satisfies PermitTransferRequest;
+
+		expect(service.supportsPermit()).toBe(true);
+		await expect(service.getPermitNonce('GOWNER')).resolves.toBe(2n);
+		await expect(service.submitPermitAndTransfer(request)).resolves.toEqual({
+			hash: 'permit-transfer-hash',
+		});
+		expect(submitPermitAndTransfer).toHaveBeenCalledOnce();
+		expect(submitPermitAndTransfer).toHaveBeenCalledWith(request);
 	});
 });

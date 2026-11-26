@@ -2,12 +2,17 @@ import type { ReactNode } from 'react';
 import RootLayout from './components/common/RootLayout';
 import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
+import MediaKitPage from './pages/MediaKitPage';
+import PublicPressPage from './pages/PublicPressPage';
+import UnsubscribePage from './pages/UnsubscribePage';
 import MarketplacePage from './pages/MarketplacePage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import ReferralHoldsPage from './pages/ReferralHoldsPage';
 import CreatorDetailPage from './pages/CreatorDetailPage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
 import CreatorPublicProfilePage from './pages/CreatorPublicProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
+import OtcTradePage from './pages/OtcTradePage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import NotificationPreferencesPage from './pages/NotificationPreferencesPage';
 import PriceAlertsSettingsPage from './pages/PriceAlertsSettingsPage';
@@ -49,6 +54,7 @@ import RentalMarketPage from './pages/RentalMarketPage';
 import MyRentalsPage from './pages/MyRentalsPage';
 import AutoInvestDashboardPage from './pages/AutoInvestDashboardPage';
 import AirdropClaimsPage from './pages/AirdropClaimsPage';
+import DistributionsPage from './pages/DistributionsPage';
 import ProtocolAnalyticsPage from './pages/ProtocolAnalyticsPage';
 import EscapeRedeemPage from './pages/EscapeRedeemPage';
 import LpPositionsPage from './pages/LpPositionsPage';
@@ -62,11 +68,17 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import AdminTwoFactorSetupPage from './pages/AdminTwoFactorSetupPage';
 import AdminTwoFactorChallengePage from './pages/AdminTwoFactorChallengePage';
 import AdminTwoFactorGuard from './components/admin/AdminTwoFactorGuard';
+import AuditLogPage from './pages/AuditLogPage';
+import ApiDocsPage from './pages/ApiDocsPage';
 import BountyBoardPage from './pages/BountyBoardPage';
 import ManageBountyPage from './pages/ManageBountyPage';
 import GrantsPage from './pages/GrantsPage';
 import GrantDetailPage from './pages/GrantDetailPage';
 import EventsPage from './pages/EventsPage';
+import DcaPlansPage from './pages/DcaPlansPage';
+import EmbedGeneratorPage from './pages/EmbedGeneratorPage';
+import EmbedWidgetView from './components/creator/EmbedWidgetView';
+import AmbassadorDashboardPage from './pages/AmbassadorDashboardPage';
 
 function withRouteErrorBoundary(element: ReactNode, routeName: string) {
 	return (
@@ -76,7 +88,6 @@ function withRouteErrorBoundary(element: ReactNode, routeName: string) {
 
 export const routes = [
 	{
-		path: '/',
 		element: <RootLayout />,
 		children: [
 			{
@@ -121,6 +132,11 @@ export const routes = [
 				),
 			},
 			{
+				// OTC key trade escrow screen (#1383).
+				path: '/otc/:id',
+				element: withRouteErrorBoundary(<OtcTradePage />, 'OTC Trade'),
+			},
+			{
 				// Listed, rented out and rented in keys for the wallet (#1360).
 				path: '/rentals/mine',
 				element: withRouteErrorBoundary(<MyRentalsPage />, 'My rentals'),
@@ -145,6 +161,18 @@ export const routes = [
 			{
 				path: '/launches',
 				element: withRouteErrorBoundary(<LaunchesPage />, 'Launches'),
+			},
+			{
+				path: '/creator/media-kit',
+				element: withRouteErrorBoundary(<MediaKitPage />, 'Media kit'),
+			},
+			{
+				path: '/k/:handle/press',
+				element: withRouteErrorBoundary(<PublicPressPage />, 'Press page'),
+			},
+			{
+				path: '/unsubscribe/:token',
+				element: withRouteErrorBoundary(<UnsubscribePage />, 'Unsubscribe'),
 			},
 			{
 				path: '/creator/verification',
@@ -312,6 +340,32 @@ export const routes = [
 				),
 			},
 			{
+				// Dollar-cost averaging recurring purchase plans (#1470).
+				path: '/portfolio/dca',
+				element: withRouteErrorBoundary(<DcaPlansPage />, 'DCA Plans'),
+			},
+			{
+				// Creator embeddable stats badge and widget generator (#1479).
+				path: '/creator/embed',
+				element: withRouteErrorBoundary(
+					<EmbedGeneratorPage />,
+					'Embed Generator'
+				),
+			},
+			{
+				// Standalone embeddable iframe widget (#1479).
+				path: '/embed/widget/:id',
+				element: withRouteErrorBoundary(<EmbedWidgetView />, 'Key Widget'),
+			},
+			{
+				// Ambassador and affiliate dashboard (#1478).
+				path: '/ambassador',
+				element: withRouteErrorBoundary(
+					<AmbassadorDashboardPage />,
+					'Ambassador Dashboard'
+				),
+			},
+			{
 				path: '/following',
 				element: <FollowingPage />,
 			},
@@ -441,6 +495,29 @@ export const routes = [
 				),
 			},
 			{
+				// Holder-facing distribution history with combined earnings chart (#1259).
+				path: '/distributions',
+				element: withRouteErrorBoundary(
+					<DistributionsPage />,
+					'Distributions'
+				// Searchable audit log of privileged admin actions (#1415).
+				path: '/admin/audit',
+				element: (
+					<AdminTwoFactorGuard>
+						{withRouteErrorBoundary(
+							<AuditLogPage />,
+							'Admin audit log'
+				path: '/admin/referral-holds',
+				element: (
+					<AdminTwoFactorGuard>
+						{withRouteErrorBoundary(
+							<ReferralHoldsPage />,
+							'Referral holds review'
+						)}
+					</AdminTwoFactorGuard>
+				),
+			},
+			{
 				path: '/admin/login',
 				element: <AdminLoginPage />,
 			},
@@ -488,6 +565,11 @@ export const routes = [
 				element: <ApiKeysPage />,
 			},
 			{
+				// Public API documentation portal rendered from the OpenAPI spec (#1416).
+				path: '/developers/docs',
+				element: withRouteErrorBoundary(
+					<ApiDocsPage />,
+					'API documentation'
 				// Social recovery guardians and recovery approvals (#1382).
 				path: '/settings/recovery',
 				element: withRouteErrorBoundary(
