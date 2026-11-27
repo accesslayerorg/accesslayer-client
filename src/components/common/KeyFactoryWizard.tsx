@@ -57,12 +57,12 @@ const DEPLOYMENT_STATUS_COPY: Record<KeyDeploymentStatus, string> = {
  * deployment redirects to the new key's detail page.
  */
 export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
-	deployer,
+	deployer: _deployer,
 	draft,
 	onDraftChange,
 	isDeploying = false,
 	deploymentStatus = null,
-	transactionHash = null,
+	transactionHash: _transactionHash = null,
 	deployedKeyId = null,
 	onDeploy,
 	className,
@@ -73,8 +73,8 @@ export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
 
 	const step = KEY_FACTORY_STEPS[stepIndex];
 	const validation = validateKeyFactoryStep(step.value, draft);
-	const draftValidation = validateKeyFactoryDraft(draft);
-	const whitelist = useMemo(
+	const _draftValidation = validateKeyFactoryDraft(draft);
+	const _whitelist = useMemo(
 		() => parseWhitelistInput(draft.whitelistInput),
 		[draft.whitelistInput]
 	);
@@ -83,7 +83,7 @@ export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
 		showErrors ? validation.errors[field] : undefined;
 
 	const isLastStep = stepIndex === KEY_FACTORY_STEPS.length - 1;
-	const isDeploymentSettled =
+	const _isDeploymentSettled =
 		deploymentStatus === 'confirmed' || deploymentStatus === 'failed';
 
 	const handleNext = () => {
@@ -99,7 +99,7 @@ export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
 		setStepIndex(index => Math.min(index + 1, KEY_FACTORY_STEPS.length - 1));
 	};
 
-	const handleBack = () => {
+	const _handleBack = () => {
 		setShowErrors(false);
 		setStepIndex(index => Math.max(index - 1, 0));
 	};
@@ -248,164 +248,6 @@ export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
 					</div>
 				</div>
 			)}
-
-			{/* Step 2 — bonding curve config + live preview */}
-			{step.value === 'curve' && (
-				<div
-					className="mt-6 space-y-4"
-					data-testid="key-factory-step-curve"
-				>
-					<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-						<div className="space-y-1.5">
-							<label
-								htmlFor="key-factory-base-price"
-								className="text-xs font-bold uppercase tracking-[0.18em] text-white/50"
-							>
-								Base price (XLM)
-							</label>
-							<input
-								id="key-factory-base-price"
-								inputMode="decimal"
-								className={fieldClass}
-								value={draft.basePriceXlm}
-								disabled={isDeploying}
-								placeholder="1.00"
-								aria-invalid={
-									errorFor('basePriceXlm') ? 'true' : undefined
-								}
-								onChange={event =>
-									onDraftChange({ basePriceXlm: event.target.value })
-								}
-								data-testid="key-factory-base-price-input"
-							/>
-							{errorFor('basePriceXlm') && (
-								<p role="alert" className="text-xs text-red-400">
-									{errorFor('basePriceXlm')}
-								</p>
-							)}
-						</div>
-
-						<div className="space-y-1.5">
-							<label
-								htmlFor="key-factory-growth-factor"
-								className="text-xs font-bold uppercase tracking-[0.18em] text-white/50"
-							>
-								Growth factor
-							</label>
-							<input
-								id="key-factory-growth-factor"
-								inputMode="decimal"
-								className={fieldClass}
-								value={draft.growthFactor}
-								disabled={isDeploying}
-								placeholder="1.01"
-								aria-invalid={
-									errorFor('growthFactor') ? 'true' : undefined
-								}
-								onChange={event =>
-									onDraftChange({ growthFactor: event.target.value })
-								}
-								data-testid="key-factory-growth-factor-input"
-							/>
-							{errorFor('growthFactor') && (
-								<p role="alert" className="text-xs text-red-400">
-									{errorFor('growthFactor')}
-								</p>
-							)}
-						</div>
-
-						<div className="space-y-1.5">
-							<label
-								htmlFor="key-factory-max-supply"
-								className="text-xs font-bold uppercase tracking-[0.18em] text-white/50"
-							>
-								Max supply
-							</label>
-							<input
-								id="key-factory-max-supply"
-								inputMode="numeric"
-								className={fieldClass}
-								value={draft.maxSupply}
-								disabled={isDeploying}
-								placeholder="1000"
-								aria-invalid={errorFor('maxSupply') ? 'true' : undefined}
-								onChange={event =>
-									onDraftChange({ maxSupply: event.target.value })
-								}
-								data-testid="key-factory-max-supply-input"
-							/>
-							{errorFor('maxSupply') && (
-								<p role="alert" className="text-xs text-red-400">
-									{errorFor('maxSupply')}
-								</p>
-							)}
-						</div>
-					</div>
-
-					<KeyFactoryCurvePreview
-						draft={draft}
-						isValid={validateKeyFactoryStep('curve', draft).isValid}
-						className="rounded-2xl border border-white/10 bg-white/[0.02] p-4"
-					/>
-				</div>
-			)}
-
-			{/* Step 3 — auction vs direct launch */}
-			{step.value === 'launch' && (
-				<div className="mt-6 space-y-4" data-testid="key-factory-step-launch">
-					<fieldset className="space-y-3">
-						<legend className="text-xs font-bold uppercase tracking-[0.18em] text-white/50">
-							Launch mode
-						</legend>
-
-						{(
-							[
-								{
-									value: 'direct',
-									label: 'Direct launch',
-									description:
-										'The key opens for trading on the bonding curve immediately.',
-								},
-								{
-									value: 'auction',
-									label: 'Auction launch',
-									description:
-										'The first keys are sold at a fixed price to whitelisted buyers.',
-								},
-							] as const
-						).map(option => (
-							<label
-								key={option.value}
-								className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-colors hover:border-white/20"
-							>
-								<input
-									type="radio"
-									name="key-factory-launch-mode"
-									value={option.value}
-									checked={draft.launchMode === option.value}
-									disabled={isDeploying}
-									onChange={() =>
-										onDraftChange({ launchMode: option.value })
-									}
-									className="mt-1 accent-amber-400"
-									data-testid={`key-factory-launch-${option.value}`}
-								/>
-								<span className="space-y-1">
-									<span className="block text-sm font-bold text-white">
-										{option.label}
-									</span>
-									<span className="block text-xs text-white/50">
-										{option.description}
-									</span>
-								</span>
-							</label>
-						))}
-					</fieldset>
-				</div>
-			)}
 		</section>
 	);
 };
-
-export default KeyFactoryWizard;
-	

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 export interface QaSession {
 	id: string;
@@ -146,8 +146,8 @@ export function useQaSession(sessionId: string, wallet?: string) {
 	});
 
 	const session = sessionQuery.data ?? null;
-	const questions = questionsQuery.data ?? [];
-	const myVotes = votesQuery.data ?? new Set<string>();
+	const questions = useMemo(() => questionsQuery.data ?? [], [questionsQuery.data]);
+	const myVotes = useMemo(() => votesQuery.data ?? new Set<string>(), [votesQuery.data]);
 
 	const sortedQuestions = [...questions]
 		.filter(q => !q.answered)
