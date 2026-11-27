@@ -112,6 +112,10 @@ export const queryKeys = {
 			['creators', creatorId, 'whitelist'] as const,
 		earlyIncentive: (creatorId: string) =>
 			['creators', creatorId, 'early-incentive'] as const,
+		launchCap: (keyId: string, wallet?: string) =>
+			wallet
+				? (['creators', keyId, 'launch-cap', wallet] as const)
+				: (['creators', keyId, 'launch-cap'] as const),
 		secondaryPrices: (creatorId: string, range: string) =>
 			['creators', creatorId, 'secondary-prices', range] as const,
 		// Order-book depth for the market depth chart (#1220).
@@ -233,6 +237,7 @@ export const queryKeys = {
 				['admin', 'audit-log', 'list', filters ?? null] as const,
 			export: (filters?: Record<string, unknown>) =>
 				['admin', 'audit-log', 'export', filters ?? null] as const,
+		},
 		referralHolds: {
 			all: () => ['admin', 'referral-holds'] as const,
 			list: (filters: ReferralHoldFilters = {}) =>
@@ -426,10 +431,12 @@ export const queryKeys = {
 	rateLimit: {
 		all: () => ['rateLimit'] as const,
 		state: () => ['rateLimit', 'state'] as const,
+	},
 	// OpenAPI document powering the public API docs portal (#1416).
 	openapi: {
 		all: () => ['openapi'] as const,
 		document: () => ['openapi', 'document'] as const,
+	},
 	launches: {
 		all: () => ['launches'] as const,
 	},

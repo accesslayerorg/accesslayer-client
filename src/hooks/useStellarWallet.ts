@@ -99,9 +99,12 @@ const WALLET_DEFINITIONS: WalletDefinition[] = [
 	{
 		id: 'freighter',
 		name: 'Freighter',
-		isPresent: win => Boolean((win as any).freighter),
+		isPresent: win => Boolean((win as Window & Record<string, unknown>).freighter),
 		probe: win => {
-			const freighter = (win as any).freighter;
+			const freighter = (win as Window & Record<string, unknown>).freighter as {
+				isConnected?: boolean;
+				isAllowed?: boolean;
+			} | undefined;
 			if (!freighter) return undefined;
 			if (freighter.isConnected === false && freighter.isAllowed === false) {
 				return 'locked';
@@ -112,22 +115,26 @@ const WALLET_DEFINITIONS: WalletDefinition[] = [
 	{
 		id: 'xbull',
 		name: 'xBull',
-		isPresent: win => Boolean((win as any).xBullSDK || (win as any).xBull),
+		isPresent: win =>
+			Boolean(
+				(win as Window & Record<string, unknown>).xBullSDK ||
+				(win as Window & Record<string, unknown>).xBull,
+			),
 	},
 	{
 		id: 'lobstr',
 		name: 'Lobstr',
-		isPresent: win => Boolean((win as any).lobstr),
+		isPresent: win => Boolean((win as Window & Record<string, unknown>).lobstr),
 	},
 	{
 		id: 'albedo',
 		name: 'Albedo',
-		isPresent: win => Boolean((win as any).albedo),
+		isPresent: win => Boolean((win as Window & Record<string, unknown>).albedo),
 	},
 	{
 		id: 'rabet',
 		name: 'Rabet',
-		isPresent: win => Boolean((win as any).rabet),
+		isPresent: win => Boolean((win as Window & Record<string, unknown>).rabet),
 	},
 ];
 
@@ -275,7 +282,7 @@ export function useWalletDetection(): WalletDetectionState {
 		return {
 			userAgent: win?.navigator?.userAgent ?? 'unknown',
 			networkPassphrase,
-			appVersion: env.VITE_APP_VERSION ?? 'unknown',
+			appVersion: (env as { VITE_APP_VERSION?: string }).VITE_APP_VERSION ?? 'unknown',
 			extensions,
 			detectedReason,
 			detectedWalletId,

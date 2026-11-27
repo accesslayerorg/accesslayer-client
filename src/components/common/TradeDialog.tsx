@@ -30,6 +30,9 @@ import PercentageBadge from '@/components/common/PercentageBadge';
 import NetworkFeeHint from '@/components/common/NetworkFeeHint';
 import PermitAllowanceStep from '@/components/common/PermitAllowanceStep';
 import HoldingCapWarning from '@/components/common/HoldingCapWarning';
+import LaunchCapMeter from '@/components/common/LaunchCapMeter';
+import { useLaunchCap } from '@/hooks/useLaunchCap';
+import type { LaunchCapConfig } from '@/types/launchCap';
 import BuyFeeBreakdown from '@/components/common/BuyFeeBreakdown';
 import SellFeeBreakdown from '@/components/common/SellFeeBreakdown';
 import LaunchPenaltyWarning from '@/components/common/LaunchPenaltyWarning';
@@ -110,6 +113,8 @@ export interface TradeDialogProps {
 	creatorName: string;
 	/** Creator / course ID — used to look up the holding cap. */
 	creatorId?: string;
+	/** Key ID alias for creatorId (#1385). */
+	keyId?: string;
 	availableHoldings: number;
 	/** Per-key price in stroops, shown on the buy confirmation step. */
 	keyPriceStroops?: number | null;
@@ -165,11 +170,14 @@ export interface TradeDialogProps {
 	networkFeeEstimateProvider?: NetworkFeeDataProvider;
 	/** Optional wallet address override (otherwise uses wagmi account). */
 	walletAddress?: string;
-	/**
-	 * Optional signed-permit capability. When omitted or unsupported, staking
-	 * keeps the standard approve-then-transfer flow.
-	 */
-	permitConfig?: PermitAllowanceConfig;
+/** Optional launch cap configuration override (#1385). */
+launchCapConfig?: LaunchCapConfig;
+
+/**
+ * Optional signed-permit capability. When omitted or unsupported, staking
+ * keeps the standard approve-then-transfer flow.
+ */
+permitConfig?: PermitAllowanceConfig;
 }
 
 type NetworkFeeEstimateState =
@@ -181,6 +189,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	side,
 	creatorName,
 	creatorId,
+	keyId,
 	availableHoldings,
 	keyPriceStroops,
 	currentSupply,
@@ -207,7 +216,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	isSubmitting = false,
 	networkFeeEstimateProvider,
 	walletAddress,
-	permitConfig,
+launchCapConfig,
+permitConfig,
 }) => {
 	const { address } = useAccount();
 	const activeAddress = walletAddress ?? address;
@@ -244,7 +254,34 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	);
 	const capData = creatorId ? caps[creatorId] : undefined;
 	const atCap = capData ? isAtHoldingCap(capData) : false;
-	const maxBuyable = capData ? remainingCapacity(capData) : null;
+	const maxBuyable =
+		capData && capData.maxCap > 0 ? remainingCapacity(capData) : null;
+
+	// ── Launch window purchase cap (#1385) ──────────────────────────────────
+	const effectiveKeyId = keyId ?? creatorId;
+	const launchCap = useLaunchCap(effectiveKeyId, activeAddress, {
+		config: launchCapConfig,
+	});
+	const isLaunchCapActive =
+		side === 'buy' &&
+		launchCap.hasCap &&
+		!launchCap.isWindowEnded &&
+		!launchCap.isExempt;
+	const launchCapAllowance = isLaunchCapActive
+		? launchCap.remainingAllowance
+		: null;
+	const atLaunchCap =
+		isLaunchCapActive &&
+		launchCapAllowance !== null &&
+		launchCapAllowance <= 0;
+
+	const effectiveMaxBuyable = useMemo(() => {
+		const limits: number[] = [];
+		if (maxBuyable !== null) limits.push(maxBuyable);
+		if (launchCapAllowance !== null) limits.push(launchCapAllowance);
+		if (limits.length === 0) return null;
+		return Math.min(...limits);
+	}, [maxBuyable, launchCapAllowance]);
 
 	// ── Local state ───────────────────────────────────────────────────────
 	const [amountText, setAmountText] = useState('1');
@@ -368,8 +405,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		setTouched(true);
 		if (side !== 'buy') return;
 		const maxClamp =
-			maxBuyable !== null
-				? Math.min(BUY_QUANTITY_BOUNDS.MAX_QTY, maxBuyable)
+			effectiveMaxBuyable !== null
+				? Math.min(BUY_QUANTITY_BOUNDS.MAX_QTY, effectiveMaxBuyable)
 				: BUY_QUANTITY_BOUNDS.MAX_QTY;
 		const res = clampBuyQuantity(
 			amountText.trim(),
@@ -392,7 +429,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		} else {
 			setAdjustmentNote(null);
 		}
-	}, [amountText, maxBuyable, side]);
+	}, [amountText, effectiveMaxBuyable, side]);
 
 	const parsedAmount = useMemo(() => {
 		const normalized = amountText.trim();
@@ -421,6 +458,18 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 			return `You can only buy up to ${formatNumber(maxBuyable)} more key${maxBuyable !== 1 ? 's' : ''} (holding cap).`;
 		if (
 			side === 'buy' &&
+			isLaunchCapActive &&
+			launchCapAllowance !== null
+		) {
+			if (launchCapAllowance <= 0) {
+				return 'You have reached your purchase cap for this launch window.';
+			}
+			if (parsedAmount > launchCapAllowance) {
+				return `Quantity exceeds your remaining launch allowance of ${formatNumber(launchCapAllowance)} key${launchCapAllowance !== 1 ? 's' : ''}.`;
+			}
+		}
+		if (
+			side === 'buy' &&
 			maxBuyQuantity != null &&
 			parsedAmount > maxBuyQuantity
 		)
@@ -444,6 +493,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		availableHoldings,
 		atCap,
 		maxBuyable,
+		isLaunchCapActive,
+		launchCapAllowance,
 		maxBuyQuantity,
 		availableSupply,
 		isPaused,
@@ -524,6 +575,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		isCircuitBreakerBreached ||
 		exceedsLiquidityDepth ||
 		atCap ||
+		atLaunchCap ||
 		isPaused ||
 		frozen ||
 		(side === 'sell' && isFloorActive) ||
@@ -545,7 +597,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		side === 'buy'
 			? isCircuitBreakerBreached
 				? 'Circuit Breaker Tripped'
-				: atCap
+				: atCap || atLaunchCap
 					? 'Cap reached'
 					: frozen
 						? 'Key frozen'
@@ -674,11 +726,11 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		if (side === 'sell') {
 			setAmountText(String(Math.max(0, availableHoldings)));
 		} else {
-			const maxVal =
-				maxBuyQuantity != null
-					? maxBuyQuantity
-					: BUY_QUANTITY_BOUNDS.MAX_QTY;
-			setAmountText(String(maxVal));
+			const candidateLimits: number[] = [BUY_QUANTITY_BOUNDS.MAX_QTY];
+			if (maxBuyQuantity != null) candidateLimits.push(maxBuyQuantity);
+			if (effectiveMaxBuyable !== null) candidateLimits.push(effectiveMaxBuyable);
+			const maxVal = Math.min(...candidateLimits);
+			setAmountText(String(Math.max(0, maxVal)));
 		}
 	};
 
@@ -778,6 +830,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		await onConfirm(parsedAmount, pricePreview, slippageBounds);
 		if (side === 'buy' && creatorId)
 			incrementHolding(creatorId, parsedAmount);
+		if (side === 'buy' && Number.isFinite(parsedAmount) && parsedAmount > 0)
+			launchCap.recordPurchase(parsedAmount);
 	};
 
 	const isMobile = useIsMobile();
@@ -1029,6 +1083,16 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 			{/* Holding cap warning (#961) — buy side only */}
 			{side === 'buy' && capData && <HoldingCapWarning data={capData} />}
 
+			{/* Launch window purchase cap meter (#1385) — buy side only */}
+			{side === 'buy' && (
+				<LaunchCapMeter
+					keyId={effectiveKeyId}
+					wallet={activeAddress}
+					data={launchCap}
+					config={launchCapConfig}
+				/>
+			)}
+
 			<div className="space-y-2">
 				<div className="text-sm text-white/70">Amount</div>
 				<div className="relative flex items-center">
@@ -1042,12 +1106,12 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 							setAdjustmentNote(null);
 						}}
 						onBlur={handleBlur}
-						disabled={isSubmitting || atCap || isPaused || frozen || (side === 'sell' && isFloorActive)}
+						disabled={isSubmitting || atCap || atLaunchCap || isPaused || frozen || (side === 'sell' && isFloorActive)}
 						className={cn(
 							'w-full rounded-xl border bg-white/[0.04] px-3 py-2 pr-16 text-white outline-none transition-colors',
 							'border-white/10 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/15',
 							showError ? 'border-red-500/60' : '',
-							atCap || isPaused || frozen || (side === 'sell' && isFloorActive)
+							atCap || atLaunchCap || isPaused || frozen || (side === 'sell' && isFloorActive)
 								? 'opacity-40 cursor-not-allowed'
 								: ''
 						)}
@@ -1066,6 +1130,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 						disabled={
 							isSubmitting ||
 							frozen ||
+							atCap ||
+							atLaunchCap ||
 							(side === 'sell' && (availableHoldings <= 0 || isFloorActive))
 						}
 						className="absolute right-2 rounded-md border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-xs font-bold text-amber-300 transition-colors hover:bg-amber-400/20 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
@@ -1094,12 +1160,15 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 					</p>
 				)}
 
-				{side === 'buy' && maxBuyable !== null && !atCap && (
-					<p className="text-xs text-white/40">
+				{side === 'buy' && effectiveMaxBuyable !== null && !atCap && (
+					<p className="text-xs text-white/40" data-testid="buy-max-helper-text">
 						Max you can buy:{' '}
 						<span className="font-semibold text-white/60">
-							{formatNumber(maxBuyable)} key{maxBuyable !== 1 ? 's' : ''}
+							{formatNumber(effectiveMaxBuyable)} key{effectiveMaxBuyable !== 1 ? 's' : ''}
 						</span>
+						{isLaunchCapActive && launchCapAllowance !== null && effectiveMaxBuyable === launchCapAllowance
+							? ' (launch allowance)'
+							: ''}
 					</p>
 				)}
 
@@ -1315,6 +1384,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 					await onConfirm(parsedAmount, pricePreview, slippageBounds);
 					if (side === 'buy' && creatorId)
 						incrementHolding(creatorId, parsedAmount);
+					if (side === 'buy' && Number.isFinite(parsedAmount) && parsedAmount > 0)
+						launchCap.recordPurchase(parsedAmount);
 					setConfirmationOpen(false);
 				}}
 				onCancel={() => setConfirmationOpen(false)}

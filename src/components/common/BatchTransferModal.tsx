@@ -82,7 +82,7 @@ export default function BatchTransferModal({
 		() =>
 			new Set(
 				(enforcement?.approvedMarketplaces ?? []).map(m =>
-					m.toUpperCase()
+					m.address.toUpperCase()
 				)
 			),
 		[enforcement]
@@ -454,7 +454,7 @@ export default function BatchTransferModal({
 						className="rounded-xl bg-amber-500 text-slate-900 hover:bg-amber-400 disabled:opacity-40"
 						data-testid="batch-transfer-submit"
 					>
-						<StableButtonContent loading={isSubmitting}>
+						<StableButtonContent isLoading={isSubmitting}>
 							Confirm Transfer
 						</StableButtonContent>
 					</Button>

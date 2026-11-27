@@ -38,7 +38,7 @@ export function CollectionDetailPage() {
     );
   }
 
-  const isEditor = user?.role === 'editor';
+  const isEditor = user?.role === 'INSTRUCTOR' || user?.role === 'BOTH';
 
   return (
     <>

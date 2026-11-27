@@ -29,3 +29,8 @@ export interface OutcomeAtPrice {
   profitLoss: number;
   returnPercent: number;
 }
+
+export interface TriggerValidation {
+  valid: boolean;
+  message: string;
+}
