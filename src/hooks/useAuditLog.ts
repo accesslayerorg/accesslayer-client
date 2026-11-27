@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import {
   useInfiniteQuery,
   type InfiniteData,
@@ -40,6 +40,7 @@ export interface UseAuditLogResult {
   hasNextPage: boolean;
   fetchNextPage: () => void;
   isFetchingNextPage: boolean;
+  refetch: () => Promise<unknown>;
 }
 
 const SECRET_KEY_PATTERN =
@@ -144,7 +145,7 @@ export function useAuditLog(): UseAuditLogResult {
   const setFilter = useCallback(
     (key: keyof AuditLogFilters, value: string) => {
       setSearchParams(
-        (prev) => {
+        (prev: URLSearchParams) => {
           const next = new URLSearchParams(prev);
           if (value) {
             next.set(key, value);
@@ -161,7 +162,7 @@ export function useAuditLog(): UseAuditLogResult {
 
   const clearFilters = useCallback(() => {
     setSearchParams(
-      (prev) => {
+      (prev: URLSearchParams) => {
         const next = new URLSearchParams(prev);
         for (const key of FILTER_KEYS) {
           next.delete(key);
@@ -203,6 +204,7 @@ export function useAuditLog(): UseAuditLogResult {
     hasNextPage: Boolean(query.hasNextPage),
     fetchNextPage,
     isFetchingNextPage: query.isFetchingNextPage,
+    refetch: query.refetch,
   };
 }
 

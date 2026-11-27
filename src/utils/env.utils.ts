@@ -38,6 +38,7 @@ const envSchema = z.object({
 	VITE_UTM_CAMPAIGN: z.string().optional(),
 	VITE_UTM_TERM: z.string().optional(),
 	VITE_UTM_CONTENT: z.string().optional(),
+	VITE_APP_VERSION: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -61,4 +62,5 @@ export const env = envSchema.parse({
 	VITE_UTM_CAMPAIGN: import.meta.env.VITE_UTM_CAMPAIGN,
 	VITE_UTM_TERM: import.meta.env.VITE_UTM_TERM,
 	VITE_UTM_CONTENT: import.meta.env.VITE_UTM_CONTENT,
+	VITE_APP_VERSION: import.meta.env.VITE_APP_VERSION,
 });

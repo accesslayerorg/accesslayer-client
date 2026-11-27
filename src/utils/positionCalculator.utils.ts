@@ -5,8 +5,8 @@
 import type {
   PositionCalculatorInputs,
   OutcomeAtPrice,
-  TriggerValidation,
 } from '@/types/positionCalculator.types';
+import type { TriggerValidation } from '@/types/holdingTrigger.types';
 
 /**
  * Calculate break-even price including all fees.

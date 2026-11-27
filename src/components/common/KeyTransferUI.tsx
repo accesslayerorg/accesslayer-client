@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAddressBook, validateAddressBookInput } from '@/hooks/useAddressBook';
-import { useRoyaltyEnforcement } from '@/hooks/useRoyaltyEnforcement';
+import { useRoyaltyEnforcement } from '@/hooks/useKeyConfig';
 import { Loader, Send, CheckCircle, Clock, ShieldAlert } from 'lucide-react';
 import showToast from '@/utils/toast.util';
 
@@ -65,7 +65,7 @@ export default function KeyTransferUI({
 	const addToAddressBook = useAddressBook(state => state.add);
 
 	const { data: enforcement } = useRoyaltyEnforcement(keyId);
-	const enforcementOn = !!enforcement?.enabled;
+	const enforcementOn = !!enforcement?.enforced;
 	const recipientIsApprovedMarketplace =
 		!!resolvedRecipient &&
 		!!enforcement?.approvedMarketplaces?.some(
@@ -350,7 +350,7 @@ export default function KeyTransferUI({
 								</div>
 
 								{enforcementOn && resolvedRecipient && !recipientIsApprovedMarketplace && (
-									<Alert variant="destructive">
+									<Alert className="border-destructive/40 text-destructive">
 										<AlertDescription>
 											This recipient is not an approved marketplace. The
 											transfer will be blocked under royalty enforcement.

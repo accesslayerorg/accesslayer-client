@@ -233,6 +233,7 @@ export const queryKeys = {
 				['admin', 'audit-log', 'list', filters ?? null] as const,
 			export: (filters?: Record<string, unknown>) =>
 				['admin', 'audit-log', 'export', filters ?? null] as const,
+		},
 		referralHolds: {
 			all: () => ['admin', 'referral-holds'] as const,
 			list: (filters: ReferralHoldFilters = {}) =>
@@ -426,10 +427,12 @@ export const queryKeys = {
 	rateLimit: {
 		all: () => ['rateLimit'] as const,
 		state: () => ['rateLimit', 'state'] as const,
+	},
 	// OpenAPI document powering the public API docs portal (#1416).
 	openapi: {
 		all: () => ['openapi'] as const,
 		document: () => ['openapi', 'document'] as const,
+	},
 	launches: {
 		all: () => ['launches'] as const,
 	},

@@ -1,13 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 import { courseService, type KeyConfig } from '@/services/course.service';
-import { api } from '@/lib/api';
+import {
+	royaltyService,
+	type ApprovedMarketplace,
+	type RoyaltyEnforcementStatus,
+} from '@/services/royalty.service';
 
-export interface RoyaltyEnforcement {
-	enabled: boolean;
-	locked: boolean;
-	approvedMarketplaceIds: string[];
-}
+export type RoyaltyEnforcement = RoyaltyEnforcementStatus & {
+	approvedMarketplaces: ApprovedMarketplace[];
+};
 
 /**
  * Fetches royalty enforcement status for a creator key.
@@ -19,8 +21,11 @@ export function useRoyaltyEnforcement(keyId: string | undefined) {
 	return useQuery<RoyaltyEnforcement>({
 		queryKey: ['keys', keyId ?? '', 'royalty-enforcement'],
 		queryFn: async () => {
-			const res = await api.get<RoyaltyEnforcement>(`/v1/keys/${keyId}/royalty-enforcement`);
-			return res.data;
+			const [status, approvedMarketplaces] = await Promise.all([
+				royaltyService.getRoyaltyEnforcement(keyId!),
+				royaltyService.getApprovedMarketplaces(),
+			]);
+			return { ...status, approvedMarketplaces };
 		},
 		enabled: Boolean(keyId),
 		staleTime: 30_000,
