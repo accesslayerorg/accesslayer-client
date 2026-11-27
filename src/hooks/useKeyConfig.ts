@@ -1,6 +1,32 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 import { courseService, type KeyConfig } from '@/services/course.service';
+import { api } from '@/lib/api';
+
+export interface RoyaltyEnforcement {
+	enabled: boolean;
+	locked: boolean;
+	approvedMarketplaceIds: string[];
+}
+
+/**
+ * Fetches royalty enforcement status for a creator key.
+ *
+ * Used to show the enforcement badge, restrict direct wallet transfers,
+ * and warn when a recipient is not an approved marketplace.
+ */
+export function useRoyaltyEnforcement(keyId: string | undefined) {
+	return useQuery<RoyaltyEnforcement>({
+		queryKey: ['keys', keyId ?? '', 'royalty-enforcement'],
+		queryFn: async () => {
+			const res = await api.get<RoyaltyEnforcement>(`/v1/keys/${keyId}/royalty-enforcement`);
+			return res.data;
+		},
+		enabled: Boolean(keyId),
+		staleTime: 30_000,
+		retry: false,
+	});
+}
 
 /**
  * Fetches the live trading config for a creator key (#951).

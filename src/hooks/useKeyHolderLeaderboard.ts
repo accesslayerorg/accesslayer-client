@@ -1,3 +1,4 @@
+
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import {
@@ -11,6 +12,7 @@ export interface UseKeyHolderLeaderboardOptions {
 	metric: KeyHolderLeaderboardMetric;
 	userWallet?: string;
 	pageSize?: number;
+	enabled?: boolean;
 }
 
 /**
@@ -24,6 +26,7 @@ export function useKeyHolderLeaderboard(
 	const metric: KeyHolderLeaderboardMetric = options?.metric ?? 'volume';
 	const userWallet = options?.userWallet;
 	const pageSize = options?.pageSize ?? 10;
+	const enabled = options?.enabled ?? true;
 
 	const query = useInfiniteQuery({
 		queryKey: queryKeys.creators.holderLeaderboard(keyId, metric, userWallet),
@@ -38,12 +41,13 @@ export function useKeyHolderLeaderboard(
 		initialPageParam: null as string | null,
 		getNextPageParam: lastPage =>
 			lastPage?.hasMore ? lastPage.nextCursor : undefined,
-		enabled: !!keyId,
+		enabled: Boolean(keyId) && enabled,
 	});
 
 	const entries = useMemo<KeyHolderLeaderboardEntry[]>(() => {
 		const seen = new Set<string>();
 		const result: KeyHolderLeaderboardEntry[] = [];
+
 		for (const page of query.data?.pages ?? []) {
 			for (const entry of page.entries) {
 				const uniqueKey = `${entry.rank}:${entry.walletAddress}`;
@@ -52,6 +56,7 @@ export function useKeyHolderLeaderboard(
 				result.push(entry);
 			}
 		}
+
 		return result;
 	}, [query.data]);
 
@@ -65,12 +70,14 @@ export function useKeyHolderLeaderboard(
 			);
 			if (found) return found;
 		}
+
 		return null;
 	}, [query.data, entries, userWallet]);
 
 	const isUserInTop10 = useMemo(() => {
 		if (!userWallet) return false;
 		const normalized = userWallet.toLowerCase();
+
 		return entries
 			.slice(0, 10)
 			.some(e => e.walletAddress.toLowerCase() === normalized);

@@ -42,6 +42,30 @@ export interface RoyaltyClaim {
   transactionHash: string;
 }
 
+/**
+ * Royalty enforcement status for a key (marketplace-restricted transfers).
+ */
+export interface RoyaltyEnforcementStatus {
+  /** Whether transfers are restricted to approved marketplaces. */
+  enforced: boolean;
+  /** True when the setting can no longer be changed (holder threshold reached). */
+  locked: boolean;
+  /** Holder count at which the setting locks, when applicable. */
+  lockThreshold?: number;
+  /** Current number of holders. */
+  holderCount?: number;
+}
+
+export interface ApprovedMarketplace {
+  id: string;
+  name: string;
+  url: string;
+  /** ISO date the marketplace was approved. */
+  approvedAt: string;
+  /** Stellar address used as transfer recipient for this marketplace. */
+  address: string;
+}
+
 const ROYALTY_CACHE_PREFIX = 'royalty_earnings_';
 const ROYALTY_CACHE_TTL_MS = 30_000;
 
@@ -72,6 +96,28 @@ class RoyaltyService extends BaseApiService {
       );
       // A successful claim changes every number on the card; drop the cache.
       cacheManager.invalidate(cacheKey(keyId, wallet));
+      return response.data.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getRoyaltyEnforcement(keyId: string): Promise<RoyaltyEnforcementStatus> {
+    try {
+      const response = await this.api.get<APIResponse<RoyaltyEnforcementStatus>>(
+        `/v1/keys/${keyId}/royalty-enforcement`
+      );
+      return response.data.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getApprovedMarketplaces(): Promise<ApprovedMarketplace[]> {
+    try {
+      const response = await this.api.get<APIResponse<ApprovedMarketplace[]>>(
+        '/v1/marketplaces'
+      );
       return response.data.data;
     } catch (error) {
       throw this.handleError(error);

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router';
 import {
 	Dialog,
 	DialogContent,
@@ -116,6 +117,13 @@ export function ShareModal({
 					>
 						Share your creator key purchase on X and invite others to trade with your referral link to earn rewards.
 					</DialogDescription>
+					<Link
+						to="/learn/bonding-curve"
+						data-testid="first-buy-explainer-link"
+						className="font-jakarta text-xs font-bold text-amber-300 hover:underline"
+					>
+						New to keys? Learn how prices move
+					</Link>
 				</DialogHeader>
 
 				<div className="space-y-4 py-2">

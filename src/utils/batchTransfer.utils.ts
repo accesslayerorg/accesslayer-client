@@ -71,7 +71,8 @@ export function calculateTotalBatchTransferKeys(
  */
 export function validateBatchTransferRows(
 	rows: BatchTransferRecipientRow[],
-	liquidBalance: number
+	liquidBalance: number,
+	resolvedAddresses?: Record<string, string | null>
 ): BatchTransferValidationResult {
 	const rowErrors: Record<string, BatchTransferRowValidation> = {};
 	let totalKeys = 0;
@@ -88,6 +89,22 @@ export function validateBatchTransferRows(
 			errors.addressError = 'Wallet address is required';
 			errors.isValid = false;
 			hasRowError = true;
+		} else if (trimmedAddress.includes('*')) {
+			const resolved = resolvedAddresses?.[row.id];
+			if (resolved && isValidStellarWalletAddress(resolved)) {
+				const upper = normalizeWalletAddress(resolved);
+				if (seenAddresses.has(upper)) {
+					errors.addressError = 'Duplicate recipient address';
+					errors.isValid = false;
+					hasRowError = true;
+				} else {
+					seenAddresses.set(upper, row.id);
+				}
+			} else {
+				errors.addressError = 'Valid Stellar address required';
+				errors.isValid = false;
+				hasRowError = true;
+			}
 		} else if (!isValidStellarWalletAddress(trimmedAddress)) {
 			errors.addressError =
 				'Invalid Stellar address (must start with G and be 56 characters)';

@@ -10,6 +10,7 @@ import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from '@tansta
 import { Address } from '@stellar/stellar-sdk';
 import { CircleDollarSign, Loader2, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { adminService, type AllocateFundsInput } from '@/services/admin.service';
 import { formatStroops, parseXlmToStroops } from '@/utils/treasury.utils';
 import showToast from '@/utils/toast.util';
@@ -188,6 +189,8 @@ function AllocateForm({ adminAddress, onSuccess }: AllocateFormProps) {
 }
 
 export default function TreasuryManagementDashboard({ adminAddress }: { adminAddress: string }) {
+	const reducedMotion = useReducedMotion();
+
 	// Balance
 	const balance = useQuery({
 		queryKey: ['treasury', 'balance'],
@@ -277,6 +280,7 @@ export default function TreasuryManagementDashboard({ adminAddress }: { adminAdd
 											innerRadius={44}
 											outerRadius={70}
 											strokeWidth={0}
+											isAnimationActive={!reducedMotion}
 										>
 											{breakdown.data.map((entry, index) => (
 												<Cell

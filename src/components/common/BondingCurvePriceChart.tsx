@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { useCreatorDetail, usePriceHistory } from '@/hooks/useCreators';
 import { useKeyStats } from '@/hooks/useKeyStats';
 import { useRealtimeKeyPrice } from '@/hooks/useRealtimeKeyPrice';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type { PriceHistoryInterval } from '@/services/course.service';
 import {
 	formatCreatorKeyPriceDisplay,
@@ -77,6 +78,8 @@ export function BondingCurvePriceChart({
 	const { data: creator, isLoading: isCreatorLoading } =
 		useCreatorDetail(creatorId);
 	const { isLive, lastUpdatedAt } = useRealtimeKeyPrice(creatorId, range);
+
+	const reducedMotion = useReducedMotion();
 
 	const data = useMemo(() => points ?? [], [points]);
 
@@ -269,6 +272,7 @@ export function BondingCurvePriceChart({
 								strokeWidth={2}
 								dot={{ fill: '#34d399', r: 3, strokeWidth: 0 }}
 								activeDot={{ r: 5 }}
+								isAnimationActive={!reducedMotion}
 							/>
 						</LineChart>
 					</ResponsiveContainer>

@@ -5,6 +5,8 @@ import { useGovernanceProposals } from '@/hooks/useGovernanceProposals';
 import { useWalletHoldings } from '@/hooks/useWallet';
 import ProposalCard from '@/components/common/ProposalCard';
 import ProposalVoteModal from '@/components/common/ProposalVoteModal';
+import CreateProposalDialog from '@/components/common/CreateProposalDialog';
+import { Button } from '@/components/ui/button';
 import type { Proposal, ProposalStatus } from '@/types/governance';
 import { cn } from '@/lib/utils';
 import { ArrowLeft, Filter } from 'lucide-react';
@@ -75,18 +77,38 @@ function GovernancePageContent() {
 				</Link>
 
 				{/* Header */}
-				<div className="mb-8">
-					<p className="font-mono text-[10px] uppercase tracking-[0.22em] text-amber-400/80">
-						Governance
-					</p>
-					<h1 className="mt-1 font-jakarta text-3xl font-black tracking-tight sm:text-4xl">
-						Proposals
-					</h1>
-					<p className="mt-2 max-w-lg text-sm text-white/50">
-						{activeCount > 0
-							? `${activeCount} active proposal${activeCount === 1 ? '' : 's'} require${activeCount === 1 ? 's' : ''} your vote.`
-							: 'No active proposals at the moment.'}
-					</p>
+				<div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+					<div>
+						<p className="font-mono text-[10px] uppercase tracking-[0.22em] text-amber-400/80">
+							Governance
+						</p>
+						<h1 className="mt-1 font-jakarta text-3xl font-black tracking-tight sm:text-4xl">
+							Proposals
+						</h1>
+						<p className="mt-2 max-w-lg text-sm text-white/50">
+							{activeCount > 0
+								? `${activeCount} active proposal${activeCount === 1 ? '' : 's'} require${activeCount === 1 ? 's' : ''} your vote.`
+								: 'No active proposals at the moment.'}
+						</p>
+						<Link
+							to="/governance/activity"
+							className="mt-2 inline-block text-xs font-semibold text-amber-300/80 hover:text-amber-200 hover:underline"
+						>
+							View admin & privileged change activity
+						</Link>
+					</div>
+					<CreateProposalDialog
+						trigger={
+							<Button
+								type="button"
+								size="sm"
+								data-testid="governance-create-proposal"
+								className="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 font-bold text-amber-300 hover:bg-amber-400/20"
+							>
+								Create Proposal
+							</Button>
+						}
+					/>
 				</div>
 
 				{/* Filters */}

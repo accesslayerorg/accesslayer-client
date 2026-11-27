@@ -15,6 +15,9 @@ const envSchema = z.object({
 	VITE_HORIZON_URL: z.string().optional(),
 	VITE_STELLAR_NETWORK: z.enum(['mainnet', 'testnet']).default('testnet'),
 	VITE_CREATOR_KEYS_CONTRACT_ID: z.string().optional(),
+	// Key rental contract (#1360). Leave unset to show rentals as not yet live
+	// and keep every rental action disabled.
+	VITE_KEY_RENTAL_CONTRACT_ID: z.string().optional(),
 	// WebSocket endpoint broadcasting real-time key-price updates (#1115).
 	// Leave unset to disable the live feed — charts fall back to polled data.
 	VITE_WEBSOCKET_URL: z.string().optional(),
@@ -25,6 +28,10 @@ const envSchema = z.object({
 	// through the key factory (#959). Leaving this unset fails closed and hides
 	// the deployment wizard.
 	VITE_KEY_FACTORY_WHITELIST: z.string().optional(),
+	// Embedded (passkey/email) wallets (#1477): transactions moving more than
+	// this many XLM, or an amount the client cannot read, need a fresh passkey
+	// confirmation. The server must enforce its own limit as well.
+	VITE_EMBEDDED_REAUTH_THRESHOLD_XLM: z.coerce.number().nonnegative().default(100),
 	// UTM configuration for share links. Optional — when not provided, share URLs remain unchanged.
 	VITE_UTM_SOURCE: z.string().optional(),
 	VITE_UTM_MEDIUM: z.string().optional(),
@@ -44,9 +51,11 @@ export const env = envSchema.parse({
 	VITE_HORIZON_URL: import.meta.env.VITE_HORIZON_URL,
 	VITE_STELLAR_NETWORK: import.meta.env.VITE_STELLAR_NETWORK,
 	VITE_CREATOR_KEYS_CONTRACT_ID: import.meta.env.VITE_CREATOR_KEYS_CONTRACT_ID,
+	VITE_KEY_RENTAL_CONTRACT_ID: import.meta.env.VITE_KEY_RENTAL_CONTRACT_ID,
 	VITE_WEBSOCKET_URL: import.meta.env.VITE_WEBSOCKET_URL,
 	VITE_ADMIN_WALLETS: import.meta.env.VITE_ADMIN_WALLETS,
 	VITE_KEY_FACTORY_WHITELIST: import.meta.env.VITE_KEY_FACTORY_WHITELIST,
+	VITE_EMBEDDED_REAUTH_THRESHOLD_XLM: import.meta.env.VITE_EMBEDDED_REAUTH_THRESHOLD_XLM,
 	VITE_UTM_SOURCE: import.meta.env.VITE_UTM_SOURCE,
 	VITE_UTM_MEDIUM: import.meta.env.VITE_UTM_MEDIUM,
 	VITE_UTM_CAMPAIGN: import.meta.env.VITE_UTM_CAMPAIGN,

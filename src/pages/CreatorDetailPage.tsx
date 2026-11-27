@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreatorDetail, usePriceHistory } from '@/hooks/useCreators';
 import { useKeyFreeze } from '@/hooks/useKeyFreeze';
@@ -18,6 +18,7 @@ import CreatorProfileHeader from '@/components/common/CreatorProfileHeader';
 import CreatorSocialSection from '@/components/common/CreatorSocialSection';
 import CreatorProfileInfoGrid from '@/components/common/CreatorProfileInfoGrid';
 import CreatorActivityFeed from '@/components/common/CreatorActivityFeed';
+import RelatedKeysCarousel from '@/components/common/RelatedKeysCarousel';
 import AnnouncementFeed from '@/components/common/AnnouncementFeed';
 import SecondaryMarketSellPanel from '@/components/common/SecondaryMarketSellPanel';
 import ActiveAuctionCard from '@/components/common/ActiveAuctionCard';
@@ -30,6 +31,11 @@ import BondingCurveChart from '@/components/common/BondingCurveChart';
 import KeySimulationTool from '@/components/common/KeySimulationTool';
 import BuyCooldownCountdown from '@/components/common/BuyCooldownCountdown';
 import KeyHolderList from '@/components/common/KeyHolderList';
+import CommentSection from '@/components/common/CommentSection';
+import KeySocialFeed from '@/components/common/KeySocialFeed';
+import KeyHolderLeaderboard from '@/components/common/KeyHolderLeaderboard';
+import KeyRatingSummary from '@/components/common/KeyRatingSummary';
+import RatingForm from '@/components/common/RatingForm';
 import HolderConcentrationChart from '@/components/common/HolderConcentrationChart';
 import HolderConcentrationHeatmap from '@/components/common/HolderConcentrationHeatmap';
 import HolderSnapshotHistory from '@/components/common/HolderSnapshotHistory';
@@ -45,11 +51,16 @@ import SectionErrorBoundary from '@/components/common/SectionErrorBoundary';
 import { isKeyDeprecated } from '@/utils/keyDeprecation.utils';
 import { Button } from '@/components/ui/button';
 import { CreatorDashboardSkeleton } from '@/components/common/CreatorSkeleton';
-import { bpsToPercent, formatNumber } from '@/utils/numberFormat.utils';
+import {
+	bpsToPercent,
+	formatHolderCount,
+	formatNumber,
+} from '@/utils/numberFormat.utils';
 import {
 	resolveCreatorKeyPriceStroops,
 	formatDisplayKeyPrice,
 } from '@/utils/keyPriceDisplay.utils';
+import { resolveCreatorKeyHolderCount } from '@/utils/creatorProfile.utils';
 import {
 	resolveHighestBid,
 	formatAuctionBidAmount,
@@ -59,8 +70,10 @@ import { ApiError } from '@/services/api.service';
 import WatchlistButton from '@/components/common/WatchlistButton';
 import AuctionPhaseSection from '@/components/common/AuctionPhaseSection';
 import { useAuctionPhase } from '@/hooks/useAuctionPhase';
+import CommitRevealPanel from '@/components/common/CommitRevealPanel';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useKeyHolders } from '@/hooks/useKeyHolders';
+import { useKeyRatings, useSubmitKeyRatingMutation } from '@/hooks/useKeyRatings';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import { useWalletHoldings, useTradeMutation } from '@/hooks/useWallet';
 import KeyMintProgressSection from '@/components/common/KeyMintProgressSection';
@@ -85,7 +98,6 @@ import { useKeyOraclePrice } from '@/hooks/useKeyOraclePrice';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 import { usePurchaseConfetti } from '@/hooks/usePurchaseConfetti';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useKeyTwap, type TwapWindow } from '@/hooks/useKeyTwap';
 import { useKeyStats } from '@/hooks/useKeyStats';
 import { useKeyUniqueTraders } from '@/hooks/useKeyUniqueTraders';
@@ -114,6 +126,11 @@ import type { KeyBuybackReceipt } from '@/hooks/useKeyBuyback';
 import { usePerformanceBond } from '@/hooks/usePerformanceBond';
 import PerformanceBondPanel from '@/components/common/PerformanceBondPanel';
 import WhitelistStatusBadge from '@/components/common/WhitelistStatusBadge';
+import FlagKeyModal from '@/components/common/FlagKeyModal';
+import FlagProgress from '@/components/common/FlagProgress';
+import FrozenForReviewBanner from '@/components/common/FrozenForReviewBanner';
+import { useKeyFlags, useFlagKeyMutation } from '@/hooks/useKeyFlags';
+import { Flag } from 'lucide-react';
 import ShareModal from '@/components/common/ShareModal';
 import SubscriptionInvestmentPanel from '@/components/common/SubscriptionInvestmentPanel';
 import PriceAlertButton from '@/components/common/PriceAlertButton';
@@ -133,12 +150,37 @@ import {
 	isKeyLockupActive,
 } from '@/hooks/useKeyLockup';
 import { formatUnlockCountdown } from '@/utils/lockupCountdown.utils';
+import RentalEscrowNotice from '@/components/rentals/RentalEscrowNotice';
+import { useWalletRentals } from '@/hooks/useKeyRentals';
+import {
+	getEscrowedKeyQuantity,
+	RENTAL_ESCROW_REASON,
+} from '@/utils/keyRental.utils';
 import KeyLockupBadge from '@/components/common/KeyLockupBadge';
 import { useAccount } from 'wagmi';
 import { useKeyMarketMaker } from '@/hooks/useKeyMarketMaker';
 import { MarketMakerChip, MMBadge } from '@/components/common/MarketMakerChip';
 import KeyHolderLeaderboardPanel from '@/components/common/KeyHolderLeaderboardPanel';
 
+import ReportKeyModal from '@/components/common/ReportKeyModal';
+import ShareQrModal from '@/components/common/ShareQrModal';
+import PageMeta from '@/components/common/PageMeta';
+import { useTheme } from '@/providers/themeContext';
+import {
+	generatePalette,
+	createCreatorAccentStyle,
+	readStoredCreatorAccent,
+} from '@/utils/accentPalette.utils';
+import { buildCreatorProfileReferralLink } from '@/utils/referral.utils';
+import { Bell, QrCode } from 'lucide-react';
+import RetirementExitPanel from '@/components/common/RetirementExitPanel';
+import RetirementNoticeEmailCard from '@/components/common/RetirementNoticeEmailCard';
+import PriceAlertForm from '@/components/common/PriceAlertForm';
+import {
+	buildCanonicalUrl,
+	buildCreatorShareImageUrl,
+} from '@/utils/seo.utils';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
 /** Series shown in the key detail price panel (#1220 adds the depth tab, #1203 adds the leaderboard tab). */
 type PriceChartTab = 'primary' | 'secondary' | 'depth' | 'revenue' | 'leaderboard';
 
@@ -160,20 +202,27 @@ function CreatorDetailPageContent() {
 
 	const [hasMounted, setHasMounted] = useState(false);
 	const [buybackModalOpen, setBuybackModalOpen] = useState(false);
+	const [flagModalOpen, setFlagModalOpen] = useState(false);
+	const [showAlertForm, setShowAlertForm] = useState(false);
 	const [recentSettlement, setRecentSettlement] =
 		useState<KeyBuybackReceipt | null>(null);
 	const [shareModalOpen, setShareModalOpen] = useState(false);
+	const [reportKeyModalOpen, setReportKeyModalOpen] = useState(false);
 	const [lastPurchasedAmount, setLastPurchasedAmount] = useState<
 		number | null
 	>(null);
 	const [deprecationDismissed, setDeprecationDismissed] = useState(false);
 	const [buyDialogOpen, setBuyDialogOpen] = useState(false);
+	const [retirementSellQuantity, setRetirementSellQuantity] = useState<
+		number | null
+	>(null);
 	const [tradeSide, setTradeSide] = useState<TradeSide>('buy');
 	const [tradeSubmitting, setTradeSubmitting] = useState(false);
 	const [interval, setInterval] = useState<PriceHistoryInterval>('24h');
 	const [priceChartTab, setPriceChartTab] = useState<PriceChartTab>('primary');
 	const [secondaryRange, setSecondaryRange] =
 		useState<SecondaryPriceRange>('7d');
+	const [qrModalOpen, setQrModalOpen] = useState(false);
 
 	const {
 		data: creator,
@@ -182,6 +231,18 @@ function CreatorDetailPageContent() {
 		isFetching,
 		refetch,
 	} = useCreatorDetail(id || '');
+
+	const { resolvedTheme } = useTheme();
+	const creatorAccent = creator?.accentColor ?? (creator?.id ? readStoredCreatorAccent(creator.id) : null);
+	const creatorAccentStyle = useMemo(() => {
+		if (!creatorAccent) return undefined;
+		try {
+			const palette = generatePalette(creatorAccent);
+			return createCreatorAccentStyle(palette, resolvedTheme) as React.CSSProperties;
+		} catch {
+			return undefined;
+		}
+	}, [creatorAccent, resolvedTheme]);
 
 	const { data: priceHistory, isLoading: isPriceHistoryLoading } =
 		usePriceHistory(id || '', interval);
@@ -198,7 +259,6 @@ function CreatorDetailPageContent() {
 	);
 
 	useNavigationTiming('creator_profile');
-	useDocumentTitle(creator ? `${creator.title} — AccessLayer` : null);
 
 	useEffect(() => {
 		setHasMounted(true);
@@ -232,6 +292,42 @@ function CreatorDetailPageContent() {
 
 	const userPosition = holdings.find(h => h.creatorId === (id || ''));
 	const holdingsCount = userPosition?.quantity ?? 0;
+	const isHolder = holdingsCount > 0;
+
+	const {
+		ratings,
+		summary: ratingSummary,
+		isLoading: isRatingsLoading,
+	} = useKeyRatings(id || '');
+	const submitRatingMutation = useSubmitKeyRatingMutation(
+		id || '',
+		userAddress
+	);
+	const existingUserRating = useMemo(
+		() =>
+			ratings.find(
+				rating =>
+					userAddress &&
+					rating.walletAddress.toLowerCase() === userAddress.toLowerCase()
+			) ?? null,
+		[ratings, userAddress]
+	);
+
+	const retirementPending =
+		creator?.isRetiring === true && !creator.retirementExecutedAt;
+
+	// #1360 — keys listed for rent stay escrowed by the rental contract: they
+	// cannot be sold, transferred or staked until the rental ends.
+	const { data: walletRentals } = useWalletRentals(userAddress);
+	const rentalEscrowedQuantity = getEscrowedKeyQuantity(
+		walletRentals ?? [],
+		userAddress,
+		id || ''
+	);
+	const tradableHoldingsCount = Math.max(
+		0,
+		holdingsCount - rentalEscrowedQuantity
+	);
 
 	// #1163 — wallet-scoped lock-up status: while active, selling is
 	// disabled with a LockupActive reason and a live unlock countdown.
@@ -283,24 +379,34 @@ function CreatorDetailPageContent() {
 		isError: isPerformanceBondError,
 	} = usePerformanceBond(id || '');
 
-	const {
-		data: earlyIncentive,
-		isLoading: isEarlyIncentiveLoading,
-	} = useEarlyIncentive(id || '');
+	const { data: earlyIncentive, isLoading: isEarlyIncentiveLoading } =
+		useEarlyIncentive(id || '');
 
-	const {
-		data: secondaryPrices,
-		isLoading: isSecondaryPricesLoading,
-	} = useSecondaryPrices(id || '', secondaryRange);
+	const { data: secondaryPrices, isLoading: isSecondaryPricesLoading } =
+		useSecondaryPrices(id || '', secondaryRange);
 
-	const {
-		data: paymentSchedule,
-		isLoading: isPaymentScheduleLoading,
-	} = usePaymentSchedule(id || '');
+	const { data: paymentSchedule, isLoading: isPaymentScheduleLoading } =
+		usePaymentSchedule(id || '');
 
 	const performanceBond =
 		performanceBondData ?? creator?.performanceBond ?? null;
 
+	// Stake-weighted community flagging (#1386): flag progress, the
+	// auto-freeze state that disables trading, and this wallet's own flag.
+	const {
+		flagCount,
+		threshold,
+		autoFrozen,
+		reviewStatus,
+		frozenAt,
+		requiredStakeStroops,
+		userFlag,
+		resolution,
+		isLoading: isKeyFlagsLoading,
+	} = useKeyFlags(id || '', userAddress);
+	const flagKeyMutation = useFlagKeyMutation(id || '', userAddress);
+
+	// Whitelist gate check for early access keys (#1031)
 	const { phase: auctionPhase } = useAuctionPhase({
 		auctionPrice: creator?.auctionPrice ?? null,
 		auctionSupply: creator?.auctionSupply ?? null,
@@ -352,11 +458,13 @@ function CreatorDetailPageContent() {
 
 	const buyDisabledReason = !userAddress
 		? 'Connect your wallet to buy this key.'
-		: auctionPhase === 'active'
-			? 'Key is currently in launch auction. Place a bid below to participate.'
-			: isLockedOut
-				? 'Early access is restricted to approved whitelisted wallets.'
-				: undefined;
+		: creator?.isRetiring && !creator.retirementExecutedAt
+			? 'New buys are disabled during the retirement notice period.'
+			: auctionPhase === 'active'
+				? 'Key is currently in launch auction. Place a bid below to participate.'
+				: isLockedOut
+					? 'Early access is restricted to approved whitelisted wallets.'
+					: undefined;
 
 	const {
 		data: onChainMetadata,
@@ -492,9 +600,60 @@ function CreatorDetailPageContent() {
 		}
 	};
 
+	const creatorHandle =
+		creator?.socialHandle?.trim() || creator?.instructorId || '';
+	const canonicalUrl = creator
+		? buildCanonicalUrl(`/keys/${encodeURIComponent(creator.id)}`)
+		: undefined;
+	const shareImage = creator
+		? buildCreatorShareImageUrl(creatorHandle)
+		: undefined;
+	const productDescription =
+		creator?.bio?.trim() ||
+		creator?.description?.trim() ||
+		`${creator?.name || creator?.title || 'Creator'} key on AccessLayer.`;
+	const productPriceStroops = creator
+		? resolveCreatorKeyPriceStroops(creator)
+		: null;
+	const pageMeta = creator && canonicalUrl ? (
+		<PageMeta
+			title={`${creator.title} — Creator Key | AccessLayer`}
+			description={productDescription}
+			image={shareImage}
+			canonicalUrl={canonicalUrl}
+			noindex={
+				keyFreeze !== null ||
+				creator.isRetiring === true ||
+				Boolean(creator.retirementExecutedAt)
+			}
+			structuredData={{
+				'@context': 'https://schema.org',
+				'@type': 'Product',
+				name: creator.title,
+				description: productDescription,
+				image: shareImage,
+				url: canonicalUrl,
+				offers:
+					productPriceStroops == null
+						? undefined
+						: {
+								'@type': 'Offer',
+								price: (
+									productPriceStroops / STROOPS_PER_XLM
+								).toFixed(7),
+								priceCurrency: 'XLM',
+								url: canonicalUrl,
+							},
+			}}
+		/>
+	) : (
+		<PageMeta />
+	);
+
 	if (isLoading) {
 		return (
 			<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
+				{pageMeta}
 				<div className="mx-auto max-w-7xl">
 					<CreatorDashboardSkeleton />
 				</div>
@@ -509,6 +668,7 @@ function CreatorDetailPageContent() {
 		if (is404) {
 			return (
 				<main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[#06111f] px-6 py-16 text-center text-white">
+					{pageMeta}
 					<h1 className="font-grotesque text-3xl font-black">
 						Creator not found
 					</h1>
@@ -571,11 +731,7 @@ function CreatorDetailPageContent() {
 		},
 		{
 			label: 'Total Holders',
-			value: formatNumber(
-				creator.creatorShareSupply
-					? Math.ceil(creator.creatorShareSupply / 2)
-					: 10
-			),
+			value: formatHolderCount(resolveCreatorKeyHolderCount(creator)),
 		},
 		// Reserve backstop (#1208); hidden until the key has accrued a reserve.
 		...(keyReserve && getKeyReserveStatus(keyReserve).visible
@@ -632,8 +788,23 @@ function CreatorDetailPageContent() {
 			};
 
 	return (
-		<main className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12">
+		<main
+			className="min-h-screen bg-[#06111f] px-6 py-16 text-white md:px-12"
+			style={creatorAccentStyle}
+			data-testid="creator-detail-page"
+			data-creator-accent={creatorAccent ?? undefined}
+		>
+			{pageMeta}
 			<div className="mx-auto max-w-7xl space-y-8">
+				{/* Auto-freeze from stake-weighted community flags (#1386) */}
+				<FrozenForReviewBanner
+					autoFrozen={autoFrozen}
+					reviewStatus={reviewStatus}
+					flagCount={flagCount}
+					threshold={threshold}
+					frozenAt={frozenAt}
+				/>
+				{/* Key deprecation notice & guaranteed buyback flow (#923) */}
 				{creator.deprecation && !deprecationDismissed && (
 					<DeprecationBanner
 						deprecation={creator.deprecation}
@@ -663,6 +834,18 @@ function CreatorDetailPageContent() {
 							}}
 							title={`Share ${creator.title || creator.name || 'this key'}`}
 						/>
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							onClick={() => setQrModalOpen(true)}
+							aria-label="QR code"
+							data-testid="key-detail-qr-button"
+							className="gap-1.5 text-white/50 hover:text-white/80"
+						>
+							<QrCode className="size-3.5" aria-hidden="true" />
+							<span>QR code</span>
+						</Button>
 						<ReportIssueButton
 							keyId={creator.id}
 							keyName={creator.title || creator.name}
@@ -670,20 +853,22 @@ function CreatorDetailPageContent() {
 					</div>
 				</div>
 
-				{creator.isRetiring ? (
+				{retirementPending ? (
 					// Retirement is the stricter, time-bounded terminal state
 					// (#1246); its own banner replaces the deprecation one below
 					// rather than stacking both for the same key.
 					<ExitNoticeBanner
 						creator={creator}
 						holdingsCount={holdingsCount}
+						showWithoutHoldings
 						onSellNow={() =>
 							document
-								.getElementById('secondary-market-sell-panel')
+								.getElementById('retirement-voluntary-exit-panel')
 								?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 						}
 					/>
 				) : (
+					!creator.retirementExecutedAt &&
 					isKeyDeprecated(creator) && (
 						<KeyDeprecationBanner
 							creator={creator}
@@ -693,6 +878,30 @@ function CreatorDetailPageContent() {
 							recentSettlement={recentSettlement}
 						/>
 					)
+				)}
+
+				{retirementPending && holdingsCount > 0 && (
+					<div className="space-y-4">
+						<RetirementExitPanel
+							holdingsCount={holdingsCount}
+							marketPriceStroops={resolveCreatorKeyPriceStroops(creator)}
+							currentSupply={creator.creatorShareSupply}
+							noticeExpiresAt={creator.retirementNoticeExpiresAt}
+							onReviewSell={quantity => {
+								setRetirementSellQuantity(quantity);
+								setTradeSide('sell');
+								setBuyDialogOpen(true);
+							}}
+						/>
+						<RetirementNoticeEmailCard
+							keyName={creator.title || creator.name || 'Creator Key'}
+							holdingsCount={holdingsCount}
+							buybackPriceStroops={
+								creator.retirementBuybackPriceStroops ?? null
+							}
+							noticeExpiresAt={creator.retirementNoticeExpiresAt ?? null}
+						/>
+					</div>
 				)}
 
 				<KeyTradingPausedBanner tradingPaused={creator.tradingPaused} />
@@ -743,6 +952,7 @@ function CreatorDetailPageContent() {
 
 								navigate('/creators');
 							}}
+							onReport={() => setReportKeyModalOpen(true)}
 						/>
 					</div>
 
@@ -751,7 +961,27 @@ function CreatorDetailPageContent() {
 						labelName={displayName}
 						className="mt-3 size-11 shrink-0 sm:size-9"
 					/>
+					<button
+						type="button"
+						onClick={() => setShowAlertForm(v => !v)}
+						aria-expanded={showAlertForm}
+						title="Set price alert"
+						className="mt-3 flex size-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30 sm:size-9"
+					>
+						<Bell className="size-4" aria-hidden="true" />
+					</button>
 				</div>
+
+				{showAlertForm && creator && (
+					<div className="mt-4">
+						<PriceAlertForm
+							creatorId={creator.id}
+							creatorTitle={creator.title}
+							currentPriceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
+							onClose={() => setShowAlertForm(false)}
+						/>
+					</div>
+				)}
 
 				{creator && (
 					<CreatorSocialSection
@@ -845,6 +1075,41 @@ function CreatorDetailPageContent() {
 					}}
 					isSubmitting={tradeSubmitting || tradeMutation.isPending}
 				/>
+				{/* Community flag progress against the auto-freeze threshold (#1386) */}
+				<FlagProgress
+					flagCount={flagCount}
+					threshold={threshold}
+					autoFrozen={autoFrozen}
+					resolution={resolution}
+					isLoading={isKeyFlagsLoading}
+					action={
+						userAddress ? (
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								className="rounded-xl"
+								disabled={Boolean(userFlag) || flagKeyMutation.isPending}
+								onClick={() => setFlagModalOpen(true)}
+								data-testid="open-flag-key-modal"
+							>
+								<Flag className="size-4" aria-hidden="true" />
+								{userFlag ? 'Flag submitted' : 'Flag this key'}
+							</Button>
+						) : (
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								className="rounded-xl"
+								disabled
+							>
+								Connect wallet to flag
+							</Button>
+						)
+					}
+				/>
+				{/* Deprecation Notice and Buy Action on Key Detail Page */}
 
 				<SectionErrorBoundary sectionName="key statistics">
 					<KeyStatsPanel
@@ -883,7 +1148,10 @@ function CreatorDetailPageContent() {
 							<TabsTrigger value="buy" data-testid="invest-tab-buy">
 								Buy
 							</TabsTrigger>
-							<TabsTrigger value="subscribe" data-testid="invest-tab-subscribe">
+							<TabsTrigger
+								value="subscribe"
+								data-testid="invest-tab-subscribe"
+							>
 								Subscribe
 							</TabsTrigger>
 						</TabsList>
@@ -900,7 +1168,9 @@ function CreatorDetailPageContent() {
 									</div>
 
 									<p className="mt-0.5 text-sm text-white/80">
-										{isKeyDeprecated(creator)
+										{autoFrozen
+											? 'Trading is disabled while community flags on this key are reviewed.'
+											: isKeyDeprecated(creator)
 											? 'Key is deprecated. New buys are disabled.'
 											: keyFreeze
 												? keyFreeze.reason
@@ -938,28 +1208,33 @@ function CreatorDetailPageContent() {
 										className="mt-2"
 									/>
 
-									{creator.publicLaunchDate && hasValidPublicLaunchDate && (
-										<p className="mt-2 text-sm text-white/70">
-											{isPublicLaunchPending
-												? 'Public launch: '
-												: 'Public trading is open. '}
+									{creator.publicLaunchDate &&
+										hasValidPublicLaunchDate && (
+											<p className="mt-2 text-sm text-white/70">
+												{isPublicLaunchPending
+													? 'Public launch: '
+													: 'Public trading is open. '}
 
-											{isPublicLaunchPending && (
-												<time dateTime={creator.publicLaunchDate}>
-													{new Date(
-														creator.publicLaunchDate
-													).toLocaleString()}
-												</time>
-											)}
-										</p>
-									)}
+												{isPublicLaunchPending && (
+													<time
+														dateTime={creator.publicLaunchDate}
+													>
+														{new Date(
+															creator.publicLaunchDate
+														).toLocaleString()}
+													</time>
+												)}
+											</p>
+										)}
 								</div>
 
 								<div className="flex flex-wrap items-center gap-2">
 									<AddToBatchButton
 										keyId={creator.id}
 										keyName={displayName}
-										priceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
+										priceStroops={
+											resolveCreatorKeyPriceStroops(creator) ?? 0
+										}
 										currentSupply={creator.creatorShareSupply ?? null}
 										thumbnail={displayAvatar ?? undefined}
 										disabled={Boolean(keyFreeze)}
@@ -970,7 +1245,9 @@ function CreatorDetailPageContent() {
 									<AddToBundleButton
 										keyId={creator.id}
 										keyName={displayName}
-										priceStroops={resolveCreatorKeyPriceStroops(creator) ?? 0}
+										priceStroops={
+											resolveCreatorKeyPriceStroops(creator) ?? 0
+										}
 										currentSupply={creator.creatorShareSupply ?? null}
 										thumbnail={displayAvatar ?? undefined}
 										disabled={Boolean(keyFreeze)}
@@ -981,11 +1258,33 @@ function CreatorDetailPageContent() {
 									<PriceAlertButton
 										userId={userAddress}
 										keyId={creator.id}
-										keyName={creator.title || creator.name || 'Creator Key'}
-										currentPrice={resolveCreatorKeyPriceStroops(creator) ?? 0}
+										keyName={
+											creator.title || creator.name || 'Creator Key'
+										}
+										currentPrice={
+											resolveCreatorKeyPriceStroops(creator) ?? 0
+										}
 									/>
 
-									{isKeyDeprecated(creator) ? (
+									<Link
+										to={`/keys/${creator.id}/lp`}
+										data-testid="creator-lp-positions-link"
+										className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 text-xs font-bold text-white/70 transition-colors hover:text-white sm:h-10 sm:min-h-0 sm:w-auto"
+									>
+										Liquidity Positions
+									</Link>
+
+									{autoFrozen ? (
+										<Button
+											disabled
+											data-testid="key-detail-buy-button"
+											variant="outline"
+											className="min-h-11 w-full rounded-xl font-bold sm:h-10 sm:min-h-0 sm:w-auto"
+											title="Trading is frozen while this key is reviewed"
+										>
+											Trading Frozen
+										</Button>
+									) : isKeyDeprecated(creator) ? (
 										<Button
 											disabled
 											data-testid="key-detail-buy-button"
@@ -995,7 +1294,10 @@ function CreatorDetailPageContent() {
 											Buy Disabled (Deprecated)
 										</Button>
 									) : keyFreeze ? (
-										<UnavailableAction disabled reason={keyFreeze.reason}>
+										<UnavailableAction
+											disabled
+											reason={keyFreeze.reason}
+										>
 											<Button
 												type="button"
 												data-testid="key-detail-buy-button"
@@ -1064,6 +1366,21 @@ function CreatorDetailPageContent() {
 													Sell Key (Locked)
 												</Button>
 											</UnavailableAction>
+										) : tradableHoldingsCount <= 0 ? (
+											<UnavailableAction
+												disabled
+												reason={RENTAL_ESCROW_REASON}
+											>
+												<Button
+													type="button"
+													disabled
+													data-testid="key-detail-sell-button"
+													variant="outline"
+													className="min-h-11 w-full rounded-xl font-bold sm:h-10 sm:min-h-0 sm:w-auto"
+												>
+													Sell Key (Listed for rent)
+												</Button>
+											</UnavailableAction>
 										) : isFloorActive ? (
 											<UnavailableAction
 												disabled
@@ -1087,6 +1404,7 @@ function CreatorDetailPageContent() {
 												className="min-h-11 w-full rounded-xl font-bold sm:h-10 sm:min-h-0 sm:w-auto"
 												onClick={() => {
 													setTradeSide('sell');
+													setRetirementSellQuantity(null);
 													setBuyDialogOpen(true);
 												}}
 											>
@@ -1101,22 +1419,32 @@ function CreatorDetailPageContent() {
 										/>
 									)}
 								</div>
+								<RentalEscrowNotice
+									escrowedQuantity={rentalEscrowedQuantity}
+									className="mt-3"
+								/>
 							</div>
 						</TabsContent>
 
 						<TabsContent value="subscribe" className="space-y-4">
 							<SubscriptionInvestmentPanel
 								creatorId={creator.id}
-								currentPriceStroops={resolveCreatorKeyPriceStroops(creator)}
-								disabled={isKeyDeprecated(creator) || Boolean(keyFreeze) || creator.tradingPaused}
+								currentPriceStroops={resolveCreatorKeyPriceStroops(
+									creator
+								)}
+								disabled={
+									isKeyDeprecated(creator) ||
+									Boolean(keyFreeze) ||
+									creator.tradingPaused
+								}
 								disabledReason={
 									isKeyDeprecated(creator)
 										? 'Key is deprecated. Subscriptions are disabled.'
 										: keyFreeze
-										? keyFreeze.reason
-										: creator.tradingPaused
-										? 'Trading is currently paused.'
-										: undefined
+											? keyFreeze.reason
+											: creator.tradingPaused
+												? 'Trading is currently paused.'
+												: undefined
 								}
 							/>
 						</TabsContent>
@@ -1124,21 +1452,28 @@ function CreatorDetailPageContent() {
 				</div>
 
 				{auctionPhase !== 'inactive' && (
-					<AuctionPhaseSection
-						creatorId={creator.id}
-						auctionPrice={creator.auctionPrice}
-						auctionSupply={creator.auctionSupply}
-						auctionSold={creator.auctionSold}
-						auctionEndsAt={creator.auctionEndsAt}
-						auctionMinIncrement={creator.auctionMinIncrement}
-						auctionHighestBid={creator.auctionHighestBid}
-						auctionBids={creator.auctionBids}
-						auctionClearingPrice={creator.auctionClearingPrice}
-						auctionAllocation={creator.auctionAllocation}
-						auctionSettled={creator.auctionSettled}
-						userAddress={userAddress}
-					/>
+					<div id="commit-reveal" data-testid="commit-reveal-panel">
+						<AuctionPhaseSection
+							creatorId={creator.id}
+							auctionPrice={creator.auctionPrice}
+							auctionSupply={creator.auctionSupply}
+							auctionSold={creator.auctionSold}
+							auctionEndsAt={creator.auctionEndsAt}
+							auctionMinIncrement={creator.auctionMinIncrement}
+							auctionHighestBid={creator.auctionHighestBid}
+							auctionBids={creator.auctionBids}
+							auctionClearingPrice={creator.auctionClearingPrice}
+							auctionAllocation={creator.auctionAllocation}
+							auctionSettled={creator.auctionSettled}
+							userAddress={userAddress}
+						/>
+					</div>
 				)}
+
+				<CommitRevealPanel
+					keyId={creator.id}
+					userAddress={userAddress}
+				/>
 
 				{userAddress && !isTradeCooldownActive && (
 					<BuyCooldownCountdown nextBuyAllowedAt={nextBuyAllowedAt} />
@@ -1233,7 +1568,7 @@ function CreatorDetailPageContent() {
 				<StakingVaultPanel
 					keyId={id ?? ''}
 					userAddress={userAddress}
-					availableBalance={holdingsCount}
+					availableBalance={tradableHoldingsCount}
 					rewardPoolBalance={stakingStats.stakingPoolBalance ?? 0}
 					isLoading={isLoading}
 				/>
@@ -1314,6 +1649,57 @@ function CreatorDetailPageContent() {
 
 				<div
 					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
+					data-testid="key-ratings-container"
+				>
+					<h2 className="mb-6 font-grotesque text-xl font-black tracking-tight text-white">
+						Ratings & Reviews
+					</h2>
+
+					<SectionErrorBoundary sectionName="key ratings">
+						<div className="space-y-4">
+							<KeyRatingSummary
+								summary={ratingSummary}
+								isLoading={isRatingsLoading}
+							/>
+							<RatingForm
+								existingRating={existingUserRating}
+								isHolder={isHolder}
+								isConnected={Boolean(userAddress)}
+								isSubmitting={submitRatingMutation.isPending}
+								onSubmit={async input => {
+									await submitRatingMutation.mutateAsync(input);
+								}}
+							/>
+							<div className="rounded-xl border border-white/10 bg-white/[0.03] p-4" data-testid="key-ratings-list">
+								<h3 className="mb-3 text-sm font-bold text-white">Recent reviews</h3>
+								{ratings.length === 0 ? (
+									<p className="text-sm text-white/50">No reviews yet.</p>
+								) : (
+									<ul className="space-y-3">
+										{ratings.slice(0, 5).map((rating) => (
+											<li key={rating.id} className="border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
+												<div className="flex items-center justify-between gap-3">
+													<span className="font-mono text-xs text-white/60">
+														{rating.walletAddress.slice(0, 4)}...{rating.walletAddress.slice(-4)}
+													</span>
+													<span className="text-xs font-semibold text-amber-300">{rating.rating}/5</span>
+												</div>
+												{rating.review ? (
+													<p className="mt-1 text-sm text-white/75 break-words">{rating.review}</p>
+												) : (
+													<p className="mt-1 text-sm text-white/40">No written review.</p>
+												)}
+											</li>
+										))}
+									</ul>
+								)}
+							</div>
+						</div>
+					</SectionErrorBoundary>
+				</div>
+
+				<div
+					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
 					data-testid="holder-concentration-container"
 				>
 					<h2 className="mb-6 font-grotesque text-xl font-black tracking-tight text-white">
@@ -1380,6 +1766,13 @@ function CreatorDetailPageContent() {
 					/>
 				</SectionErrorBoundary>
 
+				<SectionErrorBoundary sectionName="key holder leaderboard">
+					<KeyHolderLeaderboard
+						keyId={creator.id}
+						connectedWalletAddress={userAddress}
+					/>
+				</SectionErrorBoundary>
+
 				<div
 					data-testid="creator-holders-container"
 					className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8"
@@ -1399,6 +1792,21 @@ function CreatorDetailPageContent() {
 						/>
 					</SectionErrorBoundary>
 				</div>
+
+				<SectionErrorBoundary sectionName="key comments">
+					<CommentSection
+						keyId={creator.id}
+						creatorAddress={creator.instructorId}
+					/>
+				</SectionErrorBoundary>
+
+				<SectionErrorBoundary sectionName="key social feed">
+					<KeySocialFeed
+						keyId={creator.id}
+						creatorAddress={creator.instructorId}
+						userHolding={holdingsCount}
+					/>
+				</SectionErrorBoundary>
 
 				<div className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md md:p-8">
 					<h2 className="mb-6 font-grotesque text-xl font-black tracking-tight text-white">
@@ -1444,9 +1852,13 @@ function CreatorDetailPageContent() {
 									auctionId: 'active',
 									seller: userAddress ?? '',
 									fractionAmount: Math.max(1, holdingsCount),
-									reservePriceStroops: resolveCreatorKeyPriceStroops(creator) ?? 0,
+									reservePriceStroops:
+										resolveCreatorKeyPriceStroops(creator) ?? 0,
 									highestBidStroops: Math.round(
-										(resolveHighestBid(creator.auctionBids, creator.auctionHighestBid) ?? 0) * 1e7
+										(resolveHighestBid(
+											creator.auctionBids,
+											creator.auctionHighestBid
+										) ?? 0) * 1e7
 									),
 									highestBidder: null,
 									endsAt: new Date(Date.now() + 3_600_000),
@@ -1483,10 +1895,7 @@ function CreatorDetailPageContent() {
 							isHolder={holdingsCount > 0}
 							userAddress={userAddress}
 						/>
-						<RecentTipsFeed
-							creatorId={creator.id}
-							className="mt-6"
-						/>
+						<RecentTipsFeed creatorId={creator.id} className="mt-6" />
 					</SectionErrorBoundary>
 				</div>
 
@@ -1499,6 +1908,10 @@ function CreatorDetailPageContent() {
 						<CreatorActivityFeed creatorId={creator.id} />
 					</SectionErrorBoundary>
 				</div>
+
+				<SectionErrorBoundary sectionName="related keys">
+					<RelatedKeysCarousel keyId={creator.id} />
+				</SectionErrorBoundary>
 
 				{isKeyDeprecated(creator) && (
 					<KeyBuybackModal
@@ -1516,13 +1929,28 @@ function CreatorDetailPageContent() {
 						}}
 					/>
 				)}
+				{/* Flag key modal with stake + refund/forfeit rules (#1386) */}
+				<FlagKeyModal
+					open={flagModalOpen}
+					onOpenChange={setFlagModalOpen}
+					keyTitle={creator.title || creator.name || 'Creator Key'}
+					requiredStakeStroops={requiredStakeStroops}
+					existingFlag={userFlag}
+					isSubmitting={flagKeyMutation.isPending}
+					onSubmit={async ({ reasonCode }) => {
+						await flagKeyMutation.mutateAsync({
+							reasonCode,
+							stakeStroops: requiredStakeStroops,
+						});
+					}}
+				/>
 
 				{creator && (
 					<TradeDialog
 						open={buyDialogOpen}
 						side={tradeSide}
 						creatorName={creator.title || creator.name || 'Creator'}
-						availableHoldings={holdingsCount}
+						availableHoldings={tradableHoldingsCount}
 						keyPriceStroops={resolveCreatorKeyPriceStroops(creator)}
 						currentSupply={creator.creatorShareSupply}
 						maxBuyQuantity={creator.maxBuyQuantity}
@@ -1530,7 +1958,11 @@ function CreatorDetailPageContent() {
 						launchPenaltyBps={creator.launchPenaltyBps}
 						keyConfig={keyConfig}
 						isKeyConfigLoading={isKeyConfigLoading}
-						onOpenChange={setBuyDialogOpen}
+						initialAmount={retirementSellQuantity ?? undefined}
+						onOpenChange={open => {
+							setBuyDialogOpen(open);
+							if (!open) setRetirementSellQuantity(null);
+						}}
 						onConfirm={handleConfirmTrade}
 						isSubmitting={tradeSubmitting}
 						requireConfirmation={true}
@@ -1556,6 +1988,25 @@ function CreatorDetailPageContent() {
 						).replace(' XLM', '')}
 						userAddress={userAddress}
 						onDismiss={() => setShareModalOpen(false)}
+					/>
+				)}
+				{creator && (
+					<ReportKeyModal
+						open={reportKeyModalOpen}
+						onOpenChange={setReportKeyModalOpen}
+						keyId={creator.id}
+						keyName={creator.title || creator.name || 'this key'}
+					/>
+				)}
+				{creator && (
+					<ShareQrModal
+						open={qrModalOpen}
+						onOpenChange={setQrModalOpen}
+						url={buildCreatorProfileReferralLink({
+							handle: creator.socialHandle || creator.instructorId,
+							wallet: userAddress,
+						})}
+						handle={creator.socialHandle || creator.instructorId}
 					/>
 				)}
 			</div>

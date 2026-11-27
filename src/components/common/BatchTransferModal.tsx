@@ -9,7 +9,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Trash2, Users } from 'lucide-react';
+import { AlertTriangle, Lock, Plus, Trash2, Users } from 'lucide-react';
 import { formatNumber } from '@/utils/numberFormat.utils';
 import showToast from '@/utils/toast.util';
 import {
@@ -19,6 +19,8 @@ import {
 	type BatchTransferRecipientRow,
 } from '@/utils/batchTransfer.utils';
 import { useBatchTransferMutation } from '@/hooks/useWallet';
+import { useRoyaltyEnforcement } from '@/hooks/useRoyaltyEnforcement';
+import AddressInput from '@/components/common/AddressInput';
 
 export interface BatchTransferModalProps {
 	open: boolean;
@@ -66,11 +68,25 @@ export default function BatchTransferModal({
 	const [touched, setTouched] = useState<Record<string, boolean>>({});
 	const [hasSubmitted, setHasSubmitted] = useState(false);
 	const [isInternalSubmitting, setIsInternalSubmitting] = useState(false);
+	const [resolvedAddresses, setResolvedAddresses] = useState<
+		Record<string, string | null>
+	>({});
 
 	const batchTransferMutation = useBatchTransferMutation();
+	const { data: enforcement } = useRoyaltyEnforcement(creatorId);
 	const firstInputRef = useRef<HTMLInputElement | null>(null);
 
 	const isSubmitting = externalIsSubmitting ?? isInternalSubmitting;
+	const enforcementActive = !!enforcement?.enforced;
+	const approvedMarketplaces = useMemo(
+		() =>
+			new Set(
+				(enforcement?.approvedMarketplaces ?? []).map(m =>
+					m.toUpperCase()
+				)
+			),
+		[enforcement]
+	);
 
 	// Reset state when modal opens
 	useEffect(() => {
@@ -85,13 +101,28 @@ export default function BatchTransferModal({
 			setTouched({});
 			setHasSubmitted(false);
 			setIsInternalSubmitting(false);
+			setResolvedAddresses({});
 		}
 	}, [open, initialRecipients]);
 
 	const validation = useMemo(
-		() => validateBatchTransferRows(rows, liquidBalance),
-		[rows, liquidBalance]
+		() => validateBatchTransferRows(rows, liquidBalance, resolvedAddresses),
+		[rows, liquidBalance, resolvedAddresses]
 	);
+
+	// Under enforcement, a recipient must be an approved marketplace.
+	const restrictedRowIds = useMemo(() => {
+		if (!enforcementActive) return new Set<string>();
+		const blocked = new Set<string>();
+		for (const row of rows) {
+			const address = (resolvedAddresses[row.id] || row.address)
+				.trim()
+				.toUpperCase();
+			if (!address) continue;
+			if (!approvedMarketplaces.has(address)) blocked.add(row.id);
+		}
+		return blocked;
+	}, [enforcementActive, rows, resolvedAddresses, approvedMarketplaces]);
 
 	const handleAddRow = () => {
 		if (rows.length >= MAX_BATCH_TRANSFER_RECIPIENTS) return;
@@ -106,11 +137,23 @@ export default function BatchTransferModal({
 			delete next[id];
 			return next;
 		});
+		setResolvedAddresses(prev => {
+			const next = { ...prev };
+			delete next[id];
+			return next;
+		});
 	};
 
 	const handleAddressChange = (id: string, address: string) => {
 		setRows(prev => prev.map(r => (r.id === id ? { ...r, address } : r)));
 		setTouched(prev => ({ ...prev, [id]: true }));
+	};
+
+	const handleAddressResolved = (id: string, resolved: string | null) => {
+		setResolvedAddresses(prev => {
+			if (prev[id] === resolved) return prev;
+			return { ...prev, [id]: resolved };
+		});
 	};
 
 	const handleQuantityChange = (id: string, quantityStr: string) => {
@@ -122,10 +165,11 @@ export default function BatchTransferModal({
 
 	const handleSubmit = async () => {
 		setHasSubmitted(true);
-		if (!validation.isValid || isSubmitting) return;
+		if (!validation.isValid || isSubmitting || restrictedRowIds.size > 0)
+			return;
 
 		const payload: BatchTransferRecipient[] = rows.map(r => ({
-			address: r.address.trim().toUpperCase(),
+			address: (resolvedAddresses[r.id] || r.address).trim().toUpperCase(),
 			quantity: Number(r.quantity),
 		}));
 
@@ -160,7 +204,9 @@ export default function BatchTransferModal({
 		}
 	};
 
-	const canSubmit = validation.isValid && !isSubmitting;
+	const hasRestrictedRecipients = restrictedRowIds.size > 0;
+	const canSubmit =
+		validation.isValid && !isSubmitting && !hasRestrictedRecipients;
 	const isAtMaxRows = rows.length >= MAX_BATCH_TRANSFER_RECIPIENTS;
 
 	return (
@@ -196,6 +242,22 @@ export default function BatchTransferModal({
 				</DialogHeader>
 
 				<div className="space-y-4 py-2">
+					{/* Enforcement notice */}
+					{enforcementActive && (
+						<div
+							role="status"
+							className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-200"
+							data-testid="batch-transfer-enforcement-notice"
+						>
+							<Lock className="mt-0.5 size-3.5 shrink-0" />
+							<p>
+								Royalty enforcement is on. Keys can only be sent to
+								approved marketplaces. Direct wallet-to-wallet transfers
+								are disabled.
+							</p>
+						</div>
+					)}
+
 					{/* Balance banner */}
 					<div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-xs">
 						<span className="text-white/60">
@@ -218,6 +280,8 @@ export default function BatchTransferModal({
 								isRowTouched && !!rowError?.addressError;
 							const showQuantityError =
 								isRowTouched && !!rowError?.quantityError;
+							const showRestrictionError =
+								isRowTouched && restrictedRowIds.has(row.id);
 
 							return (
 								<div
@@ -233,11 +297,10 @@ export default function BatchTransferModal({
 
 										{/* Wallet Address Input */}
 										<div className="flex-1 min-w-0">
-											<input
+											<AddressInput
 												ref={
 													index === 0 ? firstInputRef : undefined
 												}
-												type="text"
 												value={row.address}
 												onChange={e =>
 													handleAddressChange(
@@ -245,7 +308,10 @@ export default function BatchTransferModal({
 														e.target.value
 													)
 												}
-												placeholder="Stellar wallet address (G...)"
+												onResolved={resolved =>
+													handleAddressResolved(row.id, resolved)
+												}
+												placeholder="Stellar wallet address (G...) or name*domain"
 												aria-label={`Recipient ${index + 1} address`}
 												aria-invalid={showAddressError || undefined}
 												disabled={isSubmitting}
@@ -296,7 +362,9 @@ export default function BatchTransferModal({
 									</div>
 
 									{/* Row-level errors */}
-									{(showAddressError || showQuantityError) && (
+									{(showAddressError ||
+										showQuantityError ||
+										showRestrictionError) && (
 										<div
 											className="mt-1.5 flex flex-col gap-0.5 text-[11px] text-red-400"
 											role="alert"
@@ -307,6 +375,13 @@ export default function BatchTransferModal({
 											)}
 											{showQuantityError && (
 												<p>{rowError?.quantityError}</p>
+											)}
+											{showRestrictionError && (
+												<p className="flex items-center gap-1">
+													<AlertTriangle className="size-3 shrink-0" />
+													Recipient is not an approved marketplace
+													under royalty enforcement.
+												</p>
 											)}
 										</div>
 									)}
@@ -354,7 +429,6 @@ export default function BatchTransferModal({
 							<div
 								role="alert"
 								className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300"
-								data-testid="batch-transfer-balance-error"
 							>
 								{validation.balanceError}
 							</div>
@@ -362,12 +436,13 @@ export default function BatchTransferModal({
 					</div>
 				</div>
 
-				<DialogFooter className="gap-2 sm:justify-between pt-2 border-t border-white/10">
+				<DialogFooter className="gap-2 sm:gap-2">
 					<Button
 						type="button"
-						variant="ghost"
+						variant="outline"
 						onClick={() => onOpenChange(false)}
 						disabled={isSubmitting}
+						className="rounded-xl"
 						data-testid="batch-transfer-cancel"
 					>
 						Cancel
@@ -376,15 +451,11 @@ export default function BatchTransferModal({
 						type="button"
 						onClick={handleSubmit}
 						disabled={!canSubmit}
-						aria-busy={isSubmitting || undefined}
-						className="rounded-xl bg-amber-500 font-semibold text-slate-950 hover:bg-amber-400 disabled:opacity-50"
+						className="rounded-xl bg-amber-500 text-slate-900 hover:bg-amber-400 disabled:opacity-40"
 						data-testid="batch-transfer-submit"
 					>
-						<StableButtonContent
-							isLoading={isSubmitting}
-							loadingLabel="Submitting batch transfer…"
-						>
-							Confirm Batch Transfer
+						<StableButtonContent loading={isSubmitting}>
+							Confirm Transfer
 						</StableButtonContent>
 					</Button>
 				</DialogFooter>
