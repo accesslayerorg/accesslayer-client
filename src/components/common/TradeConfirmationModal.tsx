@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import {
 	Dialog,
 	DialogContent,
@@ -14,6 +15,8 @@ import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import PriceImpactWarning from '@/components/common/PriceImpactWarning';
 import DynamicFeeBreakdown from '@/components/common/DynamicFeeBreakdown';
 import SlippageToleranceSelector from '@/components/common/SlippageToleranceSelector';
+import FeeImpactPreview from '@/components/fees/FeeImpactPreview';
+import { usePendingFeeChange } from '@/hooks/useFeeChange';
 import {
 	formatPriceImpact,
 	isHighPriceImpact,
@@ -27,6 +30,8 @@ import type { DynamicFeeBreakdown as DynamicFeeBreakdownData } from '@/utils/dyn
 import { ShieldCheck, ArrowRight, Info, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { validateSlippageTolerance } from '@/utils/slippage.utils';
+import LargeTradeGuard from '@/components/common/LargeTradeGuard';
+import { evaluateLargeTradeRules } from '@/utils/largeTradeGuard.utils';
 import {
 	isOrderNearPriceCeiling,
 	PRICE_CEILING_WARNING_THRESHOLD_PERCENT,
@@ -48,6 +53,8 @@ export interface TradeConfirmationModalProps {
 	maxPriceStroops?: number | null;
 	minPriceStroops?: number | null;
 	priceImpactPercent?: number | null;
+	/** Circulating supply of the key used for whale supply-percentage guard (#1480). */
+	currentSupply?: number | null;
 	ceilingStroops?: number | null;
 	priceCeilingStroops?: number | null;
 	projectedEndPriceStroops?: number | null;
@@ -87,6 +94,7 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 	maxPriceStroops,
 	minPriceStroops,
 	priceImpactPercent,
+	currentSupply = null,
 	ceilingStroops = null,
 	priceCeilingStroops = null,
 	projectedEndPriceStroops = null,
@@ -104,6 +112,24 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 		slippageTolerancePercent
 	);
 	const [slippageError, setSlippageError] = useState<string | null>(null);
+	const [largeTradeAcknowledged, setLargeTradeAcknowledged] = useState(false);
+	const pendingFeeChange = usePendingFeeChange();
+
+	const triggeredLargeTradeRules = evaluateLargeTradeRules({
+		amount,
+		unitPriceStroops,
+		totalStroops,
+		priceImpactPercent,
+		currentSupply,
+		side,
+	});
+	const hasLargeTradeGuard = triggeredLargeTradeRules.length > 0;
+
+	useEffect(() => {
+		if (!open) {
+			setLargeTradeAcknowledged(false);
+		}
+	}, [open]);
 
 	useEffect(() => {
 		setCurrentSlippage(slippageTolerancePercent);
@@ -330,6 +356,13 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 						/>
 					)}
 
+					{pendingFeeChange && (
+						<FeeImpactPreview
+							pending={pendingFeeChange}
+							totalStroops={totalStroops}
+						/>
+					)}
+
 					{/* Slippage Protection Bounds */}
 					<div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-4 space-y-3">
 						<div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-300">
@@ -427,6 +460,14 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 						</div>
 					)}
 
+					<Link
+						to="/learn/bonding-curve"
+						data-testid="trade-explainer-link"
+						className="inline-block font-jakarta text-xs font-bold text-amber-300 hover:underline"
+					>
+						How does the price curve work?
+					</Link>
+
 					{/* Price Impact Warning if exceeds 5% */}
 					{priceImpactPercent != null &&
 						isHighPriceImpact(
@@ -440,6 +481,19 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 								/>
 							</div>
 						)}
+
+					{/* Large Trade Confirmation Guard (#1480) */}
+					{hasLargeTradeGuard && (
+						<LargeTradeGuard
+							triggeredRules={triggeredLargeTradeRules}
+							amount={amount}
+							unitPriceStroops={unitPriceStroops}
+							totalStroops={totalStroops}
+							side={side}
+							creatorName={creatorName}
+							onAcknowledgementChange={setLargeTradeAcknowledged}
+						/>
+					)}
 
 					{showCeilingWarning && (
 						<div data-testid="confirmation-modal-ceiling-warning">
@@ -474,7 +528,11 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 					<Button
 						type="button"
 						onClick={onConfirm}
-						disabled={isSubmitting || slippageError != null}
+						disabled={
+							isSubmitting ||
+							slippageError != null ||
+							(hasLargeTradeGuard && !largeTradeAcknowledged)
+						}
 						aria-busy={isSubmitting || undefined}
 						data-testid="confirmation-modal-confirm"
 						className={cn(
@@ -482,7 +540,9 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 							isBuy
 								? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
 								: 'bg-rose-500 hover:bg-rose-400 text-white',
-							slippageError != null && 'opacity-50 cursor-not-allowed'
+							(slippageError != null ||
+								(hasLargeTradeGuard && !largeTradeAcknowledged)) &&
+								'opacity-50 cursor-not-allowed'
 						)}
 					>
 						<StableButtonContent

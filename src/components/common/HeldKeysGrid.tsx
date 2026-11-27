@@ -30,7 +30,7 @@ export interface HeldKeysGridProps {
 	/** Whether the viewer owns this profile — hides trade actions when false. */
 	isOwnProfile?: boolean;
 	isLoading?: boolean;
-	/** Fallback browse destination for the empty state (defaults to /creators). */
+	/** Fallback browse destination for the empty state. */
 	emptyBrowseHref?: string;
 	className?: string;
 }
@@ -49,7 +49,7 @@ const HeldKeysGrid: React.FC<HeldKeysGridProps> = ({
 	creators = [],
 	isOwnProfile = true,
 	isLoading = false,
-	emptyBrowseHref = '/creators',
+	emptyBrowseHref = '/discovery?source=empty-holdings',
 	className,
 }) => {
 	if (isLoading) {

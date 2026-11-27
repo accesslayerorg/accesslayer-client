@@ -1,6 +1,12 @@
 import { Address, Networks } from '@stellar/stellar-sdk';
 import { Client } from '@stellar/stellar-sdk/contract';
+import type {
+	PermitService,
+	PermitTransferRequest,
+	PermitTransferResult,
+} from '@/types/permit';
 import { env } from '@/utils/env.utils';
+import { PermitUnsupportedError } from '@/utils/permit.utils';
 
 export interface OnChainMetadataResult {
 	name?: string;
@@ -28,6 +34,17 @@ export type CreatorKeysContractClientFactory = (
 	rpcUrl: string,
 	networkPassphrase: string
 ) => unknown;
+
+/**
+ * Adapter supplied once the deployed contract exposes a documented permit
+ * nonce and an atomic permit-plus-transfer transaction builder.
+ */
+export interface PermitContractAdapter {
+	getPermitNonce(owner: string): Promise<bigint>;
+	submitPermitAndTransfer(
+		request: PermitTransferRequest
+	): Promise<PermitTransferResult>;
+}
 
 function getNetworkPassphrase(): string {
 	return env.VITE_STELLAR_NETWORK === 'mainnet'
@@ -149,11 +166,38 @@ const defaultFactory: CreatorKeysContractClientFactory = (
 	});
 };
 
-export class CreatorKeysContractService {
+export class CreatorKeysContractService implements PermitService {
 	private readonly factory: CreatorKeysContractClientFactory;
+	private readonly permitAdapter?: PermitContractAdapter;
 
-	constructor(factory: CreatorKeysContractClientFactory = defaultFactory) {
+	constructor(
+		factory: CreatorKeysContractClientFactory = defaultFactory,
+		permitAdapter?: PermitContractAdapter
+	) {
 		this.factory = factory;
+		this.permitAdapter = permitAdapter;
+	}
+
+	/** True only when a real atomic contract adapter has been configured. */
+	supportsPermit(): boolean {
+		return this.permitAdapter !== undefined;
+	}
+
+	async getPermitNonce(owner: string): Promise<bigint> {
+		if (!this.permitAdapter) throw new PermitUnsupportedError();
+		return this.permitAdapter.getPermitNonce(owner);
+	}
+
+	/**
+	 * Delegates one atomic submission to the contract adapter. This deliberately
+	 * does not emulate the operation with separate `permit` and `transfer_from`
+	 * calls because that would violate the one-transaction guarantee.
+	 */
+	async submitPermitAndTransfer(
+		request: PermitTransferRequest
+	): Promise<PermitTransferResult> {
+		if (!this.permitAdapter) throw new PermitUnsupportedError();
+		return this.permitAdapter.submitPermitAndTransfer(request);
 	}
 
 	async getMetadata(keyId: string): Promise<OnChainMetadataResult | null> {
@@ -463,6 +507,54 @@ export class CreatorKeysContractService {
 		messageHash?: string;
 	}): Promise<{ success: boolean; hash?: string }> {
 		return this.send_tip(args);
+	}
+
+	async submit_rating(args: {
+		keyId: string;
+		rating: number;
+		review?: string;
+	}): Promise<{ success: boolean; hash?: string }> {
+		if (!env.VITE_STELLAR_RPC_URL || !env.VITE_CREATOR_KEYS_CONTRACT_ID) {
+			return { success: true, hash: `sim_rating_${Date.now()}` };
+		}
+
+		let keyAddress: Address;
+		try {
+			keyAddress = Address.fromString(args.keyId);
+		} catch {
+			throw new Error('Invalid key ID address.');
+		}
+
+		const client = this.factory(
+			env.VITE_CREATOR_KEYS_CONTRACT_ID,
+			env.VITE_STELLAR_RPC_URL,
+			getNetworkPassphrase()
+		) as {
+			submit_rating?: (callArgs: {
+				key_id: Address;
+				rating: number;
+				review?: string;
+			}) => Promise<{ result?: unknown; hash?: string }>;
+		};
+
+		if (typeof client.submit_rating === 'function') {
+			const res = await client.submit_rating({
+				key_id: keyAddress,
+				rating: args.rating,
+				review: args.review,
+			});
+			return { success: true, hash: res?.hash };
+		}
+
+		return { success: true, hash: `sim_rating_${Date.now()}` };
+	}
+
+	async submitRating(args: {
+		keyId: string;
+		rating: number;
+		review?: string;
+	}): Promise<{ success: boolean; hash?: string }> {
+		return this.submit_rating(args);
 	}
 }
 

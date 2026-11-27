@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, useNavigate } from 'react-router';
 import NotificationBell from '@/components/common/NotificationBell';
 import { useNotifications } from '@/hooks/useNotifications';
 import type { Notification } from '@/services/notification.service';
@@ -40,6 +40,7 @@ function renderBell(userId = 'user_abc') {
 describe('NotificationBell', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.mocked(useNavigate).mockImplementation(() => vi.fn());
 	});
 
 	// ── Badge visibility ─────────────────────────────────────────────────────
@@ -399,5 +400,84 @@ describe('NotificationBell', () => {
 				screen.getByTestId('notification-unread-badge')
 			).toHaveTextContent('1');
 		});
+	});
+
+	it('renders up to ten notification items in the dropdown', async () => {
+		const user = userEvent.setup();
+		const recent = Array.from({ length: 12 }, (_, index) =>
+			makeNotification(`n${index + 1}`)
+		);
+		mockUseNotifications.mockReturnValue({
+			notifications: recent,
+			recent,
+			latest: recent,
+			popoverNotifications: recent,
+			unreadCount: 0,
+			isLoading: false,
+			isError: false,
+			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
+		});
+
+		renderBell();
+		await user.click(screen.getByRole('button', { name: /notifications/i }));
+
+		for (let index = 1; index <= 10; index += 1) {
+			expect(
+				screen.getByTestId(`notification-item-n${index}`)
+			).toBeInTheDocument();
+		}
+		expect(
+			screen.queryByTestId('notification-item-n11')
+		).not.toBeInTheDocument();
+	});
+
+	it('closes the notification popover on Escape', async () => {
+		const user = userEvent.setup();
+		mockUseNotifications.mockReturnValue({
+			notifications: [],
+			recent: [],
+			unreadCount: 0,
+			isLoading: false,
+			isError: false,
+			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
+		});
+
+		renderBell();
+		await user.click(screen.getByRole('button', { name: /notifications/i }));
+		expect(screen.getByTestId('notification-popover')).toBeInTheDocument();
+
+		await user.keyboard('{Escape}');
+
+		await waitFor(() => {
+			expect(
+				screen.queryByTestId('notification-popover')
+			).not.toBeInTheDocument();
+		});
+	});
+
+	it('navigates to the notification href when an item is clicked', async () => {
+		const user = userEvent.setup();
+		const navigate = vi.fn();
+		const item = makeNotification('n1', { href: '/creator/n1' });
+		vi.mocked(useNavigate).mockReturnValue(navigate);
+		mockUseNotifications.mockReturnValue({
+			notifications: [item],
+			recent: [item],
+			latest: [item],
+			popoverNotifications: [item],
+			unreadCount: 1,
+			isLoading: false,
+			isError: false,
+			markAsRead: vi.fn(),
+			markAllAsRead: vi.fn(),
+		});
+
+		renderBell();
+		await user.click(screen.getByRole('button', { name: /notifications/i }));
+		await user.click(screen.getByTestId('notification-item-n1'));
+
+		expect(navigate).toHaveBeenCalledWith('/creator/n1');
 	});
 });

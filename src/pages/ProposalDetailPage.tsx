@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import ProposalOutcomeSummary from '@/components/common/ProposalOutcomeSummary';
 import ProposalExecutionCountdown from '@/components/common/ProposalExecutionCountdown';
+import RagequitBanner from '@/components/governance/RagequitBanner';
 import ProposalVoteHistory from '@/components/common/ProposalVoteHistory';
 import { ProposalVotePanel } from '@/components/common/ProposalVotePanel';
 import QuorumIndicator from '@/components/common/QuorumIndicator';
@@ -211,6 +212,11 @@ export default function ProposalDetailPage() {
 						<p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-white/70">
 							{proposal.description}
 						</p>
+					</section>
+
+					{/* Ragequit Banner during Grace Exit Window */}
+					<section className="mt-6" aria-label="Ragequit window">
+						<RagequitBanner proposalId={proposal.id} />
 					</section>
 
 					{proposal.status === 'passed' && proposal.timelockExpiresAt && (

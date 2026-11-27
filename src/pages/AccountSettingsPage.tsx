@@ -1,4 +1,4 @@
-import { BellRing, Settings } from 'lucide-react';
+import { BellRing, Settings, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router';
 import { useProfileStore } from '@/hooks/useProfileStore';
 import { useSessions } from '@/hooks/useSessions';
@@ -7,6 +7,8 @@ import SessionSecuritySection from '@/components/settings/SessionSecuritySection
 import MyTicketsSection from '@/components/settings/MyTicketsSection';
 import AddressBookPanel from '@/components/settings/AddressBookPanel';
 import MotionSettingsSection from '@/components/settings/MotionSettingsSection';
+import EmbeddedWalletSection from '@/components/settings/EmbeddedWalletSection';
+import DisplaySettingsSection from '@/components/settings/DisplaySettingsSection';
 
 /**
  * Account settings page (#1111).
@@ -53,6 +55,24 @@ export default function AccountSettingsPage() {
 				</span>
 			</Link>
 
+			<Link
+				to="/settings/recovery"
+				className="mb-6 flex items-center gap-3 rounded-xl border border-border p-4 transition-colors hover:bg-accent/40"
+			>
+				<ShieldCheck
+					className="size-5 text-foreground"
+					aria-hidden="true"
+				/>
+				<span>
+					<span className="block text-sm font-medium text-foreground">
+						Social recovery
+					</span>
+					<span className="mt-0.5 block text-xs text-muted-foreground">
+						Choose guardians who can help you recover a lost wallet
+					</span>
+				</span>
+			</Link>
+
 			<SessionSecuritySection
 				sessions={sessions}
 				isLoading={isLoading}
@@ -62,6 +82,10 @@ export default function AccountSettingsPage() {
 				onRevokeAllOtherSessions={revokeAllOtherSessions}
 				className="mb-6"
 			/>
+
+			<EmbeddedWalletSection className="mb-6" />
+
+			<DisplaySettingsSection className="mb-6" />
 
 			<AddressBookPanel className="mb-6" />
 

@@ -2,12 +2,17 @@ import type { ReactNode } from 'react';
 import RootLayout from './components/common/RootLayout';
 import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
+import MediaKitPage from './pages/MediaKitPage';
+import PublicPressPage from './pages/PublicPressPage';
+import UnsubscribePage from './pages/UnsubscribePage';
 import MarketplacePage from './pages/MarketplacePage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import ReferralHoldsPage from './pages/ReferralHoldsPage';
 import CreatorDetailPage from './pages/CreatorDetailPage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
 import CreatorPublicProfilePage from './pages/CreatorPublicProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
+import OtcTradePage from './pages/OtcTradePage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import NotificationPreferencesPage from './pages/NotificationPreferencesPage';
 import PriceAlertsSettingsPage from './pages/PriceAlertsSettingsPage';
@@ -18,14 +23,19 @@ import ProfilePage from './pages/ProfilePage';
 import FollowingPage from './pages/FollowingPage';
 import ComparePage from './pages/ComparePage';
 import GovernancePage from './pages/GovernancePage';
+import GovernanceFeedPage from './pages/GovernanceFeedPage';
 import ProposalDetailPage from './pages/ProposalDetailPage';
+import ConvictionProposalsPage from './pages/ConvictionProposalsPage';
 import ReferralDashboardPage from './pages/ReferralDashboardPage';
 import CreateCreatorKeyPage from './pages/CreateCreatorKeyPage';
 import StakingDashboardPage from './pages/StakingDashboardPage';
+import BorrowPage from './pages/BorrowPage';
 import RevenueDistributionHistoryPage from './pages/RevenueDistributionHistoryPage';
 import BundleManagementPage from './pages/BundleManagementPage';
 import CreatorRevenueDashboardPage from './pages/CreatorRevenueDashboardPage';
+import EarningsStreamPage from './pages/EarningsStreamPage';
 import SpotlightAuctionPage from './pages/SpotlightAuctionPage';
+import DutchAuctionPage from './pages/SpotlightAuctionPage';
 import AtomicSwapCreatePage from './pages/AtomicSwapCreatePage';
 import AtomicSwapProposalPage from './pages/AtomicSwapProposalPage';
 import StatusPage from './pages/StatusPage';
@@ -37,17 +47,38 @@ import KeyDiscoveryFeedPage from './pages/KeyDiscoveryFeedPage';
 import KeyDiscoveryLeaderboardPage from './pages/KeyDiscoveryLeaderboardPage';
 import WalletPortfolioPage from './pages/WalletPortfolioPage';
 import CampaignsPage from './pages/CampaignsPage';
+import LaunchesPage from './pages/LaunchesPage';
+import CreatorVerificationPage from './pages/CreatorVerificationPage';
+import CurveExplainerPage from './pages/CurveExplainerPage';
 import RentalMarketPage from './pages/RentalMarketPage';
 import MyRentalsPage from './pages/MyRentalsPage';
 import AutoInvestDashboardPage from './pages/AutoInvestDashboardPage';
 import AirdropClaimsPage from './pages/AirdropClaimsPage';
+import DistributionsPage from './pages/DistributionsPage';
 import ProtocolAnalyticsPage from './pages/ProtocolAnalyticsPage';
 import EscapeRedeemPage from './pages/EscapeRedeemPage';
 import LpPositionsPage from './pages/LpPositionsPage';
 import ProposalCreatePage from './pages/ProposalCreatePage';
 import ApiKeysPage from './pages/ApiKeysPage';
+import GuardiansPage from './pages/GuardiansPage';
+import GuardianApprovePage from './pages/GuardianApprovePage';
 import RetirementBuybackConfirmedPage from './pages/RetirementBuybackConfirmedPage';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
+import AdminLoginPage from './pages/AdminLoginPage';
+import AdminTwoFactorSetupPage from './pages/AdminTwoFactorSetupPage';
+import AdminTwoFactorChallengePage from './pages/AdminTwoFactorChallengePage';
+import AdminTwoFactorGuard from './components/admin/AdminTwoFactorGuard';
+import AuditLogPage from './pages/AuditLogPage';
+import ApiDocsPage from './pages/ApiDocsPage';
+import BountyBoardPage from './pages/BountyBoardPage';
+import ManageBountyPage from './pages/ManageBountyPage';
+import GrantsPage from './pages/GrantsPage';
+import GrantDetailPage from './pages/GrantDetailPage';
+import EventsPage from './pages/EventsPage';
+import DcaPlansPage from './pages/DcaPlansPage';
+import EmbedGeneratorPage from './pages/EmbedGeneratorPage';
+import EmbedWidgetView from './components/creator/EmbedWidgetView';
+import AmbassadorDashboardPage from './pages/AmbassadorDashboardPage';
 
 function withRouteErrorBoundary(element: ReactNode, routeName: string) {
 	return (
@@ -57,7 +88,6 @@ function withRouteErrorBoundary(element: ReactNode, routeName: string) {
 
 export const routes = [
 	{
-		path: '/',
 		element: <RootLayout />,
 		children: [
 			{
@@ -102,6 +132,11 @@ export const routes = [
 				),
 			},
 			{
+				// OTC key trade escrow screen (#1383).
+				path: '/otc/:id',
+				element: withRouteErrorBoundary(<OtcTradePage />, 'OTC Trade'),
+			},
+			{
 				// Listed, rented out and rented in keys for the wallet (#1360).
 				path: '/rentals/mine',
 				element: withRouteErrorBoundary(<MyRentalsPage />, 'My rentals'),
@@ -122,6 +157,36 @@ export const routes = [
 			{
 				path: '/leaderboard',
 				element: <LeaderboardPage />,
+			},
+			{
+				path: '/launches',
+				element: withRouteErrorBoundary(<LaunchesPage />, 'Launches'),
+			},
+			{
+				path: '/creator/media-kit',
+				element: withRouteErrorBoundary(<MediaKitPage />, 'Media kit'),
+			},
+			{
+				path: '/k/:handle/press',
+				element: withRouteErrorBoundary(<PublicPressPage />, 'Press page'),
+			},
+			{
+				path: '/unsubscribe/:token',
+				element: withRouteErrorBoundary(<UnsubscribePage />, 'Unsubscribe'),
+			},
+			{
+				path: '/creator/verification',
+				element: withRouteErrorBoundary(
+					<CreatorVerificationPage />,
+					'Creator verification'
+				),
+			},
+			{
+				path: '/learn/bonding-curve',
+				element: withRouteErrorBoundary(
+					<CurveExplainerPage />,
+					'Bonding curve explainer'
+				),
 			},
 			{
 				path: '/creator/:id',
@@ -149,6 +214,14 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<CreatorDetailPage />,
 					'Key detail'
+				),
+			},
+			{
+				// Dutch auction buying page with live descending price (secondary sales).
+				path: '/auctions/:id',
+				element: withRouteErrorBoundary(
+					<DutchAuctionPage />,
+					'Dutch auction'
 				),
 			},
 			{
@@ -232,6 +305,13 @@ export const routes = [
 				element: <CreatorRevenueDashboardPage />,
 			},
 			{
+				path: '/creator/stream',
+				element: withRouteErrorBoundary(
+					<EarningsStreamPage />,
+					'Creator Earnings Stream'
+				),
+			},
+			{
 				path: '/notifications',
 				element: <NotificationsPage />,
 			},
@@ -260,6 +340,32 @@ export const routes = [
 				),
 			},
 			{
+				// Dollar-cost averaging recurring purchase plans (#1470).
+				path: '/portfolio/dca',
+				element: withRouteErrorBoundary(<DcaPlansPage />, 'DCA Plans'),
+			},
+			{
+				// Creator embeddable stats badge and widget generator (#1479).
+				path: '/creator/embed',
+				element: withRouteErrorBoundary(
+					<EmbedGeneratorPage />,
+					'Embed Generator'
+				),
+			},
+			{
+				// Standalone embeddable iframe widget (#1479).
+				path: '/embed/widget/:id',
+				element: withRouteErrorBoundary(<EmbedWidgetView />, 'Key Widget'),
+			},
+			{
+				// Ambassador and affiliate dashboard (#1478).
+				path: '/ambassador',
+				element: withRouteErrorBoundary(
+					<AmbassadorDashboardPage />,
+					'Ambassador Dashboard'
+				),
+			},
+			{
 				path: '/following',
 				element: <FollowingPage />,
 			},
@@ -270,6 +376,20 @@ export const routes = [
 			{
 				path: '/governance',
 				element: <GovernancePage />,
+			},
+			{
+				path: '/governance/conviction',
+				element: withRouteErrorBoundary(
+					<ConvictionProposalsPage />,
+					'Conviction Governance'
+				),
+			},
+			{
+				path: '/governance/activity',
+				element: withRouteErrorBoundary(
+					<GovernanceFeedPage />,
+					'Governance Activity'
+				),
 			},
 			{
 				path: '/governance/create',
@@ -294,6 +414,46 @@ export const routes = [
 			{
 				path: '/staking',
 				element: <StakingDashboardPage />,
+			},
+			{
+				path: '/borrow',
+				element: withRouteErrorBoundary(<BorrowPage />, 'Borrow'),
+			},
+			{
+				path: '/bounties',
+				element: withRouteErrorBoundary(
+					<BountyBoardPage />,
+					'Bounty board'
+				),
+			},
+			{
+				path: '/bounties/manage',
+				element: withRouteErrorBoundary(
+					<ManageBountyPage />,
+					'Manage bounties'
+				),
+			},
+			{
+				path: '/bounties/manage/:id',
+				element: withRouteErrorBoundary(
+					<ManageBountyPage />,
+					'Manage bounty'
+				),
+			},
+			{
+				path: '/treasury/grants',
+				element: withRouteErrorBoundary(<GrantsPage />, 'Grants tracker'),
+			},
+			{
+				path: '/treasury/grants/:grantId',
+				element: withRouteErrorBoundary(
+					<GrantDetailPage />,
+					'Grant tracker'
+				),
+			},
+			{
+				path: '/events',
+				element: withRouteErrorBoundary(<EventsPage />, 'Creator events'),
 			},
 			{
 				path: '/auto-invest',
@@ -325,10 +485,49 @@ export const routes = [
 			},
 			{
 				path: '/admin/dashboard',
-				element: withRouteErrorBoundary(
-					<AdminDashboardPage />,
-					'Admin dashboard'
+				element: (
+					<AdminTwoFactorGuard>
+						{withRouteErrorBoundary(
+							<AdminDashboardPage />,
+							'Admin dashboard'
+						)}
+					</AdminTwoFactorGuard>
 				),
+			},
+			{
+				// Holder-facing distribution history with combined earnings chart (#1259).
+				path: '/distributions',
+				element: withRouteErrorBoundary(
+					<DistributionsPage />,
+					'Distributions'
+				// Searchable audit log of privileged admin actions (#1415).
+				path: '/admin/audit',
+				element: (
+					<AdminTwoFactorGuard>
+						{withRouteErrorBoundary(
+							<AuditLogPage />,
+							'Admin audit log'
+				path: '/admin/referral-holds',
+				element: (
+					<AdminTwoFactorGuard>
+						{withRouteErrorBoundary(
+							<ReferralHoldsPage />,
+							'Referral holds review'
+						)}
+					</AdminTwoFactorGuard>
+				),
+			},
+			{
+				path: '/admin/login',
+				element: <AdminLoginPage />,
+			},
+			{
+				path: '/admin/2fa/setup',
+				element: <AdminTwoFactorSetupPage />,
+			},
+			{
+				path: '/admin/2fa/challenge',
+				element: <AdminTwoFactorChallengePage />,
 			},
 			{
 				path: '/revenue-distribution',
@@ -364,6 +563,26 @@ export const routes = [
 				// Developer API key management for integrators and creators (#1322).
 				path: '/settings/developer',
 				element: <ApiKeysPage />,
+			},
+			{
+				// Public API documentation portal rendered from the OpenAPI spec (#1416).
+				path: '/developers/docs',
+				element: withRouteErrorBoundary(
+					<ApiDocsPage />,
+					'API documentation'
+				// Social recovery guardians and recovery approvals (#1382).
+				path: '/settings/recovery',
+				element: withRouteErrorBoundary(
+					<GuardiansPage />,
+					'Social recovery'
+				),
+			},
+			{
+				path: '/settings/recovery/approve',
+				element: withRouteErrorBoundary(
+					<GuardianApprovePage />,
+					'Guardian approvals'
+				),
 			},
 			{
 				path: '/settings/notifications',
