@@ -373,7 +373,6 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 		isHighPriceImpact(priceImpactPercent, slippageTolerancePercent);
 	const impactAcknowledgementKey = `${side}:${parsedAmount}:${currentSupply ?? 0}:${slippageTolerancePercent}`;
 
-	return null;
 	// Early sell launch penalty
 	const launchPenalty = useMemo(() => {
 		return calculateLaunchPenalty(
@@ -389,6 +388,7 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 		launchPenaltyBps,
 	]);
 
+	const impactAcknowledged = acknowledgedImpactKey === impactAcknowledgementKey;
 	// Open confirmation modal
 	const handleReviewOrder = () => {
 		setTouched(true);

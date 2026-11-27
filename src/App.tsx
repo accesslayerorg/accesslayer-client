@@ -20,7 +20,6 @@ import { routes } from './routes';
 import { useRouteChangeLogging } from './hooks/useRouteChangeLogging';
 import { usePriceAlertMonitor } from './hooks/usePriceAlertMonitor';
 import { usePushSubscription } from './hooks/usePushSubscription';
-import { useWallet } from './hooks/useWallet';
 import {
 	useMotionOverrideStore,
 	useReducedMotion,

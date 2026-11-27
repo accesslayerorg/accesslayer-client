@@ -96,6 +96,9 @@ function qaVotesQueryKey(sessionId: string, wallet: string) {
 	return ['qa-session', sessionId, 'votes', wallet] as const;
 }
 
+
+const EMPTY_VOTES: Set<string> = new Set();
+
 /**
  * Hook for scheduled holder Q&A sessions (#1453).
  *
@@ -147,7 +150,7 @@ export function useQaSession(sessionId: string, wallet?: string) {
 
 	const session = sessionQuery.data ?? null;
 	const questions = questionsQuery.data ?? [];
-	const myVotes = votesQuery.data ?? new Set<string>();
+	const myVotes = votesQuery.data ?? EMPTY_VOTES;
 
 	const sortedQuestions = [...questions]
 		.filter(q => !q.answered)

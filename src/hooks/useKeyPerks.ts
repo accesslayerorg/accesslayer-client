@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 export interface KeyPerk {
 	id: string;
@@ -104,8 +104,8 @@ export function useKeyPerks(keyId: string, wallet?: string) {
 		enabled: !!keyId && !!wallet,
 	});
 
-	const perks = perksQuery.data ?? [];
-	const claims = claimsQuery.data ?? new Set<string>();
+	const perks = useMemo(() => perksQuery.data ?? [], [perksQuery.data]);
+	const claims = useMemo(() => claimsQuery.data ?? new Set<string>(), [claimsQuery.data]);
 
 	const addPerkMutation = useMutation({
 		mutationFn: async (input: CreatePerkInput) => {
@@ -164,7 +164,7 @@ export function useKeyPerks(keyId: string, wallet?: string) {
 	const claimPerkMutation = useMutation({
 		mutationFn: async (perkId: string) => {
 			if (!wallet) throw new Error('Wallet not connected');
-			// Decrement quantity.
+			// Increment claimed quantity.
 			const existingPerks = readPerks(keyId);
 			const updatedPerks = existingPerks.map(p => {
 				if (p.id !== perkId) return p;
@@ -203,7 +203,10 @@ export function useKeyPerks(keyId: string, wallet?: string) {
 		[perks, claims]
 	);
 
-	const sortedPerks = [...perks].sort((a, b) => a.sortOrder - b.sortOrder);
+	const sortedPerks = useMemo(
+		() => [...perks].sort((a, b) => a.sortOrder - b.sortOrder),
+		[perks]
+	);
 
 	return {
 		perks: sortedPerks,
