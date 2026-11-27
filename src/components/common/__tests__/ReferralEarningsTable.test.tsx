@@ -38,7 +38,7 @@ describe('ReferralEarningsTable (#1119)', () => {
 		);
 		expect(
 			screen.getAllByTestId('referral-earning-amount')[0]
-		).toHaveTextContent('2.5 XLM');
+		).toHaveTextContent('2.50 XLM');
 
 		// Short addresses stay intact.
 		expect(screen.getAllByTestId('referral-earning-source')[1]).toHaveTextContent(

@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -143,8 +143,11 @@ describe('LandingPage trade confirmation toast (#540)', () => {
 		await user.click(buyButtons[0]);
 
 		const amountInput = await screen.findByTestId('trade-dialog-amount');
-		await user.clear(amountInput);
-		await user.type(amountInput, '5');
+		fireEvent.change(amountInput, { target: { value: '5' } });
+
+		if (screen.queryByTestId('price-impact-override-checkbox')) {
+			await user.click(screen.getByTestId('price-impact-override-checkbox'));
+		}
 
 		await user.click(screen.getByTestId('trade-dialog-confirm'));
 

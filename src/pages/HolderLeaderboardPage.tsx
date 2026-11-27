@@ -11,6 +11,7 @@ import CircularSpinner from '@/components/common/CircularSpinnerProps';
 import { cn } from '@/lib/utils';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
+import KeyHolderLeaderboardPanel from '@/components/common/KeyHolderLeaderboardPanel';
 
 const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const TOP_HOLDERS_LIMIT = 100;
@@ -234,7 +235,13 @@ export default function HolderLeaderboardPage() {
 					Back to creator
 				</Link>
 
-				<div className="flex items-start justify-between gap-4">
+				<KeyHolderLeaderboardPanel
+					keyId={id || ''}
+					connectedWalletAddress={userAddress}
+					title={`${creator.title} Leaderboard`}
+				/>
+
+				<div className="flex items-start justify-between gap-4 pt-6 border-t border-white/10">
 					<div>
 						<h1 className="font-grotesque text-2xl font-black tracking-tight text-white mb-2">
 							{creator.title} Holder Leaderboard
