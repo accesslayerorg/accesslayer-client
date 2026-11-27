@@ -86,6 +86,15 @@ export interface WalletDiagnostics {
 	timestamp: string;
 }
 
+type WalletWindow = Window & {
+	freighter?: { isConnected?: boolean; isAllowed?: boolean };
+	xBullSDK?: unknown;
+	xBull?: unknown;
+	lobstr?: unknown;
+	albedo?: unknown;
+	rabet?: unknown;
+};
+
 interface WalletDefinition {
 	id: WalletId;
 	name: string;
@@ -99,9 +108,9 @@ const WALLET_DEFINITIONS: WalletDefinition[] = [
 	{
 		id: 'freighter',
 		name: 'Freighter',
-		isPresent: win => Boolean((win as any).freighter),
+		isPresent: win => Boolean((win as WalletWindow).freighter),
 		probe: win => {
-			const freighter = (win as any).freighter;
+			const freighter = (win as WalletWindow).freighter;
 			if (!freighter) return undefined;
 			if (freighter.isConnected === false && freighter.isAllowed === false) {
 				return 'locked';
@@ -112,22 +121,22 @@ const WALLET_DEFINITIONS: WalletDefinition[] = [
 	{
 		id: 'xbull',
 		name: 'xBull',
-		isPresent: win => Boolean((win as any).xBullSDK || (win as any).xBull),
+		isPresent: win => Boolean((win as WalletWindow).xBullSDK || (win as WalletWindow).xBull),
 	},
 	{
 		id: 'lobstr',
 		name: 'Lobstr',
-		isPresent: win => Boolean((win as any).lobstr),
+		isPresent: win => Boolean((win as WalletWindow).lobstr),
 	},
 	{
 		id: 'albedo',
 		name: 'Albedo',
-		isPresent: win => Boolean((win as any).albedo),
+		isPresent: win => Boolean((win as WalletWindow).albedo),
 	},
 	{
 		id: 'rabet',
 		name: 'Rabet',
-		isPresent: win => Boolean((win as any).rabet),
+		isPresent: win => Boolean((win as WalletWindow).rabet),
 	},
 ];
 

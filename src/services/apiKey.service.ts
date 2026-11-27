@@ -42,6 +42,10 @@ export interface CreatedApiKey {
 }
 
 class ApiKeyService extends BaseApiService {
+	async getSelectedKey(): Promise<string> {
+		return this.getAuthToken() ?? '';
+	}
+
 	/** Keys owned by the authenticated user — GET /developer/api-keys */
 	async listApiKeys(): Promise<ApiKey[]> {
 		try {

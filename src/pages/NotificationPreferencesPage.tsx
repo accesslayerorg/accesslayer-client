@@ -155,7 +155,7 @@ export default function NotificationPreferencesPage({
 						})}
 					</div>
 
-					<PushOptInCard address={address} />
+					<PushOptInCard />
 
 					<div className="mt-6 flex items-center justify-end gap-4">
 						{saveStatus === 'saving' && (

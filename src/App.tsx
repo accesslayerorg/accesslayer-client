@@ -2,6 +2,7 @@ import Lenis from 'lenis';
 import { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { createBrowserRouter, RouterProvider } from 'react-router';
+import { useAccount } from 'wagmi';
 
 import AppErrorBoundary from './components/common/AppErrorBoundary';
 import ContractPausedBanner from './components/common/ContractPausedBanner';
@@ -13,14 +14,11 @@ import PendingFeeChangeBanner from './components/fees/PendingFeeChangeBanner';
 import SessionExpiryWatcher from './components/common/SessionExpiryWatcher';
 import StatusBanner from './components/common/StatusBanner';
 import BadgeAchievementListener from './components/common/BadgeAchievementListener';
-import { RoyaltyEnforcedBadge } from './components/common/RoyaltyEnforcedBadge';
-import { ApprovedMarketplacesPanel } from './components/common/ApprovedMarketplacesPanel';
 import { useContractPausedStore } from './hooks/useContractPausedStore';
 import { routes } from './routes';
 import { useRouteChangeLogging } from './hooks/useRouteChangeLogging';
 import { usePriceAlertMonitor } from './hooks/usePriceAlertMonitor';
 import { usePushSubscription } from './hooks/usePushSubscription';
-import { useWallet } from './hooks/useWallet';
 import {
 	useMotionOverrideStore,
 	useReducedMotion,
@@ -33,8 +31,8 @@ function App() {
 	usePriceAlertMonitor();
 	const reducedMotion = useReducedMotion();
 	const motionOverride = useMotionOverrideStore(state => state.override);
-	const { address } = useWallet();
-	const { removeSubscription } = usePushSubscription();
+	const { address } = useAccount();
+	const { disable: removeSubscription } = usePushSubscription();
 
 	// Remove the backend push subscription when the wallet signs out (#1413)
 	useEffect(() => {

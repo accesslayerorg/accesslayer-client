@@ -230,6 +230,10 @@ export class BaseApiService {
 		);
 	}
 
+	public get client(): AxiosInstance {
+		return this.api;
+	}
+
 	// Store authentication token in cookie
 	public setAuthToken(token: string): void {
 		// Store token with expiry of 7 days
@@ -277,6 +281,8 @@ export class BaseApiService {
 		Cookies.remove(this.REFRESH_TOKEN);
 	}
 }
+
+export const apiClient = new BaseApiService().client;
 
 // Standalone fetch for the public OpenAPI document (#1416). The docs portal
 // must be able to load the spec even when the user is signed out, so this

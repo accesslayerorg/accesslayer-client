@@ -4,6 +4,18 @@ import { XIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+	useWalletDetection,
+	type WalletId,
+} from '@/hooks/useStellarWallet';
+
+const WALLET_DOWNLOAD_URLS: Record<WalletId, string> = {
+	freighter: 'https://freighter.me/',
+	xbull: 'https://xbull.app/',
+	lobstr: 'https://lobstr.co/',
+	albedo: 'https://albedo.link/',
+	rabet: 'https://rabet.io/',
+};
 
 function Dialog({
 	...props
@@ -170,12 +182,16 @@ export interface WalletHelpModalProps {
 export function WalletHelpModal({ open, onOpenChange }: WalletHelpModalProps) {
 	const {
 		wallets,
-		reason,
-		reasonLabel,
-		diagnostics,
+		detectedReason: reason,
+		checking: isRechecking,
 		recheck,
-		isRechecking,
+		getDiagnostics,
 	} = useWalletDetection();
+	const diagnostics = React.useMemo(
+		() => JSON.stringify(getDiagnostics(), null, 2),
+		[getDiagnostics],
+	);
+	const reasonLabel = reason ? reason.replace(/-/g, ' ') : undefined;
 	const [copied, setCopied] = React.useState(false);
 
 	const copyDiagnostics = React.useCallback(async () => {
@@ -218,7 +234,7 @@ export function WalletHelpModal({ open, onOpenChange }: WalletHelpModalProps) {
 								</div>
 								{!wallet.installed && (
 									<a
-										href={wallet.downloadUrl}
+										href={WALLET_DOWNLOAD_URLS[wallet.id]}
 										target="_blank"
 										rel="noopener noreferrer"
 										className="text-primary text-sm underline"
@@ -299,7 +315,7 @@ const checklistItems: Array<{
 		fix: 'Allow pop-ups for this site in your browser settings, then try connecting again.',
 	},
 	{
-		reason: 'adblocker',
+		reason: 'ad-blocker',
 		title: 'Ad blocker or extension conflict',
 		fix: 'Disable ad blockers or conflicting extensions for this site, then press Recheck.',
 	},

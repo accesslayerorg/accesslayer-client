@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { useWallet } from '../../hooks/useWallet';
+import { useAccount } from 'wagmi';
 import { useChartAnnotations } from '../../hooks/useChartAnnotations';
 import { exportChartPng } from '../../utils/exportChartPng';
 
@@ -37,13 +37,6 @@ interface DragState {
   startX: number;
   currentX: number;
   active: boolean;
-}
-
-interface Annotation {
-  id: string;
-  time: number;
-  price: number;
-  text: string;
 }
 
 const PADDING = { top: 24, right: 64, bottom: 32, left: 8 };
@@ -93,15 +86,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   } | null>(null);
   const [annotationText, setAnnotationText] = useState('');
 
-  const { isConnected } = useWallet();
+  const { address, isConnected } = useAccount();
   const annotationsKey = chartKey ?? symbol ?? 'default';
   const { annotations, addAnnotation, removeAnnotation } = useChartAnnotations(
     annotationsKey,
-  ) as {
-    annotations: Annotation[];
-    addAnnotation: (a: Omit<Annotation, 'id'>) => void;
-    removeAnnotation: (id: string) => void;
-  };
+    address,
+  );
 
   // Track container width for responsive rendering.
   useEffect(() => {
@@ -497,18 +487,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   );
 
   const handleExport = useCallback(async () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = containerRef.current;
+    if (!container) return;
     const rangeLabel =
       visibleData.length > 0
         ? `${formatTime(visibleData[0].time)} - ${formatTime(
             visibleData[visibleData.length - 1].time,
           )}`
         : 'No data';
-    await exportChartPng(canvas, {
+    await exportChartPng({
+      element: container,
       title: title ?? symbol ?? 'Price Chart',
-      range: rangeLabel,
-      filename: `${(symbol ?? 'chart').toLowerCase()}-${Date.now()}.png`,
+      rangeLabel,
+      fileName: `${(symbol ?? 'chart').toLowerCase()}-${Date.now()}`,
     });
   }, [visibleData, title, symbol]);
 
@@ -518,11 +509,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       setAnnotationText('');
       return;
     }
-    addAnnotation({
-      time: pendingAnnotation.time,
-      price: pendingAnnotation.price,
-      text: annotationText.trim(),
-    });
+    addAnnotation(
+      pendingAnnotation.time,
+      pendingAnnotation.price,
+      annotationText.trim(),
+    );
     setPendingAnnotation(null);
     setAnnotationText('');
   }, [pendingAnnotation, annotationText, addAnnotation]);

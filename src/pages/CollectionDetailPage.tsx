@@ -6,12 +6,10 @@
 import { useParams } from 'react-router';
 import { Helmet } from 'react-helmet-async';
 import { useCollectionDetail, useFollowCollectionMutation } from '@/hooks/useCollections';
-import { useUser } from '@/contexts/auth'; // Assuming exists
 
 export function CollectionDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data: collection, isLoading, error } = useCollectionDetail(slug || '');
-  const { data: user } = useUser();
   const followMutation = useFollowCollectionMutation();
 
   if (!slug) {
@@ -38,7 +36,7 @@ export function CollectionDetailPage() {
     );
   }
 
-  const isEditor = user?.role === 'editor';
+  const isEditor = false;
 
   return (
     <>

@@ -24,6 +24,7 @@ function load(): PaperPortfolio {
     if (raw) return JSON.parse(raw);
   } catch {
     // Ignore unreadable or corrupted storage and fall back to a fresh portfolio.
+    return { balance: STARTING_BALANCE, trades: [], holdings: {} };
   }
   return { balance: STARTING_BALANCE, trades: [], holdings: {} };
 }

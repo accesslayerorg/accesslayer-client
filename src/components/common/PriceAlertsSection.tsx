@@ -1,5 +1,6 @@
 import { BellRing, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
 import { useActivePriceAlerts, useDeletePriceAlert } from '@/hooks/usePriceAlerts';
 import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import showToast from '@/utils/toast.util';
@@ -73,7 +74,9 @@ export default function PriceAlertsSection({ userId }: PriceAlertsSectionProps) 
 										<span className={alert.direction === 'above' ? 'text-emerald-300' : 'text-rose-300'}>
 											{alert.direction}
 										</span>{' '}
-										<span className="font-mono text-white">{formatDisplayKeyPrice(alert.targetPrice)}</span>
+										<span className="font-mono text-white">
+											{formatDisplayKeyPrice(alert.targetPrice * STROOPS_PER_XLM)}
+										</span>
 									</p>
 								</div>
 								<Button

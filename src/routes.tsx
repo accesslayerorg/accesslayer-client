@@ -13,6 +13,7 @@ import CreatorDashboardPage from './pages/CreatorDashboardPage';
 import CreatorPublicProfilePage from './pages/CreatorPublicProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
 import OtcTradePage from './pages/OtcTradePage';
+import WatchlistPage from './pages/WatchlistPage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import NotificationPreferencesPage from './pages/NotificationPreferencesPage';
 import PriceAlertsSettingsPage from './pages/PriceAlertsSettingsPage';
@@ -316,6 +317,10 @@ export const routes = [
 				element: <NotificationsPage />,
 			},
 			{
+				path: '/watchlist',
+				element: withRouteErrorBoundary(<WatchlistPage />, 'Watchlist'),
+			},
+			{
 				path: '/settings',
 				element: <AccountSettingsPage />,
 			},
@@ -500,6 +505,9 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<DistributionsPage />,
 					'Distributions'
+				),
+			},
+			{
 				// Searchable audit log of privileged admin actions (#1415).
 				path: '/admin/audit',
 				element: (
@@ -507,6 +515,11 @@ export const routes = [
 						{withRouteErrorBoundary(
 							<AuditLogPage />,
 							'Admin audit log'
+						)}
+					</AdminTwoFactorGuard>
+				),
+			},
+			{
 				path: '/admin/referral-holds',
 				element: (
 					<AdminTwoFactorGuard>
@@ -570,6 +583,9 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<ApiDocsPage />,
 					'API documentation'
+				),
+			},
+			{
 				// Social recovery guardians and recovery approvals (#1382).
 				path: '/settings/recovery',
 				element: withRouteErrorBoundary(

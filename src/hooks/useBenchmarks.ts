@@ -33,12 +33,15 @@ const RANGE_DAYS: Record<BenchmarkRange, number | null> = {
 	All: null,
 };
 
+const HISTORY_RANGE: Record<BenchmarkRange, PortfolioHistoryRange> = {
+	'7D': '7d',
+	'30D': '30d',
+	'90D': '90d',
+	All: 'all',
+};
+
 function rangeToDays(range: BenchmarkRange): number {
 	return RANGE_DAYS[range] ?? 365;
-}
-
-function toPortfolioHistoryRange(range: BenchmarkRange): PortfolioHistoryRange {
-	return range === 'All' ? 'all' : (range.toLowerCase() as PortfolioHistoryRange);
 }
 
 function generateDates(days: number): string[] {
@@ -116,7 +119,7 @@ export function useBenchmarks(range: BenchmarkRange, wallet?: string) {
 
 	const portfolioHistoryQuery = usePortfolioHistory(
 		wallet ?? '',
-		toPortfolioHistoryRange(range)
+		HISTORY_RANGE[range]
 	);
 
 	const creators = creatorsQuery.data ?? [];
@@ -148,7 +151,7 @@ export function useBenchmarks(range: BenchmarkRange, wallet?: string) {
 		if (!history || !history.length) return null;
 
 		const sliced = history.slice(-days - 1);
-		const prices = sliced.map((p: { value: number }) => p.value);
+		const prices = sliced.map(p => p.value);
 		const normalised = normalise(prices);
 		const points = sliced.map((p, i) => ({
 			date: p.timestamp,
