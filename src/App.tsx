@@ -13,8 +13,6 @@ import PendingFeeChangeBanner from './components/fees/PendingFeeChangeBanner';
 import SessionExpiryWatcher from './components/common/SessionExpiryWatcher';
 import StatusBanner from './components/common/StatusBanner';
 import BadgeAchievementListener from './components/common/BadgeAchievementListener';
-import { RoyaltyEnforcedBadge } from './components/common/RoyaltyEnforcedBadge';
-import { ApprovedMarketplacesPanel } from './components/common/ApprovedMarketplacesPanel';
 import { useContractPausedStore } from './hooks/useContractPausedStore';
 import { routes } from './routes';
 import { useRouteChangeLogging } from './hooks/useRouteChangeLogging';

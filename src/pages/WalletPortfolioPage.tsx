@@ -23,7 +23,6 @@ import {
 import { useActiveKeySplits } from '@/hooks/useKeySplit';
 import { isSplitActive } from '@/utils/keySplit.utils';
 import KeySplitBanner from '@/components/common/KeySplitBanner';
-import SplitAppliedBadge from '@/components/common/SplitAppliedBadge';
 import {
 	calculatePnLSummary,
 	calculatePortfolioValue,
@@ -378,19 +377,8 @@ export default function WalletPortfolioPage() {
 															onClick={() =>
 																handleSort(column.sortKey!)
 															}
-															className={cn(
-																'inline-flex items-center gap-1 uppercase tracking-[0.18em] transition-colors hover:text-white',
-																isActive && 'text-amber-300'
-															)}
 														>
 															{column.label}
-															{isActive && (
-																<span aria-hidden="true">
-																	{sortDirection === 'asc'
-																		? '↑'
-																		: '↓'}
-																</span>
-															)}
 														</button>
 													) : (
 														column.label
@@ -401,122 +389,53 @@ export default function WalletPortfolioPage() {
 									</tr>
 								</thead>
 								<tbody>
-									{sortedRows.map(row => {
-										const isLoadingRow = row.pnl.status === 'loading';
-										const isUnavailable =
-											row.pnl.status === 'unavailable';
-										const displayPnL =
-											row.pnl.unrealisedPnLStroops == null
-												? '—'
-												: formatPnLDisplay(
-														row.pnl.unrealisedPnLStroops
-													);
-										const displayPnLPercent =
-											row.pnl.pnlPercentage == null
-												? '—'
-												: formatPnLPercentage(
-														row.pnl.pnlPercentage
-													);
-
-										return (
-											<tr
-												key={row.creatorId}
-												data-testid="portfolio-position-row"
-												data-key-id={row.creatorId}
-												onClick={() =>
-													navigate(`/creator/${row.creatorId}`)
-												}
-												className="cursor-pointer border-b border-white/5 transition-colors hover:bg-white/[0.04]"
+									{sortedRows.map(row => (
+										<tr
+											key={row.keyId}
+											className="border-b border-white/5 last:border-0"
+										>
+											<td className="py-3 pr-4">
+											<Link
+												to={`/keys/${row.keyId}`}
+												className="font-bold text-white hover:text-amber-300"
 											>
-												<td className="py-3 pr-4">
-													<div className="flex items-center gap-2">
-														<Link
-															to={`/creator/${row.creatorId}`}
-															className="font-semibold text-white hover:text-amber-300"
-															onClick={event =>
-																event.stopPropagation()
-															}
-														>
-															{row.keyName}
-														</Link>
-														{checkKeySplitActive(
-															row.creatorId
-														) && <SplitAppliedBadge />}
-													</div>
-												</td>
-												<td className="py-3 pr-4 text-right font-mono text-white/80">
-													{row.pnl.quantity}
-												</td>
-												<td className="py-3 pr-4 text-right font-mono text-white/80">
-													{isLoadingRow
-														? '—'
-														: formatDisplayKeyPrice(
-																row.pnl
-																	.averagePurchasePriceStroops
-															)}
-												</td>
-												<td
-													className="py-3 pr-4 text-right font-mono text-white"
-													data-testid="portfolio-row-current-price"
-												>
-													{isLoadingRow || isUnavailable
-														? '—'
-														: formatDisplayKeyPrice(
-																row.pnl.currentPriceStroops
-															)}
-												</td>
-												<td
-													className={cn(
-														'py-3 pr-4 text-right font-mono font-semibold',
-														row.pnl.unrealisedPnLStroops == null
-															? 'text-white/50'
-															: getPnLToneClassName(
-																	row.pnl.unrealisedPnLStroops
-																)
-													)}
-													data-testid="portfolio-row-pnl"
-												>
-													{displayPnL}
-												</td>
-												<td
-													className={cn(
-														'py-3 pr-4 text-right font-mono font-semibold',
-														row.pnl.pnlPercentage == null
-															? 'text-white/50'
-															: getPnLToneClassName(
-																	row.pnl.pnlPercentage
-																)
-													)}
-													data-testid="portfolio-row-pnl-percent"
-												>
-													{displayPnLPercent}
-												</td>
-											</tr>
-										);
-									})}
+												{row.keyName}
+											</Link>
+										</td>
+										<td className="py-3 pr-4 text-right font-mono">
+											{row.quantity}
+										</td>
+										<td className="py-3 pr-4 text-right font-mono">
+											{row.avgBuyPrice}
+										</td>
+										<td className="py-3 pr-4 text-right font-mono">
+											{row.currentPrice}
+										</td>
+										<td
+											className={cn(
+												'py-3 pr-4 text-right font-mono',
+												getPnLToneClassName(row.unrealisedPnL)
+											)}
+										>
+											{row.unrealisedPnLDisplay}
+										</td>
+										<td
+											className={cn(
+												'py-3 pr-4 text-right font-mono',
+												getPnLToneClassName(row.unrealisedPnL)
+											)}
+										>
+											{row.pnlPercentDisplay}
+										</td>
+									</tr>
+								))}
 								</tbody>
 							</table>
 						</div>
 					)}
 				</SectionErrorBoundary>
 
-				<SectionErrorBoundary sectionName="balance history">
-					<BalanceHistoryChart address={address} keyNames={keyNames} />
-				</SectionErrorBoundary>
-
-				<SectionErrorBoundary sectionName="realized gains">
-					<GainsReport walletAddress={address} />
-				</SectionErrorBoundary>
-
-				{correlationPositions.length > 1 && (
-					<SectionErrorBoundary sectionName="diversification">
-						<DiversificationPanel positions={correlationPositions} />
-					</SectionErrorBoundary>
-				)}
-
-				<SectionErrorBoundary sectionName="badge progress">
-					<BadgeProgressTracker wallet={address} className="mt-10" />
-				</SectionErrorBoundary>
+				<DiversificationPanel positions={correlationPositions} />
 			</div>
 		</main>
 	);

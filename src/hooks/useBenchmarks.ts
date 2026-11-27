@@ -60,9 +60,6 @@ function normalise(prices: number[]): number[] {
 
 /** Build an equal-weight market basket series from all creators. */
 function buildMarketBasket(creators: Course[], dates: string[]): BenchmarkPoint[] {
-	// Use volume24h as a proxy for price movement — in production this would
-	// come from a price-history endpoint. We generate a smoothed synthetic
-	// series seeded from each creator's current price change for demo purposes.
 	const avgChange =
 		creators.reduce((sum, c) => sum + (c.priceChange24h ?? 0), 0) /
 		Math.max(creators.length, 1);
@@ -89,7 +86,7 @@ function buildTop10Basket(creators: Course[], dates: string[]): BenchmarkPoint[]
 
 /** XLM benchmark: synthetic series based on a fixed modest growth assumption. */
 function buildXlmBasket(dates: string[]): BenchmarkPoint[] {
-	// Placeholder: 0.05% daily drift representing XLM hold.
+	// 0.05% daily drift representing XLM hold.
 	const dailyRate = 0.0005;
 	const prices = dates.map((_, i) => 100 * Math.pow(1 + dailyRate, i));
 	const normalised = normalise(prices);
@@ -119,7 +116,10 @@ export function useBenchmarks(range: BenchmarkRange, wallet?: string) {
 		toPortfolioHistoryRange(range)
 	);
 
-	const creators = creatorsQuery.data ?? [];
+	const creators = useMemo<Course[]>(
+		() => creatorsQuery.data ?? [],
+		[creatorsQuery.data]
+	);
 
 	const benchmarkSeries = useMemo<BenchmarkSeries[]>(() => {
 		if (!creators.length) return [];
@@ -142,7 +142,7 @@ export function useBenchmarks(range: BenchmarkRange, wallet?: string) {
 		];
 	}, [creators, dates]);
 
-	// Portfolio series from history — normalised to 100 at range start.
+	// Portfolio series from history, normalised to 100 at range start.
 	const portfolioSeries = useMemo<BenchmarkSeries | null>(() => {
 		const history = portfolioHistoryQuery.data;
 		if (!history || !history.length) return null;
