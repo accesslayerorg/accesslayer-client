@@ -3,10 +3,7 @@ import { Button } from '@/components/ui/button';
 import { StableButtonContent } from '@/components/ui/stable-button-content';
 import { cn } from '@/lib/utils';
 import { useCurveProposal } from '@/hooks/useCurveProposal';
-import {
-	computeCurveImpactPreview,
-	computeLinearCurvePrice,
-} from '@/utils/bondingCurve.utils';
+import { computeLinearCurvePrice } from '@/utils/bondingCurve.utils';
 import { formatTimelockCountdown } from '@/utils/timelock.utils';
 
 function formatXlm(value: number): string {
@@ -81,16 +78,6 @@ export function CurveParametersPanel({
 		parsedSlope >= 0 &&
 		parsedIntercept >= 0 &&
 		validationError === null;
-
-	const impactPreview = useMemo(() => {
-		if (!isValid || parsedSlope === null || parsedIntercept === null) {
-			return null;
-		}
-		return computeCurveImpactPreview(currentSupply, currentParams, {
-			slope: parsedSlope,
-			intercept: parsedIntercept,
-		});
-	}, [isValid, currentSupply, currentParams, parsedSlope, parsedIntercept]);
 
 	const countdown = useMemo(() => {
 		if (!pendingProposal) return null;

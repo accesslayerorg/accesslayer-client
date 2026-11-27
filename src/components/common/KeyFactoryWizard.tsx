@@ -1,17 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { CheckCircle2, Loader2, Rocket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Stepper from '@/components/common/Stepper';
-import KeyFactoryCurvePreview from '@/components/common/KeyFactoryCurvePreview';
-import WhitelistUploadInput from '@/components/common/WhitelistUploadInput';
-import { formatXlmPrice } from '@/utils/numberFormat.utils';
 import { truncateTxHash } from '@/constants/stellar';
 import {
 	canAdvanceToStep,
-	getDraftInitialPriceXlm,
 	KEY_FACTORY_STEPS,
-	parseWhitelistInput,
 	validateKeyFactoryDraft,
 	validateKeyFactoryStep,
 	type KeyFactoryDraft,
@@ -38,9 +33,6 @@ export interface KeyFactoryWizardProps {
 	className?: string;
 }
 
-const fieldClass =
-	'w-full rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-white/30 outline-none transition-colors focus:border-amber-400/40 focus:ring-[3px] focus:ring-amber-400/20 disabled:opacity-50';
-
 const DEPLOYMENT_STATUS_COPY: Record<KeyDeploymentStatus, string> = {
 	submitted: 'Deployment submitted. Waiting for the factory contract…',
 	pending: 'Deployment pending on-chain…',
@@ -57,9 +49,7 @@ const DEPLOYMENT_STATUS_COPY: Record<KeyDeploymentStatus, string> = {
  * deployment redirects to the new key's detail page.
  */
 export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
-	deployer,
 	draft,
-	onDraftChange,
 	isDeploying = false,
 	deploymentStatus = null,
 	transactionHash = null,
@@ -69,18 +59,11 @@ export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
 }) => {
 	const navigate = useNavigate();
 	const [stepIndex, setStepIndex] = useState(0);
-	const [showErrors, setShowErrors] = useState(false);
+	const [, setShowErrors] = useState(false);
 
 	const step = KEY_FACTORY_STEPS[stepIndex];
 	const validation = validateKeyFactoryStep(step.value, draft);
 	const draftValidation = validateKeyFactoryDraft(draft);
-	const whitelist = useMemo(
-		() => parseWhitelistInput(draft.whitelistInput),
-		[draft.whitelistInput]
-	);
-
-	const errorFor = (field: string): string | undefined =>
-		showErrors ? validation.errors[field] : undefined;
 
 	const isLastStep = stepIndex === KEY_FACTORY_STEPS.length - 1;
 	const isDeploymentSettled =
@@ -163,244 +146,43 @@ export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
 				</p>
 			</div>
 
-			{/* Step 1 — key details */}
-			{step.value === 'details' && (
-				<div className="mt-6 space-y-4" data-testid="key-factory-step-details">
-					<div className="space-y-1.5">
-						<label
-							htmlFor="key-factory-name"
-							className="text-xs font-bold uppercase tracking-[0.18em] text-white/50"
-						>
-							Key name
-						</label>
-						<input
-							id="key-factory-name"
-							type="text"
-							className={fieldClass}
-							value={draft.name}
-							disabled={isDeploying}
-							placeholder="My creator key"
-							aria-invalid={errorFor('name') ? 'true' : undefined}
-							onChange={event =>
-								onDraftChange({ name: event.target.value })
-							}
-							data-testid="key-factory-name-input"
-						/>
-						{errorFor('name') && (
-							<p role="alert" className="text-xs text-red-400">
-								{errorFor('name')}
-							</p>
-						)}
-					</div>
-
-					<div className="space-y-1.5">
-						<label
-							htmlFor="key-factory-description"
-							className="text-xs font-bold uppercase tracking-[0.18em] text-white/50"
-						>
-							Description
-						</label>
-						<textarea
-							id="key-factory-description"
-							rows={3}
-							className={fieldClass}
-							value={draft.description}
-							disabled={isDeploying}
-							placeholder="What is this key for?"
-							aria-invalid={errorFor('description') ? 'true' : undefined}
-							onChange={event =>
-								onDraftChange({ description: event.target.value })
-							}
-							data-testid="key-factory-description-input"
-						/>
-						{errorFor('description') && (
-							<p role="alert" className="text-xs text-red-400">
-								{errorFor('description')}
-							</p>
-						)}
-					</div>
-
-					<div className="space-y-1.5">
-						<label
-							htmlFor="key-factory-category"
-							className="text-xs font-bold uppercase tracking-[0.18em] text-white/50"
-						>
-							Category
-						</label>
-						<input
-							id="key-factory-category"
-							type="text"
-							className={fieldClass}
-							value={draft.category}
-							disabled={isDeploying}
-							placeholder="Education"
-							aria-invalid={errorFor('category') ? 'true' : undefined}
-							onChange={event =>
-								onDraftChange({ category: event.target.value })
-							}
-							data-testid="key-factory-category-input"
-						/>
-						{errorFor('category') && (
-							<p role="alert" className="text-xs text-red-400">
-								{errorFor('category')}
-							</p>
-						)}
-					</div>
-				</div>
-			)}
-
-			{/* Step 2 — bonding curve config + live preview */}
-			{step.value === 'curve' && (
-				<div
-					className="mt-6 space-y-4"
-					data-testid="key-factory-step-curve"
+			<div className="mt-8 flex items-center justify-between gap-3">
+				<Button
+					type="button"
+					variant="outline"
+					disabled={stepIndex === 0 || isDeploying}
+					onClick={handleBack}
+					data-testid="key-factory-back"
 				>
-					<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-						<div className="space-y-1.5">
-							<label
-								htmlFor="key-factory-base-price"
-								className="text-xs font-bold uppercase tracking-[0.18em] text-white/50"
-							>
-								Base price (XLM)
-							</label>
-							<input
-								id="key-factory-base-price"
-								inputMode="decimal"
-								className={fieldClass}
-								value={draft.basePriceXlm}
-								disabled={isDeploying}
-								placeholder="1.00"
-								aria-invalid={
-									errorFor('basePriceXlm') ? 'true' : undefined
-								}
-								onChange={event =>
-									onDraftChange({ basePriceXlm: event.target.value })
-								}
-								data-testid="key-factory-base-price-input"
-							/>
-							{errorFor('basePriceXlm') && (
-								<p role="alert" className="text-xs text-red-400">
-									{errorFor('basePriceXlm')}
-								</p>
+					Back
+				</Button>
+				<Button
+					type="button"
+					disabled={isDeploying || isDeploymentSettled || (!draftValidation.isValid && isLastStep)}
+					onClick={handleNext}
+					data-testid="key-factory-next"
+				>
+					{isLastStep ? (
+						<>
+							{isDeploying ? (
+								<Loader2 className="size-4 animate-spin" aria-hidden="true" />
+							) : (
+								<Rocket className="size-4" aria-hidden="true" />
 							)}
-						</div>
+							Deploy key
+						</>
+					) : (
+						'Next'
+					)}
+				</Button>
+			</div>
 
-						<div className="space-y-1.5">
-							<label
-								htmlFor="key-factory-growth-factor"
-								className="text-xs font-bold uppercase tracking-[0.18em] text-white/50"
-							>
-								Growth factor
-							</label>
-							<input
-								id="key-factory-growth-factor"
-								inputMode="decimal"
-								className={fieldClass}
-								value={draft.growthFactor}
-								disabled={isDeploying}
-								placeholder="1.01"
-								aria-invalid={
-									errorFor('growthFactor') ? 'true' : undefined
-								}
-								onChange={event =>
-									onDraftChange({ growthFactor: event.target.value })
-								}
-								data-testid="key-factory-growth-factor-input"
-							/>
-							{errorFor('growthFactor') && (
-								<p role="alert" className="text-xs text-red-400">
-									{errorFor('growthFactor')}
-								</p>
-							)}
-						</div>
-
-						<div className="space-y-1.5">
-							<label
-								htmlFor="key-factory-max-supply"
-								className="text-xs font-bold uppercase tracking-[0.18em] text-white/50"
-							>
-								Max supply
-							</label>
-							<input
-								id="key-factory-max-supply"
-								inputMode="numeric"
-								className={fieldClass}
-								value={draft.maxSupply}
-								disabled={isDeploying}
-								placeholder="1000"
-								aria-invalid={errorFor('maxSupply') ? 'true' : undefined}
-								onChange={event =>
-									onDraftChange({ maxSupply: event.target.value })
-								}
-								data-testid="key-factory-max-supply-input"
-							/>
-							{errorFor('maxSupply') && (
-								<p role="alert" className="text-xs text-red-400">
-									{errorFor('maxSupply')}
-								</p>
-							)}
-						</div>
-					</div>
-
-					<KeyFactoryCurvePreview
-						draft={draft}
-						isValid={validateKeyFactoryStep('curve', draft).isValid}
-						className="rounded-2xl border border-white/10 bg-white/[0.02] p-4"
-					/>
-				</div>
-			)}
-
-			{/* Step 3 — auction vs direct launch */}
-			{step.value === 'launch' && (
-				<div className="mt-6 space-y-4" data-testid="key-factory-step-launch">
-					<fieldset className="space-y-3">
-						<legend className="text-xs font-bold uppercase tracking-[0.18em] text-white/50">
-							Launch mode
-						</legend>
-
-						{(
-							[
-								{
-									value: 'direct',
-									label: 'Direct launch',
-									description:
-										'The key opens for trading on the bonding curve immediately.',
-								},
-								{
-									value: 'auction',
-									label: 'Auction launch',
-									description:
-										'The first keys are sold at a fixed price to whitelisted buyers.',
-								},
-							] as const
-						).map(option => (
-							<label
-								key={option.value}
-								className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-colors hover:border-white/20"
-							>
-								<input
-									type="radio"
-									name="key-factory-launch-mode"
-									value={option.value}
-									checked={draft.launchMode === option.value}
-									disabled={isDeploying}
-									onChange={() =>
-										onDraftChange({ launchMode: option.value })
-									}
-									className="mt-1 accent-amber-400"
-									data-testid={`key-factory-launch-${option.value}`}
-								/>
-								<span className="space-y-1">
-									<span className="block text-sm font-bold text-white">
-										{option.label}
-									</span>
-									<span className="block text-xs text-white/50">
-										{option.description}
-									</span>
-								</span>
-							</label>
-						))}
-					</fieldset>
+			{deploymentStatus && (
+				<div className="mt-6 space-y-2 text-sm text-white/60" data-testid="key-factory-deployment-status">
+					<p>{DEPLOYMENT_STATUS_COPY[deploymentStatus]}</p>
+					{transactionHash && (
+						<p className="font-mono text-xs">Tx {truncateTxHash(transactionHash)}</p>
+					)}
 				</div>
 			)}
 		</section>
@@ -408,4 +190,3 @@ export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
 };
 
 export default KeyFactoryWizard;
-	
