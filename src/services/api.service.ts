@@ -278,6 +278,15 @@ export class BaseApiService {
 	}
 }
 
+class SharedApiClient extends BaseApiService {
+	public get client(): AxiosInstance {
+		return this.api;
+	}
+}
+
+export const apiClient: AxiosInstance = new SharedApiClient().client;
+export const api = apiClient;
+
 // Standalone fetch for the public OpenAPI document (#1416). The docs portal
 // must be able to load the spec even when the user is signed out, so this
 // deliberately bypasses the authenticated axios instance and its refresh

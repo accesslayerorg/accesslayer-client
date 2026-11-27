@@ -445,9 +445,10 @@ const TryItPanel: React.FC<TryItPanelProps> = ({ entry, doc, baseUrl }) => {
   useEffect(() => {
     let cancelled = false;
     apiKeyService
-      .getSelectedKey()
-      .then((key) => {
-        if (!cancelled) setApiKey(key || '');
+      .listApiKeys()
+      .then((keys) => {
+        const prefix = keys.find((key) => key.status === 'active')?.prefix ?? '';
+        if (!cancelled) setApiKey(prefix);
       })
       .catch(() => {
         if (!cancelled) setApiKey('');

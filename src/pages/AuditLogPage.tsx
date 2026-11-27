@@ -1,23 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useAuditLog } from '../hooks/useAuditLog';
 import { useAdminRole } from '../hooks/useAdminRole';
-
-export interface AuditLogEntry {
-  id: string;
-  actor: string;
-  action: string;
-  target: string;
-  timestamp: string;
-  before?: Record<string, unknown> | null;
-  after?: Record<string, unknown> | null;
-  payload?: Record<string, unknown> | null;
-}
 
 const SECRET_KEY_PATTERN = /(secret|password|token|apikey|api_key|private|credential|authorization|auth)/i;
 const REDACTED = '[REDACTED]';
 
-export function redactSecrets(value: unknown): unknown {
+function redactSecrets(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map((item) => redactSecrets(item));
   }
@@ -58,7 +47,7 @@ function toCsvValue(value: unknown): string {
 
 const CSV_ROW_LIMIT = 5000;
 
-export default function AuditLogPage(): JSX.Element {
+export default function AuditLogPage(): React.JSX.Element | null {
   const navigate = useNavigate();
   const { isAdminWallet, loading: roleLoading } = useAdminRole();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -336,7 +325,7 @@ export default function AuditLogPage(): JSX.Element {
   );
 }
 
-function AuditLogSkeleton(): JSX.Element {
+function AuditLogSkeleton(): React.JSX.Element {
   return (
     <div className="audit-log-skeleton" data-testid="audit-log-skeleton" aria-busy="true">
       {Array.from({ length: 6 }).map((_, index) => (

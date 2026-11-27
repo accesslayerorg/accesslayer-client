@@ -24,24 +24,6 @@ subscribeToQueryCache(queryClient);
 
 // Register the background-sync + push service worker.
 if ('serviceWorker' in navigator) {
-	navigator.serviceWorker.register('/service-worker.js').catch(() => {
-		// SW registration is best-effort; a failure must not block the app.
-	});
-}
-
-createRoot(document.getElementById('root')!).render(
-	<HelmetProvider>
-		<StrictMode>
-			<Web3Provider>
-				<ThemeProvider>
-					<PendingTransactionProvider>
-						<App />
-					</PendingTransactionProvider>
-				</ThemeProvider>
-			</Web3Provider>
-		</StrictMode>
-	</HelmetProvider>
-);
 	navigator.serviceWorker
 		.register('/service-worker.js')
 		.then((registration) => {
@@ -75,13 +57,15 @@ createRoot(document.getElementById('root')!).render(
 }
 
 createRoot(document.getElementById('root')!).render(
-	<StrictMode>
-		<Web3Provider>
-			<ThemeProvider>
-				<PendingTransactionProvider>
-					<App />
-				</PendingTransactionProvider>
-			</ThemeProvider>
-		</Web3Provider>
-	</StrictMode>
+	<HelmetProvider>
+		<StrictMode>
+			<Web3Provider>
+				<ThemeProvider>
+					<PendingTransactionProvider>
+						<App />
+					</PendingTransactionProvider>
+				</ThemeProvider>
+			</Web3Provider>
+		</StrictMode>
+	</HelmetProvider>
 );

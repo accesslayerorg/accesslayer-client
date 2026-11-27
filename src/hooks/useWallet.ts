@@ -27,6 +27,8 @@ import type {
 import { fetchTradeHistoryPage } from '@/services/tradeHistory.service';
 import { usePendingTxStore } from '@/hooks/usePendingTxStore';
 
+export { useStellarWallet as useWallet } from '@/hooks/useStellarWallet';
+
 export function useWalletHoldings(address: string) {
 	return useQuery<HeldKeyPosition[]>({
 		queryKey: queryKeys.wallet.holdings(address),

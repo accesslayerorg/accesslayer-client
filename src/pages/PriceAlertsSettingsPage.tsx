@@ -15,7 +15,8 @@ export default function PriceAlertsSettingsPage() {
 
 	// The chart tools operate on a single key; use the most recently configured
 	// alert's key so annotations and export target a concrete chart.
-	const selectedKey = alerts.length > 0 ? alerts[alerts.length - 1].key : null;
+	const selectedKey =
+		alerts.length > 0 ? alerts[alerts.length - 1].creatorId : null;
 
 	return (
 		<main className="mx-auto max-w-2xl px-6 py-16">

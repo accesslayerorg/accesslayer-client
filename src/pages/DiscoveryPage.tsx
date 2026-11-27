@@ -64,20 +64,17 @@ export default function DiscoveryPage() {
 
 	const {
 		views: savedViews,
-		saveView,
-		renameView,
-		deleteView,
-	} = useSavedViews();
-	const [appliedViewId, setAppliedViewId] = useState<string | null>(null);
-	const [appliedViewSnapshot, setAppliedViewSnapshot] = useState<string | null>(
-		null
-	);
-	const currentFiltersSnapshot = useMemo(
-		() => JSON.stringify(filters),
-		[filters]
-	);
-	const isViewModified =
-		appliedViewId !== null && appliedViewSnapshot !== currentFiltersSnapshot;
+		appliedView,
+		isModified: isViewModified,
+		save,
+		apply,
+		rename,
+		delete: deleteView,
+	} = useSavedViews({
+		currentFilters: filters,
+		currentSort: { field: 'createdAt', direction: 'desc' },
+	});
+	const appliedViewId = appliedView?.id ?? null;
 
 	const {
 		trendingKeys: discoveredTrendingKeys,
@@ -111,34 +108,24 @@ export default function DiscoveryPage() {
 	};
 
 	const applySavedView = (viewId: string) => {
-		const view = savedViews.find(candidate => candidate.id === viewId);
+		const view = apply(viewId);
 		if (!view) return;
 		setSearchParams(previous =>
 			discoveryFiltersToSearchParams(view.filters, previous)
 		);
-		setAppliedViewId(view.id);
-		setAppliedViewSnapshot(JSON.stringify(view.filters));
 	};
 
 	const saveCurrentView = (name: string) => {
-		const created = saveView({ name, filters });
-		if (created) {
-			setAppliedViewId(created.id);
-			setAppliedViewSnapshot(currentFiltersSnapshot);
-		}
-		return created;
+		const result = save(name);
+		return result.ok ? result.view : null;
 	};
 
 	const renameSavedView = (viewId: string, name: string) => {
-		renameView(viewId, name);
+		rename(viewId, name);
 	};
 
 	const deleteSavedView = (viewId: string) => {
 		deleteView(viewId);
-		if (appliedViewId === viewId) {
-			setAppliedViewId(null);
-			setAppliedViewSnapshot(null);
-		}
 	};
 
 	const removeFilter = (params: readonly string[]) => {
