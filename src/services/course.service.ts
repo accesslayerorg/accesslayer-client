@@ -28,6 +28,8 @@ export interface Course {
 	socialHandle?: string;
 	/** Optional creator-published social links (#1054). */
 	socialLinks?: CreatorSocialLinks | null;
+	/** Custom creator brand accent color (#1488). */
+	accentColor?: string | null;
 	isVerified?: boolean;
 	volume24h?: number;
 	/** Percentage of total key supply held by the top ten wallets. */

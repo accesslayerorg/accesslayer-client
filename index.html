@@ -52,18 +52,27 @@
 			paint so there is no flash of the wrong theme on load.
 			Reads localStorage['al:theme'] ('light' | 'dark' | 'system');
 			'system' and missing values follow prefers-color-scheme.
+			#1488: Applies stored accent color variables to <html> before
+			first paint to eliminate accent flash on load.
 		-->
 		<script>
 			(function () {
-				var stored = null;
+				var storedTheme = null;
+				var storedAccent = null;
 				try {
-					stored = localStorage.getItem('al:theme');
+					storedTheme = localStorage.getItem('al:theme');
+					storedAccent = localStorage.getItem('al:accent');
 				} catch (error) {
 					/* localStorage can be unavailable; fall back to the OS. */
 				}
 				var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-				var useDark = stored === 'dark' || (stored !== 'light' && prefersDark);
+				var useDark = storedTheme === 'dark' || (storedTheme !== 'light' && prefersDark);
 				document.documentElement.classList.toggle('dark', useDark);
+
+				if (storedAccent && /^#[0-9a-fA-F]{6}$/.test(storedAccent)) {
+					document.documentElement.style.setProperty('--accent', storedAccent);
+					document.documentElement.style.setProperty('--color-accent', storedAccent);
+				}
 			})();
 		</script>
 	</head>

@@ -516,4 +516,4 @@ export const queryKeys = {
 		active: (wallet: string) => ['triggers', 'active', wallet] as const,
 		byId: (triggerId: string) => ['triggers', 'detail', triggerId] as const,
 	},
-};
+} as const;

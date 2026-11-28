@@ -8,6 +8,7 @@ import MyTicketsSection from '@/components/settings/MyTicketsSection';
 import AddressBookPanel from '@/components/settings/AddressBookPanel';
 import MotionSettingsSection from '@/components/settings/MotionSettingsSection';
 import EmbeddedWalletSection from '@/components/settings/EmbeddedWalletSection';
+import DisplaySettingsSection from '@/components/settings/DisplaySettingsSection';
 
 /**
  * Account settings page (#1111).
@@ -83,6 +84,8 @@ export default function AccountSettingsPage() {
 			/>
 
 			<EmbeddedWalletSection className="mb-6" />
+
+			<DisplaySettingsSection className="mb-6" />
 
 			<AddressBookPanel className="mb-6" />
 
