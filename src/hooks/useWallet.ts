@@ -5,6 +5,7 @@ import {
 	useQueryClient,
 } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
+import { useStellarWallet } from '@/hooks/useStellarWallet';
 import type { HeldKeyPosition } from '@/utils/portfolioValue.utils';
 import { resolveBondingCurveParams } from '@/utils/portfolioValue.utils';
 import { computeBuyCost } from '@/utils/bondingCurve.utils';
@@ -26,6 +27,11 @@ import type {
 } from '@/utils/walletBadges.utils';
 import { fetchTradeHistoryPage } from '@/services/tradeHistory.service';
 import { usePendingTxStore } from '@/hooks/usePendingTxStore';
+
+export function useWallet() {
+	const { address, isConnected } = useStellarWallet();
+	return { address, isConnected };
+}
 
 export function useWalletHoldings(address: string) {
 	return useQuery<HeldKeyPosition[]>({

@@ -78,6 +78,9 @@ import {
 	computeMaxBuyWithinSlippage,
 } from '@/utils/liquidityDepth.utils';
 import { useGlobalPause } from '@/hooks/useGlobalPause';
+import { useTradeCooldown } from '@/hooks/useTradeCooldown';
+import CooldownBadge from '@/components/common/CooldownBadge';
+import { formatCooldownDuration } from '@/utils/buyCooldown.utils';
 import { UnavailableAction } from '@/components/ui/unavailable-action';
 import { useContractPausedStore, selectIsPaused } from '@/hooks/useContractPausedStore';
 import { useAllowanceStore, selectNeedsApproval } from '@/hooks/useAllowanceStore';

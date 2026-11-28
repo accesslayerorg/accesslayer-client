@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Stepper from '@/components/common/Stepper';
+import KeyFactoryCurvePreview from '@/components/common/KeyFactoryCurvePreview';
 import {
 	canAdvanceToStep,
 	KEY_FACTORY_STEPS,

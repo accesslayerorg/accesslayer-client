@@ -52,13 +52,13 @@ export const PushOptInCard: React.FC<PushOptInCardProps> = ({
   className,
 }) => {
   const {
-    isSupported,
+    supported,
     permission,
-    isSubscribed,
-    isLoading,
+    subscribed,
+    loading,
     error,
-    subscribe,
-    unsubscribe,
+    enable,
+    disable,
     updatePreferences,
   } = usePushSubscription();
 
@@ -76,17 +76,17 @@ export const PushOptInCard: React.FC<PushOptInCardProps> = ({
   }, [initialPreferences]);
 
   const isDenied = permission === 'denied';
-  const isEnabled = isSubscribed && permission === 'granted';
+  const isEnabled = subscribed && permission === 'granted';
 
   const handleEnableToggle = useCallback(async () => {
     setActionError(null);
     setIsToggling(true);
     try {
       if (isEnabled) {
-        await unsubscribe();
+        await disable();
       } else {
-        // Permission is requested only here, after an explicit user action.
-        await subscribe(preferences);
+        await updatePreferences(preferences);
+        await enable(preferences);
       }
     } catch (err) {
       setActionError(
@@ -95,7 +95,7 @@ export const PushOptInCard: React.FC<PushOptInCardProps> = ({
     } finally {
       setIsToggling(false);
     }
-  }, [isEnabled, preferences, subscribe, unsubscribe]);
+  }, [isEnabled, preferences, disable, enable, updatePreferences]);
 
   const handleEventToggle = useCallback(
     async (key: PushEventType) => {
@@ -136,13 +136,13 @@ export const PushOptInCard: React.FC<PushOptInCardProps> = ({
   );
 
   const statusLabel = useMemo(() => {
-    if (!isSupported) return 'Not supported';
+    if (!supported) return 'Not supported';
     if (isDenied) return 'Blocked';
     if (isEnabled) return 'Enabled';
     return 'Disabled';
-  }, [isSupported, isDenied, isEnabled]);
+  }, [supported, isDenied, isEnabled]);
 
-  if (!isSupported) {
+  if (!supported) {
     return (
       <section
         className={className}
@@ -158,7 +158,7 @@ export const PushOptInCard: React.FC<PushOptInCardProps> = ({
     );
   }
 
-  const busy = isLoading || isToggling;
+  const busy = loading || isToggling;
 
   return (
     <section

@@ -4,6 +4,7 @@ import { XIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useWalletDetection } from '@/hooks/useStellarWallet';
 
 function Dialog({
 	...props
@@ -170,12 +171,13 @@ export interface WalletHelpModalProps {
 export function WalletHelpModal({ open, onOpenChange }: WalletHelpModalProps) {
 	const {
 		wallets,
-		reason,
-		reasonLabel,
-		diagnostics,
+		detectedReason: reason,
 		recheck,
-		isRechecking,
+		checking: isRechecking,
+		getDiagnostics,
 	} = useWalletDetection();
+	const reasonLabel = reason?.replace(/-/g, ' ');
+	const diagnostics = JSON.stringify(getDiagnostics(), null, 2);
 	const [copied, setCopied] = React.useState(false);
 
 	const copyDiagnostics = React.useCallback(async () => {
@@ -187,6 +189,14 @@ export function WalletHelpModal({ open, onOpenChange }: WalletHelpModalProps) {
 			setCopied(false);
 		}
 	}, [diagnostics]);
+
+	const downloadUrls: Record<string, string> = {
+		freighter: 'https://www.freighter.app/',
+		xbull: 'https://xbull.app/',
+		lobstr: 'https://lobstr.co/',
+		albedo: 'https://albedo.link/',
+		rabet: 'https://rabet.io/',
+	};
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -218,7 +228,7 @@ export function WalletHelpModal({ open, onOpenChange }: WalletHelpModalProps) {
 								</div>
 								{!wallet.installed && (
 									<a
-										href={wallet.downloadUrl}
+										href={downloadUrls[wallet.id]}
 										target="_blank"
 										rel="noopener noreferrer"
 										className="text-primary text-sm underline"

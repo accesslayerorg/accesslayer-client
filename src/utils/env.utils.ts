@@ -14,6 +14,7 @@ const envSchema = z.object({
 	// closed.
 	VITE_HORIZON_URL: z.string().optional(),
 	VITE_STELLAR_NETWORK: z.enum(['mainnet', 'testnet']).default('testnet'),
+	VITE_APP_VERSION: z.string().optional(),
 	VITE_CREATOR_KEYS_CONTRACT_ID: z.string().optional(),
 	// Key rental contract (#1360). Leave unset to show rentals as not yet live
 	// and keep every rental action disabled.
@@ -50,6 +51,7 @@ export const env = envSchema.parse({
 	VITE_STELLAR_RPC_URL: import.meta.env.VITE_STELLAR_RPC_URL,
 	VITE_HORIZON_URL: import.meta.env.VITE_HORIZON_URL,
 	VITE_STELLAR_NETWORK: import.meta.env.VITE_STELLAR_NETWORK,
+	VITE_APP_VERSION: import.meta.env.VITE_APP_VERSION,
 	VITE_CREATOR_KEYS_CONTRACT_ID: import.meta.env.VITE_CREATOR_KEYS_CONTRACT_ID,
 	VITE_KEY_RENTAL_CONTRACT_ID: import.meta.env.VITE_KEY_RENTAL_CONTRACT_ID,
 	VITE_WEBSOCKET_URL: import.meta.env.VITE_WEBSOCKET_URL,

@@ -2,7 +2,10 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { courseService, type Course } from '@/services/course.service';
 import { usePortfolioHistory } from '@/hooks/usePortfolioHistory';
-import type { PortfolioHistoryRange } from '@/utils/portfolioHistory.utils';
+import type {
+	PortfolioHistoryPoint,
+	PortfolioHistoryRange,
+} from '@/utils/portfolioHistory.utils';
 
 export type BenchmarkRange = '7D' | '30D' | '90D' | 'All';
 

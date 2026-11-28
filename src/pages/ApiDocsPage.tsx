@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { apiKeyService } from '../services/apiKey.service';
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -441,21 +440,6 @@ const TryItPanel: React.FC<TryItPanelProps> = ({ entry, doc, baseUrl }) => {
 
   const requestMedia = pickJsonMedia(entry.operation.requestBody?.content);
   const requestExample = mediaTypeExample(doc, requestMedia);
-
-  useEffect(() => {
-    let cancelled = false;
-    apiKeyService
-      .getSelectedKey()
-      .then((key) => {
-        if (!cancelled) setApiKey(key || '');
-      })
-      .catch(() => {
-        if (!cancelled) setApiKey('');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     setResult(null);

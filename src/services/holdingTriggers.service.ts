@@ -18,7 +18,7 @@ export async function createTrigger(
   _wallet: string,
   _signer: Signer
 ): Promise<HoldingTrigger> {
-  const response = await apiClient.post(
+  const response = await apiClient.post<HoldingTrigger>(
     `/holdings/${input.holdingId}/triggers`,
     input
   );
@@ -33,7 +33,7 @@ export async function updateTrigger(
   input: UpdateTriggerInput,
   _signer: Signer
 ): Promise<HoldingTrigger> {
-  const response = await apiClient.patch(`/triggers/${triggerId}`, input);
+  const response = await apiClient.patch<HoldingTrigger>(`/triggers/${triggerId}`, input);
   return response.data;
 }
 
@@ -51,7 +51,7 @@ export async function removeTrigger(
  * Fetch all triggers for a holding.
  */
 export async function fetchTriggers(holdingId: string): Promise<HoldingTrigger[]> {
-  const response = await apiClient.get(`/holdings/${holdingId}/triggers`);
+  const response = await apiClient.get<HoldingTrigger[]>(`/holdings/${holdingId}/triggers`);
   return response.data;
 }
 
@@ -61,7 +61,7 @@ export async function fetchTriggers(holdingId: string): Promise<HoldingTrigger[]
 export async function fetchAllActiveTriggers(
   wallet: string
 ): Promise<HoldingTrigger[]> {
-  const response = await apiClient.get(`/wallet/${wallet}/triggers`, {
+  const response = await apiClient.get<HoldingTrigger[]>(`/wallet/${wallet}/triggers`, {
     params: { status: 'active' },
   });
   return response.data;
@@ -73,6 +73,6 @@ export async function fetchAllActiveTriggers(
 export async function fetchTriggerStatus(
   triggerId: string
 ): Promise<HoldingTrigger> {
-  const response = await apiClient.get(`/triggers/${triggerId}`);
+  const response = await apiClient.get<HoldingTrigger>(`/triggers/${triggerId}`);
   return response.data;
 }
