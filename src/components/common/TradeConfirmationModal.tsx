@@ -32,6 +32,10 @@ import { cn } from '@/lib/utils';
 import { validateSlippageTolerance } from '@/utils/slippage.utils';
 import LargeTradeGuard from '@/components/common/LargeTradeGuard';
 import { evaluateLargeTradeRules } from '@/utils/largeTradeGuard.utils';
+import {
+	isOrderNearPriceCeiling,
+	PRICE_CEILING_WARNING_THRESHOLD_PERCENT,
+} from '@/utils/priceCeiling.utils';
 
 export interface TradeConfirmationModalProps {
 	open: boolean;
@@ -51,6 +55,11 @@ export interface TradeConfirmationModalProps {
 	priceImpactPercent?: number | null;
 	/** Circulating supply of the key used for whale supply-percentage guard (#1480). */
 	currentSupply?: number | null;
+	ceilingStroops?: number | null;
+	priceCeilingStroops?: number | null;
+	projectedEndPriceStroops?: number | null;
+	endPriceStroops?: number | null;
+	isNearCeiling?: boolean;
 	/** Dynamic fee quote from the contract; rendered when provided (#994). */
 	feeBreakdown?: DynamicFeeBreakdownData | null;
 	/** True while the dynamic fee rate is being fetched from the contract. */
@@ -86,6 +95,11 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 	minPriceStroops,
 	priceImpactPercent,
 	currentSupply = null,
+	ceilingStroops = null,
+	priceCeilingStroops = null,
+	projectedEndPriceStroops = null,
+	endPriceStroops = null,
+	isNearCeiling,
 	feeBreakdown = null,
 	feeIsLoading = false,
 	feeError = null,
@@ -130,6 +144,20 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 	};
 
 	const isBuy = side === 'buy';
+	const effectiveCeilingStroops = priceCeilingStroops ?? ceilingStroops;
+	const effectiveEndPriceStroops =
+		projectedEndPriceStroops ??
+		endPriceStroops ??
+		(unitPriceStroops != null
+			? unitPriceStroops * (1 + (priceImpactPercent ?? 0) / 100)
+			: null);
+	const showCeilingWarning =
+		isBuy &&
+		(isNearCeiling ??
+			isOrderNearPriceCeiling({
+				ceilingStroops: effectiveCeilingStroops,
+				endPriceStroops: effectiveEndPriceStroops,
+			}));
 	const title = isBuy ? 'Confirm Buy Order' : 'Confirm Sell Order';
 	const confirmButtonLabel = isBuy ? 'Confirm Buy' : 'Confirm Sell';
 
@@ -465,6 +493,24 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 							creatorName={creatorName}
 							onAcknowledgementChange={setLargeTradeAcknowledged}
 						/>
+					)}
+
+					{showCeilingWarning && (
+						<div data-testid="confirmation-modal-ceiling-warning">
+							<div
+								role="alert"
+								data-testid="price-ceiling-warning"
+								className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-200"
+							>
+								<AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+								<span>
+									This order ends within{' '}
+									{PRICE_CEILING_WARNING_THRESHOLD_PERCENT}% of the price
+									ceiling ({formatDisplayKeyPrice(effectiveCeilingStroops)}).
+									The buy may be blocked once the ceiling is reached.
+								</span>
+							</div>
+						</div>
 					)}
 				</div>
 

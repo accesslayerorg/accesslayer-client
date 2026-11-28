@@ -73,7 +73,7 @@ export function useBacktestComputation(
 
   try {
     return calculateBacktest(keyPrices, xlmPrices, params, fees);
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }

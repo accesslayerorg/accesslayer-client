@@ -22,6 +22,13 @@ export interface OnChainMetadataResult {
 	cid?: string;
 }
 
+export interface PriceCeilingInfo {
+	keyId: string;
+	ceilingStroops: number | null;
+	isActive: boolean;
+	cooloffEndsAt: number | string | null;
+}
+
 export type CreatorKeysContractClientFactory = (
 	contractId: string,
 	rpcUrl: string,
@@ -43,6 +50,108 @@ function getNetworkPassphrase(): string {
 	return env.VITE_STELLAR_NETWORK === 'mainnet'
 		? Networks.PUBLIC
 		: Networks.TESTNET;
+}
+
+function numericValue(value: unknown): number | null {
+	if (typeof value === 'number') {
+		return Number.isFinite(value) ? value : null;
+	}
+	if (typeof value === 'bigint') return Number(value);
+	if (typeof value === 'string' && value.trim() !== '') {
+		const parsed = Number(value);
+		return Number.isFinite(parsed) ? parsed : null;
+	}
+	return null;
+}
+
+function timestampValue(value: unknown): number | string | null {
+	if (typeof value === 'string' && value.trim() !== '') return value;
+	const parsed = numericValue(value);
+	return parsed == null ? null : parsed;
+}
+
+function firstValue(source: Record<string, unknown>, keys: string[]): unknown {
+	for (const key of keys) {
+		if (source[key] != null) return source[key];
+	}
+	return null;
+}
+
+function unwrapCeilingResult(result: unknown): Record<string, unknown> | null {
+	if (!result || typeof result !== 'object') return null;
+
+	const candidate = result as Record<string, unknown>;
+	if ('result' in candidate) {
+		return unwrapCeilingResult(candidate.result);
+	}
+
+	return candidate;
+}
+
+export function normalizePriceCeiling(
+	result: unknown,
+	keyId: string
+): PriceCeilingInfo | null {
+	const raw = unwrapCeilingResult(result);
+	if (!raw) return null;
+
+	const ceilingCandidates = [
+		'ceiling_price_stroops',
+		'price_ceiling_stroops',
+		'ceilingStroops',
+		'ceilingPriceStroops',
+		'priceCeilingStroops',
+		'ceiling_price',
+		'ceilingPrice',
+		'price_ceiling',
+		'priceCeiling',
+		'ceiling',
+	];
+	const rawCeiling = firstValue(raw, ceilingCandidates);
+	const ceilingStroops = numericValue(rawCeiling);
+	const ceilingPriceXlm = numericValue(
+		firstValue(raw, ['ceiling_price_xlm', 'ceilingPriceXlm'])
+	);
+	const normalizedCeiling =
+		ceilingStroops ??
+		(ceilingPriceXlm != null && ceilingPriceXlm > 0
+			? Math.round(ceilingPriceXlm * 10_000_000)
+			: null);
+
+	if (normalizedCeiling == null || normalizedCeiling <= 0) return null;
+
+	const activeFlag = firstValue(raw, [
+		'is_active',
+		'isActive',
+		'active',
+		'enabled',
+	]);
+	const isActive =
+		typeof activeFlag === 'boolean'
+			? activeFlag
+			: activeFlag == null
+				? true
+				: Boolean(activeFlag);
+
+	return {
+		keyId,
+		ceilingStroops: normalizedCeiling,
+		isActive,
+		cooloffEndsAt: timestampValue(
+			firstValue(raw, [
+				'cooloff_ends_at',
+				'cool_off_ends_at',
+				'ceiling_cooloff_ends_at',
+				'cooldown_ends_at',
+				'cooloffEndsAt',
+				'coolOffEndsAt',
+				'ceilingCooloffEndsAt',
+				'cooldownEndsAt',
+				'cooloff_until',
+				'coolOffUntil',
+			])
+		),
+	};
 }
 
 const defaultFactory: CreatorKeysContractClientFactory = (
@@ -135,6 +244,60 @@ export class CreatorKeysContractService implements PermitService {
 				throw err;
 			}
 		}
+	}
+
+	async getPriceCeiling(keyId: string): Promise<PriceCeilingInfo | null> {
+		if (
+			!keyId ||
+			!env.VITE_STELLAR_RPC_URL ||
+			!env.VITE_CREATOR_KEYS_CONTRACT_ID
+		) {
+			return null;
+		}
+
+		let keyAddress: Address | string = keyId;
+		try {
+			keyAddress = Address.fromString(keyId);
+		} catch {
+			keyAddress = keyId;
+		}
+
+		const client = this.factory(
+			env.VITE_CREATOR_KEYS_CONTRACT_ID,
+			env.VITE_STELLAR_RPC_URL,
+			getNetworkPassphrase()
+		) as Record<string, unknown>;
+
+		const callArgs = {
+			key_id: keyAddress,
+			creator_id: keyAddress,
+			keyId,
+			creatorId: keyId,
+		};
+		let lastError: unknown;
+
+		for (const methodName of [
+			'get_price_ceiling',
+			'getPriceCeiling',
+			'get_ceiling',
+			'price_ceiling',
+		]) {
+			const method = client?.[methodName];
+			if (typeof method !== 'function') continue;
+
+			try {
+				const response = await (
+					method as (args: typeof callArgs) => Promise<unknown>
+				).call(client, callArgs);
+				const normalized = normalizePriceCeiling(response, keyId);
+				if (normalized) return normalized;
+			} catch (err) {
+				lastError = err;
+			}
+		}
+
+		if (lastError) throw lastError;
+		return null;
 	}
 
 	async batch_transfer(args: {

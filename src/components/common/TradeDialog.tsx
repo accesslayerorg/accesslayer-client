@@ -68,6 +68,10 @@ import {
 	PRICE_IMPACT_THRESHOLD_PERCENT,
 } from '@/utils/priceImpact.utils';
 import {
+	computeBondingCurvePrice,
+	DEFAULT_BONDING_CURVE_PARAMS,
+} from '@/utils/bondingCurve.utils';
+import {
 	DEFAULT_SLIPPAGE_TOLERANCE_PERCENT,
 	computeSlippageBounds,
 	type SlippageBounds,
@@ -153,6 +157,9 @@ export interface TradeDialogProps {
 	priceFloorStroops?: number | null;
 	/** Whether the price floor is active (spot <= floor) (#1152). */
 	priceFloorActive?: boolean;
+	priceCeilingStroops?: number | null;
+	priceCeilingActive?: boolean;
+	ceilingCooloffActive?: boolean;
 	/** Optional XLM/USD spot rate for the confirmation fee USD equivalent (#994). */
 	xlmUsdRate?: number | null;
 	onOpenChange: (open: boolean) => void;
@@ -201,6 +208,9 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 	keyFreeze = null,
 	priceFloorStroops = null,
 	priceFloorActive,
+	priceCeilingStroops = null,
+	priceCeilingActive,
+	ceilingCooloffActive = false,
 	xlmUsdRate = null,
 	onOpenChange,
 	onConfirm,
@@ -280,6 +290,10 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		priceFloorStroops > 0
 			? keyPriceStroops <= priceFloorStroops
 			: false);
+	const hasPriceCeiling =
+		priceCeilingActive !== false &&
+		priceCeilingStroops != null &&
+		priceCeilingStroops > 0;
 
 	// On open: reset state, kick off allowance check + cap fetch.
 	useEffect(() => {
@@ -415,6 +429,8 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 			return 'PriceFloorActive: Selling is disabled while current price is at or below the floor price.';
 		if (isPaused)
 			return 'Trading is currently suspended because the contract is paused.';
+		if (side === 'buy' && ceilingCooloffActive)
+			return 'CeilingCooloff: Buying is disabled during the price ceiling cool-off.';
 		if (side === 'buy' && atCap)
 			return 'You have reached the maximum holding cap for this creator.';
 		if (side === 'buy' && maxBuyable !== null && parsedAmount > maxBuyable)
@@ -449,6 +465,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		isPaused,
 		keyFreeze,
 		isFloorActive,
+		ceilingCooloffActive,
 	]);
 
 	const amountValid = validationError === null;
@@ -467,6 +484,33 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 			currentSupply: currentSupply ?? 0,
 		});
 	}, [amountValid, parsedAmount, side, currentSupply]);
+
+	const projectedEndPriceStroops = useMemo(() => {
+		if (
+			side !== 'buy' ||
+			!amountValid ||
+			!Number.isFinite(parsedAmount) ||
+			parsedAmount <= 0
+		)
+			return null;
+		if (currentSupply != null) {
+			return computeBondingCurvePrice(
+				currentSupply + parsedAmount,
+				DEFAULT_BONDING_CURVE_PARAMS
+			);
+		}
+		if (keyPriceStroops != null) {
+			return keyPriceStroops * (1 + priceImpactPercent / 100);
+		}
+		return null;
+	}, [
+		side,
+		amountValid,
+		parsedAmount,
+		currentSupply,
+		keyPriceStroops,
+		priceImpactPercent,
+	]);
 
 	const effectiveCircuitBreakerThresholdPercent =
 		circuitBreakerThresholdPercent ??
@@ -527,6 +571,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 		isPaused ||
 		frozen ||
 		(side === 'sell' && isFloorActive) ||
+		(side === 'buy' && ceilingCooloffActive) ||
 		requiresAllowanceApproval;
 
 	const displayCreatorName =
@@ -953,6 +998,28 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 				</div>
 			)}
 
+			{side === 'buy' && ceilingCooloffActive && (
+				<div
+					role="alert"
+					data-testid="trade-dialog-ceiling-cooloff-alert"
+					className="flex items-start gap-2.5 rounded-xl border border-orange-500/30 bg-orange-500/10 p-3 text-xs text-orange-200"
+				>
+					<Snowflake
+						className="mt-0.5 size-4 shrink-0 text-orange-400"
+						aria-hidden="true"
+					/>
+					<div>
+						<p className="font-semibold text-orange-300">
+							Buying paused — price ceiling cool-off
+						</p>
+						<p className="mt-0.5 text-orange-200/80">
+							CeilingCooloff: Buying is disabled until the creator-set
+							cool-off ends. Selling remains available.
+						</p>
+					</div>
+				</div>
+			)}
+
 			{/* Price floor active alert (#1152) */}
 			{side === 'sell' && isFloorActive && (
 				<div
@@ -1256,15 +1323,22 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 				Cancel
 			</Button>
 			<UnavailableAction
-				disabled={frozen || paused || (side === 'sell' && isFloorActive)}
+				disabled={
+					frozen ||
+					paused ||
+					(side === 'sell' && isFloorActive) ||
+					(side === 'buy' && ceilingCooloffActive)
+				}
 				reason={
 					keyFreeze
 						? keyFreeze.reason
 						: globalPaused
 							? 'Platform Paused'
-							: side === 'sell' && isFloorActive
-								? 'PriceFloorActive: Selling is disabled while current price is at or below the floor price.'
-								: 'Trading is currently paused'
+							: side === 'buy' && ceilingCooloffActive
+								? 'CeilingCooloff: Buying is disabled during the price ceiling cool-off.'
+								: side === 'sell' && isFloorActive
+									? 'PriceFloorActive: Selling is disabled while current price is at or below the floor price.'
+									: 'Trading is currently paused'
 				}
 			>
 				<Button
@@ -1310,6 +1384,9 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 				maxPriceStroops={slippageBounds?.maxPriceStroops ?? null}
 				minPriceStroops={slippageBounds?.minPriceStroops ?? null}
 				priceImpactPercent={priceImpactPercent}
+				currentSupply={currentSupply ?? null}
+				priceCeilingStroops={hasPriceCeiling ? priceCeilingStroops : null}
+				projectedEndPriceStroops={projectedEndPriceStroops}
 				onConfirm={async () => {
 					if (isCircuitBreakerBreached) return;
 					await onConfirm(parsedAmount, pricePreview, slippageBounds);
