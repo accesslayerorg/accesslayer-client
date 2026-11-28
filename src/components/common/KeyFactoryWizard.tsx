@@ -1,18 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { CheckCircle2, Loader2, Rocket } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Stepper from '@/components/common/Stepper';
-import KeyFactoryCurvePreview from '@/components/common/KeyFactoryCurvePreview';
-import WhitelistUploadInput from '@/components/common/WhitelistUploadInput';
-import { formatXlmPrice } from '@/utils/numberFormat.utils';
-import { truncateTxHash } from '@/constants/stellar';
 import {
 	canAdvanceToStep,
-	getDraftInitialPriceXlm,
 	KEY_FACTORY_STEPS,
-	parseWhitelistInput,
-	validateKeyFactoryDraft,
 	validateKeyFactoryStep,
 	type KeyFactoryDraft,
 } from '@/utils/keyFactory.utils';
@@ -41,13 +34,6 @@ export interface KeyFactoryWizardProps {
 const fieldClass =
 	'w-full rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-white/30 outline-none transition-colors focus:border-amber-400/40 focus:ring-[3px] focus:ring-amber-400/20 disabled:opacity-50';
 
-const DEPLOYMENT_STATUS_COPY: Record<KeyDeploymentStatus, string> = {
-	submitted: 'Deployment submitted. Waiting for the factory contract…',
-	pending: 'Deployment pending on-chain…',
-	confirmed: 'Deployment confirmed. Opening your new key…',
-	failed: 'Deployment failed. No key was created.',
-};
-
 /**
  * Step-by-step key factory deployment wizard (#959).
  *
@@ -57,12 +43,10 @@ const DEPLOYMENT_STATUS_COPY: Record<KeyDeploymentStatus, string> = {
  * deployment redirects to the new key's detail page.
  */
 export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
-	deployer,
 	draft,
 	onDraftChange,
 	isDeploying = false,
 	deploymentStatus = null,
-	transactionHash = null,
 	deployedKeyId = null,
 	onDeploy,
 	className,
@@ -73,18 +57,7 @@ export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
 
 	const step = KEY_FACTORY_STEPS[stepIndex];
 	const validation = validateKeyFactoryStep(step.value, draft);
-	const draftValidation = validateKeyFactoryDraft(draft);
-	const whitelist = useMemo(
-		() => parseWhitelistInput(draft.whitelistInput),
-		[draft.whitelistInput]
-	);
-
-	const errorFor = (field: string): string | undefined =>
-		showErrors ? validation.errors[field] : undefined;
-
 	const isLastStep = stepIndex === KEY_FACTORY_STEPS.length - 1;
-	const isDeploymentSettled =
-		deploymentStatus === 'confirmed' || deploymentStatus === 'failed';
 
 	const handleNext = () => {
 		if (!validation.isValid) {
@@ -103,6 +76,9 @@ export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
 		setShowErrors(false);
 		setStepIndex(index => Math.max(index - 1, 0));
 	};
+
+	const errorFor = (field: string): string | undefined =>
+		showErrors ? validation.errors[field] : undefined;
 
 	const handleStepClick = (targetIndex: number) => {
 		if (!canAdvanceToStep(draft, targetIndex)) return;
@@ -403,6 +379,26 @@ export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
 					</fieldset>
 				</div>
 			)}
+
+			<div className="mt-8 flex items-center justify-between gap-3">
+				<Button
+					type="button"
+					variant="outline"
+					onClick={handleBack}
+					disabled={stepIndex === 0 || isDeploying}
+					data-testid="key-factory-back"
+				>
+					Back
+				</Button>
+				<Button
+					type="button"
+					onClick={handleNext}
+					disabled={isDeploying}
+					data-testid={isLastStep ? 'key-factory-deploy' : 'key-factory-next'}
+				>
+					{isLastStep ? 'Deploy key' : 'Continue'}
+				</Button>
+			</div>
 		</section>
 	);
 };

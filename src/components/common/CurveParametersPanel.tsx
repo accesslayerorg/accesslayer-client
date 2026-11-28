@@ -375,10 +375,22 @@ export function CurveParametersPanel({
 							data-testid="curve-impact-preview"
 							className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
 						>
+							{impactPreview && (
+								<div className="space-y-1 text-xs text-white/70">
+									<p>
+										Current price: {formatXlm(impactPreview.currentPrice)}
+									</p>
+									<p>Proposed price: {formatXlm(impactPreview.newPrice)}</p>
+									<p>
+										Price change: {formatXlm(impactPreview.priceChange)} (
+										{impactPreview.percentChange.toFixed(2)}%)
+									</p>
+								</div>
+							)}
 						</div>
 					</form>
 				)}
 			</div>
 		</section>
 	);
-}er
+}

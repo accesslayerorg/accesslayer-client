@@ -30,7 +30,7 @@ function load(): PaperPortfolio {
   } catch {
     // Ignore unreadable or corrupted storage and fall back to a fresh portfolio.
   }
-  return { balance: STARTING_BALANCE, trades: [], holdings: {} };
+  return emptyPortfolio;
 }
 
 function save(p: PaperPortfolio) {

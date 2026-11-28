@@ -233,6 +233,7 @@ export const queryKeys = {
 				['admin', 'audit-log', 'list', filters ?? null] as const,
 			export: (filters?: Record<string, unknown>) =>
 				['admin', 'audit-log', 'export', filters ?? null] as const,
+		},
 		referralHolds: {
 			all: () => ['admin', 'referral-holds'] as const,
 			list: (filters: ReferralHoldFilters = {}) =>
@@ -421,15 +422,14 @@ export const queryKeys = {
 		all: () => ['api-keys'] as const,
 		list: () => ['api-keys', 'list'] as const,
 	},
-	// Shared API rate-limit state (#1402): the active 429 wait window used to
-	// gate retries, disable triggering buttons and pause background polling.
 	rateLimit: {
 		all: () => ['rateLimit'] as const,
 		state: () => ['rateLimit', 'state'] as const,
-	// OpenAPI document powering the public API docs portal (#1416).
+	},
 	openapi: {
 		all: () => ['openapi'] as const,
 		document: () => ['openapi', 'document'] as const,
+	},
 	launches: {
 		all: () => ['launches'] as const,
 	},
@@ -491,4 +491,29 @@ export const queryKeys = {
 		stats: (wallet?: string, range: string = '30d') =>
 			['ambassador', 'stats', wallet ?? 'anonymous', range] as const,
 	},
-} as const;
+	collections: {
+		all: () => ['collections'] as const,
+		list: () => ['collections', 'list'] as const,
+		detail: (slug: string) => ['collections', 'detail', slug] as const,
+		featured: () => ['collections', 'featured'] as const,
+		followed: (wallet: string) => ['collections', 'followed', wallet] as const,
+	},
+	backtest: {
+		historicalPrices: (keyId: string, range: string) =>
+			['backtest', 'prices', keyId, range] as const,
+		xlmPrices: (range: string) => ['backtest', 'xlm-prices', range] as const,
+		keyCreatedDate: (keyId: string) =>
+			['backtest', 'key-created', keyId] as const,
+	},
+	positionCalculator: {
+		quote: (keyId: string, quantity: number, side: string) =>
+			['position', 'quote', keyId, quantity, side] as const,
+	},
+	holdingTriggers: {
+		byHolding: (holdingId: string) =>
+			['triggers', 'holding', holdingId] as const,
+		all: (wallet: string) => ['triggers', 'all', wallet] as const,
+		active: (wallet: string) => ['triggers', 'active', wallet] as const,
+		byId: (triggerId: string) => ['triggers', 'detail', triggerId] as const,
+	},
+};
