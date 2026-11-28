@@ -138,6 +138,55 @@ export function usePlaceAuctionBidMutation(creatorId: string) {
 	});
 }
 
+export interface CommitLaunchOrderInput {
+	keyId: string;
+	walletAddress: string;
+	commitmentHash: string;
+}
+
+export interface RevealLaunchOrderInput extends CommitLaunchOrderInput {
+	amount: string;
+	salt: string;
+}
+
+export function useCommitLaunchOrderMutation(keyId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'commit_launch_order', keyId],
+		mutationFn: (input: CommitLaunchOrderInput) =>
+			submitContractCall('commit_launch_order', input),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(keyId),
+			});
+			showToast.success('Launch order committed');
+		},
+	});
+}
+
+export function useRevealLaunchOrderMutation(keyId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationKey: ['contract', 'reveal_launch_order', keyId],
+		mutationFn: (input: RevealLaunchOrderInput) =>
+			submitContractCall('reveal_launch_order', input),
+		onError: error => {
+			showToast.error(getSignatureErrorMessage(error));
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.creators.detail(keyId),
+			});
+			showToast.success('Launch order revealed');
+		},
+	});
+}
+
 export interface PlaceSpotlightBidInput {
 	slotId: string;
 	amount: number;

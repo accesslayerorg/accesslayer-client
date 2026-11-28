@@ -518,3 +518,50 @@
 		color: CanvasText !important;
 	}
 }
+
+/*
+ * Accent Color Customization (#1488)
+ * Ensures immediate visual reflection across buttons, links, text selection,
+ * and highlights when users or creators change their accent color.
+ */
+::selection {
+	background-color: var(--accent);
+	color: var(--accent-foreground);
+}
+
+.accent-btn-solid {
+	background-color: var(--accent);
+	color: var(--accent-foreground);
+}
+
+.accent-btn-solid:hover {
+	background-color: var(--accent-hover, var(--accent));
+}
+
+.accent-btn-outline {
+	border-color: var(--accent-border, var(--accent));
+	color: var(--accent-text, var(--accent));
+	background-color: transparent;
+}
+
+.accent-btn-outline:hover {
+	background-color: var(--accent-muted, var(--accent));
+}
+
+.accent-highlight {
+	background-color: var(--accent-muted, var(--accent));
+	color: var(--accent-text, var(--accent));
+}
+
+a.accent-link,
+.link-accent {
+	color: var(--accent-text, var(--accent));
+	text-decoration-line: underline;
+	text-underline-offset: 4px;
+	transition: color 150ms ease-in-out;
+}
+
+a.accent-link:hover,
+.link-accent:hover {
+	color: var(--accent-hover, var(--accent));
+}

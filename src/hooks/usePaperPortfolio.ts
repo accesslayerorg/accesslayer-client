@@ -28,9 +28,9 @@ function load(): PaperPortfolio {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch {
-    return emptyPortfolio;
+    // Ignore unreadable or corrupted storage and fall back to a fresh portfolio.
   }
-  return emptyPortfolio;
+  return { balance: STARTING_BALANCE, trades: [], holdings: {} };
 }
 
 function save(p: PaperPortfolio) {

@@ -1,9 +1,14 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { Link } from 'react-router';
 import { useAccount } from 'wagmi';
 import { useConnectedWallet } from '@/hooks/useWatchlist';
 import type { Course } from '@/services/course.service';
 import { cn } from '@/lib/utils';
+import {
+	generatePalette,
+	createCreatorAccentStyle,
+	readStoredCreatorAccent,
+} from '@/utils/accentPalette.utils';
 import {
 	ShoppingCart,
 	ShoppingBasket,
@@ -318,6 +323,20 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 		});
 	};
 
+	const creatorAccent = creator.accentColor ?? readStoredCreatorAccent(creator.id);
+	const creatorAccentStyle = useMemo(() => {
+		if (!creatorAccent) return undefined;
+		try {
+			const palette = generatePalette(creatorAccent);
+			return createCreatorAccentStyle(
+				palette,
+				isDarkMode ? 'dark' : 'light'
+			) as React.CSSProperties;
+		} catch {
+			return undefined;
+		}
+	}, [creatorAccent, isDarkMode]);
+
 	return (
 		<div
 			ref={cardRef}
@@ -326,6 +345,9 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 				'marketplace-card-surface marketplace-card-surface-hover group relative overflow-hidden rounded-2xl border p-4 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 motion-reduce:transition-none motion-safe:md:hover:-translate-y-0.5 motion-safe:md:hover:border-amber-500/25 motion-safe:md:hover:shadow-[0_12px_32px_-20px_rgba(251,191,36,0.5)] motion-reduce:md:hover:translate-y-0 motion-reduce:md:hover:border-amber-500/35 motion-reduce:md:hover:bg-white/[0.05] motion-reduce:md:hover:shadow-[0_0_0_1px_rgba(251,191,36,0.12)]',
 				className
 			)}
+			style={creatorAccentStyle}
+			data-testid="creator-card"
+			data-creator-accent={creatorAccent ?? undefined}
 		>
 			<div className="absolute right-3 top-3 z-20 flex items-center gap-2">
 				<WatchlistButton

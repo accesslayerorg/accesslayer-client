@@ -46,13 +46,13 @@ interface ChartPoint {
 	keyName: string;
 }
 
-// Custom Dot for Buy/Sell Markers
 interface CustomizedDotProps {
 	cx?: number;
 	cy?: number;
 	payload?: ChartPoint;
 }
 
+// Custom Dot for Buy/Sell Markers
 function CustomizedDot({ cx, cy, payload }: CustomizedDotProps) {
 	if (!payload) return null;
 

@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
 	redactString,
-	redactDiagnostics,
 	serializeRedactedDiagnostics,
 } from '../debugRedaction.utils';
 

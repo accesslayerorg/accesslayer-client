@@ -23,6 +23,12 @@ vi.mock('@/utils/toast.util', () => ({
 	default: { success: toastSuccess, error: toastError },
 }));
 
+// The creator email opt-ins (#1476) have their own tests; they need a
+// QueryClient this page test does not set up.
+vi.mock('@/components/broadcasts/CreatorEmailOptIns', () => ({
+	default: () => null,
+}));
+
 vi.mock('@/hooks/useStellarWallet', () => ({
 	useStellarWallet: () => ({
 		address: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
