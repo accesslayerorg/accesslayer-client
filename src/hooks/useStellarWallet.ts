@@ -235,9 +235,9 @@ function runDetection(win: Window | undefined): {
 		}
 	} else {
 		// Wallets are present; check for environmental blockers.
-		if (detectBlockedPopup(win)) {
+		if (detectBlockedPopup(walletWindow)) {
 			detectedReason = 'blocked-popup';
-		} else if (detectAdBlocker(win)) {
+		} else if (detectAdBlocker(walletWindow)) {
 			detectedReason = 'ad-blocker';
 		}
 	}
