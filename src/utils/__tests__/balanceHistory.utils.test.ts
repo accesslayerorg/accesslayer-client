@@ -40,6 +40,12 @@ describe('balanceHistory.utils (#1446)', () => {
 		},
 	];
 
+	it('converts timestamps to estimated Stellar ledgers', () => {
+		expect(
+			timestampToEstimatedLedger(DEFAULT_REFERENCE_TIMESTAMP + 10_000)
+		).toBe(DEFAULT_REFERENCE_LEDGER + 2);
+	});
+
 	it('returns ZERO holdings for ledgers before the first checkpoint', () => {
 		const result = findBalanceAsOfLedger(mockCheckpoints, 500);
 		expect(result.balance).toBe(0);

@@ -52,14 +52,14 @@ export const PushOptInCard: React.FC<PushOptInCardProps> = ({
   className,
 }) => {
   const {
-    isSupported,
+    supported: isSupported,
     permission,
-    isSubscribed,
-    isLoading,
+    subscribed: isSubscribed,
+    loading: isLoading,
     error,
-    subscribe,
-    unsubscribe,
-    updatePreferences,
+    enable,
+    disable,
+    toggleEvent,
   } = usePushSubscription();
 
   const [preferences, setPreferences] = useState<PushPreferences>({
@@ -83,10 +83,10 @@ export const PushOptInCard: React.FC<PushOptInCardProps> = ({
     setIsToggling(true);
     try {
       if (isEnabled) {
-        await unsubscribe();
+        await disable();
       } else {
         // Permission is requested only here, after an explicit user action.
-        await subscribe(preferences);
+        await enable(preferences);
       }
     } catch (err) {
       setActionError(
@@ -95,7 +95,7 @@ export const PushOptInCard: React.FC<PushOptInCardProps> = ({
     } finally {
       setIsToggling(false);
     }
-  }, [isEnabled, preferences, subscribe, unsubscribe]);
+  }, [isEnabled, preferences, enable, disable]);
 
   const handleEventToggle = useCallback(
     async (key: PushEventType) => {
@@ -116,7 +116,7 @@ export const PushOptInCard: React.FC<PushOptInCardProps> = ({
 
       setIsToggling(true);
       try {
-        await updatePreferences(nextPreferences);
+        await toggleEvent(key);
       } catch (err) {
         // Revert optimistic update on failure.
         setPreferences(preferences);
@@ -132,7 +132,7 @@ export const PushOptInCard: React.FC<PushOptInCardProps> = ({
         setIsToggling(false);
       }
     },
-    [preferences, isEnabled, updatePreferences, onPreferencesChange],
+    [preferences, isEnabled, toggleEvent, onPreferencesChange],
   );
 
   const statusLabel = useMemo(() => {

@@ -5,9 +5,10 @@ import { wagmiConfig } from '@/lib/web3/wagmiConfig';
 import { useWalletConnectionLogger } from '@/hooks/useWalletConnectionLogger';
 import { useCrossTabSync } from '@/hooks/useCrossTabSync';
 import { queryClient } from './web3Utils';
+import { XlmFiatRateProvider } from '@/components/common/XlmFiatRateProvider';
 
 interface Web3ProviderProps {
-  children: ReactNode;
+	children: ReactNode;
 }
 
 /**
@@ -16,8 +17,8 @@ interface Web3ProviderProps {
  * reconnect banner, etc.) initiated the connection.
  */
 function WalletConnectionLogger() {
-  useWalletConnectionLogger();
-  return null;
+	useWalletConnectionLogger();
+	return null;
 }
 
 function CrossTabSync() {
@@ -31,7 +32,7 @@ export default function Web3Provider({ children }: Web3ProviderProps) {
       <QueryClientProvider client={queryClient}>
         <WalletConnectionLogger />
         <CrossTabSync />
-        {children}
+        <XlmFiatRateProvider>{children}</XlmFiatRateProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

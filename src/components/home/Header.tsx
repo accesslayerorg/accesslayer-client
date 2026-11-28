@@ -9,6 +9,7 @@ import ThemeToggle from '@/components/common/ThemeToggle';
 import { Link } from 'react-router';
 import BatchTradePanel from '@/components/common/BatchTradePanel';
 import { useConnectedWallet, useWatchlist } from '@/hooks/useWatchlist';
+import CurrencySelector from '@/components/common/CurrencySelector';
 
 const navLinks = [
 	{ label: 'Marketplace', href: '/marketplace', external: false },
@@ -16,7 +17,11 @@ const navLinks = [
 	{ label: 'Status', href: '/status', external: false },
 	{ label: 'Borrow', href: '/borrow', external: false },
 	{ label: 'About', href: '/about', external: false },
-	{ label: 'GitHub', href: 'https://github.com/accesslayerorg', external: true },
+	{
+		label: 'GitHub',
+		href: 'https://github.com/accesslayerorg',
+		external: true,
+	},
 ];
 
 export default function Header() {
@@ -24,7 +29,9 @@ export default function Header() {
 	const [batchOpen, setBatchOpen] = useState(false);
 	const profile = useProfileStore(state => state.profile);
 	const walletKey = useConnectedWallet(state => state.walletKey);
-	const watchlistCount = useWatchlist(state => state.getWatchlistCount(walletKey));
+	const watchlistCount = useWatchlist(state =>
+		state.getWatchlistCount(walletKey)
+	);
 
 	useEffect(() => {
 		const onScroll = () => {
@@ -51,7 +58,9 @@ export default function Header() {
 						alt="Access Layer"
 						className={`size-6 sm:size-5 transition-all duration-300 ${scrolled ? 'opacity-60 invert' : 'opacity-70'}`}
 					/>
-					<span className={`hidden font-mono text-[13px] uppercase tracking-[0.08em] sm:inline transition-colors duration-300 ${scrolled ? 'text-gray-700' : 'text-white/70'}`}>
+					<span
+						className={`hidden font-mono text-[13px] uppercase tracking-[0.08em] sm:inline transition-colors duration-300 ${scrolled ? 'text-gray-700' : 'text-white/70'}`}
+					>
 						Access Layer
 					</span>
 				</Link>
@@ -86,7 +95,10 @@ export default function Header() {
 						className={`relative inline-flex items-center gap-1.5 font-jakarta text-sm transition-colors duration-300 ${scrolled ? 'text-gray-500 hover:text-gray-900' : 'text-white/45 hover:text-white/80'}`}
 						aria-label={`Watchlist, ${watchlistCount} saved ${watchlistCount === 1 ? 'key' : 'keys'}`}
 					>
-						<Bookmark className="size-4 text-amber-400/80" aria-hidden="true" />
+						<Bookmark
+							className="size-4 text-amber-400/80"
+							aria-hidden="true"
+						/>
 						Watchlist
 						{watchlistCount > 0 && (
 							<span
@@ -107,6 +119,7 @@ export default function Header() {
 				{/* Right-side actions: theme toggle (#1284) + notification bell (#720) + wallet status chip (#686).
 				    NotificationBell is only rendered when a user profile is available. */}
 				<div className="flex items-center gap-2 shrink-0">
+					<CurrencySelector scrolled={scrolled} />
 					<button
 						type="button"
 						onClick={() => setBatchOpen(true)}

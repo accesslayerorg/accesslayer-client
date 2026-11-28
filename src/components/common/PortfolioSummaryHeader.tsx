@@ -8,6 +8,8 @@ import {
 	type PnLSummary,
 } from '@/utils/portfolioValue.utils';
 import { cn } from '@/lib/utils';
+import FiatValue from '@/components/common/FiatValue';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
 
 export interface PortfolioSummaryHeaderProps {
 	/** Held-keys portfolio value in stroops, or null while prices load/unavailable. */
@@ -106,6 +108,14 @@ const PortfolioSummaryHeader: React.FC<PortfolioSummaryHeaderProps> = ({
 						)}
 						{totalDisplay}
 					</div>
+					<FiatValue
+						xlmAmount={
+							totalStroops == null
+								? null
+								: totalStroops / STROOPS_PER_XLM
+						}
+						className="mt-1 block text-sm text-white/50"
+					/>
 				</div>
 			</div>
 

@@ -51,6 +51,7 @@ export function CurveParametersPanel({
 		const interval = setInterval(() => {
 			setCurrentTime(Date.now());
 		}, 1000);
+
 		return () => clearInterval(interval);
 	}, [hasActiveProposal, pendingProposal]);
 
@@ -373,12 +374,71 @@ export function CurveParametersPanel({
 						{/* Impact Preview */}
 						<div
 							data-testid="curve-impact-preview"
-							className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
+							className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-sm"
 						>
+							<div className="mb-2 font-jakarta text-xs font-bold uppercase tracking-wider text-white/60">
+								Impact Preview
+							</div>
+							{impactPreview ? (
+								<div className="space-y-2">
+									<div className="flex flex-wrap items-center justify-between gap-2 text-white/80">
+										<span>Current Price:</span>
+										<span className="font-mono font-semibold text-white">
+											{formatXlm(impactPreview.currentPrice)}
+										</span>
+									</div>
+									<div className="flex flex-wrap items-center justify-between gap-2 text-white/80">
+										<span>Projected Price:</span>
+										<span className="font-mono font-semibold text-amber-300">
+											{formatXlm(impactPreview.newPrice)}
+										</span>
+									</div>
+									<div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-2 font-medium text-white">
+										<span>Estimated price change from new parameters:</span>
+										<span
+											className={cn(
+												'font-mono font-bold',
+												impactPreview.priceChange >= 0
+													? 'text-emerald-400'
+													: 'text-rose-400'
+											)}
+										>
+											{impactPreview.priceChange >= 0 ? '+' : ''}
+											{impactPreview.priceChange.toFixed(4)} XLM (
+											{impactPreview.priceChange >= 0 ? '+' : ''}
+											{impactPreview.percentChange.toFixed(2)}%)
+										</span>
+									</div>
+								</div>
+							) : (
+								<p className="text-xs text-white/40">
+									Enter new slope and intercept values above to preview the
+									estimated price impact.
+								</p>
+							)}
+						</div>
+
+						<div className="flex justify-end pt-2">
+							<Button
+								type="submit"
+								data-testid="propose-update-button"
+								disabled={!isValid || isProposing}
+								aria-busy={isProposing || undefined}
+								className="bg-amber-500 px-6 font-bold text-slate-950 hover:bg-amber-400"
+							>
+								<StableButtonContent
+									isLoading={isProposing}
+									loadingLabel="Submitting Proposal…"
+								>
+									Propose Update
+								</StableButtonContent>
+							</Button>
 						</div>
 					</form>
 				)}
 			</div>
 		</section>
 	);
-}er
+}
+
+export default CurveParametersPanel;

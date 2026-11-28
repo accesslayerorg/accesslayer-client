@@ -85,6 +85,8 @@ import CreatorDropCountdown from '@/components/common/CreatorDropCountdown';
 import CreatorHandleHoverCard from '@/components/common/CreatorHandleHoverCard';
 import WatchlistButton from '@/components/common/WatchlistButton';
 import { CREATOR_CARD_MEDIA_RADIUS_CLASS } from '@/utils/creatorCardTokens';
+import FiatValue from '@/components/common/FiatValue';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
 
 interface CreatorCardProps {
 	creator: Course;
@@ -211,6 +213,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 
 	const isRecentlyActive = (creator.volume24h ?? 0) > 0;
 	const keyPriceDisplay = formatCreatorKeyPriceDisplay(creator);
+	const keyPriceStroops = resolveCreatorKeyPriceStroops(creator);
 
 	const handleCopyLink = async () => {
 		const url = `${window.location.origin}/creator/${creator.id}`;
@@ -247,7 +250,9 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 		}
 
 		if (isKeyDeprecated(creator)) {
-			toast.error('This key has been deprecated and can no longer be bought');
+			toast.error(
+				'This key has been deprecated and can no longer be bought'
+			);
 			return;
 		}
 
@@ -289,9 +294,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 	// ── Batch buy basket (#954) ───────────────────────────────────────────
 	const addItem = useBatchBuyStore(s => s.addItem);
 	const removeItem = useBatchBuyStore(s => s.removeItem);
-	const isInBasket = useBatchBuyStore(s =>
-		selectIsInBasket(s, creator.id)
-	);
+	const isInBasket = useBatchBuyStore(s => selectIsInBasket(s, creator.id));
 	const isAtCap = useBatchBuyStore(selectIsAtCap);
 	const priceStroops = resolveCreatorKeyPriceStroops(creator) ?? 0;
 
@@ -561,6 +564,14 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 					/>
 					<MiniStatChip label="Level" value={creator.level || 'Open'} />
 				</div>
+				<FiatValue
+					xlmAmount={
+						keyPriceStroops == null
+							? null
+							: keyPriceStroops / STROOPS_PER_XLM
+					}
+					className="mt-1 text-xs font-medium text-white/50"
+				/>
 				<CreatorListRowDivider className="my-4" />
 				<div className="mt-3 space-y-2">
 					{creator.joinedAt && (
@@ -750,8 +761,12 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 					size="sm"
 					isPending={transactionState === 'submitting'}
 					pendingText="Processing..."
-					disabled={isNetworkMismatch || isPaused || isKeyDeprecated(creator)}
-					title={isPaused ? 'Trading suspended: contract is paused' : undefined}
+					disabled={
+						isNetworkMismatch || isPaused || isKeyDeprecated(creator)
+					}
+					title={
+						isPaused ? 'Trading suspended: contract is paused' : undefined
+					}
 					className={cn(
 						'rounded-xl font-bold',
 						!isConnected && 'border-white/10  hover:bg-white/5'
@@ -786,10 +801,10 @@ const CreatorCard: React.FC<CreatorCardProps> = ({
 					isPaused
 						? 'Trading is currently suspended because the contract is paused.'
 						: isKeyDeprecated(creator)
-						? 'This key has been deprecated and can no longer be bought.'
-						: isNetworkMismatch
-							? `Switch to ${expectedChainName} to enable purchases.`
-							: undefined
+							? 'This key has been deprecated and can no longer be bought.'
+							: isNetworkMismatch
+								? `Switch to ${expectedChainName} to enable purchases.`
+								: undefined
 				}
 			/>
 

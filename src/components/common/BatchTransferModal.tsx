@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { StableButtonContent } from '@/components/ui/stable-button-content';
 import {
@@ -19,7 +19,7 @@ import {
 	type BatchTransferRecipientRow,
 } from '@/utils/batchTransfer.utils';
 import { useBatchTransferMutation } from '@/hooks/useWallet';
-import { useRoyaltyEnforcement } from '@/hooks/useRoyaltyEnforcement';
+import { useRoyaltyEnforcement } from '@/hooks/useKeyConfig';
 import AddressInput from '@/components/common/AddressInput';
 
 export interface BatchTransferModalProps {
@@ -77,11 +77,11 @@ export default function BatchTransferModal({
 	const firstInputRef = useRef<HTMLInputElement | null>(null);
 
 	const isSubmitting = externalIsSubmitting ?? isInternalSubmitting;
-	const enforcementActive = !!enforcement?.enforced;
+	const enforcementActive = !!(enforcement?.enabled || enforcement?.locked);
 	const approvedMarketplaces = useMemo(
 		() =>
 			new Set(
-				(enforcement?.approvedMarketplaces ?? []).map(m =>
+				(enforcement?.approvedMarketplaces ?? enforcement?.approvedMarketplaceIds ?? []).map(m =>
 					m.toUpperCase()
 				)
 			),
@@ -454,7 +454,7 @@ export default function BatchTransferModal({
 						className="rounded-xl bg-amber-500 text-slate-900 hover:bg-amber-400 disabled:opacity-40"
 						data-testid="batch-transfer-submit"
 					>
-						<StableButtonContent loading={isSubmitting}>
+						<StableButtonContent isLoading={isSubmitting}>
 							Confirm Transfer
 						</StableButtonContent>
 					</Button>

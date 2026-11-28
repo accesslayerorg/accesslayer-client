@@ -13,6 +13,8 @@ import AddToBatchButton from '@/components/common/AddToBatchButton';
 import IssuerVerificationBadge from '@/components/common/IssuerVerificationBadge';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
 import { cn } from '@/lib/utils';
+import FiatValue from '@/components/common/FiatValue';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
 
 export interface KeyCardProps {
 	creator: Course;
@@ -34,6 +36,7 @@ export const KeyCard: React.FC<KeyCardProps> = ({ creator, className }) => {
 		creator.socialHandle || creator.instructorId
 	);
 	const priceFormatted = formatCreatorKeyPriceDisplay(creator);
+	const priceStroops = resolveCreatorKeyPriceStroops(creator);
 	const avatarSrc = creator.thumbnail || creator.avatarUri;
 
 	return (
@@ -107,6 +110,13 @@ export const KeyCard: React.FC<KeyCardProps> = ({ creator, className }) => {
 					>
 						{priceFormatted}
 					</span>
+					<FiatValue
+						xlmAmount={
+							priceStroops == null
+								? null
+								: priceStroops / STROOPS_PER_XLM
+						}
+					/>
 				</div>
 				{creator.category && (
 					<span

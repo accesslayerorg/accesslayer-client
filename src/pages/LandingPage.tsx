@@ -118,6 +118,8 @@ import { useBatchBuyStore, selectItemCount } from '@/hooks/useBatchBuyStore';
 import { copyTextToClipboard } from '@/utils/clipboard.utils';
 import SelfFreezeDialog from '@/components/common/SelfFreezeDialog';
 import SharePortfolioModal from '@/components/common/SharePortfolioModal';
+import FiatValue from '@/components/common/FiatValue';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
 
 const FEATURED_CREATOR_FACTS = [
 	{ label: 'Membership', value: 'Collectors Circle' },
@@ -1610,6 +1612,15 @@ function LandingPage() {
 									)}
 									{portfolioValueDisplay}
 								</div>
+								<FiatValue
+									xlmAmount={
+										displayedPortfolioValue.totalStroops == null
+											? null
+											: displayedPortfolioValue.totalStroops /
+												STROOPS_PER_XLM
+									}
+									className="mt-1 block text-sm text-white/50"
+								/>
 								<p className="mt-2 text-xs leading-relaxed text-white/55">
 									{portfolioValueHelperText}
 								</p>

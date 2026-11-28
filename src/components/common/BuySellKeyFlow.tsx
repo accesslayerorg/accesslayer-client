@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { formatNumber } from '@/utils/numberFormat.utils';
 import {
@@ -45,6 +45,8 @@ import {
 import { UnavailableAction } from '@/components/ui/unavailable-action';
 import PaymentAssetSelect from '@/components/common/PaymentAssetSelect';
 import type { PaymentAsset } from '@/types/paymentAsset.types';
+import FiatValue from '@/components/common/FiatValue';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
 export interface BuySellTradeParams {
 	creatorId?: string;
 	side: 'buy' | 'sell';
@@ -372,8 +374,9 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 		isValid &&
 		isHighPriceImpact(priceImpactPercent, slippageTolerancePercent);
 	const impactAcknowledgementKey = `${side}:${parsedAmount}:${currentSupply ?? 0}:${slippageTolerancePercent}`;
+	const impactAcknowledged =
+		acknowledgedImpactKey === impactAcknowledgementKey;
 
-	return null;
 	// Early sell launch penalty
 	const launchPenalty = useMemo(() => {
 		return calculateLaunchPenalty(
@@ -686,6 +689,10 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 							{formatDisplayKeyPrice(totalStroops)}
 						</span>
 					</div>
+					<FiatValue
+						xlmAmount={totalStroops / STROOPS_PER_XLM}
+						className="block text-right text-amber-300/70"
+					/>
 					{slippageBounds && (
 						<div className="flex items-center justify-between border-t border-white/5 pt-1.5 text-[11px]">
 							<span className="text-white/50">

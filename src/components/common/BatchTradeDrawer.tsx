@@ -34,8 +34,13 @@ import {
 import { formatDisplayKeyPrice } from '@/utils/keyPriceDisplay.utils';
 import { formatPriceImpact } from '@/utils/priceImpact.utils';
 import { BUY_QUANTITY_BOUNDS } from '@/constants/fees';
-import { SLIPPAGE_TOLERANCE_BOUNDS, SLIPPAGE_TOLERANCE_PRESETS } from '@/utils/slippageTolerance.utils';
+import {
+	SLIPPAGE_TOLERANCE_BOUNDS,
+	SLIPPAGE_TOLERANCE_PRESETS,
+} from '@/utils/slippageTolerance.utils';
 import { useShallow } from 'zustand/react/shallow';
+import FiatValue from '@/components/common/FiatValue';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
 
 export interface BatchTradeDrawerProps {
 	open?: boolean;
@@ -49,7 +54,8 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 	const storeOpen = useBatchTradeStore(selectBatchIsOpen);
 	const storeClose = useBatchTradeStore(state => state.closeDrawer);
 
-	const isDrawerOpen = controlledOpen !== undefined ? controlledOpen : storeOpen;
+	const isDrawerOpen =
+		controlledOpen !== undefined ? controlledOpen : storeOpen;
 	const handleClose = controlledOnClose ?? storeClose;
 
 	const {
@@ -137,8 +143,13 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 						{/* Header */}
 						<div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
 							<div className="flex items-center gap-2">
-								<Layers className="size-5 text-amber-400" aria-hidden="true" />
-								<h2 className="text-base font-bold text-white">Batch Trade</h2>
+								<Layers
+									className="size-5 text-amber-400"
+									aria-hidden="true"
+								/>
+								<h2 className="text-base font-bold text-white">
+									Batch Trade
+								</h2>
 								{itemCount > 0 && (
 									<span
 										className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-300"
@@ -189,7 +200,10 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 										className="flex flex-col items-center justify-center gap-3 py-16 text-center px-6"
 									>
 										<div className="flex size-14 items-center justify-center rounded-full bg-white/[0.04] text-white/30 border border-white/10">
-											<Layers className="size-7" aria-hidden="true" />
+											<Layers
+												className="size-7"
+												aria-hidden="true"
+											/>
 										</div>
 										<p className="text-sm font-semibold text-white/60">
 											Your batch trade queue is empty
@@ -199,8 +213,9 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 											<span className="font-semibold text-amber-400/80">
 												Add to Batch
 											</span>{' '}
-											on discovery or creator key pages to queue multiple buy
-											or sell trades into a single atomic transaction.
+											on discovery or creator key pages to queue
+											multiple buy or sell trades into a single
+											atomic transaction.
 										</p>
 									</motion.div>
 								) : (
@@ -219,7 +234,11 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 													layout
 													initial={{ opacity: 0, y: -8 }}
 													animate={{ opacity: 1, y: 0 }}
-													exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+													exit={{
+														opacity: 0,
+														height: 0,
+														marginBottom: 0,
+													}}
 													transition={{ duration: 0.2 }}
 													className="py-4 space-y-3"
 													data-testid="batch-trade-item"
@@ -245,7 +264,10 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 																	{item.keyName}
 																</p>
 																<p className="text-[0.7rem] text-white/45">
-																	Key price: {formatDisplayKeyPrice(item.priceStroops)}
+																	Key price:{' '}
+																	{formatDisplayKeyPrice(
+																		item.priceStroops
+																	)}
 																</p>
 															</div>
 														</div>
@@ -263,7 +285,12 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 																	role="radio"
 																	aria-checked={isBuy}
 																	disabled={isSubmitting}
-																	onClick={() => updateDirection(item.keyId, 'buy')}
+																	onClick={() =>
+																		updateDirection(
+																			item.keyId,
+																			'buy'
+																		)
+																	}
 																	className={cn(
 																		'rounded px-1.5 py-0.5 text-[0.68rem] font-bold uppercase transition-colors',
 																		isBuy
@@ -278,7 +305,12 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 																	role="radio"
 																	aria-checked={!isBuy}
 																	disabled={isSubmitting}
-																	onClick={() => updateDirection(item.keyId, 'sell')}
+																	onClick={() =>
+																		updateDirection(
+																			item.keyId,
+																			'sell'
+																		)
+																	}
 																	className={cn(
 																		'rounded px-1.5 py-0.5 text-[0.68rem] font-bold uppercase transition-colors',
 																		!isBuy
@@ -293,7 +325,9 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 															{/* Remove Button */}
 															<button
 																type="button"
-																onClick={() => removeItem(item.keyId)}
+																onClick={() =>
+																	removeItem(item.keyId)
+																}
 																aria-label={`Remove ${item.keyName} from batch`}
 																data-testid="batch-item-remove"
 																className={cn(
@@ -302,7 +336,10 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 																	'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60'
 																)}
 															>
-																<Trash2 className="size-3.5" aria-hidden="true" />
+																<Trash2
+																	className="size-3.5"
+																	aria-hidden="true"
+																/>
 															</button>
 														</div>
 													</div>
@@ -321,12 +358,19 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 																id={`batch-qty-${item.keyId}`}
 																type="number"
 																inputMode="numeric"
-																min={BUY_QUANTITY_BOUNDS.MIN_QTY}
-																max={BUY_QUANTITY_BOUNDS.MAX_QTY}
+																min={
+																	BUY_QUANTITY_BOUNDS.MIN_QTY
+																}
+																max={
+																	BUY_QUANTITY_BOUNDS.MAX_QTY
+																}
 																value={item.amount}
 																disabled={isSubmitting}
 																onChange={e =>
-																	handleAmountChange(item.keyId, e.target.value)
+																	handleAmountChange(
+																		item.keyId,
+																		e.target.value
+																	)
 																}
 																data-testid="batch-item-amount"
 																className={cn(
@@ -347,23 +391,29 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 																	Slippage (%)
 																</label>
 																<div className="flex gap-1">
-																	{SLIPPAGE_TOLERANCE_PRESETS.map(preset => (
-																		<button
-																			key={preset}
-																			type="button"
-																			onClick={() =>
-																				updateSlippage(item.keyId, preset)
-																			}
-																			className={cn(
-																				'text-[0.62rem] px-1 rounded transition-colors',
-																				item.slippageTolerance === preset
-																					? 'bg-amber-400/30 text-amber-300 font-bold'
-																					: 'text-white/40 hover:text-white'
-																			)}
-																		>
-																			{preset}%
-																		</button>
-																	))}
+																	{SLIPPAGE_TOLERANCE_PRESETS.map(
+																		preset => (
+																			<button
+																				key={preset}
+																				type="button"
+																				onClick={() =>
+																					updateSlippage(
+																						item.keyId,
+																						preset
+																					)
+																				}
+																				className={cn(
+																					'text-[0.62rem] px-1 rounded transition-colors',
+																					item.slippageTolerance ===
+																						preset
+																						? 'bg-amber-400/30 text-amber-300 font-bold'
+																						: 'text-white/40 hover:text-white'
+																				)}
+																			>
+																				{preset}%
+																			</button>
+																		)
+																	)}
 																</div>
 															</div>
 
@@ -372,12 +422,21 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 																	id={`batch-slip-${item.keyId}`}
 																	type="number"
 																	step="0.1"
-																	min={SLIPPAGE_TOLERANCE_BOUNDS.MIN_PERCENT}
-																	max={SLIPPAGE_TOLERANCE_BOUNDS.MAX_PERCENT}
-																	value={item.slippageTolerance}
+																	min={
+																		SLIPPAGE_TOLERANCE_BOUNDS.MIN_PERCENT
+																	}
+																	max={
+																		SLIPPAGE_TOLERANCE_BOUNDS.MAX_PERCENT
+																	}
+																	value={
+																		item.slippageTolerance
+																	}
 																	disabled={isSubmitting}
 																	onChange={e =>
-																		handleSlippageChange(item.keyId, e.target.value)
+																		handleSlippageChange(
+																			item.keyId,
+																			e.target.value
+																		)
 																	}
 																	aria-label={`Slippage tolerance for ${item.keyName}`}
 																	data-testid="batch-item-slippage"
@@ -397,13 +456,18 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 													{/* Row 3: Estimated Cost / Proceeds */}
 													<div className="flex items-center justify-between text-xs px-1">
 														<span className="text-white/45">
-															{isBuy ? 'Estimated Cost' : 'Estimated Proceeds'}
+															{isBuy
+																? 'Estimated Cost'
+																: 'Estimated Proceeds'}
 														</span>
 														<span
 															className="font-mono font-semibold text-white/80 tabular-nums"
 															data-testid="batch-item-cost"
 														>
-															≈ {formatDisplayKeyPrice(cost.netCostStroops)}
+															≈{' '}
+															{formatDisplayKeyPrice(
+																cost.netCostStroops
+															)}
 														</span>
 													</div>
 												</motion.li>
@@ -430,19 +494,37 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 											className="font-mono text-base font-bold tabular-nums text-amber-300"
 											data-testid="batch-total-cost"
 										>
-											{formatDisplayKeyPrice(costSummary.totalEstimatedCostStroops)}
+											{formatDisplayKeyPrice(
+												costSummary.totalEstimatedCostStroops
+											)}
 										</span>
 									</div>
+									<FiatValue
+										xlmAmount={
+											costSummary.totalEstimatedCostStroops /
+											STROOPS_PER_XLM
+										}
+										className="block text-right text-amber-300/70"
+									/>
 
 									{costSummary.totalBuyCostStroops > 0 &&
 										costSummary.totalSellProceedsStroops > 0 && (
 											<div className="flex items-center justify-between text-[0.7rem] text-white/40 font-mono">
 												<span>
-													Buys: {formatDisplayKeyPrice(costSummary.totalBuyCostStroops)} · Sells:{' '}
-													{formatDisplayKeyPrice(costSummary.totalSellProceedsStroops)}
+													Buys:{' '}
+													{formatDisplayKeyPrice(
+														costSummary.totalBuyCostStroops
+													)}{' '}
+													· Sells:{' '}
+													{formatDisplayKeyPrice(
+														costSummary.totalSellProceedsStroops
+													)}
 												</span>
 												<span>
-													Net: {formatDisplayKeyPrice(Math.abs(costSummary.netCostStroops))}
+													Net:{' '}
+													{formatDisplayKeyPrice(
+														Math.abs(costSummary.netCostStroops)
+													)}
 												</span>
 											</div>
 										)}
@@ -454,7 +536,9 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 									className="flex items-center justify-between text-xs"
 									data-testid="batch-price-impact"
 								>
-									<span className="text-white/50">Combined price impact</span>
+									<span className="text-white/50">
+										Combined price impact
+									</span>
 									<span
 										className={cn(
 											'font-mono font-semibold tabular-nums',
@@ -463,7 +547,9 @@ export const BatchTradeDrawer: React.FC<BatchTradeDrawerProps> = ({
 												: 'text-white/70'
 										)}
 									>
-										{formatPriceImpact(impactSummary.totalImpactPercent)}
+										{formatPriceImpact(
+											impactSummary.totalImpactPercent
+										)}
 									</span>
 								</div>
 							)}

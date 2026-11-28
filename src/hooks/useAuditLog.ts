@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import {
   useInfiniteQuery,
   type InfiniteData,
@@ -40,6 +40,11 @@ export interface UseAuditLogResult {
   hasNextPage: boolean;
   fetchNextPage: () => void;
   isFetchingNextPage: boolean;
+  loading: boolean;
+  error: Error | null;
+  hasMore: boolean;
+  loadMore: () => void;
+  refetch: () => Promise<unknown>;
 }
 
 const SECRET_KEY_PATTERN =
@@ -130,7 +135,7 @@ async function fetchAuditLogPage(
   };
 }
 
-export function useAuditLog(): UseAuditLogResult {
+export function useAuditLog(_filters?: Partial<AuditLogFilters>): UseAuditLogResult {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const filters = useMemo<AuditLogFilters>(() => {
@@ -203,6 +208,11 @@ export function useAuditLog(): UseAuditLogResult {
     hasNextPage: Boolean(query.hasNextPage),
     fetchNextPage,
     isFetchingNextPage: query.isFetchingNextPage,
+    loading: query.isLoading,
+    error: query.error,
+    hasMore: Boolean(query.hasNextPage),
+    loadMore: fetchNextPage,
+    refetch: query.refetch,
   };
 }
 

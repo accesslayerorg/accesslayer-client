@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { statusService } from '@/services/status.service';
+import { statusService, type PlatformStatus } from '@/services/status.service';
 import { queryKeys } from '@/lib/queryKeys';
 
 /** Auto-refresh interval required by #1051 — the page polls every 60 seconds. */
@@ -67,6 +67,7 @@ export interface NormalizedPlatformStatus {
 export interface UsePlatformStatusResult {
 	/** Last known good normalized status, or `undefined` before first success. */
 	status: NormalizedPlatformStatus | undefined;
+	data?: PlatformStatus;
 	/** Whether the initial fetch is still in flight. */
 	isLoading: boolean;
 	/**
@@ -87,6 +88,8 @@ export interface UsePlatformStatusResult {
 	isUnderMaintenance: boolean;
 	/** Whether trading should be disabled (maintenance active). */
 	isTradingDisabled: boolean;
+	isFetching: boolean;
+	refetch: () => Promise<unknown>;
 }
 
 const DEFAULT_NOTE =
@@ -352,8 +355,11 @@ export function usePlatformStatus(): UsePlatformStatusResult {
 
 	return {
 		status,
+		data: query.data,
 		isLoading: query.isLoading,
 		isError: query.isError,
+		isFetching: query.isFetching,
+		refetch: query.refetch,
 		error: query.error,
 		isOperational: overall === 'operational',
 		isDegraded: overall === 'degraded',
