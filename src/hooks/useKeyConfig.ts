@@ -1,12 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
+﻿import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 import { courseService, type KeyConfig } from '@/services/course.service';
-import { api } from '@/lib/api';
+import { api } from '@/services/api.service';
 
 export interface RoyaltyEnforcement {
 	enabled: boolean;
 	locked: boolean;
 	approvedMarketplaceIds: string[];
+	enforced?: boolean;
+	approvedMarketplaces?: string[];
 }
 
 /**

@@ -42,6 +42,10 @@ export interface CreatedApiKey {
 }
 
 class ApiKeyService extends BaseApiService {
+	async getSelectedKey(): Promise<string | null> {
+		if (typeof window === 'undefined') return null;
+		return window.localStorage.getItem('accesslayer:selected-api-key');
+	}
 	/** Keys owned by the authenticated user — GET /developer/api-keys */
 	async listApiKeys(): Promise<ApiKey[]> {
 		try {

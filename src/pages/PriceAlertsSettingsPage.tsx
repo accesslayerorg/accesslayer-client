@@ -3,19 +3,17 @@ import { useNavigate } from 'react-router';
 import { cn } from '@/lib/utils';
 import { usePriceAlerts } from '@/hooks/usePriceAlerts';
 import { usePriceAlertMonitor } from '@/hooks/usePriceAlertMonitor';
-import { useWallet } from '@/hooks/useWallet';
 import PriceAlertRow from '@/components/common/PriceAlertRow';
-import PriceChart from '@/components/common/PriceChart';
+import PriceChart from '@/components/charts/PriceChart';
 
 export default function PriceAlertsSettingsPage() {
 	const navigate = useNavigate();
 	const { alerts, removeAlert } = usePriceAlerts();
 	const { isConnected } = usePriceAlertMonitor();
-	const { address } = useWallet();
 
 	// The chart tools operate on a single key; use the most recently configured
 	// alert's key so annotations and export target a concrete chart.
-	const selectedKey = alerts.length > 0 ? alerts[alerts.length - 1].key : null;
+	const selectedKey = alerts.length > 0 ? alerts[alerts.length - 1].creatorId : null;
 
 	return (
 		<main className="mx-auto max-w-2xl px-6 py-16">
@@ -63,8 +61,9 @@ export default function PriceAlertsSettingsPage() {
 			{selectedKey && (
 				<section className="mb-8" aria-label="Price chart">
 					<PriceChart
-						keyAddress={selectedKey}
-						walletAddress={address ?? undefined}
+						chartKey={selectedKey}
+						symbol={selectedKey}
+						data={[]}
 					/>
 				</section>
 			)}

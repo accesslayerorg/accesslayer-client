@@ -4,6 +4,7 @@ import { XIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useWalletDetection } from '@/hooks/useStellarWallet';
 
 function Dialog({
 	...props
@@ -170,12 +171,13 @@ export interface WalletHelpModalProps {
 export function WalletHelpModal({ open, onOpenChange }: WalletHelpModalProps) {
 	const {
 		wallets,
-		reason,
-		reasonLabel,
-		diagnostics,
+		detectedReason: reason,
+		checking: isRechecking,
 		recheck,
-		isRechecking,
+		getDiagnostics,
 	} = useWalletDetection();
+	const reasonLabel = reason?.replaceAll('-', ' ');
+	const diagnostics = JSON.stringify(getDiagnostics(), null, 2);
 	const [copied, setCopied] = React.useState(false);
 
 	const copyDiagnostics = React.useCallback(async () => {
@@ -218,7 +220,7 @@ export function WalletHelpModal({ open, onOpenChange }: WalletHelpModalProps) {
 								</div>
 								{!wallet.installed && (
 									<a
-										href={wallet.downloadUrl}
+										href={`https://www.google.com/search?q=${encodeURIComponent(wallet.name + ' Stellar wallet')}`}
 										target="_blank"
 										rel="noopener noreferrer"
 										className="text-primary text-sm underline"

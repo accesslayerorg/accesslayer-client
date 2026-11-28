@@ -26,6 +26,11 @@ import type {
 } from '@/utils/walletBadges.utils';
 import { fetchTradeHistoryPage } from '@/services/tradeHistory.service';
 import { usePendingTxStore } from '@/hooks/usePendingTxStore';
+import { useStellarWallet } from '@/hooks/useStellarWallet';
+
+export function useWallet() {
+	return useStellarWallet();
+}
 
 export function useWalletHoldings(address: string) {
 	return useQuery<HeldKeyPosition[]>({

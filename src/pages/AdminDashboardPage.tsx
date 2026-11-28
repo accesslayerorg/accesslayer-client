@@ -5,7 +5,7 @@ import AclWhitelistPanel from '@/components/admin/AclWhitelistPanel';
 import UpgradeProxyPanel from '@/components/admin/UpgradeProxyPanel';
 import TreasuryPanel from '@/components/admin/TreasuryPanel';
 import TreasuryManagementDashboard from '@/components/admin/TreasuryManagementDashboard';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import FeeChangeAdminPanel from '@/components/admin/FeeChangeAdminPanel';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useStellarWallet } from '@/hooks/useStellarWallet';

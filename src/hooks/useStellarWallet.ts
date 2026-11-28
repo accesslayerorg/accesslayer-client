@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Networks } from '@stellar/stellar-sdk';
 import { useSigner } from '@/hooks/useSigner';
 import { env } from '@/utils/env.utils';
@@ -286,7 +286,7 @@ export function useWalletDetection(): WalletDetectionState {
 		return {
 			userAgent: win?.navigator?.userAgent ?? 'unknown',
 			networkPassphrase,
-			appVersion: env.VITE_APP_VERSION ?? 'unknown',
+			appVersion: import.meta.env.MODE ?? 'unknown',
 			extensions,
 			detectedReason,
 			detectedWalletId,

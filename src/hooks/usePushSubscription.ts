@@ -25,7 +25,7 @@ export interface PushSubscriptionState {
 
 export interface UsePushSubscriptionResult extends PushSubscriptionState {
   /** Request permission (if needed) and subscribe. Must be called from a user action. */
-  enable: () => Promise<void>;
+  enable: (preferences?: PushEventPreferences) => Promise<void>;
   /** Unsubscribe and remove the subscription from the backend. */
   disable: () => Promise<void>;
   /** Toggle a single event type and sync preferences to the backend. */
@@ -190,7 +190,7 @@ export function usePushSubscription(): UsePushSubscriptionResult {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [supported, syncState]);
 
-  const enable = useCallback(async () => {
+  const enable = useCallback(async (nextPreferences?: PushEventPreferences) => {
     if (!supported) {
       setError(UNSUPPORTED_GUIDANCE);
       return;
@@ -202,6 +202,8 @@ export function usePushSubscription(): UsePushSubscriptionResult {
 
     setLoading(true);
     setError(null);
+    const subscriptionPreferences = nextPreferences ?? preferences;
+    if (nextPreferences) setPreferences(nextPreferences);
 
     try {
       // Request permission only after an explicit user action.
@@ -229,7 +231,7 @@ export function usePushSubscription(): UsePushSubscriptionResult {
       }
 
       subscriptionRef.current = subscription;
-      await postSubscription(subscriptionToJSON(subscription), preferences);
+      await postSubscription(subscriptionToJSON(subscription), subscriptionPreferences);
       setSubscribed(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to enable push notifications.');

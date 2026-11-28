@@ -1,7 +1,13 @@
-import { env } from '@/utils/env.utils';
+﻿import { env } from '@/utils/env.utils';
 import { recordRecentError } from '@/utils/recentErrors.utils';
 import axios, { type AxiosInstance, AxiosError } from 'axios';
 import Cookies from 'js-cookie';
+
+export const apiClient = axios.create({
+	baseURL: env.VITE_BACKEND_URL,
+	withCredentials: true,
+});
+export const api = apiClient;
 
 export interface APIResponse<T = undefined> {
 	success: boolean;

@@ -1,5 +1,5 @@
-import Lenis from 'lenis';
-import { useEffect } from 'react';
+﻿import Lenis from 'lenis';
+import { useEffect, useRef } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 
@@ -11,7 +11,6 @@ import GlobalPauseBanner from './components/common/GlobalPauseBanner';
 import PendingTransactionBanner from './components/common/PendingTransactionBanner';
 import PendingFeeChangeBanner from './components/fees/PendingFeeChangeBanner';
 import SessionExpiryWatcher from './components/common/SessionExpiryWatcher';
-import StatusBanner from './components/common/StatusBanner';
 import BadgeAchievementListener from './components/common/BadgeAchievementListener';
 import { useContractPausedStore } from './hooks/useContractPausedStore';
 import { routes } from './routes';
@@ -32,11 +31,14 @@ function App() {
 	const reducedMotion = useReducedMotion();
 	const motionOverride = useMotionOverrideStore(state => state.override);
 	const { address } = useWallet();
-	const { removeSubscription } = usePushSubscription();
+	const { disable: removeSubscription } = usePushSubscription();
+	const previousAddress = useRef(address);
 
 	// Remove the backend push subscription when the wallet signs out (#1413)
 	useEffect(() => {
-		if (address) return;
+		const hadAddress = Boolean(previousAddress.current);
+		previousAddress.current = address;
+		if (!hadAddress || address) return;
 		void removeSubscription();
 	}, [address, removeSubscription]);
 
@@ -94,8 +96,6 @@ function App() {
 			<EscapeBanner />
 			<OfflineBanner />
 			<GlobalPauseBanner />
-			{/* Platform status banner: degraded / partial outage / maintenance (#1403) */}
-			<StatusBanner />
 			<PendingTransactionBanner />
 			<PendingFeeChangeBanner />
 			<Toaster

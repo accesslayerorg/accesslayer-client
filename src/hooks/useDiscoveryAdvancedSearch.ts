@@ -168,7 +168,10 @@ export function useSavedViews({
 	currentSort,
 	isSignedIn = false,
 	syncAdapter,
-}: UseSavedViewsParams) {
+}: UseSavedViewsParams = {
+	currentFilters: {} as DiscoveryFilters,
+	currentSort: { field: 'volume', direction: 'desc' },
+}) {
 	const [views, setViews] = useState<SavedView[]>(() => readStoredViews());
 	const [appliedViewId, setAppliedViewId] = useState<string | null>(null);
 
@@ -349,5 +352,12 @@ export function useSavedViews({
 		apply,
 		rename,
 		delete: remove,
+		saveView: (input: string | { name: string; filters?: DiscoveryFilters }) => {
+			const name = typeof input === 'string' ? input : input.name;
+			const result = save(name);
+			return result.ok ? result.view : null;
+		},
+		renameView: rename,
+		deleteView: remove,
 	};
 }

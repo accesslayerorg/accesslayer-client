@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { formatNumber } from '@/utils/numberFormat.utils';
 import {
@@ -45,6 +45,8 @@ import {
 import { UnavailableAction } from '@/components/ui/unavailable-action';
 import PaymentAssetSelect from '@/components/common/PaymentAssetSelect';
 import type { PaymentAsset } from '@/types/paymentAsset.types';
+import FiatValue from '@/components/common/FiatValue';
+import { STROOPS_PER_XLM } from '@/constants/stellar';
 export interface BuySellTradeParams {
 	creatorId?: string;
 	side: 'buy' | 'sell';
