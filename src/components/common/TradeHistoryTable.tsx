@@ -51,7 +51,7 @@ function truncateWallet(address: string): string {
  * Merges a new live entry into the feed. Newest first, de-duplicated by id,
  * capped at LIVE_FEED_MAX_ENTRIES (oldest entries pruned from the tail).
  */
-export function mergeLiveEntry(feed: LiveTrade[], entry: LiveTrade): LiveTrade[] {
+function mergeLiveEntry(feed: LiveTrade[], entry: LiveTrade): LiveTrade[] {
 	const filtered = feed.filter(t => t.id !== entry.id);
 	const next = [entry, ...filtered];
 	return next.length > LIVE_FEED_MAX_ENTRIES
@@ -329,7 +329,6 @@ function LiveActivityFeed({ wsUrl, keyId }: { wsUrl: string; keyId?: string }) {
 			setEntries(prev => mergeLiveEntry(prev, trade));
 		};
 		return () => ws.close();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [wsUrl, keyId]);
 
 	// Events received while paused are queued and merged on resume.

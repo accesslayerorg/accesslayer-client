@@ -32,7 +32,7 @@ export default function Web3Provider({ children }: Web3ProviderProps) {
       <QueryClientProvider client={queryClient}>
         <WalletConnectionLogger />
         <CrossTabSync />
-        {children}
+        <XlmFiatRateProvider>{children}</XlmFiatRateProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

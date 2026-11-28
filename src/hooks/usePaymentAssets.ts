@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { oracleService } from '@/services/oracle.service';
 import type { PaymentAsset } from '@/types/paymentAsset.types';
+import type { OracleStatus } from '@/types/oracle';
 
 export const ALLOWLISTED_PAYMENT_ASSETS: PaymentAsset[] = [
 	{
@@ -42,7 +43,7 @@ export function usePaymentAssets(initialAssetCode: string = 'XLM') {
 	const { data: oracleStatuses = {}, isLoading } = useQuery({
 		queryKey: ['oracle', 'allPaymentAssets'],
 		queryFn: async () => {
-			const map: Record<string, any> = {};
+			const map: Record<string, OracleStatus> = {};
 			for (const asset of ALLOWLISTED_PAYMENT_ASSETS) {
 				const status = await oracleService.getOracleStatus(asset.code);
 				map[asset.code] = status;
