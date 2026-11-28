@@ -3,6 +3,17 @@ import { Networks } from '@stellar/stellar-sdk';
 import { useSigner } from '@/hooks/useSigner';
 import { env } from '@/utils/env.utils';
 
+declare global {
+	interface Window {
+		freighter?: { isConnected?: boolean; isAllowed?: boolean };
+		xBullSDK?: unknown;
+		xBull?: unknown;
+		lobstr?: unknown;
+		albedo?: unknown;
+		rabet?: unknown;
+	}
+}
+
 const networkPassphrase =
 	env.VITE_STELLAR_NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
 
@@ -99,9 +110,9 @@ const WALLET_DEFINITIONS: WalletDefinition[] = [
 	{
 		id: 'freighter',
 		name: 'Freighter',
-		isPresent: win => Boolean((win as any).freighter),
+		isPresent: win => Boolean(win.freighter),
 		probe: win => {
-			const freighter = (win as any).freighter;
+			const freighter = win.freighter;
 			if (!freighter) return undefined;
 			if (freighter.isConnected === false && freighter.isAllowed === false) {
 				return 'locked';
@@ -112,22 +123,22 @@ const WALLET_DEFINITIONS: WalletDefinition[] = [
 	{
 		id: 'xbull',
 		name: 'xBull',
-		isPresent: win => Boolean((win as any).xBullSDK || (win as any).xBull),
+		isPresent: win => Boolean(win.xBullSDK || win.xBull),
 	},
 	{
 		id: 'lobstr',
 		name: 'Lobstr',
-		isPresent: win => Boolean((win as any).lobstr),
+		isPresent: win => Boolean(win.lobstr),
 	},
 	{
 		id: 'albedo',
 		name: 'Albedo',
-		isPresent: win => Boolean((win as any).albedo),
+		isPresent: win => Boolean(win.albedo),
 	},
 	{
 		id: 'rabet',
 		name: 'Rabet',
-		isPresent: win => Boolean((win as any).rabet),
+		isPresent: win => Boolean(win.rabet),
 	},
 ];
 

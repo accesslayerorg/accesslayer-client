@@ -12,11 +12,7 @@ import {
   fetchAllActiveTriggers,
   fetchTriggerStatus,
 } from '@/services/holdingTriggers.service';
-import type {
-  HoldingTrigger,
-  CreateTriggerInput,
-  UpdateTriggerInput,
-} from '@/types/holdingTrigger.types';
+import type { CreateTriggerInput, UpdateTriggerInput } from '@/types/holdingTrigger.types';
 import type { Signer } from '@/lib/signing/types';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';

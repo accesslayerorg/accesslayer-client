@@ -18,6 +18,7 @@ interface TriggerModalProps {
   quantity: number;
   holdingId: string;
   onCreateTrigger?: (data: {
+    holdingId: string;
     type: TriggerType;
     triggerPrice: number;
     linkToTriggerId?: string;
@@ -73,6 +74,7 @@ export function TriggerModal({
 
     if (takeProfitPrice !== null) {
       onCreateTrigger({
+        holdingId,
         type: 'take-profit',
         triggerPrice: takeProfitPrice,
       });
@@ -80,6 +82,7 @@ export function TriggerModal({
 
     if (stopLossPrice !== null) {
       onCreateTrigger({
+        holdingId,
         type: 'stop-loss',
         triggerPrice: stopLossPrice,
         linkToTriggerId: linkTriggers ? undefined : undefined,

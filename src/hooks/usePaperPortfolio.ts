@@ -19,11 +19,6 @@ export interface PaperPortfolio {
 }
 
 function load(): PaperPortfolio {
-  const emptyPortfolio: PaperPortfolio = {
-    balance: STARTING_BALANCE,
-    trades: [],
-    holdings: {},
-  };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);

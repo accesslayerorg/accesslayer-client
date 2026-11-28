@@ -16,12 +16,7 @@ import {
   followCollection,
   unfollowCollection,
 } from '@/services/collection.service';
-import type {
-  Collection,
-  CreateCollectionInput,
-  AddKeyInput,
-  CollectionKey,
-} from '@/types/collection.types';
+import type { CreateCollectionInput, AddKeyInput } from '@/types/collection.types';
 import showToast from '@/utils/toast.util';
 import { getSignatureErrorMessage } from '@/utils/errorHandling.utils';
 
