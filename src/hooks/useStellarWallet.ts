@@ -90,18 +90,30 @@ interface WalletDefinition {
 	id: WalletId;
 	name: string;
 	/** Returns true when the wallet provider is present on window. */
-	isPresent: (win: Window) => boolean;
+	isPresent: (win: WalletProviderWindow) => boolean;
 	/** Optional probe that returns a failure reason when present but unusable. */
-	probe?: (win: Window) => WalletFailureReason | undefined;
+	probe?: (win: WalletProviderWindow) => WalletFailureReason | undefined;
+}
+
+interface WalletProviderWindow extends Window {
+	freighter?: {
+		isConnected?: boolean;
+		isAllowed?: boolean;
+	};
+	xBullSDK?: unknown;
+	xBull?: unknown;
+	lobstr?: unknown;
+	albedo?: unknown;
+	rabet?: unknown;
 }
 
 const WALLET_DEFINITIONS: WalletDefinition[] = [
 	{
 		id: 'freighter',
 		name: 'Freighter',
-		isPresent: win => Boolean((win as any).freighter),
+		isPresent: win => Boolean(win.freighter),
 		probe: win => {
-			const freighter = (win as any).freighter;
+			const freighter = win.freighter;
 			if (!freighter) return undefined;
 			if (freighter.isConnected === false && freighter.isAllowed === false) {
 				return 'locked';
@@ -112,22 +124,22 @@ const WALLET_DEFINITIONS: WalletDefinition[] = [
 	{
 		id: 'xbull',
 		name: 'xBull',
-		isPresent: win => Boolean((win as any).xBullSDK || (win as any).xBull),
+		isPresent: win => Boolean(win.xBullSDK || win.xBull),
 	},
 	{
 		id: 'lobstr',
 		name: 'Lobstr',
-		isPresent: win => Boolean((win as any).lobstr),
+		isPresent: win => Boolean(win.lobstr),
 	},
 	{
 		id: 'albedo',
 		name: 'Albedo',
-		isPresent: win => Boolean((win as any).albedo),
+		isPresent: win => Boolean(win.albedo),
 	},
 	{
 		id: 'rabet',
 		name: 'Rabet',
-		isPresent: win => Boolean((win as any).rabet),
+		isPresent: win => Boolean(win.rabet),
 	},
 ];
 
@@ -157,7 +169,7 @@ function detectBlockedPopup(win: Window): boolean {
 	}
 }
 
-function runDetection(win: Window | undefined): {
+function runDetection(win: WalletProviderWindow | undefined): {
 	wallets: WalletDetectionResult[];
 	detectedReason?: WalletFailureReason;
 	detectedWalletId?: WalletId;

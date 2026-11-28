@@ -52,6 +52,12 @@ describe('debugRedaction.utils (#1447)', () => {
 		};
 
 		const serialized = serializeRedactedDiagnostics(diagnostics);
+		const redacted = redactDiagnostics(diagnostics);
+		expect(redacted.user).toEqual({
+			address: '[REDACTED]',
+			password: '[REDACTED]',
+			token: '[REDACTED]',
+		});
 		expect(serialized).not.toContain(
 			'GDEMOWALLET0000000000000000000000000000000000000000000000001'
 		);

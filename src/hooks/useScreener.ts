@@ -58,7 +58,7 @@ function resolveMetricValue(creator: Course, metric: ScreenerMetric): number {
 		case 'price':
 			return creator.priceStroops ?? creator.price ?? 0;
 		case 'change_24h':
-			return creator.priceChange24h ?? 0;
+			return creator.change24h ?? 0;
 		case 'volume':
 			return creator.volume24h ?? 0;
 		case 'holder_count':
@@ -72,7 +72,9 @@ function resolveMetricValue(creator: Course, metric: ScreenerMetric): number {
 			return ms / 86_400_000;
 		}
 		case 'royalty_rate':
-			return creator.royaltyBps != null ? creator.royaltyBps / 100 : 0;
+			return creator.creatorFeeBps != null
+				? creator.creatorFeeBps / 100
+				: 0;
 		default:
 			return 0;
 	}

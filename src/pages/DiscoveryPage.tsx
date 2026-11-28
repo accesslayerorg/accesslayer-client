@@ -12,11 +12,12 @@ import {
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useNavigationTiming } from '@/hooks/useNavigationTiming';
 import { useKeyDiscovery } from '@/hooks/useKeyDiscovery';
-import { useDiscoveryAdvancedSearch } from '@/hooks/useDiscoveryAdvancedSearch';
-import { useSavedViews } from '@/hooks/useSavedViews';
+import {
+	useDiscoveryAdvancedSearch,
+	useSavedViews,
+} from '@/hooks/useDiscoveryAdvancedSearch';
 import AdvancedSearchDrawer from '@/components/common/AdvancedSearchDrawer';
 import ActiveDiscoveryFilterChips from '@/components/common/ActiveDiscoveryFilterChips';
-import SavedViewsMenu from '@/components/common/SavedViewsMenu';
 import {
 	clearDiscoveryFilterSearchParams,
 	countActiveDiscoveryFilters,
@@ -34,6 +35,7 @@ import CampaignsSection from '@/components/marketplace/CampaignsSection';
 import BundleDiscoverySection from '@/components/common/BundleDiscoverySection';
 import { Button } from '@/components/ui/button';
 import { useBatchTradeStore, selectBatchItemCount } from '@/hooks/useBatchTradeStore';
+import showToast from '@/utils/toast.util';
 
 /**
  * Key Discovery Page (#937).
@@ -62,22 +64,22 @@ export default function DiscoveryPage() {
 	);
 	const activeFilterCount = countActiveDiscoveryFilters(filters);
 
+	const currentSort = useMemo(() => {
+		const [field = 'volume', direction = 'desc'] = (
+			searchParams.get('sort') ?? 'volume_desc'
+		).split('_');
+		return { field, direction: direction === 'asc' ? 'asc' : 'desc' } as const;
+	}, [searchParams]);
 	const {
 		views: savedViews,
-		saveView,
-		renameView,
-		deleteView,
-	} = useSavedViews();
-	const [appliedViewId, setAppliedViewId] = useState<string | null>(null);
-	const [appliedViewSnapshot, setAppliedViewSnapshot] = useState<string | null>(
-		null
-	);
-	const currentFiltersSnapshot = useMemo(
-		() => JSON.stringify(filters),
-		[filters]
-	);
-	const isViewModified =
-		appliedViewId !== null && appliedViewSnapshot !== currentFiltersSnapshot;
+		appliedView,
+		isModified: isViewModified,
+		canSaveMore,
+		save: saveView,
+		apply: selectSavedView,
+		rename: renameView,
+		delete: deleteView,
+	} = useSavedViews({ currentFilters: filters, currentSort });
 
 	const {
 		trendingKeys: discoveredTrendingKeys,
@@ -111,34 +113,30 @@ export default function DiscoveryPage() {
 	};
 
 	const applySavedView = (viewId: string) => {
-		const view = savedViews.find(candidate => candidate.id === viewId);
+		const view = selectSavedView(viewId);
 		if (!view) return;
-		setSearchParams(previous =>
-			discoveryFiltersToSearchParams(view.filters, previous)
-		);
-		setAppliedViewId(view.id);
-		setAppliedViewSnapshot(JSON.stringify(view.filters));
+		setSearchParams(previous => {
+			const next = discoveryFiltersToSearchParams(view.filters, previous);
+			next.set('sort', `${view.sort.field}_${view.sort.direction}`);
+			return next;
+		});
 	};
 
 	const saveCurrentView = (name: string) => {
-		const created = saveView({ name, filters });
-		if (created) {
-			setAppliedViewId(created.id);
-			setAppliedViewSnapshot(currentFiltersSnapshot);
+		const result = saveView(name);
+		if (!result.ok) {
+			showToast.error(result.message);
 		}
-		return created;
+		return result;
 	};
 
 	const renameSavedView = (viewId: string, name: string) => {
-		renameView(viewId, name);
+		const result = renameView(viewId, name);
+		if (!result.ok) showToast.error(result.message);
 	};
 
 	const deleteSavedView = (viewId: string) => {
 		deleteView(viewId);
-		if (appliedViewId === viewId) {
-			setAppliedViewId(null);
-			setAppliedViewSnapshot(null);
-		}
 	};
 
 	const removeFilter = (params: readonly string[]) => {
@@ -233,15 +231,56 @@ export default function DiscoveryPage() {
 							)}
 						</Button>
 
-						<SavedViewsMenu
-							views={savedViews}
-							activeViewId={appliedViewId}
-							isModified={isViewModified}
-							onApply={applySavedView}
-							onSave={saveCurrentView}
-							onRename={renameSavedView}
-							onDelete={deleteSavedView}
-						/>
+						<div className="flex items-center gap-1.5">
+							<select
+								aria-label="Saved discovery views"
+								value={appliedView?.id ?? ''}
+								onChange={event => applySavedView(event.target.value)}
+								className="h-7 max-w-36 rounded-full border border-white/15 bg-slate-950 px-2 text-xs text-white"
+							>
+								<option value="">Saved views</option>
+								{savedViews.map(view => (
+									<option key={view.id} value={view.id}>
+										{view.name}
+									</option>
+								))}
+							</select>
+							<Button
+								variant="outline"
+								size="xs"
+								disabled={!canSaveMore}
+								onClick={() => {
+									const name = window.prompt('Name this view');
+									if (name) saveCurrentView(name);
+								}}
+							>
+								Save
+							</Button>
+							{appliedView && (
+								<>
+									<Button
+										variant="outline"
+										size="xs"
+										onClick={() => {
+											const name = window.prompt('Rename view', appliedView.name);
+											if (name) renameSavedView(appliedView.id, name);
+										}}
+									>
+										Rename
+									</Button>
+									<Button
+										variant="outline"
+										size="xs"
+										onClick={() => deleteSavedView(appliedView.id)}
+									>
+										Delete
+									</Button>
+									{isViewModified && (
+										<span className="text-[10px] text-white/50">Modified</span>
+									)}
+								</>
+							)}
+						</div>
 
 						<Button
 							variant="outline"

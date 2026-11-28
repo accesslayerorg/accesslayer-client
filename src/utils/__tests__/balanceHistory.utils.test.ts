@@ -3,6 +3,8 @@ import {
 	findBalanceAsOfLedger,
 	computeHoldingsAsOfDate,
 	exportBalanceHistoryToCsv,
+	DEFAULT_REFERENCE_LEDGER,
+	DEFAULT_REFERENCE_TIMESTAMP,
 } from '../balanceHistory.utils';
 import type { BalanceCheckpoint } from '@/types/balanceHistory.types';
 
@@ -39,6 +41,12 @@ describe('balanceHistory.utils (#1446)', () => {
 			eventType: 'sell',
 		},
 	];
+
+	it('converts timestamps to estimated Stellar ledgers', () => {
+		expect(
+			timestampToEstimatedLedger(DEFAULT_REFERENCE_TIMESTAMP + 10_000)
+		).toBe(DEFAULT_REFERENCE_LEDGER + 2);
+	});
 
 	it('returns ZERO holdings for ledgers before the first checkpoint', () => {
 		const result = findBalanceAsOfLedger(mockCheckpoints, 500);

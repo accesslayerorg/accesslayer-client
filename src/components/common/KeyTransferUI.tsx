@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAddressBook, validateAddressBookInput } from '@/hooks/useAddressBook';
-import { useRoyaltyEnforcement } from '@/hooks/useRoyaltyEnforcement';
+import { useRoyaltyEnforcement } from '@/hooks/useKeyConfig';
 import { Loader, Send, CheckCircle, Clock, ShieldAlert } from 'lucide-react';
 import showToast from '@/utils/toast.util';
 
@@ -65,12 +65,10 @@ export default function KeyTransferUI({
 	const addToAddressBook = useAddressBook(state => state.add);
 
 	const { data: enforcement } = useRoyaltyEnforcement(keyId);
-	const enforcementOn = !!enforcement?.enabled;
+	const enforcementOn = Boolean(enforcement?.enabled || enforcement?.locked);
 	const recipientIsApprovedMarketplace =
 		!!resolvedRecipient &&
-		!!enforcement?.approvedMarketplaces?.some(
-			m => m.address === resolvedRecipient
-		);
+		!!enforcement?.approvedMarketplaceIds?.includes(resolvedRecipient);
 	const directTransferBlocked = enforcementOn && !recipientIsApprovedMarketplace;
 
 	const { register, handleSubmit, reset } = useForm<KeyTransferFormData>({
@@ -350,7 +348,7 @@ export default function KeyTransferUI({
 								</div>
 
 								{enforcementOn && resolvedRecipient && !recipientIsApprovedMarketplace && (
-									<Alert variant="destructive">
+									<Alert className="border-red-500/30 bg-red-500/10 text-red-200">
 										<AlertDescription>
 											This recipient is not an approved marketplace. The
 											transfer will be blocked under royalty enforcement.

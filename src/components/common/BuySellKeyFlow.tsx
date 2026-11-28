@@ -45,6 +45,9 @@ import {
 import { UnavailableAction } from '@/components/ui/unavailable-action';
 import PaymentAssetSelect from '@/components/common/PaymentAssetSelect';
 import type { PaymentAsset } from '@/types/paymentAsset.types';
+import { useAccount } from 'wagmi';
+import { useTradeCooldown } from '@/hooks/useTradeCooldown';
+import CooldownBadge from '@/components/common/CooldownBadge';
 export interface BuySellTradeParams {
 	creatorId?: string;
 	side: 'buy' | 'sell';
@@ -133,6 +136,8 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 	priceFloorActive,
 	className,
 }) => {
+	const { address } = useAccount();
+	const tradeCooldown = useTradeCooldown(creatorId ?? '', address);
 	const effectiveHoldingCap = useMemo(
 		() =>
 			holdingCap ??
@@ -372,8 +377,9 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 		isValid &&
 		isHighPriceImpact(priceImpactPercent, slippageTolerancePercent);
 	const impactAcknowledgementKey = `${side}:${parsedAmount}:${currentSupply ?? 0}:${slippageTolerancePercent}`;
+	const impactAcknowledged =
+		acknowledgedImpactKey === impactAcknowledgementKey;
 
-	return null;
 	// Early sell launch penalty
 	const launchPenalty = useMemo(() => {
 		return calculateLaunchPenalty(
@@ -746,10 +752,23 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 			)}
 
 			{/* Review / Proceed to Confirmation Button */}
+			{tradeCooldown.isCoolingDown && (
+				<CooldownBadge
+					keyId={creatorId}
+					wallet={address}
+					className="mb-2"
+				/>
+			)}
 			<UnavailableAction
-				disabled={paused || (side === 'sell' && isFloorActive)}
+				disabled={
+					paused ||
+					tradeCooldown.isCoolingDown ||
+					(side === 'sell' && isFloorActive)
+				}
 				reason={
-					globalPaused
+					tradeCooldown.isCoolingDown
+						? 'Trade cooldown active'
+						: globalPaused
 						? 'Platform Paused'
 						: side === 'sell' && isFloorActive
 							? 'PriceFloorActive: Selling is disabled while current price is at or below the floor price.'
@@ -799,6 +818,7 @@ export const BuySellKeyFlow: React.FC<BuySellKeyFlowProps> = ({
 				onConfirm={handleConfirmSubmission}
 				onCancel={() => setConfirmationOpen(false)}
 				isSubmitting={isSubmitting}
+				disabled={tradeCooldown.isCoolingDown}
 			/>
 		</div>
 	);

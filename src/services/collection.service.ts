@@ -15,7 +15,7 @@ import type {
  * Fetch all published collections.
  */
 export async function fetchCollections(): Promise<Collection[]> {
-  const response = await apiClient.get('/collections', {
+  const response = await apiClient.get<Collection[]>('/collections', {
     params: { published: true },
   });
   return response.data;
@@ -25,7 +25,7 @@ export async function fetchCollections(): Promise<Collection[]> {
  * Fetch a single collection by slug.
  */
 export async function fetchCollectionDetail(slug: string): Promise<Collection> {
-  const response = await apiClient.get(`/collections/${slug}`);
+  const response = await apiClient.get<Collection>(`/collections/${slug}`);
   return response.data;
 }
 
@@ -33,7 +33,7 @@ export async function fetchCollectionDetail(slug: string): Promise<Collection> {
  * Fetch featured collections for homepage display.
  */
 export async function fetchFeaturedCollections(): Promise<Collection[]> {
-  const response = await apiClient.get('/collections/featured', {
+  const response = await apiClient.get<Collection[]>('/collections/featured', {
     params: { limit: 5 },
   });
   return response.data;
@@ -45,7 +45,7 @@ export async function fetchFeaturedCollections(): Promise<Collection[]> {
 export async function createCollection(
   input: CreateCollectionInput
 ): Promise<Collection> {
-  const response = await apiClient.post('/collections', input);
+  const response = await apiClient.post<Collection>('/collections', input);
   return response.data;
 }
 
@@ -56,7 +56,7 @@ export async function updateCollection(
   id: string,
   input: UpdateCollectionInput
 ): Promise<Collection> {
-  const response = await apiClient.patch(`/collections/${id}`, input);
+  const response = await apiClient.patch<Collection>(`/collections/${id}`, input);
   return response.data;
 }
 
@@ -68,7 +68,7 @@ export async function addKeyToCollection(
   collectionId: string,
   input: AddKeyInput
 ): Promise<CollectionKey> {
-  const response = await apiClient.post(
+  const response = await apiClient.post<CollectionKey>(
     `/collections/${collectionId}/keys`,
     input
   );
@@ -93,7 +93,7 @@ export async function reorderKeys(
   collectionId: string,
   keyIds: string[]
 ): Promise<CollectionKey[]> {
-  const response = await apiClient.post(
+  const response = await apiClient.post<CollectionKey[]>(
     `/collections/${collectionId}/reorder`,
     { keyIds }
   );
@@ -118,6 +118,6 @@ export async function unfollowCollection(collectionId: string): Promise<void> {
  * Fetch user's followed collections.
  */
 export async function fetchUserFollowedCollections(): Promise<Collection[]> {
-  const response = await apiClient.get('/user/followed-collections');
+  const response = await apiClient.get<Collection[]>('/user/followed-collections');
   return response.data;
 }

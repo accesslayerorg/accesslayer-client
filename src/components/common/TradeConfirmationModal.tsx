@@ -62,6 +62,7 @@ export interface TradeConfirmationModalProps {
 	onConfirm: () => Promise<void> | void;
 	onCancel?: () => void;
 	isSubmitting?: boolean;
+	disabled?: boolean;
 }
 
 /**
@@ -93,6 +94,7 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 	onConfirm,
 	onCancel,
 	isSubmitting = false,
+	disabled = false,
 }) => {
 	const [currentSlippage, setCurrentSlippage] = useState(
 		slippageTolerancePercent
@@ -483,6 +485,7 @@ export const TradeConfirmationModal: React.FC<TradeConfirmationModalProps> = ({
 						type="button"
 						onClick={onConfirm}
 						disabled={
+							disabled ||
 							isSubmitting ||
 							slippageError != null ||
 							(hasLargeTradeGuard && !largeTradeAcknowledged)

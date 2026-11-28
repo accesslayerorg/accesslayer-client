@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 import { courseService, type KeyConfig } from '@/services/course.service';
-import { api } from '@/lib/api';
+import { apiClient } from '@/services/api.service';
 
 export interface RoyaltyEnforcement {
 	enabled: boolean;
@@ -19,7 +19,7 @@ export function useRoyaltyEnforcement(keyId: string | undefined) {
 	return useQuery<RoyaltyEnforcement>({
 		queryKey: ['keys', keyId ?? '', 'royalty-enforcement'],
 		queryFn: async () => {
-			const res = await api.get<RoyaltyEnforcement>(`/v1/keys/${keyId}/royalty-enforcement`);
+			const res = await apiClient.get<RoyaltyEnforcement>(`/v1/keys/${keyId}/royalty-enforcement`);
 			return res.data;
 		},
 		enabled: Boolean(keyId),

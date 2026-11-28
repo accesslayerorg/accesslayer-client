@@ -19,13 +19,18 @@ export interface PaperPortfolio {
 }
 
 function load(): PaperPortfolio {
+  const emptyPortfolio: PaperPortfolio = {
+    balance: STARTING_BALANCE,
+    trades: [],
+    holdings: {},
+  };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch {
     // Ignore unreadable or corrupted storage and fall back to a fresh portfolio.
   }
-  return { balance: STARTING_BALANCE, trades: [], holdings: {} };
+  return emptyPortfolio;
 }
 
 function save(p: PaperPortfolio) {

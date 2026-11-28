@@ -1,7 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuditLog } from '../hooks/useAuditLog';
-import { useAdminRole } from '../hooks/useAdminRole';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { redactSecrets, useAuditLog } from '../hooks/useAuditLog';
 
 export interface AuditLogEntry {
   id: string;
@@ -12,27 +10,6 @@ export interface AuditLogEntry {
   before?: Record<string, unknown> | null;
   after?: Record<string, unknown> | null;
   payload?: Record<string, unknown> | null;
-}
-
-const SECRET_KEY_PATTERN = /(secret|password|token|apikey|api_key|private|credential|authorization|auth)/i;
-const REDACTED = '[REDACTED]';
-
-export function redactSecrets(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map((item) => redactSecrets(item));
-  }
-  if (value && typeof value === 'object') {
-    const result: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-      if (SECRET_KEY_PATTERN.test(key)) {
-        result[key] = REDACTED;
-      } else {
-        result[key] = redactSecrets(val);
-      }
-    }
-    return result;
-  }
-  return value;
 }
 
 function formatJson(value: unknown): string {
@@ -58,26 +35,12 @@ function toCsvValue(value: unknown): string {
 
 const CSV_ROW_LIMIT = 5000;
 
-export default function AuditLogPage(): JSX.Element {
-  const navigate = useNavigate();
-  const { isAdminWallet, loading: roleLoading } = useAdminRole();
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const actor = searchParams.get('actor') ?? '';
-  const action = searchParams.get('action') ?? '';
-  const from = searchParams.get('from') ?? '';
-  const to = searchParams.get('to') ?? '';
+export default function AuditLogPage(): React.JSX.Element {
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const copyTimeoutRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!roleLoading && !isAdminWallet) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [roleLoading, isAdminWallet, navigate]);
 
   useEffect(() => {
     return () => {
@@ -87,34 +50,21 @@ export default function AuditLogPage(): JSX.Element {
     };
   }, []);
 
-  const filters = useMemo(
-    () => ({
-      actor: actor || undefined,
-      action: action || undefined,
-      from: from || undefined,
-      to: to || undefined,
-    }),
-    [actor, action, from, to],
-  );
-
-  const { entries, loading, error, hasMore, loadMore, refetch } = useAuditLog(filters);
-
-  const updateFilter = useCallback(
-    (key: string, value: string) => {
-      const next = new URLSearchParams(searchParams);
-      if (value) {
-        next.set(key, value);
-      } else {
-        next.delete(key);
-      }
-      setSearchParams(next, { replace: true });
-    },
-    [searchParams, setSearchParams],
-  );
-
-  const clearFilters = useCallback(() => {
-    setSearchParams(new URLSearchParams(), { replace: true });
-  }, [setSearchParams]);
+  const {
+    entries,
+    filters,
+    setFilter,
+    clearFilters,
+    isLoading: loading,
+    isError,
+    hasNextPage: hasMore,
+    fetchNextPage: loadMore,
+    isFetchingNextPage,
+    query,
+  } = useAuditLog();
+  const error = isError ? query.error : null;
+  const refetch = () => void query.refetch();
+  const { actor, action, from, to } = filters;
 
   const toggleExpanded = useCallback((id: string) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -168,18 +118,6 @@ export default function AuditLogPage(): JSX.Element {
     }
   }, [entries]);
 
-  if (roleLoading) {
-    return (
-      <div className="audit-log-page" data-testid="audit-log-role-loading">
-        <AuditLogSkeleton />
-      </div>
-    );
-  }
-
-  if (!isAdminWallet) {
-    return null;
-  }
-
   const hasActiveFilters = Boolean(actor || action || from || to);
 
   return (
@@ -204,7 +142,7 @@ export default function AuditLogPage(): JSX.Element {
             type="text"
             value={actor}
             placeholder="Filter by actor"
-            onChange={(e) => updateFilter('actor', e.target.value)}
+            onChange={(e) => setFilter('actor', e.target.value)}
             data-testid="audit-log-filter-actor"
           />
         </label>
@@ -214,7 +152,7 @@ export default function AuditLogPage(): JSX.Element {
             type="text"
             value={action}
             placeholder="Filter by action"
-            onChange={(e) => updateFilter('action', e.target.value)}
+            onChange={(e) => setFilter('action', e.target.value)}
             data-testid="audit-log-filter-action"
           />
         </label>
@@ -223,7 +161,7 @@ export default function AuditLogPage(): JSX.Element {
           <input
             type="date"
             value={from}
-            onChange={(e) => updateFilter('from', e.target.value)}
+            onChange={(e) => setFilter('from', e.target.value)}
             data-testid="audit-log-filter-from"
           />
         </label>
@@ -232,7 +170,7 @@ export default function AuditLogPage(): JSX.Element {
           <input
             type="date"
             value={to}
-            onChange={(e) => updateFilter('to', e.target.value)}
+            onChange={(e) => setFilter('to', e.target.value)}
             data-testid="audit-log-filter-to"
           />
         </label>
@@ -327,8 +265,8 @@ export default function AuditLogPage(): JSX.Element {
 
       {hasMore && (
         <div className="audit-log-load-more">
-          <button type="button" onClick={loadMore} disabled={loading} data-testid="audit-log-load-more">
-            {loading ? 'Loading…' : 'Load more'}
+          <button type="button" onClick={loadMore} disabled={isFetchingNextPage} data-testid="audit-log-load-more">
+            {isFetchingNextPage ? 'Loading…' : 'Load more'}
           </button>
         </div>
       )}
@@ -336,7 +274,7 @@ export default function AuditLogPage(): JSX.Element {
   );
 }
 
-function AuditLogSkeleton(): JSX.Element {
+function AuditLogSkeleton(): React.JSX.Element {
   return (
     <div className="audit-log-skeleton" data-testid="audit-log-skeleton" aria-busy="true">
       {Array.from({ length: 6 }).map((_, index) => (

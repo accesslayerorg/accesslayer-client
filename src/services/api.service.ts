@@ -1,6 +1,11 @@
 import { env } from '@/utils/env.utils';
 import { recordRecentError } from '@/utils/recentErrors.utils';
-import axios, { type AxiosInstance, AxiosError } from 'axios';
+import axios, {
+	type AxiosInstance,
+	type AxiosError,
+	type AxiosRequestConfig,
+	type AxiosResponse,
+} from 'axios';
 import Cookies from 'js-cookie';
 
 export interface APIResponse<T = undefined> {
@@ -277,6 +282,40 @@ export class BaseApiService {
 		Cookies.remove(this.REFRESH_TOKEN);
 	}
 }
+
+class SharedApiClient extends BaseApiService {
+	get<T = unknown>(
+		url: string,
+		config?: AxiosRequestConfig
+	): Promise<AxiosResponse<T>> {
+		return this.api.get<T>(url, config);
+	}
+
+	post<T = unknown>(
+		url: string,
+		data?: unknown,
+		config?: AxiosRequestConfig
+	): Promise<AxiosResponse<T>> {
+		return this.api.post<T>(url, data, config);
+	}
+
+	patch<T = unknown>(
+		url: string,
+		data?: unknown,
+		config?: AxiosRequestConfig
+	): Promise<AxiosResponse<T>> {
+		return this.api.patch<T>(url, data, config);
+	}
+
+	delete<T = unknown>(
+		url: string,
+		config?: AxiosRequestConfig
+	): Promise<AxiosResponse<T>> {
+		return this.api.delete<T>(url, config);
+	}
+}
+
+export const apiClient = new SharedApiClient();
 
 // Standalone fetch for the public OpenAPI document (#1416). The docs portal
 // must be able to load the spec even when the user is signed out, so this

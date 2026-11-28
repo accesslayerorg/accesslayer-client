@@ -6,12 +6,10 @@
 import { useParams } from 'react-router';
 import { Helmet } from 'react-helmet-async';
 import { useCollectionDetail, useFollowCollectionMutation } from '@/hooks/useCollections';
-import { useUser } from '@/contexts/auth'; // Assuming exists
 
 export function CollectionDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data: collection, isLoading, error } = useCollectionDetail(slug || '');
-  const { data: user } = useUser();
   const followMutation = useFollowCollectionMutation();
 
   if (!slug) {
@@ -37,8 +35,6 @@ export function CollectionDetailPage() {
       </div>
     );
   }
-
-  const isEditor = user?.role === 'editor';
 
   return (
     <>
@@ -82,14 +78,6 @@ export function CollectionDetailPage() {
               {followMutation.isPending ? 'Following...' : 'Follow'}
             </button>
           </div>
-
-          {isEditor && (
-            <div className="mb-8 p-4 bg-slate-700 rounded-lg border border-slate-600">
-              <p className="text-sm text-slate-300">
-                Editor mode: You can edit this collection
-              </p>
-            </div>
-          )}
 
           <div className="space-y-4">
             {collection.keys.map((key, index) => (

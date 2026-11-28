@@ -233,6 +233,7 @@ export const queryKeys = {
 				['admin', 'audit-log', 'list', filters ?? null] as const,
 			export: (filters?: Record<string, unknown>) =>
 				['admin', 'audit-log', 'export', filters ?? null] as const,
+		},
 		referralHolds: {
 			all: () => ['admin', 'referral-holds'] as const,
 			list: (filters: ReferralHoldFilters = {}) =>
@@ -421,15 +422,14 @@ export const queryKeys = {
 		all: () => ['api-keys'] as const,
 		list: () => ['api-keys', 'list'] as const,
 	},
-	// Shared API rate-limit state (#1402): the active 429 wait window used to
-	// gate retries, disable triggering buttons and pause background polling.
 	rateLimit: {
 		all: () => ['rateLimit'] as const,
 		state: () => ['rateLimit', 'state'] as const,
-	// OpenAPI document powering the public API docs portal (#1416).
+	},
 	openapi: {
 		all: () => ['openapi'] as const,
 		document: () => ['openapi', 'document'] as const,
+	},
 	launches: {
 		all: () => ['launches'] as const,
 	},

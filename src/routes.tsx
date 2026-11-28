@@ -500,6 +500,9 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<DistributionsPage />,
 					'Distributions'
+				),
+			},
+			{
 				// Searchable audit log of privileged admin actions (#1415).
 				path: '/admin/audit',
 				element: (
@@ -507,6 +510,11 @@ export const routes = [
 						{withRouteErrorBoundary(
 							<AuditLogPage />,
 							'Admin audit log'
+						)}
+					</AdminTwoFactorGuard>
+				),
+			},
+			{
 				path: '/admin/referral-holds',
 				element: (
 					<AdminTwoFactorGuard>
@@ -570,6 +578,9 @@ export const routes = [
 				element: withRouteErrorBoundary(
 					<ApiDocsPage />,
 					'API documentation'
+				),
+			},
+			{
 				// Social recovery guardians and recovery approvals (#1382).
 				path: '/settings/recovery',
 				element: withRouteErrorBoundary(

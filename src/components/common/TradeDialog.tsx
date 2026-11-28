@@ -78,6 +78,9 @@ import {
 	computeMaxBuyWithinSlippage,
 } from '@/utils/liquidityDepth.utils';
 import { useGlobalPause } from '@/hooks/useGlobalPause';
+import { useTradeCooldown } from '@/hooks/useTradeCooldown';
+import CooldownBadge from '@/components/common/CooldownBadge';
+import { formatCooldownDuration } from '@/utils/buyCooldown.utils';
 import { UnavailableAction } from '@/components/ui/unavailable-action';
 import { useContractPausedStore, selectIsPaused } from '@/hooks/useContractPausedStore';
 import { useAllowanceStore, selectNeedsApproval } from '@/hooks/useAllowanceStore';
@@ -211,6 +214,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 }) => {
 	const { address } = useAccount();
 	const activeAddress = walletAddress ?? address;
+	const tradeCooldown = useTradeCooldown(creatorId ?? '', activeAddress);
 
 	// ── Contract pause state (#953) ───────────────────────────────────────
 	const isPaused = useContractPausedStore(selectIsPaused);
@@ -923,6 +927,13 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 
 	const bodyContent = (
 		<>
+			{tradeCooldown.isCoolingDown && (
+				<CooldownBadge
+					keyId={creatorId}
+					wallet={activeAddress}
+					className="mb-3"
+				/>
+			)}
 			{/* Key frozen alert (#1121) */}
 			{keyFreeze && (
 				<div
@@ -1256,9 +1267,16 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 				Cancel
 			</Button>
 			<UnavailableAction
-				disabled={frozen || paused || (side === 'sell' && isFloorActive)}
+				disabled={
+					frozen ||
+					paused ||
+					tradeCooldown.isCoolingDown ||
+					(side === 'sell' && isFloorActive)
+				}
 				reason={
-					keyFreeze
+					tradeCooldown.isCoolingDown
+						? `Trade cooldown active. Try again in ${formatCooldownDuration(tradeCooldown.remainingSeconds)}.`
+						: keyFreeze
 						? keyFreeze.reason
 						: globalPaused
 							? 'Platform Paused'
@@ -1319,6 +1337,7 @@ const TradeDialog: React.FC<TradeDialogProps> = ({
 				}}
 				onCancel={() => setConfirmationOpen(false)}
 				isSubmitting={isSubmitting}
+				disabled={tradeCooldown.isCoolingDown}
 			/>
 		) : null;
 

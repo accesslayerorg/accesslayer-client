@@ -17,7 +17,7 @@ export async function fetchHistoricalPrices(
   keyId: string,
   range: { start: string; end: string }
 ): Promise<HistoricalPrice[]> {
-  const response = await apiClient.get(
+  const response = await apiClient.get<HistoricalPrice[]>(
     `/analytics/historical-prices/${keyId}`,
     {
       params: {
@@ -36,7 +36,7 @@ export async function fetchXlmPrices(range: {
   start: string;
   end: string;
 }): Promise<HistoricalPrice[]> {
-  const response = await apiClient.get('/analytics/xlm-prices', {
+  const response = await apiClient.get<HistoricalPrice[]>('/analytics/xlm-prices', {
     params: {
       start: range.start,
       end: range.end,
@@ -49,7 +49,7 @@ export async function fetchXlmPrices(range: {
  * Fetch when a key was created/deployed.
  */
 export async function fetchKeyExistenceDate(keyId: string): Promise<string> {
-  const response = await apiClient.get(`/creators/${keyId}/created-at`);
+  const response = await apiClient.get<{ createdAt: string }>(`/creators/${keyId}/created-at`);
   return response.data.createdAt;
 }
 

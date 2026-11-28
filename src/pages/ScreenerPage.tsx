@@ -398,13 +398,13 @@ export default function ScreenerPage() {
 												<td className="py-3 pr-4 text-right font-mono">
 													<span
 														className={cn(
-															(creator.priceChange24h ?? 0) >= 0
+															(creator.change24h ?? 0) >= 0
 																? 'text-emerald-400'
 																: 'text-red-400'
 														)}
 													>
-														{(creator.priceChange24h ?? 0) >= 0 ? '+' : ''}
-														{formatNumber(creator.priceChange24h ?? 0, { maximumFractionDigits: 2 })}%
+														{(creator.change24h ?? 0) >= 0 ? '+' : ''}
+														{formatNumber(creator.change24h ?? 0, { maximumFractionDigits: 2 })}%
 													</span>
 												</td>
 												<td className="py-3 pr-4 text-right font-mono text-white/80">
@@ -424,8 +424,8 @@ export default function ScreenerPage() {
 														: '—'}
 												</td>
 												<td className="py-3 pr-4 text-right font-mono text-white/80">
-													{creator.royaltyBps != null
-														? `${creator.royaltyBps / 100}%`
+													{creator.creatorFeeBps != null
+														? `${creator.creatorFeeBps / 100}%`
 														: '—'}
 												</td>
 											</tr>
