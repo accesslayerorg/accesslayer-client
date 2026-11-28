@@ -119,7 +119,7 @@ export function useBenchmarks(range: BenchmarkRange, wallet?: string) {
 		toPortfolioHistoryRange(range)
 	);
 
-	const creators = creatorsQuery.data ?? [];
+	const creators = useMemo(() => creatorsQuery.data ?? [], [creatorsQuery.data]);
 
 	const benchmarkSeries = useMemo<BenchmarkSeries[]>(() => {
 		if (!creators.length) return [];

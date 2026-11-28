@@ -86,22 +86,36 @@ export interface WalletDiagnostics {
 	timestamp: string;
 }
 
+interface FreighterProvider {
+	isConnected?: boolean;
+	isAllowed?: boolean;
+}
+
+type WalletWindow = Window & {
+	freighter?: FreighterProvider;
+	xBullSDK?: unknown;
+	xBull?: unknown;
+	lobstr?: unknown;
+	albedo?: unknown;
+	rabet?: unknown;
+};
+
 interface WalletDefinition {
 	id: WalletId;
 	name: string;
 	/** Returns true when the wallet provider is present on window. */
-	isPresent: (win: Window) => boolean;
+	isPresent: (win: WalletWindow) => boolean;
 	/** Optional probe that returns a failure reason when present but unusable. */
-	probe?: (win: Window) => WalletFailureReason | undefined;
+	probe?: (win: WalletWindow) => WalletFailureReason | undefined;
 }
 
 const WALLET_DEFINITIONS: WalletDefinition[] = [
 	{
 		id: 'freighter',
 		name: 'Freighter',
-		isPresent: win => Boolean((win as any).freighter),
+		isPresent: win => Boolean(win.freighter),
 		probe: win => {
-			const freighter = (win as any).freighter;
+			const freighter = win.freighter;
 			if (!freighter) return undefined;
 			if (freighter.isConnected === false && freighter.isAllowed === false) {
 				return 'locked';
@@ -112,22 +126,22 @@ const WALLET_DEFINITIONS: WalletDefinition[] = [
 	{
 		id: 'xbull',
 		name: 'xBull',
-		isPresent: win => Boolean((win as any).xBullSDK || (win as any).xBull),
+		isPresent: win => Boolean(win.xBullSDK || win.xBull),
 	},
 	{
 		id: 'lobstr',
 		name: 'Lobstr',
-		isPresent: win => Boolean((win as any).lobstr),
+		isPresent: win => Boolean(win.lobstr),
 	},
 	{
 		id: 'albedo',
 		name: 'Albedo',
-		isPresent: win => Boolean((win as any).albedo),
+		isPresent: win => Boolean(win.albedo),
 	},
 	{
 		id: 'rabet',
 		name: 'Rabet',
-		isPresent: win => Boolean((win as any).rabet),
+		isPresent: win => Boolean(win.rabet),
 	},
 ];
 
@@ -162,7 +176,8 @@ function runDetection(win: Window | undefined): {
 	detectedReason?: WalletFailureReason;
 	detectedWalletId?: WalletId;
 } {
-	if (!win) {
+	const walletWindow = win as WalletWindow | undefined;
+	if (!walletWindow) {
 		return {
 			wallets: WALLET_DEFINITIONS.map(def => ({
 				id: def.id,
@@ -176,7 +191,7 @@ function runDetection(win: Window | undefined): {
 	}
 
 	const wallets: WalletDetectionResult[] = WALLET_DEFINITIONS.map(def => {
-		const installed = def.isPresent(win);
+		const installed = def.isPresent(walletWindow);
 		if (!installed) {
 			return {
 				id: def.id,
@@ -186,7 +201,7 @@ function runDetection(win: Window | undefined): {
 				reason: 'not-installed' as WalletFailureReason,
 			};
 		}
-		const probeReason = def.probe?.(win);
+		const probeReason = def.probe?.(walletWindow);
 		if (probeReason) {
 			return {
 				id: def.id,
@@ -263,7 +278,7 @@ export function useWalletDetection(): WalletDetectionState {
 	}, [run]);
 
 	const getDiagnostics = useCallback((): WalletDiagnostics => {
-		const win = typeof window !== 'undefined' ? window : undefined;
+		const win = typeof window !== 'undefined' ? (window as WalletWindow) : undefined;
 		const extensions = WALLET_DEFINITIONS.reduce(
 			(acc, def) => {
 				acc[def.id] = win ? def.isPresent(win) : false;

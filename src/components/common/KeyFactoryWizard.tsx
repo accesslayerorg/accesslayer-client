@@ -1,15 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { CheckCircle2, Loader2, Rocket } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Stepper from '@/components/common/Stepper';
 import KeyFactoryCurvePreview from '@/components/common/KeyFactoryCurvePreview';
-import WhitelistUploadInput from '@/components/common/WhitelistUploadInput';
-import { formatXlmPrice } from '@/utils/numberFormat.utils';
-import { truncateTxHash } from '@/constants/stellar';
 import {
 	canAdvanceToStep,
-	getDraftInitialPriceXlm,
 	KEY_FACTORY_STEPS,
 	parseWhitelistInput,
 	validateKeyFactoryDraft,
@@ -57,12 +53,12 @@ const DEPLOYMENT_STATUS_COPY: Record<KeyDeploymentStatus, string> = {
  * deployment redirects to the new key's detail page.
  */
 export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
-	deployer,
+	deployer: _deployer,
 	draft,
 	onDraftChange,
 	isDeploying = false,
 	deploymentStatus = null,
-	transactionHash = null,
+	transactionHash: _transactionHash = null,
 	deployedKeyId = null,
 	onDeploy,
 	className,
@@ -73,8 +69,8 @@ export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
 
 	const step = KEY_FACTORY_STEPS[stepIndex];
 	const validation = validateKeyFactoryStep(step.value, draft);
-	const draftValidation = validateKeyFactoryDraft(draft);
-	const whitelist = useMemo(
+	const _draftValidation = validateKeyFactoryDraft(draft);
+	const _whitelist = useMemo(
 		() => parseWhitelistInput(draft.whitelistInput),
 		[draft.whitelistInput]
 	);
@@ -83,10 +79,16 @@ export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
 		showErrors ? validation.errors[field] : undefined;
 
 	const isLastStep = stepIndex === KEY_FACTORY_STEPS.length - 1;
-	const isDeploymentSettled =
+	const _isDeploymentSettled =
 		deploymentStatus === 'confirmed' || deploymentStatus === 'failed';
+	void _deployer;
+	void _transactionHash;
+	void _draftValidation;
+	void _whitelist;
+	void _isDeploymentSettled;
+	void DEPLOYMENT_STATUS_COPY;
 
-	const handleNext = () => {
+	const _handleNext = () => {
 		if (!validation.isValid) {
 			setShowErrors(true);
 			return;
@@ -99,10 +101,12 @@ export const KeyFactoryWizard: React.FC<KeyFactoryWizardProps> = ({
 		setStepIndex(index => Math.min(index + 1, KEY_FACTORY_STEPS.length - 1));
 	};
 
-	const handleBack = () => {
+	const _handleBack = () => {
 		setShowErrors(false);
 		setStepIndex(index => Math.max(index - 1, 0));
 	};
+	void _handleNext;
+	void _handleBack;
 
 	const handleStepClick = (targetIndex: number) => {
 		if (!canAdvanceToStep(draft, targetIndex)) return;

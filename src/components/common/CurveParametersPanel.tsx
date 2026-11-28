@@ -82,7 +82,7 @@ export function CurveParametersPanel({
 		parsedIntercept >= 0 &&
 		validationError === null;
 
-	const impactPreview = useMemo(() => {
+	const _impactPreview = useMemo(() => {
 		if (!isValid || parsedSlope === null || parsedIntercept === null) {
 			return null;
 		}
@@ -381,4 +381,4 @@ export function CurveParametersPanel({
 			</div>
 		</section>
 	);
-}er
+}

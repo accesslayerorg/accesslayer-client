@@ -72,7 +72,6 @@ createRoot(document.getElementById('root')!).render(
 		.catch(() => {
 			// SW registration is best-effort; a failure must not block the app.
 		});
-}
 
 createRoot(document.getElementById('root')!).render(
 	<StrictMode>

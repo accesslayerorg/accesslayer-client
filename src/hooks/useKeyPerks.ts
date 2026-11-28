@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 export interface KeyPerk {
 	id: string;
@@ -104,8 +104,11 @@ export function useKeyPerks(keyId: string, wallet?: string) {
 		enabled: !!keyId && !!wallet,
 	});
 
-	const perks = perksQuery.data ?? [];
-	const claims = claimsQuery.data ?? new Set<string>();
+	const perks = useMemo(() => perksQuery.data ?? [], [perksQuery.data]);
+	const claims = useMemo(
+		() => claimsQuery.data ?? new Set<string>(),
+		[claimsQuery.data]
+	);
 
 	const addPerkMutation = useMutation({
 		mutationFn: async (input: CreatePerkInput) => {
